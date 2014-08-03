@@ -1,0 +1,49 @@
+CFE_OBJS +=\
+cfe.prj/xocfe.o \
+cfe/decl.o \
+cfe/err.o \
+cfe/exectree.o \
+cfe/lex.o \
+cfe/scope.o \
+cfe/st.o \
+cfe/tree.o \
+cfe/treegen.o \
+cfe/typeck.o \
+cfe/cell.o 
+
+COM_OBJS +=\
+com/smempool.o \
+com/comf.o \
+com/ltype.o
+
+XOC_OBJS +=\
+xoc/label.o \
+xoc/util.o
+
+CFLAGS = -D_LINUX_ -Wno-write-strings -Wsign-promo \
+        -Wsign-compare -Wpointer-arith -Wno-multichar -Winit-self \
+        -Wstrict-aliasing=3 -D_DEBUG_ #-Wall
+        #-Werror=overloaded-virtual \
+
+INC=-I com -I cfe -I cfe.prj -I xoc
+%.o:%.cpp
+	@echo "build $<"
+	gcc $(CFLAGS) $(INC) -O0 -c -g2 $< -o $@
+
+cfe_objs: $(CFE_OBJS)
+com_objs: $(COM_OBJS)
+xoc_objs: $(XOC_OBJS)
+
+xocfe: cfe_objs com_objs xoc_objs
+	gcc $(XOC_OBJS) $(CFE_OBJS) $(COM_OBJS) $(CFLAGS) -o xocfe.exe -lstdc++ -lm
+	@echo "success!!"
+
+clean:
+	@find -name "*.o" | xargs rm -f
+	@find -name "*.exe" | xargs rm -f
+	@find -name "*.elf" | xargs rm -f
+	@find -name "*.out" | xargs rm -f
+	@find -name "*.tmp" | xargs rm -f
+	@find -name "*.asm" | xargs rm -f
+	@find -name "tags" | xargs rm -f
+

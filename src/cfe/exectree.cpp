@@ -1,0 +1,289 @@
+/*@
+Copyright (c) 2013-2014, Su Zhenyu steven.known@gmail.com 
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+    * Redistributions of source code must retain the above copyright
+      notice, this list of conditions and the following disclaimer.
+    * Redistributions in binary form must reproduce the above copyright
+      notice, this list of conditions and the following disclaimer in the
+      documentation and/or other materials provided with the distribution.
+    * Neither the name of the Su Zhenyu nor the names of its contributors
+      may be used to endorse or promote products derived from this software 
+      without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED "AS IS" AND ANY
+EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL 
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR 
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER 
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, 
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE 
+USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+@*/
+#include "cfecom.h"
+
+/*
+Computing expected value in compiling period, such as constant expression. 
+ 'g_is_allow_float' cannot be used via extern , it must be assigned with
+ 'compute_constant_value' absolutely.
+*/
+
+static INT g_is_allow_float = 0;
+static SSTACK<CELL*> g_cell_stack;
+static INT compute_conditional_exp(IN TREE * t);
+
+
+static CELL * pushv(LONGLONG v)
+{
+	CELL * c = newcell(0);
+	CELL_val(c) = v;
+	CELL_line_no(c) = g_real_line_num;
+	g_cell_stack.push(c);
+	return c;
+}
+
+
+static LONGLONG popv()
+{
+	CELL *c = g_cell_stack.pop();
+	if (!c) {
+		err(g_real_line_num, "cell value stack cannot be NULL");
+		return -1;
+	}
+	free_cell(c);
+	return (LONG)CELL_val(c);
+}
+
+
+static INT compute_enum_const(TREE * t)
+{
+	ENUM * e = TREE_enum(t);
+	INT i = TREE_enum_val_idx(t);
+	EVAL_LIST * evl = ENUM_vallist(e);
+	while (i>0) {
+		evl = EVAL_LIST_next(evl);
+	}
+	pushv(EVAL_LIST_val(evl));
+	return ST_SUCC;
+}
+
+
+static INT compute_sizeof(TREE * t)
+{	
+	TREE *  p = TREE_sizeof_exp(t);
+	if (TREE_type(p) == TR_TYPE_NAME) {
+		DECL * dcl = TREE_type_name(p);
+		TYPE * type_spec = DECL_spec(dcl);
+		DECL * abs_decl = DECL_decl_list(dcl);
+		if (is_complex_type(abs_decl)) {
+			return get_complex_type_size_in_byte(dcl);
+		} else {
+			return get_simply_type_size_in_byte(type_spec);
+		}
+		return ST_SUCC;
+	} else {
+		return compute_conditional_exp(p);
+	}
+	err(TREE_lineno(p),"'sizeof' need type-name");
+	fprintf(g_tfile, "error in compute_sizeof()");
+	return ST_ERR;
+}
+
+
+static INT compute_unary_op(TREE * t)
+{
+	LONGLONG l;
+	if (ST_SUCC != compute_conditional_exp(TREE_lchild(t)))goto FAILED;
+	l = popv();
+	switch (TREE_type(t)) {
+	case TR_PLUS: // +123  
+		pushv(l); break;
+	case TR_MINUS:  // -123  
+		pushv((LONGLONG)-l); break;
+	case TR_REV:  // Reverse
+		pushv(~l); break;
+	case TR_NOT:  // get non-value
+		pushv(!l); break;
+	default:
+		err(TREE_lineno(t),"illegal duality expression");goto FAILED;
+	}
+
+	return ST_SUCC;
+FAILED:
+	fprintf(g_tfile, "error in compute_unary_op()");
+	return ST_ERR;
+}
+
+
+static INT compute_binary_op(TREE *t)
+{
+	if (!t)return ST_SUCC;
+	LONGLONG r,l;
+	if (ST_SUCC != compute_conditional_exp(TREE_lchild(t)))goto FAILED;
+	if (ST_SUCC != compute_conditional_exp(TREE_rchild(t)))goto FAILED;
+	r = popv();
+    l = popv();
+	switch (TREE_type(t)) {
+	case TR_LOGIC_OR: //logical or
+		l = l || r; pushv(l); break;
+	case TR_LOGIC_AND: //logical and
+		l = l && r; pushv(l); break;
+	case TR_INCLUSIVE_OR: //inclusive or
+		l = l | r; pushv(l); break;
+	case TR_INCLUSIVE_AND: //inclusive and
+		l = l & r; pushv(l); break;
+	case TR_XOR: //exclusive or
+		l = l ^ r; pushv(l); break;
+	case TR_EQUALITY: // == !=
+		switch (TREE_token(t)) {
+		case T_EQU:
+			l = (l == r); pushv(l); break;
+		case T_NOEQU:
+			l = (l != r); pushv(l); break;
+		default: IS_TRUE0(0);
+		}
+		break;
+	case TR_RELATION: // < > >= <= 
+		switch (TREE_token(t)) {
+		case T_LESSTHAN:
+			l = (l == r); pushv(l); break;
+		case T_MORETHAN:
+			l = (l != r); pushv(l); break;
+		case T_NOLESSTHAN:
+			l = (l >= r); pushv(l); break;
+		case T_NOMORETHAN:
+			l = (l <= r); pushv(l); break;
+		default: IS_TRUE0(0);
+		}
+		break;
+	case TR_SHIFT:   // >> <<
+		switch (TREE_token(t)) {
+		case T_LSHIFT:
+			l = (l >> r); pushv(l); break;
+		case T_RSHIFT:
+			l = (l << r); pushv(l); break;
+		default: IS_TRUE0(0);
+		}
+		break;
+	case TR_ADDITIVE: // '+' '-'
+		switch (TREE_token(t)) {
+		case T_ADD:
+			l = (l + r); pushv(l); break;
+		case T_SUB:
+			l = (l - r); pushv(l); break;
+		default: IS_TRUE0(0);
+		}
+		break;
+	case TR_MULTI:    // '*' '/' '%'
+		switch (TREE_token(t)) {
+		case T_ASTERISK:
+			l = (l * r); pushv(l); break;
+		case T_DIV:
+			l = (l / r); pushv(l); 
+			if (r == 0) {warn1("divisor is zero");}
+			break;
+		case T_MOD:
+			l = (l % r); pushv(l);
+			if (r == 0) {warn1("divisor is zero");}
+			break;
+		default: IS_TRUE0(0);
+		}
+		break;
+	default:
+		err(TREE_lineno(t),"illegal duality expression");goto FAILED;
+	}
+  
+	return ST_SUCC;
+FAILED:
+	fprintf(g_tfile, "error in compute_even_op()");
+	return ST_ERR;
+}
+
+
+static INT compute_conditional_exp(IN TREE * t)
+{
+	if (t == NULL) { return ST_SUCC;}
+	switch (TREE_type(t)) {
+	case TR_ENUM_CONST:
+		if (ST_SUCC != compute_enum_const(t)) goto FAILED;
+		break;
+	case TR_PLUS: // +123  
+	case TR_MINUS:  // -123  
+	case TR_REV:  // Reverse
+	case TR_NOT:  // get non-value
+		if (ST_SUCC != compute_unary_op(t)) {goto FAILED;}
+		break;
+	case TR_LOGIC_OR: //logical or
+	case TR_LOGIC_AND: //logical and
+	case TR_INCLUSIVE_OR: //inclusive or
+	case TR_INCLUSIVE_AND: //inclusive and
+	case TR_XOR: //exclusive or
+	case TR_EQUALITY: // == !=
+	case TR_RELATION: // < > >= <= 
+	case TR_SHIFT:   // >> <<
+	case TR_ADDITIVE: // '+' '-'
+	case TR_MULTI:// '*' '/' '%'
+		if (ST_SUCC != compute_binary_op(t)) {goto FAILED;}
+		break;
+	case TR_IMM:
+	case TR_IMML:
+		pushv(TREE_imm_val(t));
+        break;
+	case TR_FP:
+		if (!g_is_allow_float) {
+			err(TREE_lineno(t),"constant expression is not integral");goto FAILED;
+		}
+		pushv((INT)atof(SYM_name(TREE_fp_str_val(t))));
+		break;
+	case TR_SIZEOF:
+		if (ST_SUCC != compute_sizeof(t)) {goto FAILED;}
+		break;
+	case TR_ID:
+		{
+			DECL * dcl = NULL;
+			if (!is_decl_exist_in_outer_scope(SYM_name(TREE_id(t)), &dcl)) {
+				err(TREE_lineno(t), "'%s' undefined");
+				goto FAILED;
+			}
+			pushv(get_decl_size(dcl));
+		}
+		break;
+	case TR_COND:
+		{
+			LONGLONG v=0;
+			if (ST_SUCC != compute_conditional_exp(TREE_det(t))) goto FAILED;
+			v = popv();
+			if (v) {
+				if (ST_SUCC != compute_conditional_exp(TREE_true_part(t))) goto FAILED;
+			} else {
+				if (ST_SUCC != compute_conditional_exp(TREE_false_part(t))) goto FAILED;
+			}
+		}
+		break;
+    default:
+		err(TREE_lineno(t),"expected constant expression");goto FAILED;
+	}//end switch
+	return ST_SUCC;
+
+FAILED:
+	fprintf(g_tfile, "error in compute_conditional_exp()" );
+	return ST_ERR;
+}
+
+
+INT compute_constant_exp(IN TREE * t, OUT LONGLONG * v, IN INT is_allow_float)
+{
+	IS_TRUE0(t != NULL && v != NULL);
+	g_is_allow_float = is_allow_float;
+	if (ST_SUCC != compute_conditional_exp(t)) {
+		*v = 0;
+		return ST_ERR;
+	}
+	*v = popv();
+	return ST_SUCC;
+}
