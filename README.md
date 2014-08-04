@@ -8,4 +8,4 @@ an AST tree. XOCFE only support C99.
 A concise and readable C++ Template Library is under 'src/com' directory. It can be used to 
 build whole compiler, or anyother project.
 
-git clone https://ssh.github.com/stevenknown/xocfe 
+git clone http://github.com/stevenknown/xocfe 
