@@ -98,8 +98,8 @@ static INT process_array_init(DECL * dcl, TYPE * ty, TREE ** init)
 	} else {
 	    //single dimension array
 		/*
-		When we meet a TR_EXP_SCOPE , because now we are initializing a array,
-        so the initialization set up from subset of EXP_SCOPE
+		When we meet a TR_EXP_SCOPE, because now we are initializing a array,
+		so the initialization set up from subset of EXP_SCOPE
 		*/		
 		if (TREE_type(*init) == TR_EXP_SCOPE) {
 			TREE * t = TREE_exp_scope(*init);
@@ -142,7 +142,7 @@ static INT process_array_init(DECL * dcl, TYPE * ty, TREE ** init)
 		}
 	} //end else
 
-	if (dim==0) {
+	if (dim == 0) {
 		DECL_array_index(head) = count;
 	}
 	return st;
@@ -167,8 +167,8 @@ static INT process_pointer_init(DECL * dcl, TYPE * ty, TREE ** init)
 
 static INT process_struct_init(TYPE * ty, TREE ** init)
 {
-	INT st=ST_SUCC;
-	STRUCT *s = TYPE_struct_type(ty);
+	INT st = ST_SUCC;
+	STRUCT * s = TYPE_struct_type(ty);
 	IS_TRUE(IS_STRUCT(ty), ("ONLY must be struct type-spec"));
 	if (STRUCT_is_complete(s)) {
 		err(g_real_line_num, "uses undefined struct %s", 
@@ -219,9 +219,7 @@ static INT process_union_init(TYPE * ty, TREE ** init)
 }
 
 
-/*
-C base type
-*/
+//C base type
 static INT process_base_init(TYPE * ty, TREE ** init)
 {
 	TREE * t = TREE_exp_scope(*init);
@@ -231,8 +229,6 @@ static INT process_base_init(TYPE * ty, TREE ** init)
 		return ST_SUCC;
 	}
 	//TODO type check
-    //...
-
 	*init = TREE_nsibling(*init);
 	return ST_SUCC;
 }
@@ -278,7 +274,7 @@ INT process_init(DECL * decl)
 		st = process_pointer_init(DECL_child(dcl), ty, &init);
 	} else {
 		//simple type init. e.g INT SHORT
-    	st = process_base_init(ty, &init);
+		st = process_base_init(ty, &init);
 	}
 	if (init != NULL) {
 		IS_TRUE0(get_decl_sym(decl));
@@ -320,7 +316,7 @@ INT process_init(DECL * decl, TREE ** init)
 		st = process_pointer_init(dcl, ty, init);
 	} else {
 		//simple type init. e.g INT SHORT
-    	st = process_base_init(ty,init);
+		st = process_base_init(ty,init);
 	}
 	return st;
 }
@@ -1307,7 +1303,7 @@ Checking compatible between formal parameter and real parameter.
 */
 static bool ck_para_type_compatible(DECL * formalp, DECL * realp)
 {
-//TODO...
+	//TODO
 	return true;
 }
 
@@ -1540,7 +1536,6 @@ public:
 };
 
 
-
 /*
 Merge type attributes.
 
@@ -1604,3 +1599,4 @@ INT type_ck()
 	tfree();
 	return st;
 }
+
