@@ -2301,9 +2301,9 @@ DECL * trans_to_pointer(DECL * decl, bool is_append)
 
 
 /*
- return NULL indicate we haven't found it in 'e_list', and
- append 'e' to tail of the list as correct, otherwise return 
- the finded one.
+Return NULL indicate we haven't found it in 'e_list', and
+append 'e' to tail of the list as correct, otherwise return 
+the finded one.
 */
 ENUM * add_to_enum_list(ENUM_LIST ** e_list , ENUM * e)
 {
@@ -2334,9 +2334,9 @@ ENUM * add_to_enum_list(ENUM_LIST ** e_list , ENUM * e)
 
 
 /*
- return NULL indicate we haven't found it in 'ut_list', and
- append 'ut' to tail of the list as correct, otherwise return 
- the finded one.
+Return NULL indicate we haven't found it in 'ut_list', and
+append 'ut' to tail of the list as correct, otherwise return 
+the finded one.
 */
 DECL * add_to_user_type_list(USER_TYPE_LIST ** ut_list , DECL * decl)
 {
@@ -2398,7 +2398,7 @@ bool is_enum_id_exist_in_outer_scope(IN CHAR * cl, OUT ENUM ** e)
 
 
 /*
-Does the struct typed declaration have already existed in both 
+Return true if the struct typed declaration have already existed in both
 current and all of outer scopes.
 */
 bool is_struct_exist_in_outer_scope(IN CHAR * tag, OUT STRUCT ** s)
@@ -2415,8 +2415,8 @@ bool is_struct_exist_in_outer_scope(IN CHAR * tag, OUT STRUCT ** s)
 
 
 /*
-Does the union typed declaration have already existed in both current and 
-all of outer scopes.
+Return true if the union typed declaration have already existed in both 
+current and all of outer scopes.
 */
 bool is_union_exist_in_outer_scope(IN CHAR * tag, OUT UNION ** s)
 {
@@ -2432,7 +2432,7 @@ bool is_union_exist_in_outer_scope(IN CHAR * tag, OUT UNION ** s)
 
 
 /*
-Does enum const value have already existed in both 
+Return true if enum const value have already existed in both 
 current and all of outer scopes.
 */
 bool is_enum_const_exist_in_outer_scope(CHAR * cl, OUT ENUM ** e, 
@@ -2512,8 +2512,7 @@ INT get_enum_val_idx(IN ENUM * e, IN CHAR * ev_name)
 }
 
 
-bool is_user_type_exist(IN USER_TYPE_LIST * ut_list, 
-						IN CHAR * ut_name, 
+bool is_user_type_exist(IN USER_TYPE_LIST * ut_list, IN CHAR * ut_name, 
 						OUT DECL ** decl)
 {
 	if (ut_list == NULL || ut_name == NULL) return false;
@@ -2653,8 +2652,7 @@ INT compute_struct_type_size(TYPE * ty)
 
 INT compute_union_type_size(TYPE * ty)
 {
-	if (!IS_UNION(ty)) 
-		return 0;
+	if (!IS_UNION(ty)) { return 0; }
 	UNION * s = TYPE_union_type(ty);
 	DECL * dcl = UNION_decl_list(s);
 	INT size = 0;
@@ -2695,7 +2693,7 @@ bool is_complex_type(DECL * dcl)
 */
 INT get_simply_type_size_in_byte(TYPE * spec)
 {
-	if (spec == NULL) return 0;
+	if (spec == NULL) { return 0; }
 	if (HAVE_FLAG(TYPE_des(spec), T_SPEC_VOID)) return BYTE_PER_INT;
 	if (HAVE_FLAG(TYPE_des(spec), T_SPEC_CHAR)) return BYTE_PER_CHAR;
 	if (HAVE_FLAG(TYPE_des(spec), T_SPEC_SHORT)) return BYTE_PER_SHORT;
@@ -2725,7 +2723,7 @@ e.g : int * a;
 */
 ULONG get_complex_type_size_in_byte(DECL * decl)
 {
-	if (decl == NULL) return 0;
+	if (decl == NULL) { return 0; }
 	TYPE * spec = DECL_spec(decl);
 	DECL * d = NULL;
 	if (DECL_dt(decl) == DCL_DECLARATION ||
@@ -2884,7 +2882,7 @@ INT get_pointer_base_size(DECL * decl)
 
 bool is_simple_base_type(TYPE * ty)
 {
-	if (ty == NULL) return false;
+	if (ty == NULL) { return false; }
 	return (TYPE_des(ty) & T_SPEC_VOID ||
 			TYPE_des(ty) & T_SPEC_CHAR ||
 			TYPE_des(ty) & T_SPEC_SHORT ||
@@ -2936,7 +2934,7 @@ INT format_enum_complete(IN OUT CHAR buf[], IN ENUM * e)
 
 INT format_enum_complete(IN OUT CHAR buf[], IN TYPE * ty)
 {
-	if (ty == NULL)	return ST_SUCC;
+	if (ty == NULL) { return ST_SUCC; }
 	strcat(buf, "enum ");
 	ENUM * e = TYPE_enum_type(ty);
 	format_enum_complete(buf,e);
@@ -2946,7 +2944,7 @@ INT format_enum_complete(IN OUT CHAR buf[], IN TYPE * ty)
 
 INT format_enum(IN OUT CHAR buf[], IN TYPE * ty)
 {
-	if (ty == NULL)	return ST_SUCC;
+	if (ty == NULL)	{ return ST_SUCC; }
 	strcat(buf, "enum ");
 	ENUM * e = TYPE_enum_type(ty);
 
@@ -2961,7 +2959,7 @@ INT format_enum(IN OUT CHAR buf[], IN TYPE * ty)
 //Format union's name and members.
 INT format_union_complete(IN OUT CHAR buf[], IN UNION * u)
 {
-	if (u == NULL)	return ST_SUCC;
+	if (u == NULL) { return ST_SUCC; }
 	strcat(buf, "union ");
 	DECL * member = UNION_decl_list(u);
 	if (UNION_tag(u)) {
@@ -2982,7 +2980,7 @@ INT format_union_complete(IN OUT CHAR buf[], IN UNION * u)
 //Format struct's name and members.
 INT format_struct_complete(IN OUT CHAR buf[], IN STRUCT * s)
 {
-	if (s == NULL) return ST_SUCC;
+	if (s == NULL) { return ST_SUCC; }
 	strcat(buf, "struct ");
 	DECL * member = STRUCT_decl_list(s);
 	if (STRUCT_tag(s)) {
@@ -3018,7 +3016,7 @@ INT format_struct_complete(IN OUT CHAR buf[], IN STRUCT * s)
 //Format struct/union's name and members.
 INT format_struct_union_complete(IN OUT CHAR buf[], IN TYPE * ty)
 {
-	if (ty == NULL) return ST_SUCC;
+	if (ty == NULL) { return ST_SUCC; }
 	STRUCT * s = TYPE_struct_type(ty);
 	format_struct_union(buf, ty);
 
@@ -3038,7 +3036,7 @@ INT format_struct_union_complete(IN OUT CHAR buf[], IN TYPE * ty)
 //Format struct/union's name, it does not include members. 
 INT format_struct_union(IN OUT CHAR buf[], IN TYPE * ty)
 {
-	if (ty == NULL)	return ST_SUCC;
+	if (ty == NULL)	{ return ST_SUCC; }
 	if (TYPE_des(ty) & T_SPEC_STRUCT) {
 		strcat(buf, "struct ");
 	} else if (TYPE_des(ty) & T_SPEC_UNION) {
@@ -3060,7 +3058,7 @@ INT format_struct_union(IN OUT CHAR buf[], IN TYPE * ty)
 
 INT format_stor_spec(IN OUT CHAR buf[], IN TYPE * ty)
 {
-	if (ty == NULL)	return ST_SUCC;
+	if (ty == NULL)	{ return ST_SUCC; }
 	INT des = TYPE_des(ty);
 	if (IS_REG(ty)) strcat(buf,"register "); 
 	if (IS_STATIC(ty)) strcat(buf,"static ");
@@ -3072,7 +3070,7 @@ INT format_stor_spec(IN OUT CHAR buf[], IN TYPE * ty)
 
 INT format_quan_spec(IN OUT CHAR buf[], IN TYPE * ty)
 {
-	if (ty == NULL)	return ST_SUCC;
+	if (ty == NULL)	{ return ST_SUCC; }
 	INT des = TYPE_des(ty);
 	if (IS_CONST(ty)) strcat(buf,"const ");
 	if (IS_VOLATILE(ty)) strcat(buf,"volatile ");
@@ -3082,7 +3080,7 @@ INT format_quan_spec(IN OUT CHAR buf[], IN TYPE * ty)
 
 INT format_decl_spec(IN OUT CHAR buf[], IN TYPE * ty, DECL * decl)
 {
-	if (ty == NULL) return ST_SUCC;
+	if (ty == NULL) { return ST_SUCC; }
 	BYTE is_su = (BYTE)(IS_STRUCT(ty) || IS_UNION(ty)),
 	     is_enum = (BYTE)IS_ENUM_TYPE(ty) ,
 		 is_base = (is_simple_base_type(ty)) != 0 ,
@@ -3111,7 +3109,7 @@ INT format_decl_spec(IN OUT CHAR buf[], IN TYPE * ty, DECL * decl)
 
 INT format_parameter_list(IN OUT CHAR buf[], IN DECL * decl)
 {
-	if (decl == NULL) return ST_SUCC;
+	if (decl == NULL) { return ST_SUCC; }
 	while (decl != NULL) {
 		format_declaration(buf, decl);
 		strcat(buf, ",");
@@ -3208,7 +3206,7 @@ INT format_declarator(IN OUT CHAR buf[], IN DECL * decl)
 {
 	CHAR b[10];
 	b[0] = 0;
-	if (decl == NULL) return ST_SUCC;
+	if (decl == NULL) { return ST_SUCC; }
     if (DECL_dt(decl) == DCL_ABS_DECLARATOR||
 	    DECL_dt(decl) == DCL_DECLARATOR) {
 		if (DECL_bit_len(decl)) {
@@ -3253,8 +3251,7 @@ INT format_user_type_spec(IN OUT CHAR buf[], IN DECL * ut)
 
 INT format_base_type_spec(IN OUT CHAR buf[], IN TYPE * ty)
 {
-	if (buf == NULL || ty == NULL)
-		return ST_SUCC;
+	if (buf == NULL || ty == NULL) { return ST_SUCC; }
 	if (!is_simple_base_type(ty)) {
 		return ST_ERR;
 	}
@@ -3285,7 +3282,7 @@ INT format_base_type_spec(IN OUT CHAR buf[], IN TYPE * ty)
 
 INT format_declaration(IN OUT CHAR buf[], IN DECL * decl)
 {
-	if (decl == NULL) return ST_SUCC;
+	if (decl == NULL) { return ST_SUCC; }
 	if (DECL_dt(decl) == DCL_DECLARATION ||
 		DECL_dt(decl) == DCL_TYPE_NAME) {
 		TYPE * ty = DECL_spec(decl);
@@ -3323,7 +3320,7 @@ static void pd(INT indent)
 
 INT format_parameter_list(IN DECL * decl, INT indent)
 {
-	if (decl == NULL) return ST_SUCC;
+	if (decl == NULL) { return ST_SUCC; }
 	while (decl != NULL) {
 		format_declaration(decl, indent);
 		decl = DECL_next(decl);
@@ -3423,7 +3420,7 @@ INT format_dcrl(IN DECL * decl, INT indent)
 
 INT format_declarator(IN DECL * decl, INT indent)
 {
-	if (decl == NULL) return ST_SUCC; 	
+	if (decl == NULL) { return ST_SUCC; }
 	pd(indent);
     if (DECL_dt(decl) == DCL_ABS_DECLARATOR||
 	    DECL_dt(decl) == DCL_DECLARATOR) {
@@ -3515,7 +3512,7 @@ INT format_declaration(IN DECL * decl, INT indent)
 //Fetch const value of 't' refered
 INT get_enum_const_val(ENUM * e, INT idx)
 {
-	if (e == NULL) return -1;
+	if (e == NULL) { return -1; }
 	EVAL_LIST * evl = ENUM_vallist(e);
 	while (idx > 0 && evl != NULL) {
 		evl = EVAL_LIST_next(evl);
@@ -3532,8 +3529,7 @@ INT get_enum_const_val(ENUM * e, INT idx)
 //Fetch const value of 't' refered
 CHAR * get_enum_const_name(ENUM * e, INT idx)
 {
-	if (e == NULL) 
-		return NULL;
+	if (e == NULL) { return NULL; }
 	EVAL_LIST * evl = ENUM_vallist(e);
 	while (idx > 0 && evl != NULL) {
 		evl = EVAL_LIST_next(evl);

@@ -186,7 +186,7 @@ public:
 
 
 //Exported Variables
-extern UINT g_src_line_num;  //line number of src file
+extern UINT g_src_line_num;	//line number of src file
 extern CHAR g_cur_token_string[];
 extern CHAR * g_cur_line; //current parsing line of src file
 extern UINT g_cur_line_len; //the current line buf length ,than read from file buf

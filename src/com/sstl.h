@@ -1428,9 +1428,8 @@ protected:
 		return p;
 	}
 public:	
-	SLIST(SMEM_POOL * pool)
-	{
-		IS_TRUE0(pool);
+	SLIST(SMEM_POOL * pool = NULL)
+	{		
 		m_free_list_pool = pool;
 		m_elem_count = 0;
 		m_head = m_tail = NULL;		
@@ -1443,6 +1442,9 @@ public:
 		m_elem_count = 0;
 		m_head = m_tail = NULL;
 	}
+
+	void set_pool(SMEM_POOL * pool) { m_free_list_pool = pool; }
+	SMEM_POOL * get_pool() { return m_free_list_pool; }
 
 	SC<T> * get_one_sc()
 	{
@@ -1577,6 +1579,7 @@ public:
 	SC<T> * insert_after(T t, IN SC<T> * marker)
 	{
 		IS_TRUE0(m_free_list_pool);
+		if (marker == NULL) { return NULL; }
 		SC<T> * c = newsc();
 		IS_TRUE(c != NULL, ("newc return NULL"));
 		SC_val(c) = t;
@@ -1588,7 +1591,7 @@ public:
 	{ return m_elem_count; }
 
 	//Get tail of list, return the CONTAINER.
-	T get_tail(OUT SC<T> ** holder)
+	T get_tail(OUT SC<T> ** holder) const
 	{
 		IS_TRUE0(m_free_list_pool);
 		if (m_tail == NULL) {
@@ -3487,4 +3490,3 @@ TAB_Ttgt * MMAP<Tsrc, Ttgt, TAB_Ttgt>::get(Tsrc t)
 	return MAP<Tsrc, TAB_Ttgt*>::get(t);
 }
 #endif
-

@@ -40,6 +40,10 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define MODBPB(a) ((a) % BITS_PER_BYTE)
 #endif
 
+#define BYTES_PER_SEG	8
+#define BITS_PER_SEG	(BITS_PER_BYTE * BYTES_PER_SEG)
+
+
 //Count of bits in all the one byte numbers.
 static BYTE const g_bit_count[256] = {
   0, //  0 
@@ -999,10 +1003,10 @@ void BITSET::rev(UINT last_bit_pos)
 }
 
 
-//Complement set of s = universal - s.
-void BITSET::complement(IN BITSET const& universal_set)
+//Complement set of s = univers - s.
+void BITSET::complement(IN BITSET const& univers)
 {
-	BITSET tmp(universal_set);
+	BITSET tmp(univers);
 	tmp.diff(*this);
 	copy(tmp);
 }
@@ -1856,58 +1860,371 @@ BITSET * bs_intersect(IN BITSET const& set1,
 //
 //Sparse BITSET
 //
-class SBITSET {protected:
-	UINT m_size;
-	BYTE * m_ptr;
-		
+//Segment
+class SEG {
+public:
+	UINT start;
+	BITSET bs;
+
+	SEG() { start = 0; }
+	SEG(SEG const& src) { copy(src); }
+
+	inline void copy(SEG const& src)
+	{
+		start = src.start;
+		bs.copy(src.bs);
+	}
+
+	inline UINT count_mem() const
+	{ return sizeof(start) + bs.count_mem(); }
+
+	inline void clean() { start = 0; bs.clean(); }
+
+	inline bool is_contain(UINT elem)
+	{
+		if (elem < start) { return false; }
+		UINT last = start + MAX(bs.get_byte_size(), BYTES_PER_UINT) *
+					BITS_PER_BYTE - 1;
+		if (elem <= last) {
+			return true;
+		}
+		return false;
+	}
+
+	//Return the start position of current segment.
+	inline UINT get_start() { return start; }
+
+	//Return the end position of current segment.
+	inline UINT get_end() { return start + BITS_PER_SEG - 1; }
+};
+
+
+class SEG_MGR {	
+	SLIST<SEG*> m_free_list;
+public:
+	SEG_MGR()
+	{	
+		SMEM_POOL * p = smpool_create_handle(sizeof(SC<SEG*>) * 2, MEM_COMM); 
+		m_free_list.set_pool(p);
+	}
+
+	~SEG_MGR()
+	{ 
+		SMEM_POOL * p = m_free_list.get_pool();
+		IS_TRUE0(p);
+		smpool_free_handle(p);
+	}
+
+	inline void free(SEG * s) 
+	{ 
+		s->clean(); 
+		m_free_list.append_head(s);
+	}
+
+	SEG * new_seg()
+	{
+		SEG * s = m_free_list.remove_head();
+		if (s != NULL) return s;
+		return new SEG();		
+	}
+};
+
+
+class SBITSET {
+protected:
+	SMEM_POOL * m_pool;
+	SEG_MGR * m_sm;
+	SLIST<SEG*> segs;
+
 	void * realloc(IN void * src, ULONG orgsize, ULONG newsize);
 public:
-	SBITSET(UINT init_pool_size = 1)		
+	SBITSET(SEG_MGR * sm, UINT sz = sizeof(SEG))
 	{
-		m_ptr = 0;	
-		init(init_pool_size);	
-	}	
+		IS_TRUE0(sm);
+		m_pool = smpool_create_handle(sz, MEM_COMM);
+		m_sm = sm;
+		segs.set_pool(m_pool);
+	}
+	SBITSET(SBITSET const& bs) { copy(bs); }
+	~SBITSET() 
+	{
+		SC<SEG*> * st;
+		for (SEG * s = segs.get_head(&st); s != NULL; s = segs.get_next(&st)) {
+			m_sm->free(s);
+		}
+		smpool_free_handle(m_pool);
+	}
 
-	//Copy constructor
-	SBITSET(SBITSET const& bs)		
+	void bunion(SBITSET const& src)
 	{
-		m_ptr = 0;
-		init();
-		copy(bs);
+		SC<SEG*> * srcst;
+		UINT c = 0;
+		SC<SEG*> * tgtst, * prev_st = NULL;
+		SEG * t = segs.get_head(&tgtst);
+		for (SEG * s = src.segs.get_head(&srcst);
+			 s != NULL; s = src.segs.get_next(&srcst)) {
+			 	
+			UINT src_start = s->start;
+			for (; t != NULL; prev_st = tgtst, t = src.segs.get_next(&tgtst)) {
+				UINT tgt_start = t->start;
+				if (src_start < tgt_start) {
+					/*
+					s: |----|
+					t:       |----|
+					*/
+					SEG * x = m_sm->new_seg();
+					x->copy(*s);
+					if (prev_st == NULL) {
+						prev_st = segs.append_head(x);
+					} else {
+						prev_st = segs.insert_after(x, prev_st);
+					}
+					break;
+				} else if (src_start == tgt_start) {
+					t->bs.bunion(s->bs);
+					break;
+				}
+			}
+
+			if (t == NULL) {
+				//Append rest of src segments to tail.
+				SEG * x = m_sm->new_seg();
+				x->copy(*s);
+				segs.append_tail(x);
+			}
+		}
 	}
 	
-	~SBITSET() { destroy(); }
-
-	void init(UINT init_pool_size = 1)	
+	void bunion(UINT elem)
 	{
-		if (m_ptr != NULL) return;
-		m_size = init_pool_size;
-		if (init_pool_size == 0) return;
-		m_ptr = (BYTE*)::malloc(init_pool_size);
-		::memset(m_ptr, 0, m_size); 
+		SC<SEG*> * sct, * next_sct, * prev_sct = NULL;
+		for (segs.get_head(&sct), next_sct = sct; 
+			 sct != NULL; prev_sct = sct, sct = next_sct) {
+			SEG * s = SC_val(sct);
+			segs.get_next(&next_sct);
+			UINT start = s->start;
+			if (elem < s->get_start()) { break; }
+			UINT last = start + BITS_PER_SEG - 1;
+			if (elem <= last) {
+				s->bs.bunion(elem - start);
+				return;
+			}
+		}
+		SEG * x = m_sm->new_seg();
+		if (sct != NULL) {
+			if (prev_sct == NULL) {
+				segs.append_head(x);	
+			} else {
+				segs.insert_after(x, prev_sct);
+			}
+		} else {
+			segs.append_tail(x);
+		}
+		x->start = elem / BITS_PER_SEG * BITS_PER_SEG;
+		x->bs.bunion(elem - x->start);
 	}
-	
-	void destroy()
+
+	void copy(SBITSET const& src)
 	{
-		if (m_ptr == NULL) return;
-		IS_TRUE0(m_size > 0);
-		::free(m_ptr);
-		m_ptr = NULL;
-		m_size = 0;
+		clean();
+		SC<SEG*> * st;
+		for (SEG * s = src.segs.get_head(&st); 
+			 s != NULL; s = src.segs.get_next(&st)) {
+			SEG * t = m_sm->new_seg();
+			t->copy(*s);
+			segs.append_tail(t);
+		}
 	}
 
-	void bunion(SBITSET const& bs);
-	void bunion(INT elem);
+	void clean()
+	{
+		SC<SEG*> * st;
+		for (SEG * s = segs.get_head(&st); s != NULL; s = segs.get_next(&st)) {
+			m_sm->free(s);
+		}
+		segs.clean();
+	}
 
-	void copy(SBITSET const& src);
-	void clean();
-	UINT count_mem() const;
+	UINT count_mem() const
+	{
+		SC<SEG*> * st;
+		UINT c = 0;
+		for (SEG * s = segs.get_head(&st); s != NULL; s = segs.get_next(&st)) {
+			c += s->count_mem();
+		}
+		c += segs.count_mem();
+		return c;
+	}
 
-	void diff(UINT elem);
-	UINT get_elem_count() const;
-	INT get_first() const;
-	INT get_last() const;
-	bool get(UINT elem) const;
-	INT get_next(UINT elem) const;
+	void diff(UINT elem)
+	{
+		SC<SEG*> * sct, * next_sct, * prev_sct = NULL;
+		for (segs.get_head(&sct), next_sct = sct; 
+			 sct != NULL; prev_sct = sct, sct = next_sct) {
+			SEG * s = SC_val(sct);
+			segs.get_next(&next_sct);
+			UINT start = s->get_start();
+			if (elem < start) { break; }
+			UINT last = start + BITS_PER_SEG - 1;
+			if (elem <= last) {
+				s->bs.diff(elem - start);
+				if (s->bs.is_empty()) {
+					segs.remove(prev_sct, sct);
+					m_sm->free(s);
+				}
+				return;
+			}
+		}
+	}
+
+	void dump(FILE * h)
+	{
+		IS_TRUE0(h);
+		SC<SEG*> * sct;
+		for (SEG * s = segs.get_head(&sct);
+			 s != NULL; s = segs.get_next(&sct)) {
+			fprintf(h, " [");
+			INT n;
+			for (INT i = s->bs.get_first(); i >= 0; i = n) {
+				n = s->bs.get_next(i);
+				fprintf(h, "%d", i + s->get_start());
+				if (n >= 0) {
+					fprintf(h, ",");
+				}
+			}
+			fprintf(h, "]");
+		}
+		fflush(h);
+	}
+
+	UINT get_elem_count() const
+	{
+		UINT c = 0;
+		SC<SEG*> * st;
+		for (SEG * s = segs.get_head(&st); s != NULL; s = segs.get_next(&st)) {
+			c += s->bs.get_elem_count();
+		}
+		return c;
+	}
+
+	INT get_first(SC<SEG*> ** cur) const
+	{
+		IS_TRUE0(cur);
+		SEG * s = segs.get_head(cur);
+		if (s == NULL) {
+			IS_TRUE0(segs.get_elem_count() == 0);
+			return -1;
+		}
+		IS_TRUE0(!s->bs.is_empty());
+		return s->get_start() + s->bs.get_first();
+	}
+
+	INT get_last(SC<SEG*> ** cur) const
+	{
+		IS_TRUE0(cur);
+		SEG * s = segs.get_tail(cur);
+		if (s == NULL) {
+			IS_TRUE0(segs.get_elem_count() == 0);
+			return -1;
+		}
+		IS_TRUE0(!s->bs.is_empty());
+		return s->get_start() + s->bs.get_last();
+	}
+
+	INT get_next(UINT elem, SC<SEG*> ** cur) const
+	{
+		if (cur == NULL) {
+			SC<SEG*> * st;
+			for (SEG * s = segs.get_head(&st);
+				 s != NULL; s = segs.get_next(&st)) {
+				UINT start = s->get_start();
+				if (elem < start) { continue; }
+				UINT last = start + BITS_PER_SEG - 1;
+				if (elem <= last) {
+					INT n = s->bs.get_next(elem - start);
+					if (n >= 0) { return start + (UINT)n; }
+					
+					segs.get_next(&st);
+					if (st == NULL) { 
+						return -1;
+					}
+					start = SC_val(st)->get_start();
+					n = SC_val(st)->bs.get_first();
+					IS_TRUE0(n >= 0);
+					return start + (UINT)n;
+				}
+			}
+			return -1;
+		}
+		SC<SEG*> * cp = *cur;
+		if (cp == NULL) { return -1; }
+		UINT start = SC_val(cp)->get_start();
+		INT n = SC_val(cp)->bs.get_next(elem - start);
+		if (n >= 0) {
+			return start + (UINT)n;
+		}
+		segs.get_next(&cp);
+		if (cp == NULL) { 
+			*cur = NULL;
+			return -1;
+		}
+		*cur = cp;
+		start = SC_val(cp)->get_start();
+		n = SC_val(cp)->bs.get_first();
+		IS_TRUE0(n >= 0);
+		return start + (UINT)n;
+	}
 };
 //END SBITSET
+
+
+void sbitset_test()
+{
+	extern FILE * g_tfile;
+	SEG_MGR sm;
+	SBITSET x(&sm, 20);
+	x.bunion(1999);	
+	//x.bunion(1);
+	x.bunion(2000);
+	//x.bunion(2007);
+	//x.bunion(2016);
+	x.bunion(2014);
+	//x.bunion(2025);
+	//x.bunion(2033);
+	x.bunion(2048);
+	//x.bunion(1997);
+	//x.bunion(1991);
+	x.bunion(1983);
+	x.bunion(2112);
+	x.bunion(2113);
+	x.diff(2048);
+	x.bunion(2048);
+	x.bunion(13555);
+	int n = x.get_elem_count();
+	SC<SEG*> * ct;
+	n = x.get_first(&ct);
+	n = x.get_next(n, &ct);
+	n = x.get_next(n, &ct);
+	n = x.get_next(n, &ct);
+	n = x.get_next(n, &ct);
+	n = x.get_next(n, NULL);
+	n = x.get_next(n, &ct);
+	n = x.get_next(n, &ct);
+	n = x.get_last(&ct);
+
+	SBITSET y(&sm, 20);
+	y.bunion(23);
+	y.bunion(1990);
+	y.bunion(12345);
+	y.bunion(10000);
+
+	fprintf(g_tfile, "\n");
+	x.dump(g_tfile);
+	fprintf(g_tfile, "\n");
+	y.dump(g_tfile);
+	fprintf(g_tfile, "\n");
+
+	y.bunion(x);
+	y.dump(g_tfile);	
+}
+

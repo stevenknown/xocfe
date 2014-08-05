@@ -105,8 +105,8 @@ INT main(INT argcc, CHAR * argvc[])
 {    
 	CHAR * argv[] = {
 		"xoc.exe",
-		"../test/test_ansic.c",
-	    "-dump","a.tmp",
+		"..\\test\\test_ansic.c",
+	    "-dump","cfe.tmp",
 	};
 	INT argc = sizeof(argv)/sizeof(argv[0]);
 #else

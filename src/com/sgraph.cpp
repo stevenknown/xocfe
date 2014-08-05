@@ -977,7 +977,7 @@ Vertexs should have been sorted in topological order.
 And we access them by reverse-topological order.
 'vlst': compute dominator for vertices in vlst if it 
 	is not empty or else compute all graph.
-'uni': universal.	
+'uni': universe.	
 */
 bool DGRAPH::compute_dom(IN LIST<VERTEX*> * vlst, BITSET const* uni)
 {

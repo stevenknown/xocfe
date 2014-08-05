@@ -100,7 +100,7 @@ public:
 	void copy(BITSET const& src);
 	void clean();
 	UINT count_mem() const;
-	void complement(IN BITSET const& universal_set);	
+	void complement(IN BITSET const& univers);
 	
 	void diff(UINT elem);
 	void diff(BITSET const& bs);
