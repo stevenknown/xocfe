@@ -1512,6 +1512,7 @@ public:
 		IS_TRUE0(m_free_list_pool);
 		if (m_head == NULL) {
 			IS_TRUE(m_tail == NULL, ("tail should be NULL"));
+			IS_TRUE0(m_elem_count == 0);
 			m_head = m_tail = c; 
 			m_head->next = NULL;
 			m_elem_count++;
@@ -1554,9 +1555,7 @@ public:
 		count += sizeof(m_free_list_pool);
 		count += sizeof(m_head);
 		count += sizeof(m_tail);
-		for (SC<T> * c = m_free_list; c != NULL; c = c->next) {
-			count += sizeof(SC<T>);
-		}
+		//Do not count SC, they belong to input pool.
 		return count;
 	}
 	
@@ -1686,6 +1685,10 @@ public:
 		if (prev == NULL) {
 			IS_TRUE0(holder == m_head);
 			m_head = holder->next;
+			if (m_head == NULL) {
+				IS_TRUE0(m_elem_count == 1);
+				m_tail = NULL;
+			}
 		} else {
 			prev->next = holder->next;
 		}
@@ -1701,6 +1704,9 @@ public:
 		if (m_head == NULL) { return T(0); }
 		SC<T> * c = m_head;
 		m_head = m_head->next;
+		if (m_head == NULL) {
+			m_tail = NULL;
+		}
 		T t = SC_val(c);
 		free_sc(c);
 		m_elem_count--;

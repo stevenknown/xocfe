@@ -33,8 +33,6 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define BS_DUMP_POS		2
 #define BITS_PER_BYTE	8
 #define BYTES_PER_UINT	4
-#define BYTES_PER_SEG	8
-#define BITS_PER_SEG	(BITS_PER_BYTE * BYTES_PER_SEG)
 
 class BITSET;
 class BITSET_MGR;
@@ -543,7 +541,11 @@ public:
 	inline UINT count_mem() const
 	{ return sizeof(start) + bs.count_mem(); }
 
-	inline void clean() { start = 0; bs.clean(); }
+	inline void clean() 
+	{ 
+		start = 0; 
+		bs.clean(); 
+	}
 
 	inline bool is_contain(UINT elem)
 	{
@@ -558,9 +560,7 @@ public:
 
 	//Return the start position of current segment.
 	inline UINT get_start() { return start; }
-
-	//Return the end position of current segment.
-	inline UINT get_end() { return start + BITS_PER_SEG - 1; }
+	UINT get_end();
 };
 
 

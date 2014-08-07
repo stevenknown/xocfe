@@ -1057,11 +1057,8 @@ static bool prt_int(CHAR * buf, UINT buflen, UINT * pbufpos, INT v)
 }
 
 
-static bool prt_ulong_hex(CHAR * buf, 
-						UINT buflen, 
-						UINT * pbufpos, 
-						ULONG v, 
-						INT format_size)
+static bool prt_ulong_hex(CHAR * buf, UINT buflen, UINT * pbufpos, 
+						ULONG v, INT format_size)
 {
 	ULONG mask = 0xF0000000;
 	INT shift = 28;
@@ -1084,9 +1081,8 @@ static bool prt_ulong_hex(CHAR * buf,
 }
 
 
-static bool prt_ansi_str(CHAR * buf, UINT buflen, 
-						UINT * pbufpos, 
-						CHAR * s, INT format_size)
+static bool prt_ansi_str(CHAR * buf, UINT buflen, UINT * pbufpos,
+						 CHAR * s, INT format_size)
 {
 	CHAR ch;
 	bool sized = (format_size > 0);
@@ -1103,11 +1099,8 @@ static bool prt_ansi_str(CHAR * buf, UINT buflen,
 }
 
 
-static bool prt_wide_str(CHAR * buf,
-						UINT buflen, 
-						UINT * pbufpos, 
-						wchar_t * ws, 
-						INT format_size)
+static bool prt_wide_str(CHAR * buf, UINT buflen, UINT * pbufpos, 
+						 wchar_t * ws, INT format_size)
 {
 	wchar_t ch;
 	bool sized = (format_size > 0);
@@ -1145,11 +1138,8 @@ static bool is_exist_mark(CHAR const* format)
 
 
 //Parse string that starts with '%'.
-static bool percent(CHAR * buf,
-				UINT buflen,
-				IN OUT UINT * bufpos,
-				IN OUT CHAR const** format, 
-				va_list stack_start)
+static bool percent(CHAR * buf, UINT buflen, IN OUT UINT * bufpos, 
+					IN OUT CHAR const** format, va_list stack_start)
 {
 	//The info related to %, e.g:'%d', can not longer than 255.
 	CHAR sbuf[255]; 

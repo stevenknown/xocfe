@@ -2830,7 +2830,7 @@ DECL * get_pointer_decl(DECL * decl)
 					DECL_dt(x) != DCL_ABS_DECLARATOR &&
 					DECL_dt(x) != DCL_TYPE_NAME, 
 					("\nunsuitable DECL type locate here in is_pointer()\n"));
-			return false;
+			return NULL;
 		}
 		x = DECL_next(x);
 	}

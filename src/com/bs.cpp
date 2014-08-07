@@ -40,6 +40,9 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define MODBPB(a) ((a) % BITS_PER_BYTE)
 #endif
 
+#define BYTES_PER_SEG	64
+#define BITS_PER_SEG	(BITS_PER_BYTE * BYTES_PER_SEG)
+
 //Count of bits in all the one byte numbers.
 static BYTE const g_bit_count[256] = {
   0, //  0 
@@ -1963,7 +1966,10 @@ UINT SBITSET::count_mem() const
 	for (SEG * s = segs.get_head(&st); s != NULL; s = segs.get_next(&st)) {
 		c += s->count_mem();
 	}
+	c += sizeof(m_pool);
+	c += sizeof(m_sm);
 	c += segs.count_mem();
+	c += smpool_get_pool_size_handle(m_pool);
 	return c;
 }
 
@@ -2289,6 +2295,13 @@ UINT SBITSET_MGR::count_mem(FILE * h)
 	}
 	#endif
 	return count;
+}
+
+
+//Return the end position of current segment.
+UINT SEG::get_end() 
+{ 
+	return start + BITS_PER_SEG - 1; 
 }
 
 

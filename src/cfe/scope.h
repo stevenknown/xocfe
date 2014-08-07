@@ -68,7 +68,6 @@ SCOPE
 #define SCOPE_enum_list(sc)			(sc)->enum_list
 #define SCOPE_sym_tab_list(sc)		(sc)->sym_tab_list
 #define SCOPE_user_type_list(sc)	(sc)->utl_list
-#define SCOPE_type_list(sc)			(sc)->tl
 #define SCOPE_label_list(sc)		(sc)->li_list
 #define SCOPE_ref_label_list(sc)	(sc)->lref_list
 #define SCOPE_decl_list(sc)			(sc)->decl_list
@@ -159,5 +158,4 @@ extern SCOPE * g_cur_scope;
 //Export Functions
 SYM * add_to_symtab_list(SYM_LIST ** sym_list , SYM * sym);
 #endif 
-
 
