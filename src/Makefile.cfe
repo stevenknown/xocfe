@@ -22,7 +22,7 @@ xoc/util.o
 
 CFLAGS = -D_LINUX_ -Wno-write-strings -Wsign-promo \
         -Wsign-compare -Wpointer-arith -Wno-multichar -Winit-self \
-        -Wstrict-aliasing=3 -D_DEBUG_ #-Wall
+        -Wstrict-aliasing=3 -D_DEBUG_ -Wswitch #-Wall
         #-Werror=overloaded-virtual \
 
 INC=-I com -I cfe -I cfe.prj -I xoc

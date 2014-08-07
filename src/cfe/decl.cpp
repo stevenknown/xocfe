@@ -1017,7 +1017,8 @@ static TYPE * type_spec(TYPE * ty)
 	case T_STRUCT:
 		return type_spec_struct(ty);
 	case T_UNION:
-		return type_spec_union(ty);		
+		return type_spec_union(ty);
+	default:; //do nothing
 	}
 	return ty;
 FAILED:
@@ -1179,6 +1180,7 @@ static TYPE * quan_spec(IN TYPE * ty)
 		match(T_RESTRICT);
 		SET_FLAG(TYPE_des(ty), T_QUA_RESTRICT);
 		break;
+	default:;	
 	}
 	return ty;
 FAILED:
@@ -1234,6 +1236,7 @@ static TYPE * stor_spec(IN TYPE * ty)
 		match(T_TYPEDEF);
 		TYPE_des(ty) |= T_STOR_TYPEDEF;
 		break;
+	default:;	
 	}
 	return ty;
 FAILED:
@@ -1457,6 +1460,7 @@ static DECL * direct_abstract_declarator(TYPE * qua)
 			match(T_ID);
 		}
 		break;
+	default:;	
 	}
 	
 	switch (g_real_token) {
@@ -1496,6 +1500,7 @@ static DECL * direct_abstract_declarator(TYPE * qua)
 			}
 		}
 		break;	
+	default:;	
 	}
 	return dcl;
 FAILED:
@@ -1956,6 +1961,7 @@ static DECL * direct_declarator(TYPE * qua)
 			match(T_ID);
 		}
 		break;
+	default:;	
 	}
 	
 	if (dcl == NULL) return NULL;
@@ -1996,6 +2002,7 @@ static DECL * direct_declarator(TYPE * qua)
 			}
 		}
 		break;	
+	default:; //do nothing	
 	}
 	return dcl;
 FAILED:

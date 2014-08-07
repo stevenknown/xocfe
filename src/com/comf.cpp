@@ -992,8 +992,8 @@ ULONGLONG getusec()
 
 	return (ULONGLONG)timer;
 #else	
-	timeval tv;
-	timezone tz;
+	struct timeval tv;
+	struct timezone tz;
 	gettimeofday(&tv, &tz);
 	return ((ULONGLONG)tv.tv_sec) * 1000000LL + tv.tv_usec;
 #endif	

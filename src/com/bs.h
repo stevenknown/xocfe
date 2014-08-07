@@ -33,6 +33,8 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define BS_DUMP_POS		2
 #define BITS_PER_BYTE	8
 #define BYTES_PER_UINT	4
+#define BYTES_PER_SEG	8
+#define BITS_PER_SEG	(BITS_PER_BYTE * BYTES_PER_SEG)
 
 class BITSET;
 class BITSET_MGR;
@@ -167,6 +169,7 @@ public:
 		m_bs_list.destroy();
 		m_is_init = false;
 	}
+	
 	BITSET * create();
 	inline BITSET * copy(BITSET const& bs)
 	{
@@ -183,6 +186,7 @@ public:
 		init();
 	}	
 	UINT count_mem(FILE * h = NULL);
+	
 	inline void free(IN BITSET * bs) //free bs for next use.
 	{
 		if (bs == NULL) return;
@@ -516,5 +520,169 @@ BVEC<T> * BVEC_MGR<T>::create()
 	return p;
 }
 //END BVEC_MGR
+
+
+//
+//Sparse BITSET
+//
+//Segment
+class SEG {
+public:
+	UINT start;
+	BITSET bs;
+
+	SEG() { start = 0; }
+	SEG(SEG const& src) { copy(src); }
+
+	inline void copy(SEG const& src)
+	{
+		start = src.start;
+		bs.copy(src.bs);
+	}
+
+	inline UINT count_mem() const
+	{ return sizeof(start) + bs.count_mem(); }
+
+	inline void clean() { start = 0; bs.clean(); }
+
+	inline bool is_contain(UINT elem)
+	{
+		if (elem < start) { return false; }
+		UINT last = start + MAX(bs.get_byte_size(), BYTES_PER_UINT) *
+					BITS_PER_BYTE - 1;
+		if (elem <= last) {
+			return true;
+		}
+		return false;
+	}
+
+	//Return the start position of current segment.
+	inline UINT get_start() { return start; }
+
+	//Return the end position of current segment.
+	inline UINT get_end() { return start + BITS_PER_SEG - 1; }
+};
+
+
+class SEG_MGR {	
+	SLIST<SEG*> m_free_list;
+public:
+	SEG_MGR()
+	{	
+		SMEM_POOL * p = smpool_create_handle(sizeof(SC<SEG*>) * 2, MEM_COMM); 
+		m_free_list.set_pool(p);
+	}
+
+	~SEG_MGR()
+	{ 
+		SMEM_POOL * p = m_free_list.get_pool();
+		IS_TRUE0(p);
+		smpool_free_handle(p);
+	}
+
+	inline void free(SEG * s) 
+	{ 
+		s->clean(); 
+		m_free_list.append_head(s);
+	}
+
+	SEG * new_seg()
+	{
+		SEG * s = m_free_list.remove_head();
+		if (s != NULL) return s;
+		return new SEG();		
+	}
+};
+
+
+class SBITSET {
+protected:
+	SMEM_POOL * m_pool;
+	SEG_MGR * m_sm;
+	SLIST<SEG*> segs;
+
+	void * realloc(IN void * src, ULONG orgsize, ULONG newsize);
+public:
+	SBITSET(SEG_MGR * sm, UINT sz = sizeof(SEG))
+	{
+		IS_TRUE0(sm);
+		m_pool = smpool_create_handle(sz, MEM_COMM);
+		m_sm = sm;
+		segs.set_pool(m_pool);
+	}
+	SBITSET(SBITSET const& bs) { copy(bs); }
+	~SBITSET() 
+	{
+		SC<SEG*> * st;
+		for (SEG * s = segs.get_head(&st); s != NULL; s = segs.get_next(&st)) {
+			m_sm->free(s);
+		}
+		smpool_free_handle(m_pool);
+	}
+
+	void bunion(SBITSET const& src);
+	void bunion(UINT elem);
+	void copy(SBITSET const& src);
+	void clean();
+	UINT count_mem() const;
+	void diff(UINT elem);
+	void diff(SBITSET const& src);
+	void dump(FILE * h) const;
+	UINT get_elem_count() const;
+	INT get_first(SC<SEG*> ** cur) const;
+	INT get_last(SC<SEG*> ** cur) const;
+	INT get_next(UINT elem, SC<SEG*> ** cur) const;
+	void intersect(SBITSET const& src);
+	bool is_equal(SBITSET const& src) const;
+	bool is_contain(UINT elem) const;
+};
+
+
+class SBITSET_MGR
+{
+protected:
+	SLIST<SBITSET*> m_bs_list;
+	SLIST<SBITSET*> m_free_list;	
+	SEG_MGR m_sm;
+public:	
+	SBITSET_MGR() 
+	{
+		SMEM_POOL * p = smpool_create_handle(sizeof(SC<SBITSET*>), MEM_COMM);
+		m_bs_list.set_pool(p);
+		m_free_list.set_pool(p);
+	}
+	
+	~SBITSET_MGR() 
+	{ 
+		SC<SBITSET*> * st;
+		for (SBITSET * bs = m_bs_list.get_head(&st);
+			 bs != NULL; bs = m_bs_list.get_next(&st)) {
+			delete bs;
+		}
+		SMEM_POOL * p = m_bs_list.get_pool();
+		IS_TRUE0(p);
+		smpool_free_handle(p);
+	}
+
+	SBITSET * create()
+	{
+		SBITSET * p = m_free_list.remove_head();
+		if (p == NULL) {
+			p = new SBITSET(&m_sm);
+			m_bs_list.append_tail(p);
+		}
+		return p;
+	}
+	UINT count_mem(FILE * h = NULL);
+	
+	void free(SBITSET * bs) //free bs for next use.
+	{
+		if (bs == NULL) return;
+		bs->clean();
+		m_free_list.append_tail(bs);
+	}
+
+	SEG_MGR * get_seg_mgr() { return &m_sm; }
+};
 #endif
 

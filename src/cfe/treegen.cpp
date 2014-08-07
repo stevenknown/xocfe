@@ -272,6 +272,7 @@ bool is_in_first_set_of_exp_list(TOKEN tok)
 	case T_SUBSUB:     //--
 	case T_SIZEOF:     //sizeof
 		return true;
+	default:;	
 	}
 	return false;
 }
@@ -284,6 +285,7 @@ static INT is_c_type_quan(TOKEN tok)
 	case T_CONST:
 	case T_VOLATILE:
 		return 1;
+	default:;	
 	}
 	return 0;
 }
@@ -292,7 +294,7 @@ static INT is_c_type_quan(TOKEN tok)
 static INT is_c_type_spec(TOKEN tok)
 {
 	switch (tok) {
-		//scalar-type-spec
+	//scalar-type-spec
 	case T_VOID:
 	case T_CHAR:
 	case T_SHORT:
@@ -308,6 +310,7 @@ static INT is_c_type_spec(TOKEN tok)
 	case T_UNION:
 	case T_ENUM:
 		return 1;
+	default:;	
 	}
 	return 0;
 }
@@ -323,6 +326,7 @@ static INT is_c_stor_spec(TOKEN tok)
 	case T_STATIC:
 	case T_TYPEDEF:
 		return 1;
+	default:;	
 	}
 	return 0;
 }
@@ -330,10 +334,8 @@ static INT is_c_stor_spec(TOKEN tok)
 
 static INT is_constant(TREE_TYPE tt)
 {
-	if (tt != TR_ENUM_CONST &&
-	   tt != TR_IMM &&
-	   tt != TR_IMML &&
-	   tt != TR_FP) {
+	if (tt != TR_ENUM_CONST && tt != TR_IMM && 
+		tt != TR_IMML && tt != TR_FP) {
 		return 0;
 	}
 	return 1;
@@ -758,6 +760,7 @@ static TREE * primary_exp(IN OUT UINT * st)
 			return NULL;
 		}
 		break;
+	default:;	
 	}	
 	*st = ST_SUCC;
 	return t;
@@ -903,6 +906,7 @@ AGAIN:
 			}
 		}
 		break;
+	default:;	
 	}
 	return t;
 }
@@ -1110,6 +1114,7 @@ static TREE * unary_exp()
 			goto FAILED; 
 		}
 		break;
+	default:;	
 	}
 	return t ;
 FAILED:
@@ -1640,6 +1645,7 @@ static TREE * jump_stmt()
 			goto FAILED;
 		}
 		break;
+	default:;	
 	}
 	return t;
 FAILED:
@@ -1763,6 +1769,7 @@ static TREE * label_stmt()
 			}
 		}
 		break;
+	default:;	
 	}
 	return t;
 FAILED:
@@ -1931,6 +1938,7 @@ static TREE * iter_stmt()
 	case T_FOR:
 		t = for_stmt();
 		break;
+	default:;	
 	}
 	return t;
 }
@@ -2005,8 +2013,7 @@ static TREE * switch_stmt()
 	pushst(st_DO,0); //push down inherit properties
 	TREE_switch_body(t) = statement();
 	set_parent(t,TREE_switch_body(t));	
-	popst();
-    
+	popst();    
 	return t;
 FAILED:
 	scr("error in switch_stmt()");
@@ -2024,6 +2031,7 @@ static TREE * select_stmt()
 	case T_SWITCH:
 		t = switch_stmt();
 		break;
+	default:;	
 	}
 	return t;
 }
