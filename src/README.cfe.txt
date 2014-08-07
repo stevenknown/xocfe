@@ -25,7 +25,7 @@ How to use cfe?
 	
 	Firstly, CFE(C Front End) generate a top scope.
 	The top scope means all compile unit, namely, it is file scope.
-	The scope includes a number of list, include type list,  statement list, 
+	The scope includes a number of list, include type list,  statement list,
 	and function definitions, and function declarations.
 	So walk through these data-structure, you will get the informations of :
 		* variable declarations
