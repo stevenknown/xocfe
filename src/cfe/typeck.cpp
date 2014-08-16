@@ -1564,10 +1564,6 @@ INT type_trans()
 			if (g_err_msg_list.get_elem_count() > 0) {
 				return ST_ERR;
 			}
-			/*
-			dump_scope(DECL_fun_body(dcl), 
-					   DUMP_SCOPE_FUNC_BODY|DUMP_SCOPE_STMT_TREE);
-			*/		   
 		}
 		dcl = DECL_next(dcl);
 	}

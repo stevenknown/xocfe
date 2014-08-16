@@ -1056,7 +1056,7 @@ static EVAL_LIST * enumrator(INT * cur_e_val)
 					err(g_real_line_num, "empty constant expression");
 					goto FAILED;
 				}
-				if (ST_SUCC != compute_constant_exp(t, &idx, 0)) {
+				if (!compute_constant_exp(t, &idx, 0)) {
 					err(g_real_line_num, "expected constant expression"); 
 					goto FAILED;
 				}
@@ -1199,15 +1199,22 @@ storage_class_specifier:  one of
 */
 static TYPE * stor_spec(IN TYPE * ty)
 {
-	if (ty == NULL) {ty = new_type();}
-	//There cannot be more than two storage class specifier
-	if (HAVE_FLAG(TYPE_des(ty), T_STOR_AUTO) ||
-	    HAVE_FLAG(TYPE_des(ty), T_STOR_REG) ||
-	    HAVE_FLAG(TYPE_des(ty), T_STOR_STATIC) ||
-	    HAVE_FLAG(TYPE_des(ty), T_STOR_EXTERN) ||
-	    HAVE_FLAG(TYPE_des(ty), T_STOR_INLINE) ||
-	    HAVE_FLAG(TYPE_des(ty), T_STOR_TYPEDEF)) {
-		err(g_real_line_num, "more than one storage class specified");		
+	if (ty == NULL) { ty = new_type(); }
+
+	if ((HAVE_FLAG(TYPE_des(ty), T_STOR_AUTO) && 
+		 g_real_token != T_AUTO) || 
+		(!ONLY_HAVE_FLAG(TYPE_des(ty), T_STOR_AUTO) && 
+		 g_real_token == T_AUTO)) {
+		err(g_real_line_num, 
+			"auto can not specified with other type-specifier");
+		goto FAILED;
+	}
+
+	if ((HAVE_FLAG(TYPE_des(ty), T_STOR_STATIC) &&
+		 g_real_token == T_EXTERN) || 
+		(HAVE_FLAG(TYPE_des(ty), T_STOR_EXTERN) &&
+		 g_real_token == T_STATIC)) {
+		err(g_real_line_num, "static and extern can not be specified meanwhile");
 		goto FAILED;
 	}
 	
@@ -1729,7 +1736,7 @@ static DECL * struct_declarator(TYPE * qua)
 		}
 		match(T_COLON);
 		t = conditional_exp();
-		if (ST_SUCC != compute_constant_exp(t, &idx, 0)) {
+		if (!compute_constant_exp(t, &idx, 0)) {
 			err(g_real_line_num, "expected constant expression"); 
 			goto FAILED;
 		}
@@ -1840,7 +1847,7 @@ static INT compute_array_indx(DECL * dclr)
 				st = ST_ERR;
 				goto NEXT;
 			} else if (t != NULL) {
-				if (ST_SUCC != compute_constant_exp(t, &idx, 0)) {
+				if (!compute_constant_exp(t, &idx, 0)) {
 					err(g_real_line_num, "expected constant expression");
 					st = ST_ERR;
 					goto NEXT;

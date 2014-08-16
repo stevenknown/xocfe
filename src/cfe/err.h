@@ -60,9 +60,7 @@ extern LIST<WARN_MSG*> g_warn_msg_list;
 //Exported Functions
 void warn1(CHAR * msg, ...);
 void err(INT line_num, CHAR * msg, ...);
-void err1(CHAR * msg, ...);
 void show_err();
 void show_warn();
 INT is_too_many_err();
 void interwarn(CHAR * format, ...);
-

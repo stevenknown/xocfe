@@ -54,6 +54,8 @@ CHAR * getfilesuffix(CHAR * n, OUT CHAR * buf);
 CHAR * getfilepath(CHAR * n, OUT CHAR * buf, UINT bufl);
 CHAR * getfilename(CHAR * n, OUT CHAR * buf, UINT bufl);
 ULONGLONG getusec();
+LONG getclockstart();
+float getclockend(LONG start);
 INT get_first_one_pos(INT m);
 
 bool is_integer(float f);

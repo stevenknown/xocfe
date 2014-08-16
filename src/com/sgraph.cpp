@@ -951,14 +951,13 @@ void DGRAPH::compute_rpo_norec(IN VERTEX * root, OUT LIST<VERTEX*> & vlst)
 	SSTACK<VERTEX*> stk;
 	stk.push(root);
 	VERTEX * v;
-	while ((v = stk.pop()) != NULL) {
+	while ((v = stk.get_top()) != NULL) {
 		is_visited.bunion(VERTEX_id(v));
 		EDGE_C * el = VERTEX_out_list(v);
 		bool find = false; //find unvisited kid.
 		while (el != NULL) {
 			VERTEX * succ = EDGE_to(EC_edge(el));
-			if (!is_visited.is_contain(VERTEX_id(succ))) {
-				stk.push(v);
+			if (!is_visited.is_contain(VERTEX_id(succ))) {				
 				stk.push(succ);
 				find = true;
 				break;				
@@ -966,6 +965,7 @@ void DGRAPH::compute_rpo_norec(IN VERTEX * root, OUT LIST<VERTEX*> & vlst)
 			el = EC_next(el);
 		}
 		if (!find) {			
+			stk.pop();
 			vlst.append_head(v);
 		}
 	}
@@ -1057,6 +1057,18 @@ bool DGRAPH::compute_dom(IN LIST<VERTEX*> * vlst, BITSET const* uni)
 	IS_TRUE0(!change);
 	if (uni == NULL && luni != NULL) {
 		delete luni;
+	}
+	return true;
+}
+
+
+bool DGRAPH::compute_pdom_by_rpo(VERTEX * root, BITSET const* uni)
+{	
+	LIST<VERTEX*> vlst;	
+	compute_rpo_norec(root, vlst);
+	vlst.reverse();
+	if (!compute_pdom(&vlst, uni)) { 
+		IS_TRUE0(0); 
 	}
 	return true;
 }
