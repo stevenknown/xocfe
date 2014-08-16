@@ -1384,6 +1384,294 @@ T LIST<T>::get_head_nth(INT n, IN OUT C<T> ** holder)
 //END LIST
 
 
+/*
+Single LIST Core
+Encapsulate most operations for list.
+*/
+template <class T> class SLISTC {
+private:
+	SLISTC(SLISTC const&) { IS_TRUE(0, ("Do not invoke copy-constructor.")); }
+	void operator = (SLISTC const&) 
+	{ IS_TRUE(0, ("Do not invoke copy-constructor.")); }
+protected:	
+	INT m_elem_count;
+	SC<T> * m_head;
+	SC<T> * m_tail;
+	
+	void * _xmalloc(ULONG size, SMEM_POOL * pool)
+	{
+		IS_TRUE(pool != NULL, ("LIST not yet initialized."));
+		void * p = smpool_malloc_h(size, pool);
+		IS_TRUE0(p != NULL);
+		memset(p, 0, size);
+		return p;
+	}
+public:	
+	SLISTC()
+	{	
+		m_elem_count = 0;
+		m_head = m_tail = NULL;
+	}	
+	~SLISTC() {}
+
+	SC<T> * get_one_sc(SC<T> ** free_list)
+	{		
+		if (free_list == NULL || *free_list == NULL) { return NULL; }
+		SC<T> * t = *free_list;
+		*free_list = (*free_list)->next;
+		t->next = NULL;
+		return t;
+	}
+
+	void free_sc(SC<T> * sc, SC<T> ** free_list)
+	{
+		IS_TRUE0(free_list);
+		sc->next = *free_list;
+		*free_list = sc;
+	}
+	
+	SC<T> * newsc(SC<T> ** free_list, SMEM_POOL * pool)
+	{
+		SC<T> * c = get_one_sc(free_list);
+		if (c == NULL) {
+			c = (SC<T>*)_xmalloc(sizeof(SC<T>), pool);
+		}
+		return c;
+	}
+			
+	SC<T> * append_tail(T t, SC<T> ** free_list, SMEM_POOL * pool)
+	{		
+		SC<T> * c  = newsc(free_list, pool);
+		IS_TRUE(c != NULL, ("newc return NULL"));
+		SC_val(c) = t;
+		append_tail(c);
+		return c; 
+	}
+
+	void append_tail(IN SC<T> * c)
+	{
+		if (m_head == NULL) {
+			IS_TRUE(m_tail == NULL, ("tail should be NULL"));
+			m_head = m_tail = c; 
+			SC_next(m_head) = NULL;			
+			m_elem_count++;
+			return;
+		}
+		SC_next(m_tail) = c;
+		m_tail = c;
+		SC_next(m_tail) = NULL;
+		m_elem_count++;
+		return; 
+	}
+	
+	SC<T> * append_head(T t, SC<T> ** free_list, SMEM_POOL * pool)
+	{
+		SC<T> * c = newsc(free_list, pool);
+		IS_TRUE(c != NULL, ("newc return NULL"));
+		SC_val(c) = t;
+		append_head(c);
+		return c; 
+	}
+	
+	void append_head(IN SC<T> * c)
+	{
+		if (m_head == NULL) {
+			IS_TRUE(m_tail == NULL, ("tail should be NULL"));
+			IS_TRUE0(m_elem_count == 0);
+			m_head = m_tail = c; 
+			m_head->next = NULL;
+			m_elem_count++;
+			return;
+		}
+		c->next = m_head;
+		m_head = c;
+		m_elem_count++;
+		return;
+	}	
+
+	void copy(IN SLISTC<T> & src, SC<T> ** free_list, SMEM_POOL * pool)
+	{
+		clean(free_list);
+		SC<T> * sct;
+		T t = src.get_head(&sct);
+		for (INT n = src.get_elem_count(); n > 0; n--) {
+			append_tail(t, free_list, pool);
+			t = src.get_next(&sct);
+		}
+	}
+
+	void clean(SC<T> ** free_list)
+	{
+		SC<T> * c = m_head;
+		while (c != NULL) {
+			SC<T> * next = c->next;
+			c->next = NULL;
+			free_sc(c, free_list);
+			c = next;
+		}
+		m_elem_count = 0;
+		m_head = m_tail = NULL;
+	}
+	
+	UINT count_mem() const	
+	{
+		UINT count = sizeof(m_elem_count);
+		count += sizeof(m_head);
+		count += sizeof(m_tail);
+		//Do not count SC, they belong to input pool.
+		return count;
+	}
+	
+	//Insert 'c' into list after the 'marker'.
+	void insert_after(IN SC<T> * c, IN SC<T> * marker)
+	{		
+		if (marker == NULL || c == NULL) { return; }
+		if (c == marker) { return; }
+		if (m_tail == NULL || marker == m_tail) {
+			append_tail(c);
+			return;
+		}
+		c->next = marker->next;
+		marker->next = c;
+		m_elem_count++;
+	}	
+	
+	//Insert 't' into list after the 'marker'.
+	SC<T> * insert_after(T t, IN SC<T> * marker, SC<T> ** free_list, 
+						 SMEM_POOL * pool)
+	{
+		if (marker == NULL) { return NULL; }
+		SC<T> * c = newsc(free_list, pool);
+		IS_TRUE(c != NULL, ("newc return NULL"));
+		SC_val(c) = t;
+		insert_after(c, marker);
+		return c;
+	}	
+	
+	UINT get_elem_count() const 
+	{ return m_elem_count; }
+
+	//Get tail of list, return the CONTAINER.
+	T get_tail(OUT SC<T> ** holder) const
+	{
+		if (m_tail == NULL) {
+			if (holder != NULL) {
+				*holder = NULL;
+			}
+			return T(0);
+		}
+		if (holder != NULL) {
+			*holder = m_tail;
+		}
+		return SC_val(m_tail);
+	}
+	
+	//Get head of list, return the CONTAINER.
+	T get_head(OUT SC<T> ** holder) const
+	{
+		if (m_head == NULL) {
+			if (holder != NULL) {
+				*holder = NULL;
+			}
+			return T(0);
+		}
+		if (holder != NULL) {
+			*holder = m_head;
+		}
+		return SC_val(m_head);
+	}
+
+	//Return list member and update holder to next member.
+	T get_next(IN OUT SC<T> ** holder) const
+	{
+		IS_TRUE0(holder != NULL);
+		SC<T> * c = *holder;
+		if (c == NULL || c->next == NULL) {
+			*holder = NULL;
+			return T(0);
+		}
+		IS_TRUE0(m_head || m_tail);
+		c = c->next;
+		*holder = c;
+		return SC_val(c);
+	}
+	
+	//Find 't' in list, return the container in 'holder' if 't' existed.
+	//The function is regular list search, and has O(n) complexity.
+	bool find(IN T t, OUT SC<T> ** holder = NULL)
+	{
+		SC<T> * c = m_head;
+		while (c != NULL) {
+			if (SC_val(c) == t) {
+				if (holder  != NULL) {
+					*holder = c;
+				}
+				return true;
+			}
+			c = c->next;
+		}
+		if (holder != NULL) {
+			*holder = NULL;
+		}
+		return false;
+	}
+
+	//Remove 't' out of list.
+	//Note that this is costly operation.
+	T remove(T t, SC<T> ** free_list)
+	{
+		if (m_head == NULL) { return T(0); }
+		if (SC_val(m_head) == t) {
+			return remove_head(free_list);
+		}
+		SC<T> * c = m_head->next;
+		SC<T> * prev = m_head;
+		while (c != NULL) {
+			if (SC_val(c) == t) { break; }
+			prev = c;
+			c = c->next;
+		}
+		if (c == NULL) return T(0);
+		return remove(prev, c);
+	}
+	
+	//'prev': the previous one element of 'holder'.
+	T remove(SC<T> * prev, SC<T> * holder, SC<T> ** free_list)
+	{		
+		IS_TRUE0(holder);
+		IS_TRUE(m_head != NULL, ("list is empty"));
+		if (prev == NULL) {
+			IS_TRUE0(holder == m_head);
+			m_head = holder->next;
+			if (m_head == NULL) {
+				IS_TRUE0(m_elem_count == 1);
+				m_tail = NULL;
+			}
+		} else {
+			prev->next = holder->next;
+		}
+		m_elem_count--;
+		T t = SC_val(holder);
+		free_sc(holder, free_list);
+		return t;
+	}
+	
+	T remove_head(SC<T> ** free_list)
+	{
+		if (m_head == NULL) { return T(0); }
+		SC<T> * c = m_head;
+		m_head = m_head->next;
+		if (m_head == NULL) {
+			m_tail = NULL;
+		}
+		T t = SC_val(c);
+		free_sc(c, free_list);
+		m_elem_count--;
+		return t;
+	}
+};
+//END SLISTC
+
 
 /*
 Single LIST
@@ -1407,310 +1695,86 @@ NOTICE:
 				return t;
 			}	
 */
-template <class T> class SLIST {
+template <class T> class SLIST : public SLISTC<T> {
 private:
 	SLIST(SLIST const&) { IS_TRUE(0, ("Do not invoke copy-constructor.")); }
 	void operator = (SLIST const&) 
 	{ IS_TRUE(0, ("Do not invoke copy-constructor.")); }
 protected:
 	SMEM_POOL * m_free_list_pool;
-	INT m_elem_count;
-	SC<T> * m_head;
-	SC<T> * m_tail;
-	SC<T> * m_free_list; //Hold for available containers
-	
-	void * _xmalloc(ULONG size)
-	{
-		IS_TRUE(m_free_list_pool != NULL, ("LIST not yet initialized."));
-		void * p = smpool_malloc_h(size, m_free_list_pool);
-		IS_TRUE0(p != NULL);
-		memset(p, 0, size);
-		return p;
-	}
+	SC<T> * m_free_list; //Hold for available containers	
 public:	
 	SLIST(SMEM_POOL * pool = NULL)
 	{		
-		m_free_list_pool = pool;
-		m_elem_count = 0;
-		m_head = m_tail = NULL;		
+		m_free_list_pool = pool;		
 		m_free_list = NULL;
-	}	
-	
-	~SLIST()
-	{ 
-		m_free_list_pool = NULL;
-		m_elem_count = 0;
-		m_head = m_tail = NULL;
 	}
+	
+	~SLIST() {}
 
 	void set_pool(SMEM_POOL * pool) { m_free_list_pool = pool; }
 	SMEM_POOL * get_pool() { return m_free_list_pool; }
 
-	SC<T> * get_one_sc()
-	{
-		if (m_free_list == NULL) return NULL;
-		SC<T> * t = m_free_list;
-		m_free_list = m_free_list->next;
-		t->next = NULL;
-		return t;
-	}
-
-	void free_sc(SC<T> * sc)
-	{
-		sc->next = m_free_list;
-		m_free_list = sc;
-	}
-	
-	SC<T> * newsc()
-	{
-		SC<T> * c = get_one_sc();
-		if (c == NULL) {
-			c = (SC<T>*)_xmalloc(sizeof(SC<T>));
-		}
-		return c;
-	}
-			
 	SC<T> * append_tail(T t)
 	{
 		IS_TRUE0(m_free_list_pool);
-		SC<T> * c  = newsc();
-		IS_TRUE(c != NULL, ("newc return NULL"));
-		SC_val(c) = t;
-		append_tail(c);
-		return c; 
+		return SLISTC<T>::append_tail(t, &m_free_list, m_free_list_pool);
 	}
 
-	void append_tail(IN SC<T> * c)
-	{
-		IS_TRUE0(m_free_list_pool);
-		if (m_head == NULL) {
-			IS_TRUE(m_tail == NULL, ("tail should be NULL"));
-			m_head = m_tail = c; 
-			SC_next(m_head) = NULL;			
-			m_elem_count++;
-			return;
-		}
-		SC_next(m_tail) = c;
-		m_tail = c;
-		SC_next(m_tail) = NULL;
-		m_elem_count++;
-		return; 
-	}
-	
 	SC<T> * append_head(T t)
 	{
 		IS_TRUE0(m_free_list_pool);
-		SC<T> * c = newsc();
-		IS_TRUE(c != NULL, ("newc return NULL"));
-		SC_val(c) = t;
-		append_head(c);
-		return c; 
+		return SLISTC<T>::append_head(t, &m_free_list, m_free_list_pool);
 	}
 	
-	void append_head(IN SC<T> * c)
-	{
-		IS_TRUE0(m_free_list_pool);
-		if (m_head == NULL) {
-			IS_TRUE(m_tail == NULL, ("tail should be NULL"));
-			IS_TRUE0(m_elem_count == 0);
-			m_head = m_tail = c; 
-			m_head->next = NULL;
-			m_elem_count++;
-			return;
-		}
-		c->next = m_head;
-		m_head = c;
-		m_elem_count++;
-		return;
-	}	
-
 	void copy(IN SLIST<T> & src)
 	{
-		clean();
+		SLISTC<T>::clean(&m_free_list);
 		SC<T> * sct;
 		T t = src.get_head(&sct);
 		for (INT n = src.get_elem_count(); n > 0; n--) {
-			append_tail(t);
+			SLISTC<T>::append_tail(t, &m_free_list, m_free_list_pool);
 			t = src.get_next(&sct);
 		}
 	}
 
-	void clean()
-	{
-		SC<T> * c = m_head;
-		while (c != NULL) {
-			SC<T> * next = c->next;
-			c->next = NULL;
-			free_sc(c);
-			c = next;
-		}
-		m_elem_count = 0;
-		m_head = m_tail = NULL;
-	}
+	void clean() { SLISTC<T>::clean(&m_free_list); }
 	
 	UINT count_mem() const	
 	{
-		UINT count = sizeof(m_elem_count);
-		count += sizeof(m_free_list);
+		UINT count = sizeof(m_free_list);
 		count += sizeof(m_free_list_pool);
-		count += sizeof(m_head);
-		count += sizeof(m_tail);
+		count += SLISTC<T>::count_mem();
 		//Do not count SC, they belong to input pool.
 		return count;
 	}
-	
-	//Insert 'c' into list after the 'marker'.
-	void insert_after(IN SC<T> * c, IN SC<T> * marker)
-	{
-		IS_TRUE0(m_free_list_pool);
-		if (marker == NULL || c == NULL) { return; }
-		if (c == marker) { return; }
-		if (m_tail == NULL || marker == m_tail) {
-			append_tail(c);
-			return;
-		}
-		c->next = marker->next;
-		marker->next = c;
-		m_elem_count++;
-	}	
 	
 	//Insert 't' into list after the 'marker'.
 	SC<T> * insert_after(T t, IN SC<T> * marker)
 	{
 		IS_TRUE0(m_free_list_pool);
-		if (marker == NULL) { return NULL; }
-		SC<T> * c = newsc();
-		IS_TRUE(c != NULL, ("newc return NULL"));
-		SC_val(c) = t;
-		insert_after(c, marker);
-		return c;
+		return SLISTC<T>::insert_after(t, marker, &m_free_list, m_free_list_pool);
 	}	
 	
-	UINT get_elem_count() const 
-	{ return m_elem_count; }
-
-	//Get tail of list, return the CONTAINER.
-	T get_tail(OUT SC<T> ** holder) const
-	{
-		IS_TRUE0(m_free_list_pool);
-		if (m_tail == NULL) {
-			if (holder != NULL) {
-				*holder = NULL;
-			}
-			return T(0);
-		}
-		if (holder != NULL) {
-			*holder = m_tail;
-		}
-		return SC_val(m_tail);
-	}
-	
-	//Get head of list, return the CONTAINER.
-	T get_head(OUT SC<T> ** holder) const
-	{
-		IS_TRUE0(m_free_list_pool);
-		if (m_head == NULL) {
-			if (holder != NULL) {
-				*holder = NULL;
-			}
-			return T(0);
-		}
-		if (holder != NULL) {
-			*holder = m_head;
-		}
-		return SC_val(m_head);
-	}
-
-	//Return list member and update holder to next member.
-	T get_next(IN OUT SC<T> ** holder) const
-	{
-		IS_TRUE0(m_free_list_pool);
-		IS_TRUE0(holder != NULL);
-		SC<T> * c = *holder;
-		if (c == NULL || c->next == NULL) {
-			*holder = NULL;
-			return T(0);
-		}
-		c  = c->next;
-		*holder = c;
-		return SC_val(c);
-	}
-	
-	//Find 't' in list, return the container in 'holder' if 't' existed.
-	bool find(IN T t, OUT SC<T> ** holder = NULL)
-	{
-		IS_TRUE0(m_free_list_pool);
-		SC<T> * c = m_head;
-		while (c != NULL) {
-			if (SC_val(c) == t) {
-				if (holder  != NULL) {
-					*holder = c;
-				}
-				return true;
-			}
-			c = c->next;
-		}
-		if (holder != NULL) {
-			*holder = NULL;
-		}
-		return false;
-	}
-
 	//Remove 't' out of list.
 	//Note that this is costly operation.
 	T remove(T t)
 	{
 		IS_TRUE0(m_free_list_pool);
-		if (m_head == NULL) { return T(0); }
-		if (SC_val(m_head) == t) {
-			return remove_head();
-		}
-		SC<T> * c = m_head->next;
-		SC<T> * prev = m_head;
-		while (c != NULL) {
-			if (SC_val(c) == t) { break; }
-			prev = c;
-			c = c->next;
-		}
-		if (c == NULL) return T(0);
-		return remove(prev, c);
+		return SLISTC<T>::remove(t, &m_free_list);
 	}
 	
 	//'prev': the previous one element of 'holder'.
 	T remove(SC<T> * prev, SC<T> * holder)
 	{
 		IS_TRUE0(m_free_list_pool);
-		IS_TRUE0(holder);
-		IS_TRUE(m_head != NULL, ("list is empty"));
-		if (prev == NULL) {
-			IS_TRUE0(holder == m_head);
-			m_head = holder->next;
-			if (m_head == NULL) {
-				IS_TRUE0(m_elem_count == 1);
-				m_tail = NULL;
-			}
-		} else {
-			prev->next = holder->next;
-		}
-		m_elem_count--;
-		T t = SC_val(holder);
-		free_sc(holder);
-		return t;
-	}
+		return SLISTC<T>::remove(prev, holder, &m_free_list);
+	}	
 	
 	T remove_head()
 	{
 		IS_TRUE0(m_free_list_pool);		
-		if (m_head == NULL) { return T(0); }
-		SC<T> * c = m_head;
-		m_head = m_head->next;
-		if (m_head == NULL) {
-			m_tail = NULL;
-		}
-		T t = SC_val(c);
-		free_sc(c);
-		m_elem_count--;
-		return t;
+		return SLISTC<T>::remove_head(&m_free_list);
 	}
 };
 //END SLIST
@@ -2530,7 +2594,7 @@ public:
 		m_elem_count = 0;
 		init(bsize);
 	}
-	virtual ~SHASH() { destroy(); }	
+	virtual ~SHASH() { destroy(); }
 	inline SMEM_POOL * get_free_list_pool() const 
 	{ return m_free_list_pool; };
 	virtual T append(ULONG val, OUT HC<T> ** hct = NULL, bool * find = NULL);

@@ -28,9 +28,7 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef __EXEC_TREE_H__
 #define __EXEC_TREE_H__
 
-extern INT compute_constant_exp(IN TREE * t, OUT LONGLONG * v, IN INT is_allow_float);
+extern bool compute_constant_exp(IN TREE * t, OUT LONGLONG * v, 
+								 bool is_allow_float);
 
 #endif
- 
- 
-

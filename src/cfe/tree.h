@@ -49,7 +49,7 @@ typedef enum _TREE_TYPE {
 	TR_ID, 
 	TR_IMM,				//integer, 1234. 
 	TR_IMML,			//long long integer, 1234L.
-	TR_FP,				//3.1415926
+	TR_FP,				//3.1415926f
 	TR_ENUM_CONST, 
 	TR_STRING,
 	TR_LOGIC_OR,		//logical or ||
@@ -63,7 +63,6 @@ typedef enum _TREE_TYPE {
 	TR_ADDITIVE,		// '+' '-'
 	TR_MULTI,			// '*' '/' '%'
 	TR_INTRI_FUN,
-
 	TR_IF,
 	TR_ELSE,
 	TR_DO,
@@ -77,10 +76,10 @@ typedef enum _TREE_TYPE {
 	TR_LABEL,
 	TR_DEFAULT,
 	TR_CASE,
-	TR_COND,			// formulized log_OR_exp?exp:cond_exp
+	TR_COND,			// formulized log_OR_exp ? exp : cond_exp
 	TR_CVT,				// type convertion
 	TR_TYPE_NAME,		// user defined type ord C standard type
-	TR_LDA,				// &a get address of 'a'
+	TR_LDA,				// &a, load address of 'a'
 	TR_DEREF,			// *p dereferencing the pointer 'p'
 	TR_INC,				// ++a
 	TR_DEC,				// --a
@@ -91,8 +90,8 @@ typedef enum _TREE_TYPE {
 	TR_REV,				// Reverse
 	TR_NOT,				// get non-value
 	TR_SIZEOF,			// sizeof(a)
-	TR_DMEM,			// a.b 
-	TR_INDMEM,			// a->b, indirect memory accessing
+	TR_DMEM,			// a.b, direct memory access 
+	TR_INDMEM,			// a->b, indirect memory access
 	TR_ARRAY,
 	TR_CALL,			// function call
 	TR_SCOPE,			// record a scope
@@ -121,6 +120,17 @@ public:
 
 
 #define MAX_TREE_FLDS	4 
+
+#define TREE_token(tn)				(tn)->tok
+#define TREE_lineno(tn)				(tn)->lineno
+#define TREE_type(tn)				(tn)->tree_node_type
+#define TREE_result_type(tn)		(tn)->result_type_name
+#define TREE_fld(tn,N)				(tn)->pfld[N] //access no.N child of tree
+#define TREE_parent(tn)				(tn)->parent //parent tree node
+#define TREE_nsibling(tn)			(tn)->nsibling //next sibling(default)
+#define TREE_psibling(tn)			(tn)->psibling //prev sibling
+#define TREE_rchild(tn)				(tn)->pfld[0] //rchild of the tree
+#define TREE_lchild(tn)				(tn)->pfld[1] //lchild of the tree
 class TREE {
 public:
 	TREE_TYPE tree_node_type;  
@@ -161,25 +171,16 @@ public:
 	DECL * result_type_name; 
     TREE * pfld[MAX_TREE_FLDS]; //for any other use
 };
-#define TREE_token(tn)				(tn)->tok
-#define TREE_lineno(tn)				(tn)->lineno
-#define TREE_type(tn)				(tn)->tree_node_type
-#define TREE_result_type(tn)		(tn)->result_type_name
-#define TREE_fld(tn,N)				(tn)->pfld[N] //access no.N child of tree
-#define TREE_parent(tn)				(tn)->parent //parent tree node
-#define TREE_nsibling(tn)			(tn)->nsibling //next sibling(default)
-#define TREE_psibling(tn)			(tn)->psibling //prev sibling
-#define TREE_rchild(tn)				(tn)->pfld[0] //rchild of the tree
-#define TREE_lchild(tn)				(tn)->pfld[1] //lchild of the tree
 
 
 /*
 The following macro defined accessing method of
 C language tree node. 
+
+unary operator: & * + - ~ ! use TREE_lchild
+binary operator: '=' '*=' '/=' '%=' '+=' '-=' '<<=' '>>=' '&=' '^=' 
+use TREE_lchild and TREE_rchild
 */
-//unary_operator:  one of 
-//&  *  +  -  ~  ! use TREE_lchild
-// '='  '*='  '/='  '%='  '+='  '-='  '<<='  '>>='  '&='  '^=' use TREE_lchild TREE_rchild
 
 //Pragma
 #define TREE_pragma_tok_lst(tn)    (tn)->u1.token_list
@@ -189,7 +190,6 @@ C language tree node.
 #define TREE_if_true_stmt(tn)  (tn)->pfld[1]  // then-stmt of if-stmt
 #define TREE_if_false_stmt(tn) (tn)->pfld[2]  // else-stmt of if-stmt
 
-//
 //for(init;determinant;step){ for-body }
 #define TREE_for_init(tn)      (tn)->pfld[0]  // initialize of for-stmt 
 #define TREE_for_det(tn)       (tn)->pfld[1]  // determinant of for-stmt

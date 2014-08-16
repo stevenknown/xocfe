@@ -287,8 +287,7 @@ public:
 		union {
 			/*
 			Record number of bit which restricted by type-spec descriptor.
-			This value was computed in typeck.cpp file 
-			compute_constant_exp() function.
+			This value was computed in compute_constant_exp().
 			only be seen as a child of DCL_DECLARATOR.
 			only be valid in struct-member declare.
 			only was effective after 'bit_exp' has been computed 

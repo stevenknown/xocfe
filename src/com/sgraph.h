@@ -396,6 +396,7 @@ public:
 	}	
 	bool clone_bs(DGRAPH & src);	
 	bool compute_dom(LIST<VERTEX*> * vlst = NULL, BITSET const* uni = NULL);
+	bool compute_pdom_by_rpo(VERTEX * root, BITSET const* uni = NULL);
 	bool compute_pdom(LIST<VERTEX*> * vlst = NULL, BITSET const* uni = NULL);
 	bool compute_idom();
 	bool compute_ipdom();

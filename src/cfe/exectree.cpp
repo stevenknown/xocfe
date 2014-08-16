@@ -33,10 +33,9 @@ Computing expected value in compiling period, such as constant expression.
  'compute_constant_value' absolutely.
 */
 
-static INT g_is_allow_float = 0;
+static bool g_is_allow_float = false;
 static SSTACK<CELL*> g_cell_stack;
-static INT compute_conditional_exp(IN TREE * t);
-
+static bool compute_conditional_exp(IN TREE * t);
 
 static CELL * pushv(LONGLONG v)
 {
@@ -60,7 +59,7 @@ static LONGLONG popv()
 }
 
 
-static INT compute_enum_const(TREE * t)
+static bool compute_enum_const(TREE * t)
 {
 	ENUM * e = TREE_enum(t);
 	INT i = TREE_enum_val_idx(t);
@@ -69,155 +68,190 @@ static INT compute_enum_const(TREE * t)
 		evl = EVAL_LIST_next(evl);
 	}
 	pushv(EVAL_LIST_val(evl));
-	return ST_SUCC;
+	return true;
 }
 
 
-static INT compute_sizeof(TREE * t)
+//Return byte size of TYPE_NAME, or -1 if failed.
+static bool compute_sizeof(TREE * t)
 {	
 	TREE *  p = TREE_sizeof_exp(t);
 	if (TREE_type(p) == TR_TYPE_NAME) {
 		DECL * dcl = TREE_type_name(p);
 		TYPE * type_spec = DECL_spec(dcl);
 		DECL * abs_decl = DECL_decl_list(dcl);
+		ULONG sz;
 		if (is_complex_type(abs_decl)) {
-			return get_complex_type_size_in_byte(dcl);
+			sz = get_complex_type_size_in_byte(dcl);			
 		} else {
-			return get_simply_type_size_in_byte(type_spec);
+			sz = get_simply_type_size_in_byte(type_spec);
 		}
-		return ST_SUCC;
+		if (sz != 0) {
+			pushv(sz);
+			return true;
+		}
 	} else {
 		return compute_conditional_exp(p);
 	}
-	err(TREE_lineno(p),"'sizeof' need type-name");
-	fprintf(g_tfile, "error in compute_sizeof()");
-	return ST_ERR;
+	err(TREE_lineno(p), "'sizeof' need type-name");
+	return false;
 }
 
 
-static INT compute_unary_op(TREE * t)
+static bool compute_unary_op(TREE * t)
 {
-	LONGLONG l;
-	if (ST_SUCC != compute_conditional_exp(TREE_lchild(t)))goto FAILED;
-	l = popv();
+	if (!compute_conditional_exp(TREE_lchild(t))) { 
+		return false;
+	}
+	LONGLONG l = popv();
 	switch (TREE_type(t)) {
 	case TR_PLUS: // +123  
-		pushv(l); break;
+		pushv(l); 
+		break;
 	case TR_MINUS:  // -123  
-		pushv((LONGLONG)-l); break;
+		pushv((LONGLONG)-l); 
+		break;
 	case TR_REV:  // Reverse
-		pushv(~l); break;
+		pushv(~l); 
+		break;
 	case TR_NOT:  // get non-value
-		pushv(!l); break;
-	default:
-		err(TREE_lineno(t),"illegal duality expression");goto FAILED;
+		pushv(!l); 
+		break;
+	default: 
+		err(TREE_lineno(t),"illegal duality expression"); 
+		return false;
 	}
-
-	return ST_SUCC;
-FAILED:
-	fprintf(g_tfile, "error in compute_unary_op()");
-	return ST_ERR;
+	return true;
 }
 
 
-static INT compute_binary_op(TREE *t)
+static bool compute_binary_op(TREE * t)
 {
-	if (!t)return ST_SUCC;
+	if (t == NULL) { return false; } 
 	LONGLONG r,l;
-	if (ST_SUCC != compute_conditional_exp(TREE_lchild(t)))goto FAILED;
-	if (ST_SUCC != compute_conditional_exp(TREE_rchild(t)))goto FAILED;
+	if (!compute_conditional_exp(TREE_lchild(t))) { return false; }
+	if (!compute_conditional_exp(TREE_rchild(t))) { return false; }
 	r = popv();
     l = popv();
 	switch (TREE_type(t)) {
 	case TR_LOGIC_OR: //logical or
-		l = l || r; pushv(l); break;
+		l = l || r; 
+		pushv(l); 
+		break;
 	case TR_LOGIC_AND: //logical and
-		l = l && r; pushv(l); break;
+		l = l && r; 
+		pushv(l); 
+		break;
 	case TR_INCLUSIVE_OR: //inclusive or
-		l = l | r; pushv(l); break;
+		l = l | r; 
+		pushv(l); 
+		break;
 	case TR_INCLUSIVE_AND: //inclusive and
-		l = l & r; pushv(l); break;
+		l = l & r; 
+		pushv(l); 
+		break;
 	case TR_XOR: //exclusive or
-		l = l ^ r; pushv(l); break;
+		l = l ^ r; 
+		pushv(l); 
+		break;
 	case TR_EQUALITY: // == !=
 		switch (TREE_token(t)) {
 		case T_EQU:
-			l = (l == r); pushv(l); break;
+			l = (l == r); 
+			pushv(l); 
+			break;
 		case T_NOEQU:
-			l = (l != r); pushv(l); break;
+			l = (l != r); 
+			pushv(l); 
+			break;
 		default: IS_TRUE0(0);
 		}
 		break;
 	case TR_RELATION: // < > >= <= 
 		switch (TREE_token(t)) {
 		case T_LESSTHAN:
-			l = (l == r); pushv(l); break;
+			l = (l == r); 
+			pushv(l); 
+			break;
 		case T_MORETHAN:
-			l = (l != r); pushv(l); break;
+			l = (l != r); 
+			pushv(l); 
+			break;
 		case T_NOLESSTHAN:
-			l = (l >= r); pushv(l); break;
+			l = (l >= r); 
+			pushv(l); 
+			break;
 		case T_NOMORETHAN:
-			l = (l <= r); pushv(l); break;
+			l = (l <= r); 
+			pushv(l); 
+			break;
 		default: IS_TRUE0(0);
 		}
 		break;
 	case TR_SHIFT:   // >> <<
 		switch (TREE_token(t)) {
 		case T_LSHIFT:
-			l = (l >> r); pushv(l); break;
+			l = (l >> r); 
+			pushv(l); 
+			break;
 		case T_RSHIFT:
-			l = (l << r); pushv(l); break;
+			l = (l << r); 
+			pushv(l); 
+			break;
 		default: IS_TRUE0(0);
 		}
 		break;
 	case TR_ADDITIVE: // '+' '-'
 		switch (TREE_token(t)) {
 		case T_ADD:
-			l = (l + r); pushv(l); break;
+			l = (l + r); 
+			pushv(l); 
+			break;
 		case T_SUB:
-			l = (l - r); pushv(l); break;
+			l = (l - r); 
+			pushv(l); 
+			break;
 		default: IS_TRUE0(0);
 		}
 		break;
 	case TR_MULTI:    // '*' '/' '%'
 		switch (TREE_token(t)) {
 		case T_ASTERISK:
-			l = (l * r); pushv(l); break;
+			l = (l * r); 
+			pushv(l); 
+			break;
 		case T_DIV:
-			l = (l / r); pushv(l); 
-			if (r == 0) {warn1("divisor is zero");}
+			l = (l / r); 
+			pushv(l); 
+			if (r == 0) { warn1("divisor is zero"); }
 			break;
 		case T_MOD:
-			l = (l % r); pushv(l);
-			if (r == 0) {warn1("divisor is zero");}
+			l = (l % r); 
+			pushv(l);
+			if (r == 0) { warn1("divisor is zero"); }
 			break;
 		default: IS_TRUE0(0);
 		}
 		break;
 	default:
-		err(TREE_lineno(t),"illegal duality expression");goto FAILED;
-	}
-  
-	return ST_SUCC;
-FAILED:
-	fprintf(g_tfile, "error in compute_even_op()");
-	return ST_ERR;
+		err(TREE_lineno(t),"illegal duality expression");
+		return false;
+	}  
+	return true;
 }
 
 
-static INT compute_conditional_exp(IN TREE * t)
+static bool compute_conditional_exp(IN TREE * t)
 {
-	if (t == NULL) { return ST_SUCC;}
+	if (t == NULL) { return true;}
 	switch (TREE_type(t)) {
 	case TR_ENUM_CONST:
-		if (ST_SUCC != compute_enum_const(t)) goto FAILED;
-		break;
+		return compute_enum_const(t);
 	case TR_PLUS: // +123  
 	case TR_MINUS:  // -123  
 	case TR_REV:  // Reverse
 	case TR_NOT:  // get non-value
-		if (ST_SUCC != compute_unary_op(t)) {goto FAILED;}
-		break;
+		return compute_unary_op(t);		
 	case TR_LOGIC_OR: //logical or
 	case TR_LOGIC_AND: //logical and
 	case TR_INCLUSIVE_OR: //inclusive or
@@ -228,62 +262,57 @@ static INT compute_conditional_exp(IN TREE * t)
 	case TR_SHIFT:   // >> <<
 	case TR_ADDITIVE: // '+' '-'
 	case TR_MULTI:// '*' '/' '%'
-		if (ST_SUCC != compute_binary_op(t)) {goto FAILED;}
-		break;
+		return compute_binary_op(t);
 	case TR_IMM:
 	case TR_IMML:
 		pushv(TREE_imm_val(t));
         break;
 	case TR_FP:
 		if (!g_is_allow_float) {
-			err(TREE_lineno(t),"constant expression is not integral");goto FAILED;
+			err(TREE_lineno(t),"constant expression is not integral");
+			return false;
 		}
-		pushv((INT)atof(SYM_name(TREE_fp_str_val(t))));
+		pushv((LONGLONG)atof(SYM_name(TREE_fp_str_val(t))));		
 		break;
 	case TR_SIZEOF:
-		if (ST_SUCC != compute_sizeof(t)) {goto FAILED;}
-		break;
+		return compute_sizeof(t);			
 	case TR_ID:
 		{
 			DECL * dcl = NULL;
 			if (!is_decl_exist_in_outer_scope(SYM_name(TREE_id(t)), &dcl)) {
 				err(TREE_lineno(t), "'%s' undefined");
-				goto FAILED;
+				return false;
 			}
 			pushv(get_decl_size(dcl));
 		}
 		break;
 	case TR_COND:
 		{
-			LONGLONG v=0;
-			if (ST_SUCC != compute_conditional_exp(TREE_det(t))) goto FAILED;
-			v = popv();
-			if (v) {
-				if (ST_SUCC != compute_conditional_exp(TREE_true_part(t))) goto FAILED;
+			if (!compute_conditional_exp(TREE_det(t))) { return false; }
+			LONGLONG v = popv();
+			if (v != 0) {
+				return compute_conditional_exp(TREE_true_part(t));
 			} else {
-				if (ST_SUCC != compute_conditional_exp(TREE_false_part(t))) goto FAILED;
+				return compute_conditional_exp(TREE_false_part(t));
 			}
 		}
 		break;
     default:
-		err(TREE_lineno(t),"expected constant expression");goto FAILED;
-	}//end switch
-	return ST_SUCC;
-
-FAILED:
-	fprintf(g_tfile, "error in compute_conditional_exp()" );
-	return ST_ERR;
+		err(TREE_lineno(t), "expected constant expression");
+		return false;
+	} //end switch
+	return true;
 }
 
 
-INT compute_constant_exp(IN TREE * t, OUT LONGLONG * v, IN INT is_allow_float)
+bool compute_constant_exp(IN TREE * t, OUT LONGLONG * v, bool is_allow_float)
 {
 	IS_TRUE0(t != NULL && v != NULL);
 	g_is_allow_float = is_allow_float;
-	if (ST_SUCC != compute_conditional_exp(t)) {
+	if (!compute_conditional_exp(t)) {
 		*v = 0;
-		return ST_ERR;
+		return false;
 	}
 	*v = popv();
-	return ST_SUCC;
+	return true;
 }

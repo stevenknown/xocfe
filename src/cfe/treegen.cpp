@@ -31,9 +31,9 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
 static TREE * statement();
-static INT is_c_type_spec(TOKEN tok);
-static INT is_c_type_quan(TOKEN tok);
-static INT is_c_stor_spec(TOKEN tok);
+static bool is_c_type_spec(TOKEN tok);
+static bool is_c_type_quan(TOKEN tok);
+static bool is_c_stor_spec(TOKEN tok);
 static TREE * cast_exp();
 static TREE * unary_exp();
 static TREE * exp_stmt();
@@ -240,17 +240,17 @@ static INT is_declarator_terminal()
 }
 
 
-//Return one if 'sst' indicate terminal charactor, otherwise zero.
+//Return true if 'tok' indicate terminal charactor, otherwise false.
 bool is_in_first_set_of_exp_list(TOKEN tok)
 {
 	DECL * ut = NULL;
 	switch (g_real_token) {
 	case T_ID:
 		if (is_user_type_exist_in_outer_scope(g_real_token_string, &ut)) {
-		//If there is a type-name, so it belong to first set of declarator
+			//If there is a type-name, then it belongs to first-set of declarator.
 			return false;
 		} else {
-		//May be identifier or enum-constant
+			//May be identifier or enum-constant.
 			return true;
 		}
 		break;
@@ -278,20 +278,20 @@ bool is_in_first_set_of_exp_list(TOKEN tok)
 }
 
 
-static INT is_c_type_quan(TOKEN tok)
+static bool is_c_type_quan(TOKEN tok)
 {
 	switch (tok) {
 	//scalar-type-spec
 	case T_CONST:
 	case T_VOLATILE:
-		return 1;
+		return true;
 	default:;	
 	}
-	return 0;
+	return false;
 }
 
 
-static INT is_c_type_spec(TOKEN tok)
+static bool is_c_type_spec(TOKEN tok)
 {
 	switch (tok) {
 	//scalar-type-spec
@@ -309,14 +309,14 @@ static INT is_c_type_spec(TOKEN tok)
 	case T_STRUCT:
 	case T_UNION:
 	case T_ENUM:
-		return 1;
+		return true;
 	default:;	
 	}
-	return 0;
+	return false;
 }
 
 
-static INT is_c_stor_spec(TOKEN tok)
+static bool is_c_stor_spec(TOKEN tok)
 {
 	switch (tok) {
 	case T_AUTO:
@@ -325,20 +325,20 @@ static INT is_c_stor_spec(TOKEN tok)
 	case T_INLINE:	
 	case T_STATIC:
 	case T_TYPEDEF:
-		return 1;
+		return true;
 	default:;	
 	}
-	return 0;
+	return false;
 }
 
 
-static INT is_constant(TREE_TYPE tt)
+static bool is_constant(TREE_TYPE tt)
 {
 	if (tt != TR_ENUM_CONST && tt != TR_IMM && 
 		tt != TR_IMML && tt != TR_FP) {
-		return 0;
+		return false;
 	}
-	return 1;
+	return true;
 }
 
 
@@ -579,10 +579,8 @@ static TOKEN look_next_token(INT n, OUT CHAR ** tok_string,
 
 
 /*
-Pry the followed 'num' number of tokens.
-
-'...': represent a token list which will to match, and the last 
-	token must be T_NUL.
+'num': pry the followed 'num' number of tokens.
+'...': represent a token list which will to match.
 */
 bool look_forward_token(INT num, ...)
 {
@@ -653,13 +651,10 @@ static TREE * param_list()
 		if (nt == NULL) {
 			err(g_real_line_num, "miss patameter, syntax error : '%s'", 
 				g_real_token_string);
-			goto FAILED;
+			return t;
 		}
 		add_tree_nsibling(&t, nt);
 	}
-	return t;
-FAILED:
-	scr("err1 in param_list()");
 	return t;
 }
 
@@ -1591,13 +1586,13 @@ static TREE * jump_stmt()
 		match(T_GOTO);
 		if (g_real_token != T_ID) {
 			err(g_real_line_num, "target address label needed for 'goto'"); 
-			goto FAILED;
+			return t;
 		}
 		TREE_lab_info(t) = add_ref_label(g_real_token_string, g_real_line_num);
 		match(T_ID);
 		if (match(T_SEMI) != ST_SUCC) {
 			err(g_real_line_num, "miss ';'"); 
-			goto FAILED;
+			return t;
 		}
 		break;
 	case T_BREAK:
@@ -1606,14 +1601,14 @@ static TREE * jump_stmt()
 		   !is_sst_exist(st_FOR) &&
 		   !is_sst_exist(st_SWITCH)) {
 			err(g_real_line_num, "invalid use 'break'"); 
-			goto FAILED;
+			return t;
 		}
 		t = NEWT(TR_BREAK);
 		TREE_token(t) = g_real_token;
 		match(T_BREAK);
 		if (match(T_SEMI) != ST_SUCC) { 
 			err(g_real_line_num, "miss ';'"); 
-			goto FAILED;
+			return t;
 		}
 		break;
 	case T_RETURN:
@@ -1626,7 +1621,7 @@ static TREE * jump_stmt()
 		}
 		if (match(T_SEMI) != ST_SUCC) { 
 			err(g_real_line_num, "miss ';'"); 
-			goto FAILED;
+			return t;
 		}
 		break;
 	case T_CONTINUE:
@@ -1635,21 +1630,18 @@ static TREE * jump_stmt()
 		   !is_sst_exist(st_FOR) &&
 		   !is_sst_exist(st_SWITCH)) {
 			err(g_real_line_num, "invalid use 'continue'"); 
-			goto FAILED;
+			return t;
 		}
 		t = NEWT(TR_CONTINUE);
 		TREE_token(t) = g_real_token;
 		match(T_CONTINUE);
 		if (match(T_SEMI) != ST_SUCC) { 
 			err(g_real_line_num, "miss ';'"); 
-			goto FAILED;
+			return t;
 		}
 		break;
-	default:;	
+	default:;
 	}
-	return t;
-FAILED:
-	scr("err1 in jump_stmt()");
 	return t;
 }
 
@@ -1708,12 +1700,12 @@ static TREE * label_stmt()
 										  g_real_line_num)) == NULL) {
 			err(g_real_line_num, "illegal label '%s' defined", 
 				g_real_token_string); 
-			goto FAILED;	
+			return t;
 		}
 		match(T_ID);
 		if (match(T_COLON) != ST_SUCC) {
 			err(g_real_line_num, "label defined incompletely"); 
-			goto FAILED;
+			return t;
 		}		
 		break;
 	case T_CASE:
@@ -1726,26 +1718,26 @@ static TREE * label_stmt()
 			   !is_sst_exist(st_FOR) &&
 			   !is_sst_exist(st_SWITCH)) {
 				err(g_real_line_num, "invalid use 'case'"); 
-				goto FAILED;
+				return t;
 			}
 			t = NEWT(TR_CASE);  
 			TREE_token(t) = g_real_token;
 			nt = postfix_exp(); //case's constant value
-			if (ST_SUCC != compute_constant_exp(nt, &idx, 0)) {
+			if (!compute_constant_exp(nt, &idx, 0)) {
 				err(g_real_line_num, "expected constant expression"); 
-				goto FAILED;
+				return t;
 			}
 			if (get_const_bit_len(idx) > 
 				(sizeof(TREE_case_value(t)) * HOST_BITS_PER_BYTE)) {
 				err(g_real_line_num, "bitsize of const is more than %dbit", 
 					(sizeof(TREE_case_value(t)) * HOST_BITS_PER_BYTE)); 
-				goto FAILED;
+				return t;
 			}
 			TREE_case_value(t) = (INT)idx;
 			if (match(T_COLON) != ST_SUCC) {
 				err(g_real_line_num, "miss ':' before '%s'", 
 					g_real_token_string); 
-				goto FAILED;
+				return t;
 			}
 		}
 		break;
@@ -1760,20 +1752,17 @@ static TREE * label_stmt()
 			   !is_sst_exist(st_FOR) &&
 			   !is_sst_exist(st_SWITCH)) {
 				err(g_real_line_num, "invalid use 'default'"); 
-				goto FAILED;
+				return t;
 			} 			
 			if (match(T_COLON) != ST_SUCC) {
 				err(g_real_line_num, "miss ':' before '%s'", 
 					g_real_token_string); 
-				goto FAILED;
+				return t;
 			}
 		}
 		break;
 	default:;	
 	}
-	return t;
-FAILED:
-	scr("err1 in label_stmt()");
 	return t;
 }
 

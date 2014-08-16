@@ -28,6 +28,7 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifdef WIN32
 #include <time.h>
 #else
+#include <time.h>
 #include <sys/time.h>
 #endif
 
@@ -979,6 +980,18 @@ bool binsearch(INT array[], UINT n, INT v, IN OUT UINT * ppos)
 }
 
 
+LONG getclockstart()
+{
+	return clock();
+}
+
+
+float getclockend(LONG start)
+{
+	return (float)(clock() - start) / CLOCKS_PER_SEC;
+}
+
+
 //Get current micro-second.
 ULONGLONG getusec()
 {
@@ -989,13 +1002,12 @@ ULONGLONG getusec()
 	//Time Format as: Local time is: Fri Jan 17 16:26:27 2013
 	//struct tm * tblock = localtime(&timer);
 	//printf("Local time is: %s", asctime(tblock));
-
 	return (ULONGLONG)timer;
 #else	
 	struct timeval tv;
 	struct timezone tz;
 	gettimeofday(&tv, &tz);
-	return ((ULONGLONG)tv.tv_sec) * 1000000LL + tv.tv_usec;
+	return (((ULONGLONG)tv.tv_sec) * 1000000LL + tv.tv_usec) / 1000000LL;
 #endif	
 }
 

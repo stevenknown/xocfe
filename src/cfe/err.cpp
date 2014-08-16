@@ -88,31 +88,6 @@ void warn1(CHAR * msg, ...)
 }
 
 
-//Used in treegen.cpp
-void err1(CHAR * msg, ...)
-{
- 	ERR_MSG * p = NULL;
-	CHAR sbuf[ERR_BUF_LEN] = {0}; 
-	if (msg == NULL) {  
-		return ; 
-	}
-	if (strlen(msg) > ERR_BUF_LEN) {
-		msg[ERR_BUF_LEN-1] = 0;
-	}
-	//CHAR * arg = (CHAR*)((CHAR*)(&msg) + sizeof(CHAR*));
-	va_list arg;
-	va_start(arg, msg);
-	vsprintf(sbuf, msg, arg);    	
-	p = (ERR_MSG*)xmalloc(sizeof(ERR_MSG));
-	p->msg = (CHAR*)xmalloc(strlen(sbuf) + 1);
-	memcpy(p->msg, sbuf, strlen(sbuf) + 1);
-	p->lineno = g_real_line_num;
-	g_err_msg_list.append_tail(p);
-	va_end(arg);
-	return ;   	   
-}
-
-
 //Report error with line number.
 void err(INT line_num, CHAR * msg, ...)
 {
