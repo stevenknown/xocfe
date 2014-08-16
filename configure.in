@@ -1,0 +1,41 @@
+#                                               -*- Autoconf -*-
+# Process this file with autoconf to produce a configure script.
+
+AC_PREREQ([2.68])
+AC_INIT(xocfe, 1.0, steven.known@gmail.com)
+
+VERSION_MAJOR=1
+VERSION_MINOR=0
+VERSION_MICRO=0
+VERSION=$VERSION_MAJOR.$VERSION_MINOR.$VERSION_MICRO
+AC_SUBST(VERSION_MAJOR)
+AC_SUBST(VERSION_MINOR)
+AC_SUBST(VERSION_MICRO)
+AC_SUBST(VERSION)
+
+AM_INIT_AUTOMAKE(AC_PACKAGE_NAME, $VERSION)
+AC_CONFIG_HEADERS(xconfig.h)
+
+# Checks for programs.
+AC_PROG_CXX
+AC_PROG_CC
+AC_PROG_MAKE_SET
+
+# Checks for libraries.
+
+# Checks for header files.
+AC_CHECK_HEADERS(sys/time.h)
+
+# Checks for typedefs, structures, and compiler characteristics.
+AC_HEADER_STDBOOL
+AC_C_INLINE
+
+# Checks for library functions.
+AC_FUNC_MALLOC
+AC_FUNC_REALLOC
+AC_CHECK_FUNCS([floor gettimeofday memset strdup strerror])
+
+AC_OUTPUT(
+Makefile
+src/Makefile
+)
