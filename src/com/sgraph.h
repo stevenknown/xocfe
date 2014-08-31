@@ -440,8 +440,8 @@ public:
 	bool is_pdom(UINT v1, UINT v2)
 	{ return get_pdom_set(v2)->is_contain(v1); }
 
-	void sort_in_bfs_order(SVECTOR<UINT> & order_buf, GRAPH & domtree,
-						   VERTEX * root);
+	void sort_in_bfs_order(SVECTOR<UINT> & order_buf, VERTEX * root, 
+						   BITSET & visit);
 	void sort_dom_tree_in_preorder(IN GRAPH & dom_tree, IN VERTEX * root, 
 								   OUT LIST<VERTEX*> & lst);
 	void sort_dom_tree_in_postorder(IN GRAPH & dom_tree, IN VERTEX * root,
