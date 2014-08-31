@@ -213,8 +213,7 @@ public:
 		for (INT i = 0; i < MAX_TYPE_FLD; i++) {
 			pfld[i] = ty.pfld[i];
 		}
-	}
-		
+	}		
 };
 
 
@@ -238,6 +237,9 @@ typedef enum {
 
 class DECL {
 public:
+	#ifdef _DEBUG_
+	UINT unique_id;
+	#endif
 	DCL decl_type;
 	DECL * prev;
 	DECL * next;
@@ -311,6 +313,10 @@ public:
 		TREE * init; 
 	} u2;
 };
+
+#ifdef _DEBUG_
+#define DECL_uid(d)					(d)->unique_id
+#endif
 #define DECL_dt(d)					(d)->decl_type
 #define DECL_next(d)				(d)->next
 #define DECL_prev(d)				(d)->prev

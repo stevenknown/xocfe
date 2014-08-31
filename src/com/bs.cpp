@@ -847,13 +847,13 @@ void * BITSET::realloc(IN void * src, ULONG orgsize, ULONG newsize)
 //Allocate bytes
 void BITSET::alloc(UINT size)
 {
-	IS_TRUE(m_ptr != NULL, ("not yet init"));	
 	m_size = size;
-	::free(m_ptr);	
-	m_ptr = NULL;
+	if (m_ptr != NULL) { ::free(m_ptr);	}	
 	if (size != 0) {
 		m_ptr = (BYTE*)::malloc(size);
 		::memset(m_ptr, 0, m_size);
+	} else {
+		m_ptr = NULL;
 	}
 }
 
@@ -864,8 +864,7 @@ and modify set1 as result operand.
 */
 void BITSET::bunion(BITSET const& bs)
 {
-	IS_TRUE(m_ptr != NULL, ("not yet init"));
-	IS_TRUE(bs.m_ptr != NULL, ("not yet init"));
+	if (bs.m_ptr == NULL) { return; }
 	UINT cp_sz = bs.m_size; //size need to union.
 	if (m_size < bs.m_size) {
 		//src's last byte pos.
@@ -878,6 +877,7 @@ void BITSET::bunion(BITSET const& bs)
 		}
 	}
 	UINT const num_of_uint = cp_sz / BYTES_PER_UINT; //floor-div.
+	IS_TRUE(m_ptr, ("not yet init"));
 	UINT * uint_ptr_this = (UINT*)m_ptr;
 	UINT * uint_ptr_bs = (UINT*)bs.m_ptr;
 	for (UINT i = 0; i < num_of_uint; i++) {
@@ -892,7 +892,6 @@ void BITSET::bunion(BITSET const& bs)
 //Add a element which corresponding to 'elem' bit, and set this bit.
 void BITSET::bunion(INT elem)
 {
-	IS_TRUE(m_ptr != NULL, ("not yet init"));
 	IS_TRUE(elem >= 0,("bit set cannot be NULL"));
 	UINT const first_byte = DIVBPB(elem);
 	if (m_size < (first_byte+1)) {
@@ -911,12 +910,12 @@ Remove a element which map with 'elem' bit, and clean this bit
 */
 void BITSET::diff(UINT elem)
 {
-	IS_TRUE(m_ptr != NULL, ("not yet init"));
 	UINT first_byte = DIVBPB(elem);
 	if ((first_byte + 1) > m_size) {
 		return;
 	}
 	elem = MODBPB(elem);
+	IS_TRUE(m_ptr != NULL, ("not yet init"));
 	m_ptr[first_byte] &= (BYTE)(~(1 << elem));
 }
 
@@ -929,7 +928,7 @@ Returns a new set which is { x : member( x, 'set1' ) & ~ member( x, 'set2' ) }.
 */
 void BITSET::diff(BITSET const& bs)
 {
-	IS_TRUE(m_ptr != NULL, ("not yet init"));
+	if (m_size == 0 || bs.m_size == 0) { return; }
 	UINT minsize = MIN(m_size, bs.m_size);
 	//Common part: copy the inverse bits.
 	//for (UINT i = 0; i < minsize; i++) {
@@ -944,6 +943,8 @@ void BITSET::diff(BITSET const& bs)
 			uint_ptr_this[i] &= ~d;
 		}
 	}
+	
+	IS_TRUE(m_ptr != NULL, ("not yet init"));
 	for (UINT i = num_of_uint * BYTES_PER_UINT; i < minsize; i++) {
 		BYTE d = bs.m_ptr[i];
 		if (d != 0) {
@@ -956,7 +957,7 @@ void BITSET::diff(BITSET const& bs)
 //Returns the a new set which is intersection of 'set1' and 'set2'.
 void BITSET::intersect(BITSET const& bs)
 {
-	IS_TRUE(m_ptr != NULL, ("not yet init"));
+	if (m_ptr == NULL) { return; }
 	if (m_size > bs.m_size) {
 		for (UINT i = 0; i < bs.m_size; i++) {
 			m_ptr[i] &= bs.m_ptr[i];
@@ -977,7 +978,7 @@ e.g: 1001 to 0110
 */
 void BITSET::rev(UINT last_bit_pos)
 {
-	IS_TRUE(m_ptr != NULL, ("not yet init"));
+	IS_TRUE(m_ptr != NULL, ("can not reverse empty set"));
 	UINT const last_byte_pos = last_bit_pos / BITS_PER_BYTE;
 	IS_TRUE0(last_byte_pos < m_size);
 	
@@ -1017,7 +1018,7 @@ effecient loadbyte instructions!
 */
 UINT BITSET::get_elem_count() const
 {
-	IS_TRUE(m_ptr != NULL, ("not yet init"));
+	if (m_ptr == NULL) { return 0; }
 	UINT count = 0;
 //#define HAMMING_WEIGHT_METHOD
 #ifdef HAMMING_WEIGHT_METHOD
@@ -1043,11 +1044,18 @@ UINT BITSET::get_elem_count() const
 
 bool BITSET::is_equal(BITSET const& bs) const
 {
-	IS_TRUE(m_ptr != NULL, ("not yet init"));
-	UINT size1 = m_size , size2 = bs.m_size;	
+	UINT size1 = m_size , size2 = bs.m_size;
+	if (size1 == 0) {
+		if (size2 == 0) { return true; }
+		return bs.is_empty();
+	}
+	if (size2 == 0) {
+		if (size1 == 0) { return true; }
+		return is_empty();
+	}
+	
 	BYTE const* ptr1 = m_ptr;
 	BYTE const* ptr2 = bs.m_ptr;
-
 	//To guarantee set1 is the smaller.
 	if (size1 > size2) {
 		BYTE const* tmp = ptr1;
@@ -1090,7 +1098,7 @@ bool BITSET::is_equal(BITSET const& bs) const
 //Return true if this contain elem.
 bool BITSET::is_contain(UINT elem) const
 {
-	IS_TRUE(m_ptr != NULL, ("not yet init"));
+	if (m_ptr == NULL) { return false; }
 	if (elem >= (MULBPB(m_size))) {
 		return false;
 	}
@@ -1108,8 +1116,7 @@ Return true if 'this' contains 'bs'.
 	element that does not belong to 'bs'.
 */
 bool BITSET::is_contain(BITSET const& bs, bool strict) const
-{
-	IS_TRUE(m_ptr != NULL && bs.m_ptr != NULL, ("not yet init"));
+{	
 	bool scon = false; //Set to true if 'this' strictly contained 'bs'.
 	INT const first_bit = get_first();
 	if (first_bit == -1) {
@@ -1161,7 +1168,7 @@ bool BITSET::is_contain(BITSET const& bs, bool strict) const
 
 bool BITSET::is_empty() const
 {
-	IS_TRUE(m_ptr != NULL, ("not yet init"));
+	if (m_ptr == NULL) { return true; }
 	UINT num_of_uint = m_size / BYTES_PER_UINT;
 	UINT * uint_ptr = (UINT*)m_ptr;
 	for (UINT i = 0; i < num_of_uint; i++) {
@@ -1179,8 +1186,7 @@ bool BITSET::is_empty() const
 
 
 bool BITSET::is_intersect(BITSET const& bs) const
-{
-	IS_TRUE(m_ptr != NULL && bs.m_ptr != NULL, ("not yet init"));
+{	
 	INT const first_bit = get_first();
 	if (first_bit == -1) {
 		return false;
@@ -1210,7 +1216,6 @@ Return true if 'this' contained in range between 'low' and 'high'.
 */
 bool BITSET::is_contained_in_range(UINT low, UINT high, bool strict) const
 {
-	IS_TRUE(m_ptr != NULL, ("not yet init"));
 	IS_TRUE(low <= high, ("Invalid bit set"));
 	INT const set_low = get_first();
 	if (set_low == -1) {
@@ -1238,7 +1243,6 @@ bool BITSET::is_contained_in_range(UINT low, UINT high, bool strict) const
 //Return true if 'this' contained range between 'low' and 'high'.
 bool BITSET::is_contain_range(UINT low, UINT high, bool strict) const
 {
-	IS_TRUE(m_ptr != NULL, ("not yet init"));
 	IS_TRUE(low <= high, ("Invalid bit set"));
 	INT const set_low = get_first();
 	if (set_low == -1) {
@@ -1270,7 +1274,6 @@ last_bit of 'this' overlapped with the range between
 */
 bool BITSET::is_overlapped(UINT low, UINT high) const
 { 
-	IS_TRUE(m_ptr != NULL, ("not yet init"));
 	IS_TRUE(low <= high, ("Invalid bit set"));
 	INT const set_low = get_first();
 	if (set_low == -1) {
@@ -1323,7 +1326,6 @@ any elements.
 */
 bool BITSET::has_elem_in_range(UINT low, UINT high) const
 {
-	IS_TRUE(m_ptr != NULL, ("not yet init"));
 	IS_TRUE(low <= high, ("out of boundary"));
 	INT const first_bit = get_first();
 	if (first_bit == -1 || (UINT)first_bit > high) {
@@ -1354,7 +1356,6 @@ Return -1 if the bitset is empty.
 */
 INT BITSET::get_first() const
 {
-	IS_TRUE(m_ptr != NULL, ("not yet init"));
 	if (m_size == 0) return -1;
 	UINT i = 0;
 	UINT m = m_size / BYTES_PER_UINT * BYTES_PER_UINT;
@@ -1384,7 +1385,6 @@ INT BITSET::get_first() const
 //Get bit postition of the last element.
 INT BITSET::get_last() const
 {
-	IS_TRUE(m_ptr != NULL, ("not yet init"));
 	if (m_size == 0) return -1;
 	INT i = m_size - 1;
 	UINT m = m_size % BYTES_PER_UINT;
@@ -1418,12 +1418,10 @@ INT BITSET::get_last() const
 //Extract subset in range between 'low' and 'high'.
 BITSET * BITSET::get_subset_in_range(IN UINT low, IN UINT high, 
 									 OUT BITSET & subset)
-{
-	IS_TRUE(m_ptr != NULL && subset.m_ptr != NULL, ("not yet init"));
+{	
 	IS_TRUE(low <= high, ("Invalid bit set"));
-	if (&subset == this) {
-		IS_TRUE(0, ("overlapped!"));
-	}
+	IS_TRUE(&subset != this, ("overlapped!"));
+	
 	subset.clean();
 	INT first_bit = get_first();
 	if (first_bit == -1) {
@@ -1548,22 +1546,12 @@ BITSET * BITSET::get_subset_in_range(IN UINT low, IN UINT high,
 }
 
 
-bool BITSET::get(UINT elem) const
-{
-	if (is_contain(elem)) {
-		return true;
-	}
-	return false;
-}
-
-
 /*
 Return -1 if it has no other element.
 'elem': return next one to current element.
 */
 INT BITSET::get_next(UINT elem) const
-{
-	IS_TRUE(m_ptr != NULL, ("not yet init"));
+{	
 	if (m_size == 0) return -1;
 	INT first_byte = DIVBPB(elem);
 	if (((UINT)first_byte + 1) > m_size) {
@@ -1594,23 +1582,15 @@ INT BITSET::get_next(UINT elem) const
 
 void BITSET::clean()
 {
-	IS_TRUE(m_ptr != NULL, ("not yet init"));
 	if (m_ptr == NULL) return; 
 	::memset(m_ptr, 0, m_size);
 }
 
 
-UINT BITSET::count_mem() const
-{
-	return get_byte_size() + sizeof(BITSET);
-}
-
-
 //Do copy from 'src' to 'des'.
 void BITSET::copy(BITSET const& src)
-{
-	IS_TRUE(m_ptr != NULL, ("not yet init"));
-	if (this == &src) return;
+{	
+	IS_TRUE(this != &src, ("copy self"));
 	UINT cp_sz = src.m_size; //size need to copy.
 	if (m_size < src.m_size) {
 		//src's last byte pos.
@@ -1630,7 +1610,8 @@ void BITSET::copy(BITSET const& src)
 	} else if (m_size > src.m_size) {
 		cp_sz = src.m_size;
 		::memset(m_ptr + cp_sz, 0, m_size - cp_sz);
-	}	
+	}
+	IS_TRUE(m_ptr != NULL, ("not yet init"));
 	::memcpy(m_ptr, src.m_ptr, cp_sz);
 }
 
@@ -1643,10 +1624,8 @@ BITSET const& BITSET::operator = (BITSET const& src)
 }
 
 
-void BITSET::dump(CHAR const* name, bool is_del, 
-					UINT flag, INT last_pos) const
-{
-	IS_TRUE(m_ptr != NULL, ("not yet init"));
+void BITSET::dump(CHAR const* name, bool is_del, UINT flag, INT last_pos) const
+{	
 	if (name == NULL) {
 		name = "zbs.cxx";
 	}
@@ -1662,8 +1641,7 @@ void BITSET::dump(CHAR const* name, bool is_del,
 
 void BITSET::dump(FILE * h, UINT flag, INT last_pos) const
 {
-	IS_TRUE(m_ptr != NULL, ("not yet init"));
-	IS_TRUE(h, ("need file handler"));
+	if (h == NULL) { return; }
 	IS_TRUE0((last_pos / BITS_PER_BYTE) < (INT)m_size);
 	
 	INT elem = get_last();
@@ -1693,7 +1671,7 @@ void BITSET::dump(FILE * h, UINT flag, INT last_pos) const
 			fprintf(h, "\nbitset:[");
 			i = 0;
 			do {
-				if (get(i)) {
+				if (is_contain(i)) {
 					fprintf(h, "1");
 				} else {
 					fprintf(h, "0");
@@ -1776,14 +1754,14 @@ UINT BITSET_MGR::count_mem(FILE * h)
 }
 
 
-BITSET * BITSET_MGR::create()
+BITSET * BITSET_MGR::create(UINT init_sz)
 {
 	IS_TRUE(m_is_init, ("not yet init"));	
 	BITSET * p = m_free_list.remove_head();
 	if (p == NULL) {
 		p = (BITSET*)::malloc(sizeof(BITSET));
 		::memset(p, 0, sizeof(*p));
-		p->init();
+		p->init(init_sz);
 		m_bs_list.append_tail(p);
 	}
 	return p;
@@ -2014,9 +1992,9 @@ void SBITSETC::bunion(UINT elem, SEG_MGR * sm,
 		 sct != NULL; prev_sct = sct, sct = next_sct) {
 		SEG * s = SC_val(sct);
 		segs.get_next(&next_sct);
-		UINT start = s->start;
-		if (elem < s->get_start()) { break; }
-		UINT last = start + BITS_PER_SEG - 1;
+		UINT start = s->get_start();
+		if (elem < start) { break; }
+		UINT last = s->get_end();
 		if (elem <= last) {
 			s->bs.bunion(elem - start);
 			return;
@@ -2101,7 +2079,7 @@ void SBITSETC::diff(UINT elem, SEG_MGR * sm, SC<SEG*> ** free_list)
 		segs.get_next(&next_sct);
 		UINT start = s->get_start();
 		if (elem < start) { break; }
-		UINT last = start + BITS_PER_SEG - 1;
+		UINT last = s->get_end();
 		if (elem <= last) {
 			s->bs.diff(elem - start);
 			if (s->bs.is_empty()) {
@@ -2245,7 +2223,7 @@ INT SBITSETC::get_next(UINT elem, SC<SEG*> ** cur) const
 			 s != NULL; s = segs.get_next(&st)) {
 			UINT start = s->get_start();
 			if (elem < start) { continue; }
-			UINT last = start + BITS_PER_SEG - 1;
+			UINT last = s->get_end();
 			if (elem <= last) {
 				INT n = s->bs.get_next(elem - start);
 				if (n >= 0) { return start + (UINT)n; }
@@ -2340,9 +2318,12 @@ bool SBITSETC::is_contain(UINT elem) const
 	SC<SEG*> * st;
 	segs.get_head(&st);
 	while (st != NULL) {
-		if (SC_val(st)->bs.is_contain(elem)) {
-			return true;
-		}		
+		SEG * seg = SC_val(st);
+        UINT start = seg->get_start();
+        if (elem < start) { return false; }
+        if (elem >= start && elem <= seg->get_end()) {
+            return seg->bs.is_contain(elem - start);
+        }
 		segs.get_next(&st);
 	}
 	return false;
