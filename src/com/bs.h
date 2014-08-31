@@ -101,7 +101,7 @@ public:
 
 	void copy(BITSET const& src);
 	void clean();
-	UINT count_mem() const;
+	UINT count_mem() const { return get_byte_size() + sizeof(BITSET); }
 	void complement(IN BITSET const& univers);
 	
 	void diff(UINT elem);
@@ -115,10 +115,7 @@ public:
 	UINT get_elem_count() const;
 	INT get_first() const;
 	INT get_last() const;
-	bool get(UINT elem) const;
-	BITSET * get_subset_in_range(IN UINT low, 
-								IN UINT high, 
-								OUT BITSET & subset);
+	BITSET * get_subset_in_range(UINT low, UINT high, OUT BITSET & subset);
 	INT get_next(UINT elem) const;
 	UINT get_byte_size() const { return m_size; }
 
@@ -170,7 +167,7 @@ public:
 		m_is_init = false;
 	}
 	
-	BITSET * create();
+	BITSET * create(UINT init_sz = 0);
 	inline BITSET * copy(BITSET const& bs)
 	{
 		IS_TRUE(m_is_init, ("not yet init"));
@@ -681,7 +678,7 @@ public:
 	INT get_next(UINT elem, SC<SEG*> ** cur) const;	
 
 	void intersect(SBITSETC const& src, SEG_MGR * sm, SC<SEG*> ** free_list);
-	void intersect(SBITSETC const& src, SDBITSET_MGR & m);	
+	void intersect(SBITSETC const& src, SDBITSET_MGR & m);
 	bool is_equal(SBITSETC const& src) const;
 	bool is_contain(UINT elem) const;
 	bool is_intersect(SBITSETC const& src) const;
@@ -912,6 +909,16 @@ public:
 	}
 	void intersect(DBITSETC const& src, SDBITSET_MGR & m);
 	
+	bool is_contain(UINT elem) const
+	{
+		if (m_is_sparse) {	
+			return SBITSETC::is_contain(elem);
+		}
+		BITSET const* tgtbs = read_bs();
+		if (tgtbs == NULL) { return false; }
+		return tgtbs->is_contain(elem);
+	}
+
 	bool is_equal(DBITSETC const& src) const
 	{
 		IS_TRUE0(this != &src);

@@ -1598,7 +1598,7 @@ public:
 	
 	//Find 't' in list, return the container in 'holder' if 't' existed.
 	//The function is regular list search, and has O(n) complexity.
-	bool find(IN T t, OUT SC<T> ** holder = NULL)
+	bool find(IN T t, OUT SC<T> ** holder = NULL) const
 	{
 		SC<T> * c = m_head;
 		while (c != NULL) {
@@ -1616,13 +1616,14 @@ public:
 		return false;
 	}
 
-	//Remove 't' out of list.
+	//Remove 't' out of list, return true if find t, otherwise return false.
 	//Note that this is costly operation.
-	T remove(T t, SC<T> ** free_list)
+	bool remove(T t, SC<T> ** free_list)
 	{
-		if (m_head == NULL) { return T(0); }
+		if (m_head == NULL) { return false; }
 		if (SC_val(m_head) == t) {
-			return remove_head(free_list);
+			remove_head(free_list);
+			return true;
 		}
 		SC<T> * c = m_head->next;
 		SC<T> * prev = m_head;
@@ -1631,10 +1632,12 @@ public:
 			prev = c;
 			c = c->next;
 		}
-		if (c == NULL) return T(0);
-		return remove(prev, c);
+		if (c == NULL) return false;
+		remove(prev, c, free_list);
+		return true;
 	}
 	
+	//Return the element removed.
 	//'prev': the previous one element of 'holder'.
 	T remove(SC<T> * prev, SC<T> * holder, SC<T> ** free_list)
 	{		
@@ -1656,6 +1659,7 @@ public:
 		return t;
 	}
 	
+	//Return the element removed.
 	T remove_head(SC<T> ** free_list)
 	{
 		if (m_head == NULL) { return T(0); }
@@ -1756,14 +1760,15 @@ public:
 		return SLISTC<T>::insert_after(t, marker, &m_free_list, m_free_list_pool);
 	}	
 	
-	//Remove 't' out of list.
+	//Remove 't' out of list, return true if find t, otherwise return false.
 	//Note that this is costly operation.
-	T remove(T t)
+	bool remove(T t)
 	{
 		IS_TRUE0(m_free_list_pool);
 		return SLISTC<T>::remove(t, &m_free_list);
 	}
 	
+	//Return element removed.
 	//'prev': the previous one element of 'holder'.
 	T remove(SC<T> * prev, SC<T> * holder)
 	{
@@ -1771,6 +1776,7 @@ public:
 		return SLISTC<T>::remove(prev, holder, &m_free_list);
 	}	
 	
+	//Return element removed.
 	T remove_head()
 	{
 		IS_TRUE0(m_free_list_pool);		
@@ -2614,6 +2620,7 @@ public:
 	inline T get_next(INT & cur);
 	inline T get_last(INT & cur);
 	inline T get_prev(INT & cur);
+	void grow(UINT bsize);
 	virtual bool insert_t(IN OUT HC<T> ** bucket_entry, 
 						  OUT HC<T> ** hc, IN T t);
 	virtual bool insert_v(IN OUT HC<T> ** bucket_entry, 
@@ -2725,8 +2732,7 @@ Insert element into hash table.
 Return true if 't' already exist.
 */
 template <class T>
-bool SHASH<T>::insert_v(IN OUT HC<T> ** bucket_entry, 
-						OUT HC<T> ** hc, ULONG val)
+bool SHASH<T>::insert_v(OUT HC<T> ** bucket_entry, OUT HC<T> ** hc, ULONG val)
 {
 	HC<T> * elemhc = *bucket_entry;
 	HC<T> * prev = NULL;
@@ -2760,8 +2766,7 @@ Insert element into hash table.
 Return true if 't' already exist.
 */
 template <class T>
-bool SHASH<T>::insert_t(IN OUT HC<T> ** bucket_entry, 
-						OUT HC<T> ** hc, IN T t)
+bool SHASH<T>::insert_t(IN OUT HC<T> ** bucket_entry, OUT HC<T> ** hc, IN T t)
 {
 	HC<T> * prev = NULL;
 	HC<T> * elemhc = *bucket_entry;
@@ -2897,6 +2902,55 @@ T SHASH<T>::removed(T t)
 		}		
 	}
 	return T(0);
+}
+
+
+//Grow hash to 'bsize'. 
+//NOTE: Grow is costly function.
+template <class T>
+void SHASH<T>::grow(UINT bsize)
+{
+	IS_TRUE(m_bucket != NULL, ("SHASH not yet initialized."));
+	if (bsize != 0) {
+		IS_TRUE0(bsize > m_bucket_size);
+	} else {
+		bsize = m_bucket_size * 2;
+	}
+
+	SHASH_BUCKET * new_bucket = 
+		(SHASH_BUCKET*)::malloc(sizeof(SHASH_BUCKET) * bsize);	
+	memset(new_bucket, 0, sizeof(SHASH_BUCKET) * bsize);
+	if (m_elem_count == 0) {
+		::free(m_bucket);
+		m_bucket = new_bucket;
+		m_bucket_size = bsize;
+		return;
+	}
+	
+	for (UINT i = 0; i < m_bucket_size; i++) {
+		HC<T> * hc = NULL;
+		while ((hc = removehead((HC<T>**)&SHB_member(m_bucket[i]))) != NULL) {
+			m_free_list.add_free_elem(hc);
+		}
+	}
+
+	::free(m_bucket);
+	m_bucket = new_bucket;
+	m_bucket_size = bsize;
+	
+	INT l = m_elem_vector.get_last_idx();	
+	for (INT i = 0; i <= l; i++) {
+		T t = m_elem_vector.get(i);
+		if (t == T(0)) { continue; }
+		UINT hashv = get_hash_value(t); //compute new hash value.
+		IS_TRUE(hashv < m_bucket_size, 
+				("hash value must less than bucket size"));
+		HC<T> * elemhc = NULL;
+		bool doit = insert_t((HC<T>**)&SHB_member(m_bucket[hashv]), 
+							 &elemhc, t);
+		IS_TRUE0(!doit);
+		SHB_count(m_bucket[hashv])++;
+	}	
 }
 
 

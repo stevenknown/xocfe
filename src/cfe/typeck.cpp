@@ -87,11 +87,11 @@ static INT process_array_init(DECL * dcl, TYPE * ty, TREE ** init)
 	tail = dcl;
 
 	if (head != tail) {
-	//multipul dimension array
+		//multipul dimension array.
 		while (*init != NULL && st == ST_SUCC) {
 			st = process_array_init(DECL_next(head), ty, init);
 			count++;
-			if (dim && count >= dim) {
+			if (dim > 0 && count >= dim) {
 				break;
 			}
 		}
@@ -112,11 +112,11 @@ static INT process_array_init(DECL * dcl, TYPE * ty, TREE ** init)
 				} else if (is_pointer(dcl)) {
 					st = process_pointer_init(dcl, ty, &t);
 				} else {
-				//simple type init. e.g INT SHORT
+					//simple type init. e.g INT/SHORT/CHAR
     				st = process_base_init(ty, &t);
 				}
 				count++;
-				if (dim && count >= dim) {
+				if (dim > 0 && count >= dim) {
 					break;
 				}
 			}
@@ -131,11 +131,11 @@ static INT process_array_init(DECL * dcl, TYPE * ty, TREE ** init)
 				} else if (is_pointer(dcl)) {
 					st = process_pointer_init(dcl, ty, init);
 				} else {
-				//simple type init. e.g INT SHORT
+					//simple type init. e.g INT/SHORT/CHAR
     				st = process_base_init(ty, init);
 				}
 				count++;
-				if (dim && count >= dim) {
+				if (dim > 0 && count >= dim) {
 					break;
 				}
 			}

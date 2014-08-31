@@ -5,13 +5,11 @@
 Record a variety of symbols such as user defined variables, 
 compiler internal variables, LABEL, ID, TYPE_NAME etc.
 */
+#define SYM_name(sym)			((sym)->s)
 class SYM {
 public:
-	CHAR * s;
-	INT hash_val; //retrive index in hash bucket	
+	CHAR * s;	
 };
-#define SYM_hash_val(sym)		(sym)->hash_val
-#define SYM_name(sym)			(sym)->s
 
 
 #define MAX_HASH_BUCKET_SYMTAB 217
@@ -32,9 +30,6 @@ public:
 		v %= m_bucket_size;
 		return v;
 	}
-
-	UINT get_hash_value(SYM * s)
-	{ return SYM_hash_val(s); }
 
 	UINT get_hash_value(ULONG v)
 	{	
@@ -69,7 +64,6 @@ public:
 	{ 
 		SYM * sym = (SYM*)smpool_malloc_h(sizeof(SYM), m_pool);
 		SYM_name(sym) = strdup((CHAR const*)v);
-		SYM_hash_val(sym) = compute_hash_value(SYM_name(sym));
 		return sym;
 	}
 

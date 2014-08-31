@@ -175,9 +175,10 @@ bool GRAPH::clone(GRAPH & src)
 		EDGE * e = add_edge(VERTEX_id(EDGE_from(srce)), 
 							VERTEX_id(EDGE_to(srce)));
 
-		/*Calls inherited class method.
-		 *Edge info of memory should allocated by inherited class method
-		 * */
+		/*
+		Calls inherited class method.
+		Edge info of memory should allocated by inherited class method
+		*/
 		if (EDGE_info(srce) != NULL) {
 			EDGE_info(e) = clone_edge_info(srce);
 		}
@@ -1439,10 +1440,15 @@ void DGRAPH::sort_dom_tree_in_preorder(IN GRAPH & dom_tree, IN VERTEX * root,
 }
 
 
-//'order_buf': record the bfs-order for each vertex.
-void DGRAPH::sort_in_bfs_order(SVECTOR<UINT> & order_buf, GRAPH & domtree,
-							   VERTEX * root)
-{		
+/*
+'order_buf': record the bfs-order for each vertex.
+
+NOTE: BFS does NOT keep the sequence if you are going to
+access vertex in lexicographic order.
+*/
+void DGRAPH::sort_in_bfs_order(SVECTOR<UINT> & order_buf, VERTEX * root, 
+							   BITSET & visit)
+{
 	LIST<VERTEX*> worklst;
 	worklst.append_tail(root);
 	UINT order = 1;
@@ -1450,9 +1456,14 @@ void DGRAPH::sort_in_bfs_order(SVECTOR<UINT> & order_buf, GRAPH & domtree,
 		VERTEX * sv = worklst.remove_head();
 		order_buf.set(VERTEX_id(sv), order);
 		order++;
+		visit.bunion(VERTEX_id(sv));	
 		EDGE_C * el = VERTEX_out_list(sv);
 		while (el != NULL) {
 			VERTEX * to = EDGE_to(EC_edge(el));
+			if (visit.is_contain(VERTEX_id(to))) {
+				el = EC_next(el);
+				continue;
+			}
 			worklst.append_tail(to);
 			el = EC_next(el);
 		}

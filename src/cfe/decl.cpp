@@ -78,13 +78,15 @@ static DECL * struct_declaration();
 static DECL * struct_declarator_list(TYPE * qua);
 static DECL * abstract_declarator(TYPE * qua);
 static DECL * pointer(TYPE ** qua);
-static INT compute_array_indx(DECL * dclr);
+static INT compute_array_indx(DECL * dclr, bool allow_dim0_is_empty);
 static TREE * refine_tree_list(TREE * t);
 static bool is_enum_const_name_exist(ENUM * e, CHAR * ev_name, OUT INT * idx);
 static bool is_enum_id_exist(IN ENUM_LIST * e_list, 
 							 IN CHAR * e_id_name, OUT ENUM ** e);
 
-
+#ifdef _DEBUG_
+UINT g_decl_counter = 1;
+#endif
 INT g_alignment = PRAGMA_ALIGN; //default alignment.
 CHAR * g_dcl_name [] = {
 //character of DCL enum-type.
@@ -183,6 +185,9 @@ DECL * new_decl(DCL dcl_type)
 {
 	DECL * d = (DECL*)xmalloc(sizeof(DECL));
 	DECL_dt(d) = dcl_type;
+	#ifdef _DEBUG_
+	DECL_uid(d) = g_decl_counter++;
+	#endif
 	return d;
 }
 
@@ -1380,7 +1385,7 @@ static DECL * parameter_declaration()
 	DECL * declaration = new_decl(DCL_DECLARATION);
 	DECL_spec(declaration) = ty;
 	DECL_decl_list(declaration) = dcl;
-	compute_array_indx(declaration);	
+	compute_array_indx(declaration, false); //array parameter has at least one elem.
 	return declaration;
 }
 
@@ -1724,7 +1729,7 @@ static DECL * struct_declarator(TYPE * qua)
 	dclr = reverse_list(dclr);
 	DECL * declarator = new_decl(DCL_DECLARATOR);
 	DECL_child(declarator) = dclr;
-	compute_array_indx(declarator);
+	compute_array_indx(declarator, true);
 	if (g_real_token == T_COLON) {
 		TREE * t = NULL;
 		if (is_indirection(dclr)) {
@@ -1825,9 +1830,13 @@ DECL * get_pure_declarator(DECL * decl)
 /*
 Calculate constant expression when parsing the variable 
 declaration of array type.
+
+'allow_dim0_is_empty': parameter array's lowest dimension size
+	can NOT be zero.
 */
-static INT compute_array_indx(DECL * dclr)
+static INT compute_array_indx(DECL * dclr, bool allow_dim0_is_empty)
 {
+	int (*(a[1][2]))[3][4];
 	BYTE dim = 0;
 	INT st = ST_SUCC;
 	DECL * orgdcl = dclr;	
@@ -1836,16 +1845,30 @@ static INT compute_array_indx(DECL * dclr)
 		if (DECL_dt(dclr) == DCL_ARRAY) {
 			dim++;
 		} else {
+			/*
+			Recompute dim size for next array type:
+			e.g: int (*(a[1][2]))[3][4];
+			pure dclr: ID(a)->[1]->[2]->PTR->[3]->[4]
+			*/
 			dim = 0;
 		}
 		
 		if (dim >= 1) {
 			TREE * t = DECL_array_index_exp(dclr);	
 			LONGLONG idx = 0;
-			if (t == NULL && dim > 1) {
-				err(g_real_line_num, "'<Unknown>' missing subscript");
-				st = ST_ERR;
-				goto NEXT;
+			if (t == NULL) {
+				if (dim > 1) {
+					err(g_real_line_num, 
+						"size of dimension %dth can not be zero, may be miss subscript",
+						dim);
+					st = ST_ERR;
+					goto NEXT;
+				}
+				if (!allow_dim0_is_empty) {
+					//If size of dim0 is 0, set it to 1 by default means the array
+					//contain at least one element.
+					idx = 1; 
+				}
 			} else if (t != NULL) {
 				if (!compute_constant_exp(t, &idx, 0)) {
 					err(g_real_line_num, "expected constant expression");
@@ -1886,7 +1909,8 @@ static DECL * init_declarator(TYPE * qua)
 	//dclr is DCL_DECLARATOR node	
 	DECL * declarator = new_decl(DCL_DECLARATOR);
 	DECL_child(declarator) = dclr;
-	compute_array_indx(declarator);
+	compute_array_indx(declarator, 
+				true /*array dim size should be determined by init value.*/);
 
 	if (g_real_token == T_ASSIGN) {
 		match(T_ASSIGN);
@@ -2124,8 +2148,10 @@ CHAR * dump_decl(DECL * dcl, CHAR * buf)
 	fflush(g_tfile);
 	if (!is_ret) {
 		fprintf(g_tfile, "\n%s\n", buf);
+		fflush(g_tfile);
 		return NULL;
 	}
+	fflush(g_tfile);
 	return buf;
 }
 
@@ -3964,8 +3990,10 @@ static bool check_struct_union_complete(DECL * decl)
 				CHAR buf[512];
 				buf[0] = 0;
 				if (name != NULL) {
-					format_struct_union_complete(buf, get_pure_type_spec(type_spec));
-					err(g_real_line_num, "'%s' uses incomplete defined %s : %s",
+					format_struct_union_complete(buf, 
+							get_pure_type_spec(type_spec));
+					err(g_real_line_num, 
+						"'%s' uses incomplete defined %s : %s",
 						name, t, buf);
 					return false;
 				} else {
@@ -4057,6 +4085,7 @@ bool declaration()
 	
 	TYPE * qualifier = new_type();
 	extract_qualifier(type_spec, qualifier);
+	
 	complement_qua(type_spec);
 	dcl_list = init_declarator_list(qualifier);
 	if (dcl_list == NULL) {
@@ -4082,7 +4111,9 @@ bool declaration()
 		DECL_align(declaration) = g_alignment;
 		DECL_decl_scope(declaration) = g_cur_scope;
 		DECL_lineno(declaration) = lineno;		
-		//dump_decl(declaration, 0);
+
+		dump_decl(declaration, 0);
+		
 		if (is_fun_decl(declaration)) {
 			if (g_real_token == T_LLPAREN) {
 				if (!func_def(declaration)) {
