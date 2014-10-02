@@ -426,11 +426,14 @@ VERTEX * GRAPH::remove_vertex(VERTEX * vex)
 Return all neighbors of 'vid' on graph.
 Return false if 'vid' is not on graph.
 */
-bool GRAPH::get_neighbor_list(OUT LIST<UINT> & ni_list, IN UINT vid)
+bool GRAPH::get_neighbor_list(OUT LIST<UINT> & ni_list, IN UINT vid) const
 {
 	IS_TRUE(m_pool != NULL, ("not yet initialized."));
 	UINT degree = 0;
-	VERTEX * vex  = m_vertexs.find(vid);
+
+	//Ensure VERTEX_HASH::find is readonly.
+	GRAPH * pthis = const_cast<GRAPH*>(this);	
+	VERTEX * vex  = pthis->m_vertexs.find(vid);
 	if (vex == NULL) return false;
 	EDGE_C * el = VERTEX_in_list(vex);
 	while (el != NULL) {

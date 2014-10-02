@@ -35,8 +35,7 @@ template <class Tsrc, class Ttgt> class MAP;
 template <class T> class SVECTOR;
 
 /*
-struct chain operations 
-
+Structure chain operations.
 For easing implementation, there must be 2 fields declared by T
 	1. T * next
 	2. T * prev
@@ -1406,6 +1405,17 @@ protected:
 		memset(p, 0, size);
 		return p;
 	}
+
+	bool in_list(SC<T> const* p) const
+	{
+		if (p == NULL) { return true; }
+		SC<T> const* t = m_head;
+		while (t != NULL) {
+			if (t == p) { return true; }
+			t = t->next;
+		}
+		return false;
+	}
 public:	
 	SLISTC()
 	{	
@@ -1525,8 +1535,9 @@ public:
 	//Insert 'c' into list after the 'marker'.
 	void insert_after(IN SC<T> * c, IN SC<T> * marker)
 	{		
-		if (marker == NULL || c == NULL) { return; }
-		if (c == marker) { return; }
+		if (marker == NULL || c == NULL) { return; }		
+		IS_TRUE0(in_list(marker));
+		if (c == marker) { return; }		
 		if (m_tail == NULL || marker == m_tail) {
 			append_tail(c);
 			return;
@@ -1541,6 +1552,7 @@ public:
 						 SMEM_POOL * pool)
 	{
 		if (marker == NULL) { return NULL; }
+		IS_TRUE0(in_list(marker));
 		SC<T> * c = newsc(free_list, pool);
 		IS_TRUE(c != NULL, ("newc return NULL"));
 		SC_val(c) = t;
@@ -1584,7 +1596,7 @@ public:
 	//Return list member and update holder to next member.
 	T get_next(IN OUT SC<T> ** holder) const
 	{
-		IS_TRUE0(holder != NULL);
+		IS_TRUE0(holder != NULL && in_list(*holder));
 		SC<T> * c = *holder;
 		if (c == NULL || c->next == NULL) {
 			*holder = NULL;
@@ -1643,15 +1655,20 @@ public:
 	{		
 		IS_TRUE0(holder);
 		IS_TRUE(m_head != NULL, ("list is empty"));
+		IS_TRUE0(in_list(prev) && in_list(holder));
 		if (prev == NULL) {
 			IS_TRUE0(holder == m_head);
-			m_head = holder->next;
+			m_head = m_head->next;
 			if (m_head == NULL) {
 				IS_TRUE0(m_elem_count == 1);
 				m_tail = NULL;
 			}
 		} else {
+			IS_TRUE(prev->next == holder, ("not prev one"));
 			prev->next = holder->next;
+		}
+		if (holder == m_tail) {
+			m_tail = prev;
 		}
 		m_elem_count--;
 		T t = SC_val(holder);
@@ -1797,30 +1814,11 @@ NOTICE: User must define a mapping class, see Single Valued Mapping.
 */
 template <class T, class MAP_T2HOLDER> class ELIST : public LIST<T> {
 protected:
-	MAP_T2HOLDER m_t2holder_map; //map 't' to its LIST HOLDER.
-	bool m_is_init;
+	MAP_T2HOLDER m_t2holder_map; //map 't' to its LIST HOLDER.	
 public:
-	ELIST(UINT bsize = MAX_SHASH_BUCKET)
-	{
-		m_is_init = false;
-		init(bsize);
-	}
-	~ELIST() { destroy(); }
-	void init(UINT bsize = MAX_SHASH_BUCKET)
-	{
-		if (m_is_init) return;
-		m_t2holder_map.init(bsize);
-		LIST<T>::init();
-		m_is_init = true;
-	} 
-	void destroy()
-	{
-		if (!m_is_init) return;
-		m_t2holder_map.destroy();
-		LIST<T>::destroy();
-		m_is_init = false;
-	}
-
+	ELIST(UINT bsize = MAX_SHASH_BUCKET) {}
+	virtual ~ELIST() {} //MAP_T2HOLDER has virtual function.
+	
 	inline void copy(IN LIST<T> & src);
 	void clean()
 	{
@@ -1871,6 +1869,8 @@ public:
 	inline C<T> * insert_after(T t, C<T> * marker);
 	inline void insert_after(C<T> * c, C<T> * marker);
 	inline bool find(T t, C<T> ** holder = NULL);	
+
+	MAP_T2HOLDER * get_holder_map() { return &m_t2holder_map; }
 	T get_cur() //Do NOT update 'm_cur'
 	{ return LIST<T>::get_cur(); }
 	T get_cur(IN OUT C<T> ** holder) //Do NOT update 'm_cur'
@@ -1972,7 +1972,6 @@ template <class T, class MAP_T2HOLDER>
 UINT ELIST<T, MAP_T2HOLDER>::count_mem() const
 {
 	UINT count = m_t2holder_map.count_mem();
-	count += sizeof(m_is_init);
 	count += ((LIST<T>*)this)->count_mem();
 	return count;
 }
@@ -2508,7 +2507,7 @@ Hash element recorded not only in hash table but also in SVECTOR.
 The later opertaion used in order to speed up element accessing.
 
 NOTICE:
-	1.T(0) was defined as default NULL in SHASH, so do not use T(0) as element.
+	1.T(0) is defined as default NULL in SHASH, so do not use T(0) as element.
 	2.Do not use SHASH directly, please overload 
 	  following functions optionally:
 		* return hash-key deduce from 'val'
@@ -2548,13 +2547,13 @@ public:
 	UINT hash_member_count; //
 };
 
-typedef enum{
+typedef enum {
 	COMPARE_UNDEF = 0,
 	COMPARE_ELEM1_ELEM2,
 	COMPARE_ELEM1_VAL,
 } COMPARETYPE;
 
-typedef enum{
+typedef enum {
 	SHASHV_UNDEF = 0,
 	SHASHV_ELEM,//parameter is elem which type is T
 	SHASHV_VAL, //parameter is only value-key
@@ -3131,11 +3130,626 @@ void SHASH<T>::dump_intersp(FILE * h)
 
 
 
+typedef enum _RBT_RED {
+	RBT_NON = 0,
+	RBRED = 1,
+	RBBLACK = 2,
+} RBCOL;
+
+template <class T, class Ttgt>
+class RBTN {
+public:
+	RBTN * parent;
+	union {
+		RBTN * lchild;
+		RBTN * prev;
+	};
+
+	union {
+		RBTN * rchild;
+		RBTN * next;
+	};
+	T key;
+	Ttgt mapped;
+	RBCOL color;
+
+	RBTN()
+	{
+		parent = NULL;
+		lchild = NULL;
+		rchild = NULL;
+		key = T(0);
+		mapped = Ttgt(0);
+		color = RBBLACK;
+	}
+};
+
+
+template <class T, class Ttgt>
+class RBT {
+protected:
+	UINT m_num_of_tn;
+	RBTN<T, Ttgt> * m_root;
+	SMEM_POOL * m_pool;
+	RBTN<T, Ttgt> * m_free_list;
+
+	void * _xmalloc(ULONG size)
+	{
+		void * p = smpool_malloc_h(size, m_pool);
+		IS_TRUE0(p);
+		memset(p, 0, size);
+		return p;
+	}
+
+	void free_rbt(RBTN<T, Ttgt> * t)
+	{ 
+		if (t == NULL) return;
+		t->prev = t->next = t->parent = NULL;
+		t->key = T(0);
+		t->mapped = Ttgt(0);		
+		insertbefore_one(&m_free_list, m_free_list, t);
+	}
+	
+	void rleft(RBTN<T, Ttgt> * x)
+	{
+		IS_TRUE0(x->rchild != NULL);
+		RBTN<T, Ttgt> * y = x->rchild;
+		y->parent = x->parent;
+		x->parent = y;
+		x->rchild = y->lchild;
+		if (y->lchild != NULL) {
+			y->lchild->parent = x;
+		}
+		y->lchild = x;
+		if (y->parent == NULL) {
+			m_root = y;
+		} else if (y->parent->lchild == x) {
+			y->parent->lchild = y;
+		} else if (y->parent->rchild == x) {
+			y->parent->rchild = y;
+		}
+	}
+	
+	void rright(RBTN<T, Ttgt> * y)
+	{
+		IS_TRUE0(y->lchild != NULL);
+		RBTN<T, Ttgt> * x = y->lchild;		
+		x->parent = y->parent;
+		y->parent = x;
+		y->lchild = x->rchild;
+		if (x->rchild != NULL) {
+			x->rchild->parent = y;
+		}
+		x->rchild = y;
+		if (x->parent == NULL) {
+			m_root = x;
+		} else if (x->parent->lchild == y) {
+			x->parent->lchild = x;
+		} else if (x->parent->rchild == y) {
+			x->parent->rchild = x;
+		}
+	}
+
+	inline bool is_lchild(RBTN<T, Ttgt> const* z) const
+	{
+		IS_TRUE0(z && z->parent);
+		return z == z->parent->lchild;
+	}
+
+	inline bool is_rchild(RBTN<T, Ttgt> const* z) const
+	{
+		IS_TRUE0(z && z->parent);
+		return z == z->parent->rchild;
+	}
+
+	void fixup(RBTN<T, Ttgt> * z)
+	{
+		RBTN<T, Ttgt> * y = NULL;
+		while (z->parent != NULL && z->parent->color == RBRED) {
+			if (is_lchild(z->parent)) {
+				y =	z->parent->parent->rchild;
+				if (y != NULL && y->color == RBRED) {
+					z->parent->color = RBBLACK;
+					z->parent->parent->color = RBRED;
+					y->color = RBBLACK;
+					z = z->parent->parent;
+				} else if (is_rchild(z)) {
+					z = z->parent;
+					rleft(z);
+				} else {
+					IS_TRUE0(is_lchild(z));
+					z->parent->color = RBBLACK;
+					z->parent->parent->color = RBRED;
+					rright(z->parent->parent);					
+				}
+			} else {
+				IS_TRUE0(is_rchild(z->parent));
+				y =	z->parent->parent->lchild;
+				if (y != NULL && y->color == RBRED) {
+					z->parent->color = RBBLACK;
+					z->parent->parent->color = RBRED;
+					y->color = RBBLACK;
+					z = z->parent->parent;
+				} else if (is_lchild(z)) {
+					z = z->parent;
+					rright(z);
+				} else {
+					IS_TRUE0(is_rchild(z));
+					z->parent->color = RBBLACK;
+					z->parent->parent->color = RBRED;
+					rleft(z->parent->parent);					
+				}
+			}
+		}
+		m_root->color = RBBLACK;
+	}
+public:
+	RBT() 
+	{
+		m_pool = smpool_create_handle(sizeof(RBTN<T, Ttgt>), MEM_COMM);
+		m_root = NULL;
+		m_num_of_tn = 0;
+		m_free_list = NULL;
+	}
+	virtual ~RBT() { smpool_free_handle(m_pool); m_pool = NULL; }
+	
+	//Derived Class need to implement.
+	virtual UINT compute_key(T t) const
+	{ return (UINT)(ULONG)t; }
+
+	UINT count_mem() const
+	{
+		UINT c = sizeof(m_num_of_tn);
+		c += sizeof(m_root);
+		c += sizeof(m_pool);
+		c += sizeof(m_free_list);
+		c += smpool_get_pool_size_handle(m_pool);
+		return c;
+	}
+
+	void clean()
+	{
+		LIST<RBTN<T, Ttgt>*> wl;
+		if (RBT<T, Ttgt>::m_root != NULL) {
+			wl.append_tail(RBT<T, Ttgt>::m_root);
+			RBT<T, Ttgt>::m_root = NULL;
+		}
+		while (wl.get_elem_count() != 0) {
+			RBTN<T, Ttgt> * x = wl.remove_head();			
+			if (x->rchild != NULL) {
+				wl.append_tail(x->rchild);
+			}
+			if (x->lchild != NULL) {
+				wl.append_tail(x->lchild);
+			}
+			free_rbt(x);
+		}
+		m_num_of_tn = 0;
+	}
+	
+	UINT get_elem_count() const { return m_num_of_tn; }
+	SMEM_POOL * get_pool() { return m_pool; }
+	RBTN<T, Ttgt> const* get_root_c() const { return m_root; }
+	RBTN<T, Ttgt> * get_root() { return m_root; }
+
+	RBTN<T, Ttgt> * find_with_key(UINT keyt)
+	{
+		if (m_root == NULL) { return NULL; }
+		RBTN<T, Ttgt> * x = m_root;		
+		while (x != NULL) {
+			UINT const keyx = compute_key(x->key);
+			if (keyt == keyx) {
+				return x;
+			} else if (keyt < keyx) {
+				x = x->lchild;
+			} else {
+				x = x->rchild;
+			}
+		}
+		return NULL;
+	}
+	
+	inline RBTN<T, Ttgt> * find(T t)
+	{
+		if (m_root == NULL) { return NULL; }	
+		return find_with_key(compute_key(t));
+	}
+
+	RBTN<T, Ttgt> * insert(T t, bool * find = NULL)
+	{
+		if (m_root == NULL) {
+			RBTN<T, Ttgt> * z = new_tn(t, RBBLACK);
+			m_num_of_tn++;
+			m_root = z;
+			if (find != NULL) {
+				*find = false;
+			}
+			return z;
+		}
+		UINT const keyt = compute_key(t);
+		RBTN<T, Ttgt> * mark = NULL;
+		UINT keymark = 0xFFFFFFFF;
+		RBTN<T, Ttgt> * x = m_root;
+		while (x != NULL) {
+			UINT const keyx = compute_key(x->key);
+			mark = x;
+			keymark = keyx;
+			if (keyt < keyx) {
+				x = x->lchild;
+			} else {
+				x = x->rchild;
+			}
+		}
+
+		if (mark != NULL && keyt == keymark) {
+			if (find != NULL) {
+				*find = true;
+			}
+			return mark;
+		}
+
+		if (find != NULL) {
+			*find = false;
+		}
+
+		//Add new.
+		RBTN<T, Ttgt> * z = new_tn(t, RBRED);
+		z->parent = mark;
+		if (mark == NULL) {
+			//The first node.
+			m_root = z;
+		} else {
+			if (keyt < keymark) {
+				mark->lchild = z;
+			} else {
+				mark->rchild = z;
+			}
+		}
+		IS_TRUE0(z->lchild == NULL && z->rchild == NULL);		
+		m_num_of_tn++;
+		fixup(z);
+		return z;
+	}
+	
+	RBTN<T, Ttgt> * min(RBTN<T, Ttgt> * x)
+	{
+		IS_TRUE0(x);
+		while (x->lchild != NULL) { x = x->lchild; }
+		return x;
+	}
+
+	inline RBTN<T, Ttgt> * new_tn(T t, RBCOL c = RBRED)
+	{
+		RBTN<T, Ttgt> * x = removehead(&m_free_list);
+		if (x == NULL) {
+			x = (RBTN<T, Ttgt>*)_xmalloc(sizeof(RBTN<T, Ttgt>));
+		} else {
+			x->lchild = NULL;
+			x->rchild = NULL;
+		}
+		x->key = t;
+		x->color = c;
+		return x;
+	}
+
+	RBTN<T, Ttgt> * succ(RBTN<T, Ttgt> * x)
+	{
+		if (x->rchild != NULL) { return min(x->rchild); }
+		RBTN<T, Ttgt> * y = x->parent;
+		while (y != NULL && x == y->rchild) {
+			x = y;
+			y = y->parent;
+		}
+		return y;
+	}
+
+	inline bool both_child_black(RBTN<T, Ttgt> * x)
+	{
+		if (x->lchild != NULL && x->lchild->color == RBRED) {
+			return false;
+		}
+		if (x->rchild != NULL && x->rchild->color == RBRED) {
+			return false;
+		}
+		return true;
+	}
+
+	void rmfixup(RBTN<T, Ttgt> * x)
+	{
+		IS_TRUE0(x);
+		while (x != m_root && x->color == RBBLACK) {
+			if (is_lchild(x)) {
+				RBTN<T, Ttgt> * bro = x->parent->rchild;
+				IS_TRUE0(bro);
+				if (bro->color == RBRED) {
+					bro->color = RBBLACK;
+					x->parent->color = RBRED;
+					rleft(x->parent);
+					bro = x->parent->rchild;
+				}
+				if (both_child_black(bro)) {
+					bro->color = RBRED;
+					x = x->parent;
+					continue;
+				} else if (bro->rchild == NULL || 
+						   bro->rchild->color == RBBLACK) {
+					IS_TRUE0(bro->lchild && bro->lchild->color == RBRED);
+					bro->lchild->color = RBBLACK;
+					bro->color = RBRED;
+					rright(bro);
+					bro = x->parent->rchild;
+				}
+				bro->color = x->parent->color;
+				x->parent->color = RBBLACK;
+				bro->rchild->color = RBBLACK;
+				rleft(x->parent);
+				x = m_root;
+			} else {
+				IS_TRUE0(is_rchild(x));
+				RBTN<T, Ttgt> * bro = x->parent->lchild;
+				if (bro->color == RBRED) {
+					bro->color = RBBLACK;
+					x->parent->color = RBRED;
+					rright(x->parent);
+					bro = x->parent->lchild;
+				}
+				if (both_child_black(bro)) {					
+					bro->color = RBRED;
+					x = x->parent;
+					continue;
+				} else if (bro->lchild == NULL || 
+						   bro->lchild->color == RBBLACK) {
+					IS_TRUE0(bro->rchild && bro->rchild->color == RBRED);
+					bro->rchild->color = RBBLACK;
+					bro->color = RBRED;
+					rleft(bro);
+					bro = x->parent->lchild;
+				}
+				bro->color = x->parent->color;
+				x->parent->color = RBBLACK;
+				bro->lchild->color = RBBLACK;
+				rright(x->parent);
+				x = m_root;
+			}
+		}
+		x->color = RBBLACK;
+	}
+	
+	void remove(T t)
+	{
+		RBTN<T, Ttgt> * z = find(t);
+		if (z == NULL) { return; }
+		remove(z);
+	}
+
+	void remove(RBTN<T, Ttgt> * z)
+	{
+		if (z == NULL) { return; }
+		if (m_num_of_tn == 1) {
+			IS_TRUE(z == m_root, ("z is not the node of tree"));
+			IS_TRUE(z->rchild == NULL && z->lchild == NULL, 
+					("z is the last node"));
+			free_rbt(z);
+			m_num_of_tn--;
+			m_root = NULL;
+			return;
+		}
+		RBTN<T, Ttgt> * y;
+		if (z->lchild == NULL || z->rchild == NULL) {
+			y = z;
+		} else {
+			y = min(z->rchild);
+		}
+
+		RBTN<T, Ttgt> * x = y->lchild != NULL ? y->lchild : y->rchild;
+		RBTN<T, Ttgt> holder;
+		if (x != NULL) {
+			x->parent = y->parent;
+		} else {
+			holder.parent = y->parent;
+		}
+		if (y->parent == NULL) {
+			m_root = x;
+		} else if (is_lchild(y)) {
+			if (x != NULL) {
+				y->parent->lchild = x;
+			} else {
+				y->parent->lchild = &holder;
+			}
+		} else {
+			if (x != NULL) {
+				y->parent->rchild = x;
+			} else {
+				y->parent->rchild = &holder;
+			}
+		}
+		if (y != z) {
+			z->key = y->key;
+			z->mapped = y->mapped;
+		}
+		if (y->color == RBBLACK) {
+			//Need to keep RB tree property: the number 
+			//of black must be same in all path.			
+			if (x != NULL) {
+				rmfixup(x);
+			} else {
+				rmfixup(&holder);
+				if (is_rchild(&holder)) {
+					holder.parent->rchild = NULL;
+				} else {
+					IS_TRUE0(is_lchild(&holder));
+					holder.parent->lchild = NULL;
+				}
+			}
+		} else if (holder.parent != NULL) {
+			if (is_rchild(&holder)) {
+				holder.parent->rchild = NULL;
+			} else {
+				IS_TRUE0(is_lchild(&holder));
+				holder.parent->lchild = NULL;
+			}
+		}
+		free_rbt(y);
+		m_num_of_tn--;
+	}
+
+	//iter should be clean by caller.
+	T get_first(LIST<RBTN<T, Ttgt>*> & iter, Ttgt * mapped = NULL)
+	{		
+		if (m_root == NULL) { return T(0); }
+		iter.append_tail(m_root);
+		if (mapped != NULL) { *mapped = m_root->mapped; }
+		return m_root->key;
+	}
+
+	T get_next(LIST<RBTN<T, Ttgt>*> & iter, Ttgt * mapped = NULL) 
+	{		
+		RBTN<T, Ttgt> * x = iter.remove_head();
+		if (x == NULL) {
+			if (mapped != NULL) { *mapped = Ttgt(0); }
+			return T(0); 
+		}
+		if (x->rchild != NULL) {
+			iter.append_tail(x->rchild);		
+		}
+		if (x->lchild != NULL) {
+			iter.append_tail(x->lchild);				
+		}
+		x = iter.get_head();
+		if (x == NULL) { 
+			if (mapped != NULL) { *mapped = Ttgt(0); }
+			return T(0); 
+		}
+		if (mapped != NULL) { *mapped = x->mapped; }
+		return x->key;
+	}
+};
+
+
+
+/*
+TMAP
+
+NOTICE:
+	1.Tsrc(0) is defined as default NULL in TMAP, so do not use T(0) as element.
+	2.If Tsrc's key is not UINT, do not use TMAP directly, 
+	  one should overload following function:
+	  
+		* compute the unique key from 't'
+			virtual UINT compute_key(Tsrc t) const
+
+		e.g: Make a mapping from OPND to OPER.
+			class OPND2OPER_MAP : public TMAP<OPND*, OPER*> {
+			public:
+				UINT compute_key(OPND * opnd) const
+				{ 
+				  //opnd's id is unique.
+				  return opnd->id; 
+				} 
+			};
+*/
+template <class Tsrc, class Ttgt>
+class TMAP_ITER : public LIST<RBTN<Tsrc, Ttgt>*> {};
+
+template <class Tsrc, class Ttgt>
+class TMAP : public RBT<Tsrc, Ttgt> {
+public:
+	TMAP() {}
+	~TMAP() {}
+
+	//Alway set new mapping even if it has done. 
+	void aset(Tsrc t, Ttgt mapped)
+	{
+		bool find;
+		RBTN<Tsrc, Ttgt> * z = RBT<Tsrc, Ttgt>::insert(t, &find);
+		IS_TRUE0(z);
+		z->mapped = mapped;
+	}
+	
+	//Establishing mapping in between 't' and 'mapped'.
+	void set(Tsrc t, Ttgt mapped)
+	{
+		bool find;
+		RBTN<Tsrc, Ttgt> * z = RBT<Tsrc, Ttgt>::insert(t, &find);
+		IS_TRUE0(z);
+		IS_TRUE(!find, ("already mapped"));
+		z->mapped = mapped;
+	}
+
+	//Get mapped element of 't'. Set find to true if t is already be mapped.
+	Ttgt get(Tsrc t, bool * f = NULL)
+	{
+		RBTN<Tsrc, Ttgt> * z = RBT<Tsrc, Ttgt>::find(t);
+		if (z == NULL) {
+			if (f != NULL) {
+				*f = false;
+			}
+			return Ttgt(0);
+		}
+
+		if (f != NULL) {
+			*f = true;
+		}
+		return z->mapped;
+	}		
+};
+//END TMAP
+
+
+/*
+TTAB
+
+NOTICE:
+	1.T(0) is defined as default NULL in TTAB, do not use T(0) as element.
+	2.If the key of T is not UINT type, do not use TTAB directly, 
+	  one should overload following function:
+	  
+		* compute the unique key from 't'
+			virtual UINT compute_key(T t) const
+
+		e.g: Make a mapping from OPND to OPER.
+			class OPND2OPER_MAP : public TTAB<OPND*> {
+			public:
+				UINT compute_key(OPND * opnd) const
+				{ 
+				  //opnd's id is unique.
+				  return opnd->id; 
+				} 
+			};
+*/
+template <class T>
+class TAB_ITER : public LIST<RBTN<T, T>*> {};
+
+template <class T>
+class TTAB : public TMAP<T, T> {
+public:
+	void append(T t)
+	{
+		IS_TRUE0(t != T(0));
+		#ifdef _DEBUG_
+		bool find = false;
+		T mapped = TMAP<T, T>::get(t, &find);
+		if (find) {
+			IS_TRUE0(mapped == t);
+		}
+		#endif
+		TMAP<T, T>::aset(t, t);
+	}
+
+	void remove(T t)
+	{
+		IS_TRUE0(t != T(0));
+		TMAP<T, T>::remove(t);
+	}
+};
+//END TTAB
+
+
 /*
 Single Valued Mapping
 
 NOTICE:
-	1.T(0) was defined as default NULL in MAP, so do not use T(0) as element.
+	1.Tsrc(0) is defined as default NULL in MAP, so do not use T(0) as element.
 	2.Do not use MAP directly, please overload following functions optionally:
 		* return hash-key deduce from 'val'
 			UINT get_hash_value(ULONG val) 
@@ -3181,6 +3795,7 @@ public:
 	//Establishing mapping in between 't' and 'mapped'.
 	void set(Tsrc t, Ttgt mapped);	
 	void setv(ULONG v, Ttgt mapped);
+	SMEM_POOL * get_pool() { return SHASH<Tsrc>::get_free_list_pool(); }
 	Ttgt get(Tsrc t, bool * find = NULL); //Get mapped pointer of 't'
 	SVECTOR<Ttgt> * get_tgt_elem_vec() { return &m_mapped_elem_table; }
 	void clean();
@@ -3247,7 +3862,7 @@ HC<Tsrc> * MAP<Tsrc, Ttgt>::findhc(Tsrc t)
 				return elemhc;
 			}
 			elemhc = HC_next(elemhc); 
-		}//end while
+		} //end while
 	}
 	return NULL;
 }
@@ -3325,7 +3940,7 @@ MAP_Tsrc2Ttgt: class derive from MAP<Tsrc, Ttgt>
 MAP_Ttgt2Tsrc: class derive from MAP<Ttgt, Tsrc>
 
 NOTICE:
-	1.T(0) was defined as default NULL in DMAP, so do not use T(0) as element.
+	1.Tsrc(0) is defined as default NULL in DMAP, so do not use T(0) as element.
 		e.g: Mapping OPND to corresponding OPER.
 			class MAP1 : public MAP<OPND*, OPER*> {
 			public:
@@ -3476,7 +4091,7 @@ TAB_Ttgt: TAB to record tgt element.
 			};
 
 NOTICE:
-	1.T(0) was defined as default NULL in MMAP, so do not use T(0) as element.
+	1.Tsrc(0) is defined as default NULL in MMAP, so do not use T(0) as element.
 	2.MMAP allocate memory for 'TAB_Ttgt' and return 'TAB_Ttgt *' 
 		when get(Tsrc) be invoked. DO NOT free these pointers!
 		And TAB_Ttgt should NOT be pointer type.

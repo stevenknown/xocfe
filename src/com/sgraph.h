@@ -273,7 +273,7 @@ public:
 								
 	void erasure();	
 
-	bool get_neighbor_list(IN OUT LIST<UINT> & ni_list, IN UINT vid);
+	bool get_neighbor_list(IN OUT LIST<UINT> & ni_list, IN UINT vid) const;
 	inline UINT get_degree(UINT vid)
 	{
 		IS_TRUE(m_pool != NULL, ("not yet initialized."));

@@ -1642,7 +1642,7 @@ void BITSET::dump(CHAR const* name, bool is_del, UINT flag, INT last_pos) const
 void BITSET::dump(FILE * h, UINT flag, INT last_pos) const
 {
 	if (h == NULL) { return; }
-	IS_TRUE0((last_pos / BITS_PER_BYTE) < (INT)m_size);
+	IS_TRUE0(last_pos < 0 || (last_pos / BITS_PER_BYTE) < (INT)m_size);
 	
 	INT elem = get_last();
 	if (last_pos != -1) {

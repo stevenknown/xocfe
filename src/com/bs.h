@@ -109,8 +109,8 @@ public:
 	void dump(CHAR const* name = NULL, bool is_del = false, 
 			  UINT flag = BS_DUMP_BITSET | BS_DUMP_POS,
 			  INT last_pos = -1) const;
-	void dump(FILE * h, UINT flag = BS_DUMP_BITSET | BS_DUMP_POS, 
-			  INT last_pos = -1) const;
+	void dump(FILE * h, UINT flag, INT last_pos) const;
+	void dump(FILE * h) const { dump(h, BS_DUMP_BITSET|BS_DUMP_POS, -1); }
 	
 	UINT get_elem_count() const;
 	INT get_first() const;
