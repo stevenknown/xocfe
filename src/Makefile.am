@@ -4,9 +4,9 @@ INCLUDES = -I./ \
            -I./com/ \
            -I./cfe/ \
            -I./cfe.prj/ \
-           -I./xoc/
+           -I./util/
 
-VPATH = ./cfe ./com ./xoc ./cfe.prj
+VPATH = ./cfe ./com ./util ./cfe.prj
 
 bin_PROGRAMS = xocfe
 
@@ -30,9 +30,10 @@ xocfe_SOURCES = \
                 \
                 com/smempool.cpp \
                 com/comf.cpp \
+                com/bs.cpp \
                 com/ltype.cpp \
                 \
-                xoc/label.cpp \
-                xoc/util.cpp
+                util/label.cpp \
+                util/util.cpp
 
 

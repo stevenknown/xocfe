@@ -1,5 +1,5 @@
 /*@
-Copyright (c) 2013-2014, Su Zhenyu steven.known@gmail.com 
+Copyright (c) 2013-2014, Su Zhenyu steven.known@gmail.com
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -11,18 +11,18 @@ modification, are permitted provided that the following conditions are met:
       notice, this list of conditions and the following disclaimer in the
       documentation and/or other materials provided with the distribution.
     * Neither the name of the Su Zhenyu nor the names of its contributors
-      may be used to endorse or promote products derived from this software 
+      may be used to endorse or promote products derived from this software
       without specific prior written permission.
 
 THIS SOFTWARE IS PROVIDED "AS IS" AND ANY
 EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
 DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL 
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR 
-SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER 
-CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, 
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE 
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 @*/
 #ifndef __TREE_H__
@@ -30,7 +30,7 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /*
 ENUM_LIST
- |	
+ |
  |--ENUM1
 	  |--ENUM-VAL1
 			|--name
@@ -42,15 +42,15 @@ typedef enum _TREE_TYPE {
 	TR_NUL = 0,
 
 	/*
-	One of '='  '*='  '/='  '%='  '+='  '-='  '<<='  
-	'>>='  '&='  '^='  '|='  
+	One of '='  '*='  '/='  '%='  '+='  '-='  '<<='
+	'>>='  '&='  '^='  '|='
 	*/
-	TR_ASSIGN, 	
-	TR_ID, 
-	TR_IMM,				//integer, 1234. 
+	TR_ASSIGN,
+	TR_ID,
+	TR_IMM,				//integer, 1234.
 	TR_IMML,			//long long integer, 1234L.
 	TR_FP,				//3.1415926f
-	TR_ENUM_CONST, 
+	TR_ENUM_CONST,
 	TR_STRING,
 	TR_LOGIC_OR,		//logical or ||
 	TR_LOGIC_AND,		//logical and &&
@@ -58,7 +58,7 @@ typedef enum _TREE_TYPE {
 	TR_INCLUSIVE_AND,	//inclusive and &
 	TR_XOR,				//exclusive or
 	TR_EQUALITY,		// == !=
-	TR_RELATION,		// < > >= <= 
+	TR_RELATION,		// < > >= <=
 	TR_SHIFT,			// >> <<
 	TR_ADDITIVE,		// '+' '-'
 	TR_MULTI,			// '*' '/' '%'
@@ -85,12 +85,12 @@ typedef enum _TREE_TYPE {
 	TR_DEC,				// --a
 	TR_POST_INC,		// a++
 	TR_POST_DEC,		// a--
-	TR_PLUS,			// +123  
-	TR_MINUS,			// -123  
+	TR_PLUS,			// +123
+	TR_MINUS,			// -123
 	TR_REV,				// Reverse
 	TR_NOT,				// get non-value
 	TR_SIZEOF,			// sizeof(a)
-	TR_DMEM,			// a.b, direct memory access 
+	TR_DMEM,			// a.b, direct memory access
 	TR_INDMEM,			// a->b, indirect memory access
 	TR_ARRAY,
 	TR_CALL,			// function call
@@ -119,7 +119,7 @@ public:
 };
 
 
-#define MAX_TREE_FLDS	4 
+#define MAX_TREE_FLDS	4
 
 #define TREE_token(tn)				(tn)->tok
 #define TREE_lineno(tn)				(tn)->lineno
@@ -133,11 +133,11 @@ public:
 #define TREE_lchild(tn)				(tn)->pfld[1] //lchild of the tree
 class TREE {
 public:
-	TREE_TYPE tree_node_type;  
+	TREE_TYPE tree_node_type;
 	TREE * parent;
 	TREE * nsibling;
-	TREE * psibling;	
-	INT lineno; ///line number in src file 
+	TREE * psibling;
+	INT lineno; ///line number in src file
 	TOKEN tok; //record the token that tree-node related.
 	BYTE is_imm_unsigned:1; //if true, immediate is unsigned.
 	union {
@@ -147,12 +147,12 @@ public:
 		} u11; //record a enum constant
 		struct {
 			SYM * id; //record a id in SYM_TAB
-			DECL * id_decl; //record a legal declaration 
+			DECL * id_decl; //record a legal declaration
 		} u12;
 		SYM * sval; //record a string in SYM_TAB
 		SYM * lab_name; //record a label name in SYM_TAB
 		HOST_INT_TYPE ival; //record a integer value
-		LABEL_INFO * lab_info; //record a label info defined in 
+		LABEL_INFO * lab_info; //record a label info defined in
 							//function level
 		INT  case_value; //record a constant value of jump-case table
 		//TYPE * ty;       //C standard type description
@@ -164,21 +164,21 @@ public:
 	} u1;
 
 	/*
-	Record DCL_TYPE_NAME that is an abstract type 
+	Record DCL_TYPE_NAME that is an abstract type
 	specifier to describing the result-data-type while current
 	TREE operator is acted.
 	*/
-	DECL * result_type_name; 
+	DECL * result_type_name;
     TREE * pfld[MAX_TREE_FLDS]; //for any other use
 };
 
 
 /*
 The following macro defined accessing method of
-C language tree node. 
+C language tree node.
 
 unary operator: & * + - ~ ! use TREE_lchild
-binary operator: '=' '*=' '/=' '%=' '+=' '-=' '<<=' '>>=' '&=' '^=' 
+binary operator: '=' '*=' '/=' '%=' '+=' '-=' '<<=' '>>=' '&=' '^='
 use TREE_lchild and TREE_rchild
 */
 
@@ -191,22 +191,22 @@ use TREE_lchild and TREE_rchild
 #define TREE_if_false_stmt(tn) (tn)->pfld[2]  // else-stmt of if-stmt
 
 //for(init;determinant;step){ for-body }
-#define TREE_for_init(tn)      (tn)->pfld[0]  // initialize of for-stmt 
+#define TREE_for_init(tn)      (tn)->pfld[0]  // initialize of for-stmt
 #define TREE_for_det(tn)       (tn)->pfld[1]  // determinant of for-stmt
 #define TREE_for_step(tn)      (tn)->pfld[2]  // step of for-stmt
 #define TREE_for_body(tn)      (tn)->pfld[3]  // body of for-stmt
 
 //do{body}while(determinant)
 #define TREE_dowhile_det(tn)   (tn)->pfld[0]  // determinant of dowhile-stmt
-#define TREE_dowhile_body(tn)  (tn)->pfld[1]  // body of dowhile-stmt 
+#define TREE_dowhile_body(tn)  (tn)->pfld[1]  // body of dowhile-stmt
 
 //while(determinant)do{body}
 #define TREE_whiledo_det(tn)   (tn)->pfld[0]  // determinant of whiledo-stmt
-#define TREE_whiledo_body(tn)  (tn)->pfld[1]  // body of whiledo-stmt 
+#define TREE_whiledo_body(tn)  (tn)->pfld[1]  // body of whiledo-stmt
 
 //switch(determinant){statement}
 #define TREE_switch_det(tn)    (tn)->pfld[0]  // determinant of switch-stmt
-#define TREE_switch_body(tn)   (tn)->pfld[1]  // statement of switch-stmt 
+#define TREE_switch_body(tn)   (tn)->pfld[1]  // statement of switch-stmt
 
 //conditional exp
 #define TREE_det(tn)           (tn)->pfld[0]
@@ -232,7 +232,7 @@ use TREE_lchild and TREE_rchild
 #define TREE_field(tn)         (tn)->pfld[1]
 
 //return def
-#define TREE_ret_exp(tn)       (tn)->pfld[0]  // return expression 
+#define TREE_ret_exp(tn)       (tn)->pfld[0]  // return expression
 
 //inc/pos-inc
 #define TREE_inc_exp(tn)       (tn)->pfld[0]
@@ -285,5 +285,5 @@ extern void dump_trees(TREE * t);
 extern INT is_indirect_tree_node(TREE * t);
 
 extern INT g_indent;
-#endif 
+#endif
 

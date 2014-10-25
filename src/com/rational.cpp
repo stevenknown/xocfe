@@ -1,5 +1,5 @@
 /*@
-Copyright (c) 2013-2014, Su Zhenyu steven.known@gmail.com 
+Copyright (c) 2013-2014, Su Zhenyu steven.known@gmail.com
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -11,18 +11,18 @@ modification, are permitted provided that the following conditions are met:
       notice, this list of conditions and the following disclaimer in the
       documentation and/or other materials provided with the distribution.
     * Neither the name of the Su Zhenyu nor the names of its contributors
-      may be used to endorse or promote products derived from this software 
+      may be used to endorse or promote products derived from this software
       without specific prior written permission.
 
 THIS SOFTWARE IS PROVIDED "AS IS" AND ANY
 EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
 DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL 
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR 
-SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER 
-CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, 
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE 
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 @*/
 #include "ltype.h"
@@ -32,33 +32,33 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define REDUCE
 #define abs(x) ((x) >= 0 ? (x) : -(x))
 
-RATIONAL::RATIONAL() 
+RATIONAL::RATIONAL()
 {
-	m_num = 0; 
+	m_num = 0;
 	m_den = 1;
 }
 
 
-RATIONAL::RATIONAL(RATIONAL const& r) 
+RATIONAL::RATIONAL(RATIONAL const& r)
 {
 	//Sometimes, r need not to initialize always.
 	//IS_TRUE(r.m_den != 0, ("denominator is 0!"));
-	m_num = r.m_num; 
+	m_num = r.m_num;
 	m_den = r.m_den;
 }
 
 
-RATIONAL::RATIONAL(INT num, INT den) 
+RATIONAL::RATIONAL(INT num, INT den)
 {
 	IS_TRUE(den != 0, ("denominator is 0!"));
 	m_num = num,  m_den = den;
 }
 
 
-RATIONAL & RATIONAL::operator = (RATIONAL const& a) 
+RATIONAL & RATIONAL::operator = (RATIONAL const& a)
 {
 	IS_TRUE(a.m_den != 0, ("denominator is 0!"));
-	m_num = a.m_num; 
+	m_num = a.m_num;
 	m_den = a.m_den;
 	return *this;
 }
@@ -127,7 +127,7 @@ CHAR * RATIONAL::format(CHAR * buf)
 		sprintf(buf, "%d/%d", m_num, m_den);
 	}
 	return buf;
-}	
+}
 
 
 static inline LONGLONG gcdf(LONGLONG x, LONGLONG y)
@@ -156,7 +156,7 @@ static inline void reduce_ll(LONGLONG & num, LONGLONG & den)
 		den = 1;
 		return;
 	}
-	LONGLONG gcd = gcdf(num, den);	
+	LONGLONG gcd = gcdf(num, den);
 	if (gcd == 1) {
 		if (den < 0) {
 			den = -den;
@@ -178,7 +178,7 @@ LONGLONG g_appro_count = 0;
 static inline void appro(LONGLONG & num, LONGLONG & den)
 {
 	g_appro_count++;
-	float v = float(num) / float(den);	
+	float v = float(num) / float(den);
 	if (v < 100.0) {
 		v = v * 1000000;
 		num = INT(v);
@@ -218,7 +218,7 @@ static inline void appro(LONGLONG & num, LONGLONG & den)
 bool operator < (RATIONAL const& a, RATIONAL const& b)
 {
 	IS_TRUE(a.m_den != 0 && b.m_den != 0, ("denominator is 0!"));
-	if ((LONGLONG)a.m_num * (LONGLONG)b.m_den < 
+	if ((LONGLONG)a.m_num * (LONGLONG)b.m_den <
 		(LONGLONG)a.m_den * (LONGLONG)b.m_num) {
 		return true;
 	}
@@ -229,7 +229,7 @@ bool operator < (RATIONAL const& a, RATIONAL const& b)
 bool operator <= (RATIONAL const& a, RATIONAL const& b)
 {
 	IS_TRUE(a.m_den != 0 && b.m_den != 0, ("denominator is 0!"));
-	if (((LONGLONG)(a.m_num) * (LONGLONG)(b.m_den)) <= 
+	if (((LONGLONG)(a.m_num) * (LONGLONG)(b.m_den)) <=
 		((LONGLONG)(a.m_den) * (LONGLONG)(b.m_num))) {
 		return true;
 	}
@@ -240,7 +240,7 @@ bool operator <= (RATIONAL const& a, RATIONAL const& b)
 bool operator > (RATIONAL const& a, RATIONAL const& b)
 {
 	IS_TRUE(a.m_den != 0 && b.m_den != 0, ("denominator is 0!"));
-	if (((LONGLONG)(a.m_num) * (LONGLONG)(b.m_den)) > 
+	if (((LONGLONG)(a.m_num) * (LONGLONG)(b.m_den)) >
 		((LONGLONG)(a.m_den) * (LONGLONG)(b.m_num))) {
 		return true;
 	}
@@ -251,7 +251,7 @@ bool operator > (RATIONAL const& a, RATIONAL const& b)
 bool operator >= (RATIONAL const& a, RATIONAL const& b)
 {
 	IS_TRUE(a.m_den != 0 && b.m_den != 0, ("denominator is 0!"));
-	if (((LONGLONG)(a.m_num) * (LONGLONG)(b.m_den)) >= 
+	if (((LONGLONG)(a.m_num) * (LONGLONG)(b.m_den)) >=
 		((LONGLONG)(a.m_den) * (LONGLONG)(b.m_num))) {
 		return true;
 	}
@@ -267,7 +267,7 @@ RATIONAL operator * (RATIONAL const& a, RATIONAL const& b)
 	if (rnum == 0) {
 		rat.m_num = 0;
 		rat.m_den = 1;
-		return rat;	
+		return rat;
 	}
 	LONGLONG rden = (LONGLONG)(a.m_den) * (LONGLONG)(b.m_den);
 	IS_TRUE(rden != 0, ("den is zero"));
@@ -279,22 +279,22 @@ RATIONAL operator * (RATIONAL const& a, RATIONAL const& b)
 #endif
 	IS_TRUE0(rden > 0);
 	LONGLONG trnum = abs(rnum);
-	if ((trnum >= (LONGLONG)(INT_MAX>>2)) || 
+	if ((trnum >= (LONGLONG)(INT_MAX>>2)) ||
 		(rden >= (LONGLONG)(INT_MAX>>2))) {
 		reduce_ll(trnum, rden);
-		if ((trnum >= (LONGLONG)(INT_MAX)) || 
+		if ((trnum >= (LONGLONG)(INT_MAX)) ||
 			(rden >= (LONGLONG)(INT_MAX))) {
 			appro(trnum, rden);
-			IS_TRUE0((trnum < (LONGLONG)(INT_MAX)) && 
+			IS_TRUE0((trnum < (LONGLONG)(INT_MAX)) &&
 					 (rden < (LONGLONG)(INT_MAX)));
 		}
 	}
 
-	//Enforce conversion from 'int64' to 'int32', 
+	//Enforce conversion from 'int64' to 'int32',
 	//even if it possible loss of data.
-	rat.m_num = rnum < 0 ? -trnum : trnum; 
+	rat.m_num = rnum < 0 ? -trnum : trnum;
 	rat.m_den = rden;
-	return rat;	
+	return rat;
 }
 
 
@@ -320,26 +320,26 @@ RATIONAL operator / (RATIONAL const& a, RATIONAL const& b)
 		}
 		return rat;
 	}
-	
+
 	LONGLONG ratnum = (LONGLONG)(anum) * (LONGLONG)(bden);
-	LONGLONG ratden = (LONGLONG)(aden) * (LONGLONG)(bnum); 
+	LONGLONG ratden = (LONGLONG)(aden) * (LONGLONG)(bnum);
 	if (ratnum == ratden) { rat.m_num = 1; rat.m_den = 1; return rat; }
 	if (ratnum == -ratden) { rat.m_num = -1; rat.m_den = 1; return rat; }
-	if ((ratnum < 0 && ratden < 0) || ratden < 0) { 
-		ratnum = -ratnum; ratden = -ratden; 
+	if ((ratnum < 0 && ratden < 0) || ratden < 0) {
+		ratnum = -ratnum; ratden = -ratden;
 	}
 #ifdef REDUCE
 	reduce_ll(ratnum, ratden);
 #endif
 	IS_TRUE0(ratden > 0);
 	LONGLONG trnum = abs(ratnum);
-	if ((trnum >= (LONGLONG)(INT_MAX >> 2)) || 
+	if ((trnum >= (LONGLONG)(INT_MAX >> 2)) ||
 		(ratden >= (LONGLONG)(INT_MAX >> 2))) {
 		reduce_ll(trnum, ratden);
-		if ((trnum >= (LONGLONG)(INT_MAX)) || 
+		if ((trnum >= (LONGLONG)(INT_MAX)) ||
 			(ratden >= (LONGLONG)(INT_MAX))) {
 			appro(trnum, ratden);
-			IS_TRUE0((trnum < (LONGLONG)(INT_MAX)) && 
+			IS_TRUE0((trnum < (LONGLONG)(INT_MAX)) &&
 					(ratden < (LONGLONG)(INT_MAX)));
 		}
 	}
@@ -353,7 +353,7 @@ RATIONAL operator + (RATIONAL const& a, RATIONAL const& b)
 {
 	IS_TRUE(a.m_den != 0 && b.m_den != 0, ("denominator is 0!"));
 	RATIONAL rat;
-	LONGLONG rnum = (LONGLONG)(a.m_num) * (LONGLONG)(b.m_den) + 
+	LONGLONG rnum = (LONGLONG)(a.m_num) * (LONGLONG)(b.m_den) +
 					(LONGLONG)(a.m_den) * (LONGLONG)(b.m_num);
 	if (rnum == 0) {
 		rat.m_num = 0;
@@ -370,15 +370,15 @@ RATIONAL operator + (RATIONAL const& a, RATIONAL const& b)
 #endif
 	IS_TRUE0(rden > 0);
 	LONGLONG trnum = abs(rnum);
-	if ((trnum >= (LONGLONG)(INT_MAX>>2)) || 
+	if ((trnum >= (LONGLONG)(INT_MAX>>2)) ||
 		(rden >= (LONGLONG)(INT_MAX>>2))) {
 		reduce_ll(trnum, rden);
-		if ((trnum >= (LONGLONG)(INT_MAX)) || 
+		if ((trnum >= (LONGLONG)(INT_MAX)) ||
 			(rden >= (LONGLONG)(INT_MAX))) {
 			appro(trnum, rden);
-			IS_TRUE0((trnum < (LONGLONG)(INT_MAX)) && 
+			IS_TRUE0((trnum < (LONGLONG)(INT_MAX)) &&
 					(rden < (LONGLONG)(INT_MAX)));
-		}	
+		}
 	}
 	rat.m_num = rnum < 0 ? -trnum : trnum;
 	rat.m_den = rden;

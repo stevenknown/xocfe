@@ -1,5 +1,5 @@
 /*@
-Copyright (c) 2013-2014, Su Zhenyu steven.known@gmail.com 
+Copyright (c) 2013-2014, Su Zhenyu steven.known@gmail.com
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -11,22 +11,24 @@ modification, are permitted provided that the following conditions are met:
       notice, this list of conditions and the following disclaimer in the
       documentation and/or other materials provided with the distribution.
     * Neither the name of the Su Zhenyu nor the names of its contributors
-      may be used to endorse or promote products derived from this software 
+      may be used to endorse or promote products derived from this software
       without specific prior written permission.
 
 THIS SOFTWARE IS PROVIDED "AS IS" AND ANY
 EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
 DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL 
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR 
-SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER 
-CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, 
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE 
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 @*/
 #ifndef __GRAPH_H_
 #define __GRAPH_H_
+
+#define MAGIC_METHOD
 
 class VERTEX;
 class EDGE;
@@ -39,7 +41,7 @@ class GRAPH;
 #define EDGE_info(e)		(e)->info
 class EDGE {
 public:
-	EDGE() 
+	EDGE()
 	{
 		prev = next = NULL;
 		from = to = NULL;
@@ -59,7 +61,7 @@ public:
 #define EC_edge(el)		(el)->edge
 class EDGE_C {
 public:
-	EDGE_C() 
+	EDGE_C()
 	{
 		next = prev = NULL;
 		edge = NULL;
@@ -96,45 +98,27 @@ public:
 };
 
 
-#define MAKE_VALUE(from, to) (((from)*4+(to))%m_bucket_size)
-class EDGE_HASH : public SHASH<EDGE*> {
-	GRAPH * m_g;
+#define MAKE_VALUE(from, to) (((from)<<16)|(to))
+class EDGE_HF {
 public:
-	EDGE_HASH(UINT bsize = 47) : SHASH<EDGE*>(bsize) {} 
-	virtual ~EDGE_HASH() {}
-
-	void init_g(GRAPH * g) { m_g = g; }
-	void init(GRAPH * g, UINT bsize)
+	UINT get_hash_value(EDGE * e, UINT bs) const
 	{
-		m_g = g;
-		SHASH<EDGE*>::init(bsize);
+		IS_TRUE0(is_power_of_2(bs));
+		return hash32bit(MAKE_VALUE(VERTEX_id(EDGE_from(e)),
+									VERTEX_id(EDGE_to(e)))) & (bs - 1);
 	}
 
-	void destroy()
+	UINT get_hash_value(ULONG val, UINT bs) const
+	{ return get_hash_value((EDGE*)val, bs); }
+
+	bool compare(EDGE * e1, EDGE * e2) const
 	{
-		m_g = NULL;
-		SHASH<EDGE*>::destroy();
-	}
-	
-	virtual UINT get_hash_value(EDGE * e)
-	{ 
-		return MAKE_VALUE(VERTEX_id(EDGE_from(e)), VERTEX_id(EDGE_to(e)));
-	}
-	virtual bool compare(EDGE * e1, EDGE * e2)
-	{ 
-		return (VERTEX_id(EDGE_from(e1)) == VERTEX_id(EDGE_from(e2))) && 
+		return (VERTEX_id(EDGE_from(e1)) == VERTEX_id(EDGE_from(e2))) &&
 			   (VERTEX_id(EDGE_to(e1)) == VERTEX_id(EDGE_to(e2)));
 	}
-	
-	virtual UINT get_hash_value(ULONG val)
-	{
-		EDGE * e = (EDGE*)val;
-		return MAKE_VALUE(VERTEX_id(EDGE_from(e)), VERTEX_id(EDGE_to(e)));
-	}
 
-	virtual EDGE * create(ULONG v);
-	virtual bool compare(EDGE * t1, ULONG val)
-	{ 
+	bool compare(EDGE * t1, ULONG val) const
+	{
 		EDGE * t2 = (EDGE*)val;
 		return VERTEX_id(EDGE_from(t1)) == VERTEX_id(EDGE_from(t2)) &&
 			   VERTEX_id(EDGE_to(t1)) == VERTEX_id(EDGE_to(t2));
@@ -142,26 +126,56 @@ public:
 };
 
 
-class VERTEX_HASH : public SHASH<VERTEX*> {
+class EDGE_HASH : public SHASH<EDGE*, EDGE_HF> {
+	GRAPH * m_g;
 public:
-	VERTEX_HASH(UINT bsize = 47) : SHASH<VERTEX*>(bsize) {}
+	EDGE_HASH(UINT bsize = 64) : SHASH<EDGE*, EDGE_HF>(bsize) {}
+	virtual ~EDGE_HASH() {}
+
+	void init_g(GRAPH * g) { m_g = g; }
+	void init(GRAPH * g, UINT bsize)
+	{
+		m_g = g;
+		SHASH<EDGE*, EDGE_HF>::init(bsize);
+	}
+
+	void destroy()
+	{
+		m_g = NULL;
+		SHASH<EDGE*, EDGE_HF>::destroy();
+	}
+
+	virtual EDGE * create(ULONG v);
+};
+
+
+class VERTEX_HF {
+public:
+	UINT get_hash_value(ULONG val, UINT bs) const
+	{
+		IS_TRUE0(is_power_of_2(bs));
+		return hash32bit((UINT)val) & (bs - 1);
+	}
+
+	UINT get_hash_value(VERTEX const* vex, UINT bs) const
+	{
+		IS_TRUE0(is_power_of_2(bs));
+		return hash32bit(VERTEX_id(vex)) & (bs - 1);
+	}
+
+	bool compare(VERTEX * v1, VERTEX * v2) const
+	{ return (VERTEX_id(v1) == VERTEX_id(v2)); }
+
+	bool compare(VERTEX * v1, ULONG val) const
+	{ return (VERTEX_id(v1) == val); }
+};
+
+
+class VERTEX_HASH : public SHASH<VERTEX*, VERTEX_HF> {
+public:
+	VERTEX_HASH(UINT bsize = 64) : SHASH<VERTEX*, VERTEX_HF>(bsize) {}
 	virtual ~VERTEX_HASH() {}
-	virtual UINT get_hash_value(ULONG val)
-	{
-		return val % m_bucket_size;
-	}
-	virtual UINT get_hash_value(VERTEX * vex)
-	{
-		return VERTEX_id(vex) % m_bucket_size;
-	}
-	virtual bool compare(VERTEX * v1, VERTEX * v2)
-	{
-		return (VERTEX_id(v1) == VERTEX_id(v2));
-	}
-	virtual bool compare(VERTEX * v1, ULONG val)
-	{
-		return (VERTEX_id(v1) == val);
-	}
+
 	virtual VERTEX * create(ULONG v)
 	{
 		VERTEX * ver = (VERTEX*)_xmalloc(sizeof(VERTEX));
@@ -172,26 +186,26 @@ public:
 
 
 /*
-A graph G = (V, E), consists of a set of vertices, V, and a set of edges, E. 
-Each edge is a pair (v,w), where v,w belong to V. Edges are sometimes 
-referred to as arcs. If the pair is ordered, then the graph is directed. 
-Directed graphs are sometimes referred to as digraphs. Vertex w is adjacent 
-to v if and only if (v,w) belong to E. In an undirected graph with edge (v,w), 
-and hence (w,v), w is adjacent to v and v is adjacent to w. 
-Sometimes an edge has a third component, known as either a weight or a cost. 
+A graph G = (V, E), consists of a set of vertices, V, and a set of edges, E.
+Each edge is a pair (v,w), where v,w belong to V. Edges are sometimes
+referred to as arcs. If the pair is ordered, then the graph is directed.
+Directed graphs are sometimes referred to as digraphs. Vertex w is adjacent
+to v if and only if (v,w) belong to E. In an undirected graph with edge (v,w),
+and hence (w,v), w is adjacent to v and v is adjacent to w.
+Sometimes an edge has a third component, known as either a weight or a cost.
 
 NOTICE:
 1. For accelerating perform operation of each vertex, e.g
-   compute dominator, please try best to add vertex with 
+   compute dominator, please try best to add vertex with
    topological order.
 */
 class GRAPH {
 	friend class EDGE_HASH;
 	friend class VERTEX_HASH;
-protected:	
-	//it is true if the number of edges between any two 
+protected:
+	//it is true if the number of edges between any two
 	//vertexs are not more than one.
-	BYTE m_is_unique:1; 
+	BYTE m_is_unique:1;
 	BYTE m_is_direction:1; //true if graph is direction.
 	UINT m_edge_hash_size;
 	UINT m_vex_hash_size;
@@ -213,7 +227,7 @@ protected:
 	inline void add_out_list(VERTEX * vex, EDGE * e);
 	inline void add_in_list(VERTEX * vex, EDGE * e);
 public:
-	GRAPH(UINT edge_hash_size = 47, UINT vex_hash_size = 47);
+	GRAPH(UINT edge_hash_size = 64, UINT vex_hash_size = 64);
 	GRAPH(GRAPH & g);
 	virtual ~GRAPH() { destroy(); }
 	void init();
@@ -221,22 +235,22 @@ public:
 	inline EDGE * add_edge(UINT from, UINT to)
 	{
 		IS_TRUE(m_pool != NULL, ("not yet initialized."));
-		return new_edge(from, to);	
+		return new_edge(from, to);
 	}
 	inline EDGE * add_edge(VERTEX * from, VERTEX * to)
 	{
 		IS_TRUE(m_pool != NULL, ("not yet initialized."));
-		return new_edge(from, to);	
+		return new_edge(from, to);
 	}
 	inline VERTEX * add_vertex(UINT vid)
 	{
 		IS_TRUE(m_pool != NULL, ("not yet initialized."));
 		return m_vertexs.append(new_vertex(vid));
-	}	
+	}
 
 	bool clone(GRAPH & src);
 	UINT count_mem() const;
-	
+
 	void dump_dot(CHAR const* name = NULL);
 	void dump_vcg(CHAR const* name = NULL);
 
@@ -244,18 +258,18 @@ public:
 	bool is_pred(VERTEX * v, VERTEX * pred);
 	bool is_equal(GRAPH & g);
 	bool is_unique() const { return m_is_unique; }
-	bool is_direction() const { return m_is_direction; } 
+	bool is_direction() const { return m_is_direction; }
 	//Is there exist a path connect 'from' and 'to'.
 	inline bool is_reachable(UINT from, UINT to)
 	{
 		IS_TRUE(m_pool != NULL, ("not yet initialized."));
 		return is_reachable(get_vertex(from), get_vertex(to));
 	}
-	bool is_reachable(VERTEX * from, VERTEX * to);	
-	void insert_vertex_between(IN VERTEX * v1, IN VERTEX * v2, 
-							   IN VERTEX * newv, OUT EDGE ** e1 = NULL, 
+	bool is_reachable(VERTEX * from, VERTEX * to);
+	void insert_vertex_between(IN VERTEX * v1, IN VERTEX * v2,
+							   IN VERTEX * newv, OUT EDGE ** e1 = NULL,
 							   OUT EDGE ** e2 = NULL);
-	void insert_vertex_between(UINT v1, UINT v2, UINT newv, 
+	void insert_vertex_between(UINT v1, UINT v2, UINT newv,
 							   OUT EDGE ** e1 = NULL, OUT EDGE ** e2 = NULL);
 	inline bool is_graph_entry(VERTEX * v)
 	{
@@ -270,14 +284,15 @@ public:
 		}
 		return false;
 	}
-								
-	void erasure();	
+
+	void erasure();
 
 	bool get_neighbor_list(IN OUT LIST<UINT> & ni_list, IN UINT vid) const;
+	bool get_neighbor_set(OUT SBITSET & niset, IN UINT vid) const;
 	inline UINT get_degree(UINT vid)
 	{
 		IS_TRUE(m_pool != NULL, ("not yet initialized."));
-		return get_degree(m_vertexs.find(vid));	
+		return get_degree(m_vertexs.find(vid));
 	}
 	UINT get_degree(VERTEX const* vex) const;
 	UINT get_in_degree(VERTEX const* vex) const;
@@ -325,7 +340,7 @@ public:
 		VERTEX * fp = add_vertex(from);
 		VERTEX * tp = add_vertex(to);
 		return new_edge(fp, tp);
-	}	
+	}
 	EDGE * new_edge(VERTEX * from, VERTEX * to);
 	VERTEX * new_vertex(UINT vid);
 	EDGE_C * new_ec(EDGE * e);
@@ -340,7 +355,7 @@ public:
 		IS_TRUE(m_pool != NULL, ("not yet initialized."));
 		return remove_vertex(get_vertex(vid));
 	}
-	void remove_transitive_edge();	
+	void remove_transitive_edge();
 
 	bool sort_in_toplog_order(OUT SVECTOR<UINT> & vex_vec, bool is_topdown);
 	inline void set_unique(bool is_unique)
@@ -363,7 +378,7 @@ public:
 	UINT is_preorder:1;
 	UINT is_postorder:1;
 
-	ITER_DOM_TREE() 
+	ITER_DOM_TREE()
 	{
 		is_preorder = 0;
 		is_postorder = 0;
@@ -386,15 +401,15 @@ protected:
 	BITSET_MGR * m_bs_mgr;
 	void _remove_unreach_node(UINT id, BITSET & visited);
 public:
-	DGRAPH(UINT edge_hash_size = 47, UINT vex_hash_size = 47);
+	DGRAPH(UINT edge_hash_size = 64, UINT vex_hash_size = 64);
 	DGRAPH(DGRAPH & g);
 
 	inline bool clone(DGRAPH & g)
 	{
 		m_bs_mgr = g.m_bs_mgr;
 		return GRAPH::clone(g);
-	}	
-	bool clone_bs(DGRAPH & src);	
+	}
+	bool clone_bs(DGRAPH & src);
 	bool compute_dom(LIST<VERTEX*> * vlst = NULL, BITSET const* uni = NULL);
 	bool compute_pdom_by_rpo(VERTEX * root, BITSET const* uni = NULL);
 	bool compute_pdom(LIST<VERTEX*> * vlst = NULL, BITSET const* uni = NULL);
@@ -408,7 +423,7 @@ public:
 	//idom must be positive
 	inline UINT get_idom(UINT bbid) { return m_idom_set.get(bbid); }
 	//ipdom must be positive
-	inline UINT get_ipdom(UINT bbid) { return m_ipdom_set.get(bbid); }	
+	inline UINT get_ipdom(UINT bbid) { return m_ipdom_set.get(bbid); }
 	void get_dom_tree(OUT GRAPH & dom);
 	void get_pdom_tree(OUT GRAPH & pdom);
 
@@ -440,9 +455,9 @@ public:
 	bool is_pdom(UINT v1, UINT v2)
 	{ return get_pdom_set(v2)->is_contain(v1); }
 
-	void sort_in_bfs_order(SVECTOR<UINT> & order_buf, VERTEX * root, 
+	void sort_in_bfs_order(SVECTOR<UINT> & order_buf, VERTEX * root,
 						   BITSET & visit);
-	void sort_dom_tree_in_preorder(IN GRAPH & dom_tree, IN VERTEX * root, 
+	void sort_dom_tree_in_preorder(IN GRAPH & dom_tree, IN VERTEX * root,
 								   OUT LIST<VERTEX*> & lst);
 	void sort_dom_tree_in_postorder(IN GRAPH & dom_tree, IN VERTEX * root,
 									OUT LIST<VERTEX*> & lst);

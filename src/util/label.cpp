@@ -48,16 +48,16 @@ void dump_lab(LABEL_INFO const* li)
 {
 	if (g_tfile == NULL) return;
 	if (LABEL_INFO_type(li) == L_ILABEL) {
-		fprintf(g_tfile, "\nilabel(" ILABEL_STR_FORMAT ")", 
+		fprintf(g_tfile, "\nilabel(" ILABEL_STR_FORMAT ")",
 				ILABEL_CONT(li));
 	} else if (LABEL_INFO_type(li) == L_CLABEL) {
-		fprintf(g_tfile, "\nclabel(" CLABEL_STR_FORMAT ")", 
+		fprintf(g_tfile, "\nclabel(" CLABEL_STR_FORMAT ")",
 				CLABEL_CONT(li));
 	} else if (LABEL_INFO_type(li) == L_PRAGMA) {
-		fprintf(g_tfile, "\npragms(%s)", 
+		fprintf(g_tfile, "\npragms(%s)",
 				SYM_name(LABEL_INFO_pragma(li)));
 	} else { IS_TRUE0(0); }
-	
+
 	if (LABEL_INFO_b1(li) != 0) {
 		fprintf(g_tfile, "(");
 	}
@@ -74,7 +74,7 @@ void dump_lab(LABEL_INFO const* li)
 		fprintf(g_tfile, "used ");
 	}
 	if (LABEL_INFO_b1(li) != 0) {
-		fprintf(g_tfile, ")");	
+		fprintf(g_tfile, ")");
 	}
 	fflush(g_tfile);
 }
