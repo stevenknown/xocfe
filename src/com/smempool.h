@@ -1,5 +1,5 @@
 /*@
-Copyright (c) 2013-2014, Su Zhenyu steven.known@gmail.com 
+Copyright (c) 2013-2014, Su Zhenyu steven.known@gmail.com
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -11,18 +11,18 @@ modification, are permitted provided that the following conditions are met:
       notice, this list of conditions and the following disclaimer in the
       documentation and/or other materials provided with the distribution.
     * Neither the name of the Su Zhenyu nor the names of its contributors
-      may be used to endorse or promote products derived from this software 
+      may be used to endorse or promote products derived from this software
       without specific prior written permission.
 
 THIS SOFTWARE IS PROVIDED "AS IS" AND ANY
 EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
 DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL 
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR 
-SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER 
-CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, 
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE 
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 @*/
 #ifndef __MEM_POOL_H__
@@ -66,7 +66,7 @@ typedef struct _mem_pool {
 	ULONG grow_size;
 
 	//represent total mem pool size, include pool's header and bound-words size.
-	ULONG mem_pool_total_size; 
+	ULONG mem_pool_total_size;
 	MEMPOOLTYPE mem_pool_type;
 	void * ppool; //start address of mem pool
 } SMEM_POOL;
@@ -75,7 +75,7 @@ typedef struct _mem_pool {
 #ifdef __cplusplus
 extern "C" {
 #endif
-//create mem pool  
+//create mem pool
 MEMPOOLIDX smpool_create_idx(ULONG size, MEMPOOLTYPE mpt);
 SMEM_POOL * smpool_create_handle(ULONG size, MEMPOOLTYPE mpt);
 
@@ -83,7 +83,7 @@ SMEM_POOL * smpool_create_handle(ULONG size, MEMPOOLTYPE mpt);
 INT smpool_free_idx(MEMPOOLIDX mpt_idx);
 INT smpool_free_handle(SMEM_POOL * handle);
 
-//alloc memory from corresponding mem pool 
+//alloc memory from corresponding mem pool
 void * smpool_malloc_i(ULONG size, MEMPOOLIDX mpt_idx, UINT grow_size = 0);
 void * smpool_malloc_h(ULONG size, SMEM_POOL * handle, UINT grow_size = 0);
 
@@ -91,10 +91,10 @@ void * smpool_malloc_h(ULONG size, SMEM_POOL * handle, UINT grow_size = 0);
 ULONG smpool_get_pool_size_idx(MEMPOOLIDX mpt_idx);
 ULONG smpool_get_pool_size_handle(SMEM_POOL const* handle);
 void smpool_init_pool(); //Initializing pool utilities
-void smpool_fini_pool(); //Finializing pool 
+void smpool_fini_pool(); //Finializing pool
 #ifdef __cplusplus
 }
-#endif 
+#endif
 
 extern ULONG g_stat_mem_size;
 #endif

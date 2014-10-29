@@ -1,5 +1,5 @@
 /*@
-Copyright (c) 2013-2014, Su Zhenyu steven.known@gmail.com 
+Copyright (c) 2013-2014, Su Zhenyu steven.known@gmail.com
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -11,18 +11,18 @@ modification, are permitted provided that the following conditions are met:
       notice, this list of conditions and the following disclaimer in the
       documentation and/or other materials provided with the distribution.
     * Neither the name of the Su Zhenyu nor the names of its contributors
-      may be used to endorse or promote products derived from this software 
+      may be used to endorse or promote products derived from this software
       without specific prior written permission.
 
 THIS SOFTWARE IS PROVIDED "AS IS" AND ANY
 EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
 DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL 
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR 
-SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER 
-CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, 
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE 
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 @*/
 #ifndef __DECL_H__
@@ -55,7 +55,7 @@ Record ENUM info, and field 'name' reserved its character description.
 class ENUM {
 public:
 	INT val;
-	SYM * name;  
+	SYM * name;
 	EVAL_LIST * pevlist;
 };
 
@@ -68,7 +68,7 @@ class ENUM_LIST {
 public:
 	ENUM_LIST * next;
 	ENUM_LIST * prev;
-	ENUM * e; 
+	ENUM * e;
 };
 
 
@@ -80,7 +80,7 @@ class USER_TYPE_LIST {
 public:
 	USER_TYPE_LIST * next;
 	USER_TYPE_LIST * prev;
-	DECL * ut; 
+	DECL * ut;
 };
 
 
@@ -156,7 +156,7 @@ public:
 #define TYPE_parent(t)			(t)->pfld[0]
 #define TYPE_next(t)			(t)->pfld[1]
 #define TYPE_prev(t)			(t)->pfld[2]
-#define TYPE_user_type(t)		(t)->u1.user_type //user type define 
+#define TYPE_user_type(t)		(t)->u1.user_type //user type define
 #define TYPE_enum_type(t)		(t)->u1.enum_type //enum type define
 #define TYPE_struct_type(t)		(t)->u1.struct_type //struct type define
 #define TYPE_union_type(t)		(t)->u1.union_type //union type define
@@ -166,7 +166,7 @@ public:
 #define IS_STRUCT(t)			HAVE_FLAG(TYPE_des(t), T_SPEC_STRUCT)
 #define IS_UNION(t)				HAVE_FLAG(TYPE_des(t), T_SPEC_UNION)
 #define IS_TYPE(t,T)			HAVE_FLAG(TYPE_des(t), T)
-#define IS_TYPED(des,T)			HAVE_FLAG((des), T) 
+#define IS_TYPED(des,T)			HAVE_FLAG((des), T)
 #define IS_REG(t)				HAVE_FLAG(TYPE_des(t), T_STOR_REG)
 #define IS_STATIC(t)			HAVE_FLAG(TYPE_des(t), T_STOR_STATIC)
 #define IS_EXTERN(t)			HAVE_FLAG(TYPE_des(t), T_STOR_EXTERN)
@@ -174,14 +174,14 @@ public:
 #define IS_TYPEDEF(t)			HAVE_FLAG(TYPE_des(t), T_STOR_TYPEDEF)
 #define IS_ENUM_TYPE(t)			HAVE_FLAG(TYPE_des(t), T_SPEC_ENUM_TYPE)
 #define IS_USER_TYPE(t)			HAVE_FLAG(TYPE_des(t), T_SPEC_USER_TYPE)
-#define IS_DOUBLE(t)			HAVE_FLAG(t, T_SPEC_DOUBLE) 
-#define IS_FLOAT(t)				HAVE_FLAG(t, T_SPEC_FLOAT) 
-class TYPE { 
+#define IS_DOUBLE(t)			HAVE_FLAG(t, T_SPEC_DOUBLE)
+#define IS_FLOAT(t)				HAVE_FLAG(t, T_SPEC_FLOAT)
+class TYPE {
 public:
 	ULONG t_des; /* descripte: const volatile
 				    	void char short int long longlong float double bool
 						signed unsigned struct union enum-specifier typedef-name
-			        	auto register static extern typedef	
+			        	auto register static extern typedef
 				 */
 	union {
 		TYPE * decl_list; //record struct or union body
@@ -192,7 +192,7 @@ public:
 	} u1;
 	TYPE * pfld[MAX_TYPE_FLD];
 
-	TYPE() 
+	TYPE()
 	{
 		clean();
 	}
@@ -213,7 +213,7 @@ public:
 		for (INT i = 0; i < MAX_TYPE_FLD; i++) {
 			pfld[i] = ty.pfld[i];
 		}
-	}		
+	}
 };
 
 
@@ -229,10 +229,10 @@ typedef enum {
 	DCL_ID,        //identifier
 	DCL_VARIABLE,  //variable length parameter, e.g: ...
 	DCL_TYPE_NAME,   //if current decl is TYPE_NAME,  it descript a
-					 //abstract type spec 
+					 //abstract type spec
 	DCL_DECLARATOR,  //declarator
 	DCL_DECLARATION, //declaration
-	DCL_ABS_DECLARATOR, //abstract declarator	
+	DCL_ABS_DECLARATOR, //abstract declarator
 } DCL;
 
 class DECL {
@@ -247,18 +247,18 @@ public:
 	UINT lineno; //record line number of declaration.
 
 	//record the num of fields while the base of DECL is STRUCT/UNION.
-	UINT fieldno; 
+	UINT fieldno;
 
 	//memory alignment of declaration in the current context.
-	UINT align; 
+	UINT align;
 	TYPE * base_type_spec; //Record base type-spec of field.
 
 	//1 indicates that the DECL enclosed with a pair of '(' ')'.
-	BYTE is_paren:1; 
+	BYTE is_paren:1;
 	BYTE is_bit_field:1; //descripte a bit field.
 
 	//descripte a function's property: 1: definition, 0:declaration.
-	BYTE is_fun_def:1;  
+	BYTE is_fun_def:1;
 	BYTE is_init:1; //has a initializing expression.
 	BYTE is_sub_field:1; //DECL is a sub field of struct/union.
 	BYTE is_formal_para:1; //DECL is a formal parameter.
@@ -266,19 +266,19 @@ public:
 	struct {
 		//declaration specifier
 		//only locate on top of decl link list
-		TYPE * specifier; 
+		TYPE * specifier;
 
-		DECL * declarator_list; //declarator list 
-		SCOPE * scope; //declaration reside in 
+		DECL * declarator_list; //declarator list
+		SCOPE * scope; //declaration reside in
 	} u0; //only for DCL_DECLARATION used
-	TYPE * qualifier; //quanlifier for POINTER/ID		
+	TYPE * qualifier; //quanlifier for POINTER/ID
 	union {
 		struct {
 			union {
 				ULONGLONG  index;
 				TREE * index_exp;
 			} u121;
-			DECL * abase; 
+			DECL * abase;
 		} u12; //only for DCL_ARRAY used
 
 		struct {
@@ -292,25 +292,25 @@ public:
 			This value was computed in compute_constant_exp().
 			only be seen as a child of DCL_DECLARATOR.
 			only be valid in struct-member declare.
-			only was effective after 'bit_exp' has been computed 
+			only was effective after 'bit_exp' has been computed
 			completely in typeck.cpp file.
 			*/
 			INT  bit_len;
 		} u16;
-		
+
 		//Record a identifier, only used by DCL_ID.
-		//TREE type should be defined relatively with specific language.		
+		//TREE type should be defined relatively with specific language.
 		TREE * id;
 	} u1;
 
 	union {
 		//Record a function body
 		//ONLY record as a child of DCL_DECLARATION
-		SCOPE * fun_body; 
+		SCOPE * fun_body;
 
 		//Record an initializing tree
 		//ONLY record as a child of DCL_DECLARATOR
-		TREE * init; 
+		TREE * init;
 	} u2;
 };
 
@@ -346,7 +346,7 @@ record its body
 
 /*
 Record qualification of DCL.
-If current 'decl' is DCL_POINTER or DCL_ID, the 
+If current 'decl' is DCL_POINTER or DCL_ID, the
 followed member record its quanlifier specicfier.
 */
 #define DECL_qua(d)					(d)->qualifier
@@ -366,7 +366,7 @@ record it initializing tree
 /*
 If current 'decl' is DCL_ARRAY, the followed members record its
 base and index value/expression, which may be NULL.
-During the AST generation, DECL_array_index_exp() is avaiable, and 
+During the AST generation, DECL_array_index_exp() is avaiable, and
 the actually integer value is calculated after c_parse() finished.
 */
 #define DECL_array_index(d)			(d)->u1.u12.u121.index
@@ -391,8 +391,8 @@ It will not be zero if current decl record a bit field
 //#define DECL_bit_exp(d)			(d)->u1.u16.bit_exp
 
 /*
-'d' must be TYPE-NAME ,get pure declarator list 
-The macro without validation check, plz call 
+'d' must be TYPE-NAME ,get pure declarator list
+The macro without validation check, plz call
 get_pure_declarator if you want to check.
 */
 #define PURE_DECL(d)				DECL_child(DECL_decl_list(d))
@@ -441,7 +441,7 @@ INT format_user_type_spec(IN OUT CHAR buf[], IN DECL * ut);
 INT format_base_type_spec(IN OUT CHAR buf[], IN TYPE * ty);
 INT format_stor_spec(IN OUT CHAR buf[], IN TYPE * ty);
 INT format_declarator(IN OUT CHAR buf[], IN DECL * decl);
-INT format_declaration(IN OUT CHAR buf[], IN DECL * decl);	
+INT format_declaration(IN OUT CHAR buf[], IN DECL * decl);
 
 //Dump DECL-TREE style type-info
 INT format_dcrl(IN DECL * decl, INT indent);

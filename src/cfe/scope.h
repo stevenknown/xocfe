@@ -1,5 +1,5 @@
 /*@
-Copyright (c) 2013-2014, Su Zhenyu steven.known@gmail.com 
+Copyright (c) 2013-2014, Su Zhenyu steven.known@gmail.com
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -11,18 +11,18 @@ modification, are permitted provided that the following conditions are met:
       notice, this list of conditions and the following disclaimer in the
       documentation and/or other materials provided with the distribution.
     * Neither the name of the Su Zhenyu nor the names of its contributors
-      may be used to endorse or promote products derived from this software 
+      may be used to endorse or promote products derived from this software
       without specific prior written permission.
 
 THIS SOFTWARE IS PROVIDED "AS IS" AND ANY
 EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
 DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL 
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR 
-SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER 
-CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, 
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE 
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 @*/
 #ifndef __SCOPE_H__
@@ -39,7 +39,7 @@ class SYM_LIST {
 public:
 	SYM_LIST * next;
 	SYM_LIST * prev;
-	SYM * sym; 
+	SYM * sym;
 };
 #define SYM_LIST_sym(syml) (syml)->sym
 #define SYM_LIST_next(syml) (syml)->next
@@ -48,7 +48,7 @@ public:
 
 /*
 SCOPE
-	|	
+	|
 	|--ENUM_LIST
 	|--SYM_TAB_LIST
 	|--TYPE_LIST
@@ -57,14 +57,14 @@ SCOPE
 */
 #define MAX_SCOPE_FILED 4
 #define GLOBAL_SCOPE    0  //Global memory space
-#define FUNCTION_SCOPE  1  //Function unit  
-#define REGION_SCOPE    2    //Region unit  
+#define FUNCTION_SCOPE  1  //Function unit
+#define REGION_SCOPE    2    //Region unit
 #define SCOPE_id(sc)				(sc)->id
-#define SCOPE_is_tmp_sc(sc)			(sc)->is_tmp_scope 
+#define SCOPE_is_tmp_sc(sc)			(sc)->is_tmp_scope
 #define SCOPE_parent(sc)			(sc)->parent //owner scope, namely parent node
 #define SCOPE_nsibling(sc)			(sc)->next //next sibling , growing to right way
-#define SCOPE_sub(sc)				(sc)->sub //sub scope 
-#define SCOPE_level(sc)				(sc)->level 
+#define SCOPE_sub(sc)				(sc)->sub //sub scope
+#define SCOPE_level(sc)				(sc)->level
 #define SCOPE_enum_list(sc)			(sc)->enum_list
 #define SCOPE_sym_tab_list(sc)		(sc)->sym_tab_list
 #define SCOPE_user_type_list(sc)	(sc)->utl_list
@@ -81,9 +81,9 @@ public:
 	bool is_tmp_scope;
 	SCOPE * parent;
 	SCOPE * next;
-	SCOPE * prev;	
+	SCOPE * prev;
 	SCOPE * sub;
-	
+
 	ENUM_LIST * enum_list;		//enum-type list
 	USER_TYPE_LIST * utl_list;	//record type defined with 'typedef'
 
@@ -93,7 +93,7 @@ public:
 	STRUCT * struct_list;		//structure list of current scope
 	UNION * union_list;			//union list of current scope
 
-	DECL * decl_list;			//record identifier declaration info 
+	DECL * decl_list;			//record identifier declaration info
 	SYM_LIST * sym_tab_list;	//record identifier name
 
 	TREE * stmt_list;			//record statement list to generate code
@@ -117,23 +117,7 @@ public:
 };
 
 
-class LAB2LINE_MAP : public MAP<LABEL_INFO*, UINT> {
-public:
-	LAB2LINE_MAP(UINT bsize = 37) : MAP<LABEL_INFO*, UINT>(bsize) {}
-	virtual ~LAB2LINE_MAP() {}	
-	UINT get_hash_value(LABEL_INFO * li)
-	{
-		IS_TRUE0(m_bucket_size != 0);
-		/*
-		Same label may be mapped to different lineno.
-		e.g: refer label and define label in different line.
-		*/
-		return ((ULONG)li) % m_bucket_size;
-	}
-
-	bool compare(LABEL_INFO * li1, LABEL_INFO * li2)
-	{ return li1 == li2; }
-};
+typedef TMAP<LABEL_INFO*, UINT> LAB2LINE_MAP;
 
 
 //Exported functions
@@ -157,5 +141,5 @@ extern SCOPE * g_cur_scope;
 
 //Export Functions
 SYM * add_to_symtab_list(SYM_LIST ** sym_list , SYM * sym);
-#endif 
+#endif
 

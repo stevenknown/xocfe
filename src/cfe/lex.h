@@ -1,5 +1,5 @@
 /*@
-Copyright (c) 2013-2014, Su Zhenyu steven.known@gmail.com 
+Copyright (c) 2013-2014, Su Zhenyu steven.known@gmail.com
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -11,18 +11,18 @@ modification, are permitted provided that the following conditions are met:
       notice, this list of conditions and the following disclaimer in the
       documentation and/or other materials provided with the distribution.
     * Neither the name of the Su Zhenyu nor the names of its contributors
-      may be used to endorse or promote products derived from this software 
+      may be used to endorse or promote products derived from this software
       without specific prior written permission.
 
 THIS SOFTWARE IS PROVIDED "AS IS" AND ANY
 EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
 DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL 
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR 
-SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER 
-CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, 
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE 
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 @*/
 #ifndef _LEX_
@@ -30,8 +30,8 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 //C language's key words.
 typedef enum _TOKEN {
-	T_NUL = 0,		// NULL                          
-	T_ID,			// ID = (A-Z|a-z)( A-Z|a-z|0-9 )*    
+	T_NUL = 0,		// NULL
+	T_ID,			// ID = (A-Z|a-z)( A-Z|a-z|0-9 )*
 	T_IMM,			// 0~9
 	T_IMML,			// 0~9L
 	T_IMMU,			// Unsigned
@@ -41,17 +41,17 @@ typedef enum _TOKEN {
 	T_CHAR_LIST,	// 'abcd'
 	T_INTRI_FUN,	// intrinsic function call
 	T_INTRI_VAL,	// intrinsic value
-	T_LLPAREN,		// {                         
-	T_RLPAREN,		// }                         
+	T_LLPAREN,		// {
+	T_RLPAREN,		// }
 	T_LSPAREN,		// [
 	T_RSPAREN,		// ]
-	T_ASSIGN,		// =                                 
-	T_LPAREN,		// (                                
-	T_RPAREN,		// )                                
-	T_ADD,			// +                               
-	T_SUB,			// -                               
-	T_ASTERISK,		// *                               
-	T_DIV,			// /                               
+	T_ASSIGN,		// =
+	T_LPAREN,		// (
+	T_RPAREN,		// )
+	T_ADD,			// +
+	T_SUB,			// -
+	T_ASTERISK,		// *
+	T_DIV,			// /
 	T_AND,			// &&
 	T_BITANDEQU,	// &=
 	T_OR,			// ||
@@ -59,7 +59,7 @@ typedef enum _TOKEN {
 	T_BITAND,		// &
 	T_BITOR,		// |
 	T_BITOREQU,		// |=
-	T_LESSTHAN,		// <                               
+	T_LESSTHAN,		// <
 	T_MORETHAN,		// >
 	T_RSHIFT,		// >>
 	T_RSHIFTEQU,	// >>=
@@ -69,7 +69,7 @@ typedef enum _TOKEN {
 	T_NOLESSTHAN,	// >=
 	T_NOEQU,		// !=
 	T_NOT,			// !
-	T_EQU,			// ==                              
+	T_EQU,			// ==
 	T_ADDEQU,		// +=
 	T_SUBEQU,		// -=
 	T_MULEQU,		// *=
@@ -80,10 +80,10 @@ typedef enum _TOKEN {
 	T_MOD,			// %
 	T_COLON,		// :
 	T_DCOLON,		// ::
-	T_SEMI,			// ;                                
-	T_QUOT,			// "                                  
-	T_COMMA,		// ,                              
-	T_UNDERLINE,	// _                              
+	T_SEMI,			// ;
+	T_QUOT,			// "
+	T_COMMA,		// ,
+	T_UNDERLINE,	// _
 	T_LANDSCAPE,	// -
 	T_REV,			// ~ reverse  e.g:a = ~a
 	T_DOT,			// .
@@ -94,7 +94,7 @@ typedef enum _TOKEN {
 
 	//The following token is C specail.
 	T_DOTDOTDOT,	// ...
-	
+
 	//scalar-type-spec
 	T_VOID,
 	T_CHAR,
@@ -111,11 +111,11 @@ typedef enum _TOKEN {
 	//boolean
 	T_TRUE,
 	T_FALSE,
-	
-	//struct-or-union	
+
+	//struct-or-union
 	T_STRUCT,
 	T_UNION,
-	
+
 	//control-clause
 	T_IF,
 	T_ELSE,
@@ -129,7 +129,7 @@ typedef enum _TOKEN {
 	T_CASE,
 	T_DEFAULT,
 	T_FOR,
-	
+
 	//storage-class-spec
 	T_AUTO,
 	T_REGISTER,
@@ -137,20 +137,20 @@ typedef enum _TOKEN {
 	T_INLINE,
 	T_STATIC,
 	T_TYPEDEF,
-	
+
 	//qualifiers-opt
 	T_CONST,
 	T_VOLATILE,
 	T_RESTRICT,
-	
+
 	//unary-operator
-	T_SIZEOF,	
+	T_SIZEOF,
 	T_ENUM,
 
 	//pragma
 	T_SHARP,		// #
 	T_PRAGMA,		// pragma
-	
+
 	T_NEWLINE,		// \n
 	////////////////////////////////////
 	//DO NOT ADD ENUM AFTER THIS LINE.//
@@ -190,9 +190,9 @@ extern UINT g_src_line_num;	//line number of src file
 extern CHAR g_cur_token_string[];
 extern CHAR * g_cur_line; //current parsing line of src file
 extern UINT g_cur_line_len; //the current line buf length ,than read from file buf
-extern TOKEN g_cur_token; 
+extern TOKEN g_cur_token;
 extern LONG * g_ofst_tab; //Record offset of each line in src file
-extern LONG g_ofst_tab_byte_size;//Record entry number of offset table 
+extern LONG g_ofst_tab_byte_size;//Record entry number of offset table
 extern TOKEN_INFO g_token_info[];
 extern bool g_enable_newline_token; //Set true to regard '\n' as token.
 

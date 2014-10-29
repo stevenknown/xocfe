@@ -1,5 +1,5 @@
 /*@
-Copyright (c) 2013-2014, Su Zhenyu steven.known@gmail.com 
+Copyright (c) 2013-2014, Su Zhenyu steven.known@gmail.com
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -11,24 +11,24 @@ modification, are permitted provided that the following conditions are met:
       notice, this list of conditions and the following disclaimer in the
       documentation and/or other materials provided with the distribution.
     * Neither the name of the Su Zhenyu nor the names of its contributors
-      may be used to endorse or promote products derived from this software 
+      may be used to endorse or promote products derived from this software
       without specific prior written permission.
 
 THIS SOFTWARE IS PROVIDED "AS IS" AND ANY
 EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
 DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL 
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR 
-SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER 
-CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, 
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE 
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 @*/
 #include "cfecom.h"
 
 /*
-Computing expected value in compiling period, such as constant expression. 
+Computing expected value in compiling period, such as constant expression.
  'g_is_allow_float' cannot be used via extern , it must be assigned with
  'compute_constant_value' absolutely.
 */
@@ -74,7 +74,7 @@ static bool compute_enum_const(TREE * t)
 
 //Return byte size of TYPE_NAME, or -1 if failed.
 static bool compute_sizeof(TREE * t)
-{	
+{
 	TREE *  p = TREE_sizeof_exp(t);
 	if (TREE_type(p) == TR_TYPE_NAME) {
 		DECL * dcl = TREE_type_name(p);
@@ -82,7 +82,7 @@ static bool compute_sizeof(TREE * t)
 		DECL * abs_decl = DECL_decl_list(dcl);
 		ULONG sz;
 		if (is_complex_type(abs_decl)) {
-			sz = get_complex_type_size_in_byte(dcl);			
+			sz = get_complex_type_size_in_byte(dcl);
 		} else {
 			sz = get_simply_type_size_in_byte(type_spec);
 		}
@@ -100,25 +100,25 @@ static bool compute_sizeof(TREE * t)
 
 static bool compute_unary_op(TREE * t)
 {
-	if (!compute_conditional_exp(TREE_lchild(t))) { 
+	if (!compute_conditional_exp(TREE_lchild(t))) {
 		return false;
 	}
 	LONGLONG l = popv();
 	switch (TREE_type(t)) {
-	case TR_PLUS: // +123  
-		pushv(l); 
+	case TR_PLUS: // +123
+		pushv(l);
 		break;
-	case TR_MINUS:  // -123  
-		pushv((LONGLONG)-l); 
+	case TR_MINUS:  // -123
+		pushv((LONGLONG)-l);
 		break;
 	case TR_REV:  // Reverse
-		pushv(~l); 
+		pushv(~l);
 		break;
 	case TR_NOT:  // get non-value
-		pushv(!l); 
+		pushv(!l);
 		break;
-	default: 
-		err(TREE_lineno(t),"illegal duality expression"); 
+	default:
+		err(TREE_lineno(t),"illegal duality expression");
 		return false;
 	}
 	return true;
@@ -127,7 +127,7 @@ static bool compute_unary_op(TREE * t)
 
 static bool compute_binary_op(TREE * t)
 {
-	if (t == NULL) { return false; } 
+	if (t == NULL) { return false; }
 	LONGLONG r,l;
 	if (!compute_conditional_exp(TREE_lchild(t))) { return false; }
 	if (!compute_conditional_exp(TREE_rchild(t))) { return false; }
@@ -135,55 +135,55 @@ static bool compute_binary_op(TREE * t)
     l = popv();
 	switch (TREE_type(t)) {
 	case TR_LOGIC_OR: //logical or
-		l = l || r; 
-		pushv(l); 
+		l = l || r;
+		pushv(l);
 		break;
 	case TR_LOGIC_AND: //logical and
-		l = l && r; 
-		pushv(l); 
+		l = l && r;
+		pushv(l);
 		break;
 	case TR_INCLUSIVE_OR: //inclusive or
-		l = l | r; 
-		pushv(l); 
+		l = l | r;
+		pushv(l);
 		break;
 	case TR_INCLUSIVE_AND: //inclusive and
-		l = l & r; 
-		pushv(l); 
+		l = l & r;
+		pushv(l);
 		break;
 	case TR_XOR: //exclusive or
-		l = l ^ r; 
-		pushv(l); 
+		l = l ^ r;
+		pushv(l);
 		break;
 	case TR_EQUALITY: // == !=
 		switch (TREE_token(t)) {
 		case T_EQU:
-			l = (l == r); 
-			pushv(l); 
+			l = (l == r);
+			pushv(l);
 			break;
 		case T_NOEQU:
-			l = (l != r); 
-			pushv(l); 
+			l = (l != r);
+			pushv(l);
 			break;
 		default: IS_TRUE0(0);
 		}
 		break;
-	case TR_RELATION: // < > >= <= 
+	case TR_RELATION: // < > >= <=
 		switch (TREE_token(t)) {
 		case T_LESSTHAN:
-			l = (l == r); 
-			pushv(l); 
+			l = (l == r);
+			pushv(l);
 			break;
 		case T_MORETHAN:
-			l = (l != r); 
-			pushv(l); 
+			l = (l != r);
+			pushv(l);
 			break;
 		case T_NOLESSTHAN:
-			l = (l >= r); 
-			pushv(l); 
+			l = (l >= r);
+			pushv(l);
 			break;
 		case T_NOMORETHAN:
-			l = (l <= r); 
-			pushv(l); 
+			l = (l <= r);
+			pushv(l);
 			break;
 		default: IS_TRUE0(0);
 		}
@@ -191,12 +191,12 @@ static bool compute_binary_op(TREE * t)
 	case TR_SHIFT:   // >> <<
 		switch (TREE_token(t)) {
 		case T_LSHIFT:
-			l = (l >> r); 
-			pushv(l); 
+			l = (l >> r);
+			pushv(l);
 			break;
 		case T_RSHIFT:
-			l = (l << r); 
-			pushv(l); 
+			l = (l << r);
+			pushv(l);
 			break;
 		default: IS_TRUE0(0);
 		}
@@ -204,12 +204,12 @@ static bool compute_binary_op(TREE * t)
 	case TR_ADDITIVE: // '+' '-'
 		switch (TREE_token(t)) {
 		case T_ADD:
-			l = (l + r); 
-			pushv(l); 
+			l = (l + r);
+			pushv(l);
 			break;
 		case T_SUB:
-			l = (l - r); 
-			pushv(l); 
+			l = (l - r);
+			pushv(l);
 			break;
 		default: IS_TRUE0(0);
 		}
@@ -217,16 +217,16 @@ static bool compute_binary_op(TREE * t)
 	case TR_MULTI:    // '*' '/' '%'
 		switch (TREE_token(t)) {
 		case T_ASTERISK:
-			l = (l * r); 
-			pushv(l); 
+			l = (l * r);
+			pushv(l);
 			break;
 		case T_DIV:
-			l = (l / r); 
-			pushv(l); 
+			l = (l / r);
+			pushv(l);
 			if (r == 0) { warn1("divisor is zero"); }
 			break;
 		case T_MOD:
-			l = (l % r); 
+			l = (l % r);
 			pushv(l);
 			if (r == 0) { warn1("divisor is zero"); }
 			break;
@@ -236,7 +236,7 @@ static bool compute_binary_op(TREE * t)
 	default:
 		err(TREE_lineno(t),"illegal duality expression");
 		return false;
-	}  
+	}
 	return true;
 }
 
@@ -247,18 +247,18 @@ static bool compute_conditional_exp(IN TREE * t)
 	switch (TREE_type(t)) {
 	case TR_ENUM_CONST:
 		return compute_enum_const(t);
-	case TR_PLUS: // +123  
-	case TR_MINUS:  // -123  
+	case TR_PLUS: // +123
+	case TR_MINUS:  // -123
 	case TR_REV:  // Reverse
 	case TR_NOT:  // get non-value
-		return compute_unary_op(t);		
+		return compute_unary_op(t);
 	case TR_LOGIC_OR: //logical or
 	case TR_LOGIC_AND: //logical and
 	case TR_INCLUSIVE_OR: //inclusive or
 	case TR_INCLUSIVE_AND: //inclusive and
 	case TR_XOR: //exclusive or
 	case TR_EQUALITY: // == !=
-	case TR_RELATION: // < > >= <= 
+	case TR_RELATION: // < > >= <=
 	case TR_SHIFT:   // >> <<
 	case TR_ADDITIVE: // '+' '-'
 	case TR_MULTI:// '*' '/' '%'
@@ -272,10 +272,10 @@ static bool compute_conditional_exp(IN TREE * t)
 			err(TREE_lineno(t),"constant expression is not integral");
 			return false;
 		}
-		pushv((LONGLONG)atof(SYM_name(TREE_fp_str_val(t))));		
+		pushv((LONGLONG)atof(SYM_name(TREE_fp_str_val(t))));
 		break;
 	case TR_SIZEOF:
-		return compute_sizeof(t);			
+		return compute_sizeof(t);
 	case TR_ID:
 		{
 			DECL * dcl = NULL;

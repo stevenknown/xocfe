@@ -1,5 +1,5 @@
 /*@
-Copyright (c) 2013-2014, Su Zhenyu steven.known@gmail.com 
+Copyright (c) 2013-2014, Su Zhenyu steven.known@gmail.com
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -11,18 +11,18 @@ modification, are permitted provided that the following conditions are met:
       notice, this list of conditions and the following disclaimer in the
       documentation and/or other materials provided with the distribution.
     * Neither the name of the Su Zhenyu nor the names of its contributors
-      may be used to endorse or promote products derived from this software 
+      may be used to endorse or promote products derived from this software
       without specific prior written permission.
 
 THIS SOFTWARE IS PROVIDED "AS IS" AND ANY
 EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
 DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL 
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR 
-SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER 
-CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, 
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE 
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 @*/
 #include "cfecom.h"
@@ -30,7 +30,7 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 static SSTACK<CELL*> g_cell_stack;
 ST_INFO g_st_info[]={
 	st_NULL,				"NULL" ,
-	
+
 	//non-terminal	chacartor  as followed
     st_ID,                  "id" ,
     st_IMM,                 "imm",
@@ -40,17 +40,17 @@ ST_INFO g_st_info[]={
     st_CHAR_LIST,           "charlist",
     st_INTRI_FUN,           "",
 	st_INTRI_VAL,           "",
-	st_LLPAREN,             "{",                         
-    st_RLPAREN,             "}",                         
+	st_LLPAREN,             "{",
+    st_RLPAREN,             "}",
 	st_LSPAREN ,            "[",
 	st_RSPAREN ,            "]",
-    st_ASSIGN,              "=",                                 
-	st_LPAREN,              "(",                                
-	st_RPAREN,              ")",                                
-	st_ADD,                 "+",                               
-	st_SUB,                 "-",                               
-	st_MUL,                 "*",                               
-    st_DIV,                 "/",                               
+    st_ASSIGN,              "=",
+	st_LPAREN,              "(",
+	st_RPAREN,              ")",
+	st_ADD,                 "+",
+	st_SUB,                 "-",
+	st_MUL,                 "*",
+    st_DIV,                 "/",
 	st_AND,                 "&&",
 	st_BITANDEQU,           "&=",
 	st_OR,                  "||",
@@ -58,7 +58,7 @@ ST_INFO g_st_info[]={
     st_BITAND,              "&",
 	st_BITOR,               "|",
 	st_BITOREQU,            "|=",
-    st_LESSTHAN,            "<" ,                              
+    st_LESSTHAN,            "<" ,
 	st_MORETHAN,            ">",
 	st_RSHIFT,              ">>",
 	st_RSHIFTEQU,           ">>=",
@@ -68,7 +68,7 @@ ST_INFO g_st_info[]={
 	st_NOLESSTHAN,          ">=",
 	st_NOEQU,               "!=",
 	st_NOT,                 "!",
-    st_EQU,                 "==",                              
+    st_EQU,                 "==",
 	st_ADDEQU,              "+=",
 	st_SUBEQU,              "-=",
 	st_MULEQU,              "*=",
@@ -79,9 +79,9 @@ ST_INFO g_st_info[]={
 	st_MOD,                 "%",
 	st_COLON,               ":",
 	st_DCOLON,              "::",
-	st_SEMI,                ";"  ,                              
-	st_QUOT,                "\""  ,                                
-	st_COMMA,               "," ,                          
+	st_SEMI,                ";"  ,
+	st_QUOT,                "\""  ,
+	st_COMMA,               "," ,
 	st_UNDERLINE,           "_",
 	st_LANDSCAPE,           "-",
 	st_REV,                 "~",
@@ -106,10 +106,10 @@ ST_INFO g_st_info[]={
 	st_UNSIGNED,            "unsigned",
 	st_LONGLONG,            "longlong",
 
-    //struct-or-union	
+    //struct-or-union
 	st_STRUCT,              "struct",
 	st_UNION,               "union",
-	
+
 	//control-clause
 	st_IF,                  "if",
 	st_ELSE,                "else",
@@ -128,22 +128,22 @@ ST_INFO g_st_info[]={
 	st_AUTO,                "auto",
 	st_REGISTER,            "register",
 	st_EXTERN,              "extern",
-	st_INLINE,              "inline",	
+	st_INLINE,              "inline",
 	st_STATIC,              "static",
 	st_TYPEDEF,             "typedef",
 
 	//qualifiers-opt
 	st_CONST,               "const",
 	st_VOLATILE,            "volatile",
-	
+
 	//unary-operator
 	st_SIZEOF,              "sizeof",
 
-	//enum type 
+	//enum type
 	st_ENUM,                "enum",
 
 	//clause statment marker, non-terminal	chacartor
-	st_translation_unit,			"trans_unit",                    
+	st_translation_unit,			"trans_unit",
 	st_external_declaration,		"ext_decl",
 	st_function_definition,			"fun_def",
 	st_declaration,					"decl",
@@ -217,7 +217,7 @@ static void * xmalloc(ULONG size)
 	memset(p, 0, size);
 	return p;
 }
- 
+
 
 //Utility for st.cpp
 SST pushst(SST st, ULONG v)
@@ -234,8 +234,8 @@ SST popst()
 {
 	CELL * c = g_cell_stack.pop();
 	SST sst = c ? (SST)CELL_type(c) : st_NULL;
-	free_cell(c);  
-	return sst;	
+	free_cell(c);
+	return sst;
 }
 
 
@@ -243,14 +243,14 @@ SST popst()
 SST get_top_nth_st(INT n)
 {
 	CELL * c = g_cell_stack.get_top_nth(n);
-	return c ? (SST)CELL_type(c) : st_NULL;	
+	return c ? (SST)CELL_type(c) : st_NULL;
 }
 
 
-//check whether 'sst' exist in the SST stack. 
+//check whether 'sst' exist in the SST stack.
 INT is_sst_exist(SST sst)
 {
-	for (CELL * c = g_cell_stack.get_head(); 
+	for (CELL * c = g_cell_stack.get_head();
 		 c != NULL; c = g_cell_stack.get_next()) {
 		if (CELL_type(c) == sst) {
 			return 1;
@@ -263,7 +263,7 @@ INT is_sst_exist(SST sst)
 SST get_top_st()
 {
 	CELL * c = g_cell_stack.get_top();
-	return c != NULL ? (SST)CELL_type(c) : st_NULL;	
+	return c != NULL ? (SST)CELL_type(c) : st_NULL;
 }
 
 
@@ -272,25 +272,25 @@ void dump_st_stack()
 	for (CELL * c = g_cell_stack.get_head(); c; c = g_cell_stack.get_next()) {
 		switch (CELL_type(c)) {
 		case st_ID:
-			fprintf(g_tfile, "%s ", SYM_name((SYM*)CELL_val(c)));	
+			fprintf(g_tfile, "%s ", SYM_name((SYM*)CELL_val(c)));
 			break;
 		case st_IMM:
-			fprintf(g_tfile, "%d ", (INT)CELL_val(c));	
+			fprintf(g_tfile, "%d ", (INT)CELL_val(c));
 			break;
 		case st_IMML:
-			fprintf(g_tfile, "%lld ", (LONGLONG)CELL_val(c));	
+			fprintf(g_tfile, "%lld ", (LONGLONG)CELL_val(c));
 			break;
 		case st_FP:
-			fprintf(g_tfile, "%s ", SYM_name((SYM*)CELL_val(c)));	
+			fprintf(g_tfile, "%s ", SYM_name((SYM*)CELL_val(c)));
 			break;
 		case st_STRING:
-			fprintf(g_tfile, "\"%s\" ", SYM_name((SYM*)CELL_val(c)));	
+			fprintf(g_tfile, "\"%s\" ", SYM_name((SYM*)CELL_val(c)));
 			break;
 		case st_CHAR_LIST:
-			fprintf(g_tfile, "'%s' ", SYM_name((SYM*)CELL_val(c)));	
+			fprintf(g_tfile, "'%s' ", SYM_name((SYM*)CELL_val(c)));
 			break;
 		default:
-			fprintf(g_tfile, "%s ", g_st_info[CELL_type(c)].name);	
+			fprintf(g_tfile, "%s ", g_st_info[CELL_type(c)].name);
 		} //end switch
 	}
 	fprintf(g_tfile, "\n");

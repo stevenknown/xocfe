@@ -13,29 +13,30 @@ cfe/cell.o
 
 COM_OBJS +=\
 com/smempool.o \
+com/bs.o \
 com/comf.o \
 com/ltype.o
 
-XOC_OBJS +=\
-xoc/label.o \
-xoc/util.o
+UTIL_OBJS +=\
+util/label.o \
+util/util.o
 
 CFLAGS = -D_LINUX_ -Wno-write-strings -Wsign-promo \
         -Wsign-compare -Wpointer-arith -Wno-multichar -Winit-self \
         -D_DEBUG_ -Wswitch #-Wall
         #-Werror=overloaded-virtual \
 
-INC=-I com -I cfe -I cfe.prj -I xoc
+INC=-I com -I cfe -I cfe.prj -I util 
 %.o:%.cpp
 	@echo "build $<"
 	gcc $(CFLAGS) $(INC) -O0 -c -g2 $< -o $@
 
 cfe_objs: $(CFE_OBJS)
 com_objs: $(COM_OBJS)
-xoc_objs: $(XOC_OBJS)
+util_objs: $(UTIL_OBJS)
 
-xocfe: cfe_objs com_objs xoc_objs
-	gcc $(XOC_OBJS) $(CFE_OBJS) $(COM_OBJS) $(CFLAGS) -o xocfe.exe -lstdc++ -lm
+xocfe: cfe_objs com_objs util_objs
+	gcc $(UTIL_OBJS) $(CFE_OBJS) $(COM_OBJS) $(CFLAGS) -o xocfe.exe -lstdc++ -lm
 	@echo "success!!"
 
 clean:

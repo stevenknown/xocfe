@@ -5,7 +5,7 @@ typedef enum {
 	L_UNDEF = 0,
 	L_CLABEL, //customer defined label
 	L_ILABEL, //internal generated label
-	L_PRAGMA, //pragma 
+	L_PRAGMA, //pragma
 } LABEL_TYPE;
 
 #define PREFIX_OF_LABEL()     "_L"
@@ -52,7 +52,7 @@ public:
 		} s1;
 		BYTE b1;
 	} u2;
-	
+
 	void copy(LABEL_INFO const& li)
 	{
 		ltype = li.ltype;
@@ -67,7 +67,7 @@ Exported Functions
 Simplest method to compute hash value.
 */
 inline INT lab_hash_value(LABEL_INFO const* li)
-{ 
+{
 	INT v = 0;
 	if (LABEL_INFO_type(li) == L_CLABEL) {
 		CHAR const* p = SYM_name(LABEL_INFO_name(li));
@@ -86,6 +86,26 @@ LABEL_INFO * new_label(SMEM_POOL * pool);
 LABEL_INFO * new_ilabel(SMEM_POOL * pool);
 LABEL_INFO * new_clabel(SYM * st, SMEM_POOL * pool);
 bool is_same_label(LABEL_INFO const* li1, LABEL_INFO const* li2);
-void dump_lab(LABEL_INFO const* li);	
-#endif 
+void dump_lab(LABEL_INFO const* li);
 
+
+class LAB_HF : public HASH_FUNC_BASE<LABEL_INFO*> {
+public:
+	UINT get_hash_value(LABEL_INFO * li, UINT bucket_size) const
+	{ return ((UINT)lab_hash_value(li)) % bucket_size; }
+
+	bool compare(LABEL_INFO * li1, LABEL_INFO * li2) const
+	{ return is_same_label(li1, li2); }
+};
+
+
+class CLAB_HF : public HASH_FUNC_BASE<LABEL_INFO const*> {
+public:
+	UINT get_hash_value(LABEL_INFO const* li, UINT bucket_size) const
+	{ return ((UINT)lab_hash_value(li)) % bucket_size; }
+
+	bool compare(LABEL_INFO const* li1, LABEL_INFO const* li2) const
+	{ return is_same_label(li1, li2); }
+};
+
+#endif

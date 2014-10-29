@@ -1,5 +1,5 @@
 /*@
-Copyright (c) 2013-2014, Su Zhenyu steven.known@gmail.com 
+Copyright (c) 2013-2014, Su Zhenyu steven.known@gmail.com
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -11,18 +11,18 @@ modification, are permitted provided that the following conditions are met:
       notice, this list of conditions and the following disclaimer in the
       documentation and/or other materials provided with the distribution.
     * Neither the name of the Su Zhenyu nor the names of its contributors
-      may be used to endorse or promote products derived from this software 
+      may be used to endorse or promote products derived from this software
       without specific prior written permission.
 
 THIS SOFTWARE IS PROVIDED "AS IS" AND ANY
 EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
 DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL 
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR 
-SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER 
-CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, 
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE 
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 @*/
 #include "cfecom.h"
@@ -37,94 +37,94 @@ static INT  g_file_buf_pos = MAX_BUF_LINE;
 static INT  g_last_read_num = 0;
 
 //Set true to return the newline charactors as normal character.
-static bool g_use_newline_char = true; 
+static bool g_use_newline_char = true;
 static ULONG g_cur_src_ofst = 0;  //Record current file offset of src file
 
 UINT g_src_line_num = 0; //line number of src file
 
 //The string buffer which token were reside.
-CHAR g_cur_token_string[MAX_BUF_LINE] = {0}; 
+CHAR g_cur_token_string[MAX_BUF_LINE] = {0};
 CHAR * g_cur_line; //Current parsing line of src file
 UINT g_cur_line_len = 0; //The current line buf length ,than read from file buf
 TOKEN g_cur_token = T_NUL;
 LONG * g_ofst_tab = NULL; //Record offset of each line in src file
-LONG g_ofst_tab_byte_size = 0; //Record entry number of offset table 
+LONG g_ofst_tab_byte_size = 0; //Record entry number of offset table
 bool g_enable_newline_token = false; //Set true to regard '\n' as token.
 
 //If true, recognize the true and false token.
-bool g_enable_true_false_token = true; 
+bool g_enable_true_false_token = true;
 
 
 /*
 You should construct tokens or keywords as following list if
-you have modified TOKEN enumeration declared in lex.h. 
-NOTICE: Be careful the order of your new token and it must 
-conform the declaration order in lex.h. 
+you have modified TOKEN enumeration declared in lex.h.
+NOTICE: Be careful the order of your new token and it must
+conform the declaration order in lex.h.
 */
-TOKEN_INFO g_token_info[] =  
+TOKEN_INFO g_token_info[] =
 {
-	{ T_NUL, "" },  
-	{ T_ID,  "id" },  
-	{ T_IMM, "imme"},  
-	{ T_IMML, "long imme"},  
-	{ T_IMMU, "unsigned imme"},  
+	{ T_NUL, "" },
+	{ T_ID,  "id" },
+	{ T_IMM, "imme"},
+	{ T_IMML, "long imme"},
+	{ T_IMMU, "unsigned imme"},
 	{ T_IMMUL, "unsigned long imme"},
-	{ T_FP, "decimal"},  
-	{ T_STRING, "string"},  
+	{ T_FP, "decimal"},
+	{ T_STRING, "string"},
 	{ T_CHAR_LIST, "char list"},
 	{ T_INTRI_FUN, ""},
 	{ T_INTRI_VAL, ""},
-	{ T_LLPAREN,  "{" },                           
-	{ T_RLPAREN,  "}"},                         
-	{ T_LSPAREN ,  "["},    
-	{ T_RSPAREN ,   "]" }, 
+	{ T_LLPAREN,  "{" },
+	{ T_RLPAREN,  "}"},
+	{ T_LSPAREN ,  "["},
+	{ T_RSPAREN ,   "]" },
 	{ T_ASSIGN, "="},
 	{ T_LPAREN,  "("},
 	{ T_RPAREN,  ")"},
 	{ T_ADD,    "+" },
-	{ T_SUB,    "-"}, 
-	{ T_ASTERISK, "*" }, 
-	{ T_DIV,  "/" }, 
+	{ T_SUB,    "-"},
+	{ T_ASTERISK, "*" },
+	{ T_DIV,  "/" },
 	{ T_AND,   "&&" },
 	{ T_BITANDEQU,  "&=" },
-	{ T_OR,   "||" },  
-	{ T_AT,   "@" },  
+	{ T_OR,   "||" },
+	{ T_AT,   "@" },
 	{ T_BITAND, "&"},
 	{ T_BITOR, "|"  },
 	{ T_BITOREQU,  "|="},
-	{ T_LESSTHAN,"<"}, 
+	{ T_LESSTHAN,"<"},
 	{ T_MORETHAN,">" },
 	{ T_RSHIFT,  ">>"},
 	{ T_RSHIFTEQU, ">>="  },
-	{ T_LSHIFT, "<<" }, 
+	{ T_LSHIFT, "<<" },
 	{ T_LSHIFTEQU, "<<="},
-	{ T_NOMORETHAN,"<="}, 
-	{ T_NOLESSTHAN,">="}, 
+	{ T_NOMORETHAN,"<="},
+	{ T_NOLESSTHAN,">="},
 	{ T_NOEQU,  "!="},
 	{ T_NOT,   "!"},
-	{ T_EQU,  "=="},   
-	{ T_ADDEQU, "+="},  
-	{ T_SUBEQU,  "-="}, 
-	{ T_MULEQU,"*="},   
-	{ T_DIVEQU, "/="},  
-	{ T_XOR,   "^"},   
-	{ T_XOREQU, "^="}, 
-	{ T_REMEQU,"%="}, 
-	{ T_MOD,   "%"}, 
-	{ T_COLON, ":"}, 
-	{ T_DCOLON, "::"}, 
-	{ T_SEMI,   ";"}, 
-	{ T_QUOT,  "\""}, 
-	{ T_COMMA,  ","}, 
+	{ T_EQU,  "=="},
+	{ T_ADDEQU, "+="},
+	{ T_SUBEQU,  "-="},
+	{ T_MULEQU,"*="},
+	{ T_DIVEQU, "/="},
+	{ T_XOR,   "^"},
+	{ T_XOREQU, "^="},
+	{ T_REMEQU,"%="},
+	{ T_MOD,   "%"},
+	{ T_COLON, ":"},
+	{ T_DCOLON, "::"},
+	{ T_SEMI,   ";"},
+	{ T_QUOT,  "\""},
+	{ T_COMMA,  ","},
 	{ T_UNDERLINE, "_"},
-	{ T_LANDSCAPE,"-"}, 
-	{ T_REV,  "~"},     
+	{ T_LANDSCAPE,"-"},
+	{ T_REV,  "~"},
 	{ T_DOT, "."},//.
 	{ T_QUES_MARK, "?"},
 	{ T_ARROW, "->"},
 	{ T_ADDADD, "++"},
 	{ T_SUBSUB, "--"},
-	
+
 	//The following token is C specail.
 	{ T_DOTDOTDOT, "..."},//...
 
@@ -143,11 +143,11 @@ TOKEN_INFO g_token_info[] =
 
 	{ T_TRUE,"true"},
 	{ T_FALSE,"false"},
-		
-	//struct-or-union	
+
+	//struct-or-union
 	{ T_STRUCT,"struct"},
 	{ T_UNION,"union"},
-	
+
 	//control-clause
 	{ T_IF,"if"},
 	{ T_ELSE,"else"},
@@ -161,7 +161,7 @@ TOKEN_INFO g_token_info[] =
 	{ T_CASE,"case"},
 	{ T_DEFAULT,"default"},
 	{ T_FOR,"for"},
-	
+
 	//storage-class-spec
 	{ T_AUTO,"auto"},
 	{ T_REGISTER,"register"},
@@ -169,21 +169,21 @@ TOKEN_INFO g_token_info[] =
 	{ T_INLINE,"inline"},
 	{ T_STATIC,"static"},
 	{ T_TYPEDEF,"typedef"},
-	
+
 	//qualifiers-opt
 	{ T_CONST,"const"},
 	{ T_VOLATILE,"volatile"},
 	{ T_RESTRICT,"restrict"},
-	
+
 	//unary-operator
 	{ T_SIZEOF,"sizeof"},
-	
+
 	{ T_ENUM, "enum"},
 	{ T_ENUM, "#"},
 	{ T_ENUM, "pragma"},
 	{ T_NEWLINE, "\\n"},
 	{ T_END, ""},
-};   
+};
 
 
 static KEYWORD_INFO g_keyword_info[] = {
@@ -198,15 +198,15 @@ static KEYWORD_INFO g_keyword_info[] = {
 	{ T_SIGNED,"signed"},
 	{ T_UNSIGNED,"unsigned"},
 	{ T_LONGLONG,"longlong"},
-	{ T_BOOL,"bool"},	
+	{ T_BOOL,"bool"},
 
 	{ T_TRUE,"true"},
 	{ T_FALSE,"false"},
- 
-    //struct-or-union	
+
+    //struct-or-union
 	{ T_STRUCT,"struct"},
 	{ T_UNION,"union"},
-	
+
 	//control-clause
 	{ T_IF,"if"},
 	{ T_ELSE,"else"},
@@ -233,7 +233,7 @@ static KEYWORD_INFO g_keyword_info[] = {
 	{ T_CONST,"const"},
 	{ T_VOLATILE,"volatile"},
 	{ T_RESTRICT,"restrict"},
-	
+
 	//unary-operator
 	{ T_SIZEOF,"sizeof"},
 	{ T_ENUM,"ENUM"},
@@ -257,16 +257,16 @@ static INT get_line()
 		g_ofst_tab = (LONG*)::malloc(g_ofst_tab_byte_size);
 		::memset(g_ofst_tab, 0, g_ofst_tab_byte_size);
 	} else if (OFST_TAB_LINE_SIZE < (g_src_line_num + 10)) {
-		g_ofst_tab = (LONG*)::realloc(g_ofst_tab, 
-									  g_ofst_tab_byte_size + 
+		g_ofst_tab = (LONG*)::realloc(g_ofst_tab,
+									  g_ofst_tab_byte_size +
 									  MAX_BUF_LEN * sizeof(LONG));
-		::memset(((BYTE*)g_ofst_tab) + g_ofst_tab_byte_size, 
-				 0, MAX_BUF_LEN * sizeof(LONG)); 
+		::memset(((BYTE*)g_ofst_tab) + g_ofst_tab_byte_size,
+				 0, MAX_BUF_LEN * sizeof(LONG));
 		g_ofst_tab_byte_size += MAX_BUF_LEN * sizeof(LONG);
 	}
 
 	UINT pos = 0;
-	bool is_some_chars_in_cur_line = false;	
+	bool is_some_chars_in_cur_line = false;
 	while (1) {
         if (g_cur_line == NULL) {
 			g_cur_line = (CHAR*)::malloc(MAX_BUF_LINE);
@@ -283,14 +283,14 @@ static INT get_line()
 			if (dw == 0) {
 				if (!is_some_chars_in_cur_line) {
 					/*
-					Some characters had been put into 'g_cur_line', but the last 
-					character of 'g_file_buf' is not '0xD,0xA', so we 
-					should to get there. But there is nothing more can 
-					be read from file, so 'dw' is zero. 
-					This situation may take place at that we meet the 
+					Some characters had been put into 'g_cur_line', but the last
+					character of 'g_file_buf' is not '0xD,0xA', so we
+					should to get there. But there is nothing more can
+					be read from file, so 'dw' is zero.
+					This situation may take place at that we meet the
 					file that terminate without a '0xD,0xA'.
-					TODO:Considering this specified case, we can not return 
-					'FEOF' directly , and we should process the last 
+					TODO:Considering this specified case, we can not return
+					'FEOF' directly , and we should process the last
 					characters in 'g_cur_line' correctly.
 					*/
  					goto FEOF;
@@ -299,16 +299,16 @@ static INT get_line()
 				}
 			} else {
 				g_last_read_num = dw;
-			}			
+			}
 			g_last_read_num = MIN(g_last_read_num, MAX_BUF_LINE);
 			g_file_buf_pos = 0;
 		}
 
-		//Get one line characters from buffer which end up 
+		//Get one line characters from buffer which end up
 		//with '0xd,0xa' in DOS or '0xa' in Linux.
 		bool is_0xd_recog = false;
 		while (g_file_buf_pos < g_last_read_num) {
-			if (g_file_buf[g_file_buf_pos] == 0xd && 
+			if (g_file_buf[g_file_buf_pos] == 0xd &&
 				g_file_buf[g_file_buf_pos + 1] == 0xa) { //DOS line end characters.
 				g_is_dos = true;
 				if (g_use_newline_char) {
@@ -326,7 +326,7 @@ static INT get_line()
 				goto FIN;
 			} else if (g_file_buf[g_file_buf_pos] == 0xa) { //unix text format
 				if (is_0xd_recog) {
-					//We have met '0xd', the '0xa' is one of 
+					//We have met '0xd', the '0xa' is one of
 					//the terminate string '0xD,0xA' under DOS text format.
 					if (g_use_newline_char) {
 						g_cur_line[pos] = g_file_buf[g_file_buf_pos];
@@ -350,7 +350,7 @@ static INT get_line()
 				g_src_line_num++;
 				goto FIN;
 			} else if(g_file_buf[g_file_buf_pos] == 0xd && g_is_dos) {
-				//0xd is the last charactor in 'g_file_buf',so 0xa is should be 
+				//0xd is the last charactor in 'g_file_buf',so 0xa is should be
 				//recognized in get_token() in order to the lex parsing correctly.
 				is_0xd_recog = 1;
 				if (g_use_newline_char) {
@@ -373,12 +373,12 @@ static INT get_line()
 			pos++;
 			g_file_buf_pos++;
 			is_some_chars_in_cur_line = true;
-			g_cur_src_ofst++;			
+			g_cur_src_ofst++;
 		} //end while g_file_buf_pos
 	} //end while(1)
 FIN:
 	IS_TRUE0((g_src_line_num + 1) < OFST_TAB_LINE_SIZE);
-	g_ofst_tab[g_src_line_num + 1] = g_cur_src_ofst;	
+	g_ofst_tab[g_src_line_num + 1] = g_cur_src_ofst;
 	g_cur_line[pos] = 0;
 	g_cur_line_num = strlen(g_cur_line);
 	g_cur_line_pos = 0;
@@ -396,30 +396,17 @@ FEOF:
 }
 
 
-class STR2TOKEN : public MAP<CHAR const*, TOKEN> {
+class STR2TOKEN : public HMAP<CHAR const*, TOKEN, HASH_FUNC_STR2> {
 public:
-	STR2TOKEN(UINT bsize) : MAP<CHAR const*, TOKEN>(bsize) {}
+	STR2TOKEN(UINT bsize) : HMAP<CHAR const*, TOKEN, HASH_FUNC_STR2>(bsize) {}
 	virtual ~STR2TOKEN() {}
-	UINT get_hash_value(CHAR const* s)
-	{
-		IS_TRUE0(m_bucket_size != 0);
-		UINT v = 0 ;
-		while (*s++) {
-			v += (UINT)(*s);
-		}
-		v %= m_bucket_size;
-		return v;
-	}
-
-	bool compare(CHAR const* s1, CHAR const* s2)
-	{ return strcmp(s1, s2) == 0; }
 };
 
 STR2TOKEN g_str2token(0);
 
 void init_key_word_tab()
 {
-	g_str2token.init(40);
+	g_str2token.init(64); //Must be power of 2 since we use HASH_FUNC_STR2.
 	for (UINT i = 0; i < g_keyword_num; i++) {
 		g_str2token.set(KEYWORD_INFO_name(&g_keyword_info[i]),
 						KEYWORD_INFO_token(&g_keyword_info[i]));
@@ -430,12 +417,12 @@ void init_key_word_tab()
 static TOKEN get_key_word(CHAR const* s)
 {
 	if (s == NULL) return T_NUL;
-	return g_str2token.get(s);	
+	return g_str2token.get(s);
 }
 
 
 /*
-Get a charactor from g_cur_line , and if it meet the end of src file, 
+Get a charactor from g_cur_line , and if it meet the end of src file,
 the return value is -1, otherwise the ASCI charactor.
 */
 static CHAR get_next_char()
@@ -448,7 +435,7 @@ static CHAR get_next_char()
 			g_cur_line_pos++;
 		} else if(st == ST_EOF) {
 			res = ST_EOF;
-		} 
+		}
 	} else if (g_cur_line_pos < g_cur_line_num) {
 		res = g_cur_line[g_cur_line_pos];
 		g_cur_line_pos++;
@@ -463,21 +450,21 @@ AGAIN:
 			}
 		} else if (st == ST_EOF) {
 	  		res = ST_EOF;
-		} 
+		}
    }
    return res;
 }
 
 
 /*********************************************************************
-You should construct the following function accroding to your lexical 
+You should construct the following function accroding to your lexical
 token word.
 
 START HERE.
 **********************************************************************/
 /*
 'g_cur_char' hold the current charactor right now.
-You should assign 'g_cur_char' the next valid charactor before 
+You should assign 'g_cur_char' the next valid charactor before
 the function return.
 */
 static TOKEN t_num()
@@ -486,7 +473,7 @@ static TOKEN t_num()
 	CHAR b_is_fp = 0;
 	TOKEN t = T_NUL;
 	if (g_cur_char == '0' && (c == 'x' || c == 'X')) {
-		//hex 
+		//hex
 		g_cur_token_string[g_cur_token_string_pos++] = c;
 		while (xisdigithex(c = get_next_char())) {
 			g_cur_token_string[g_cur_token_string_pos++] = c;
@@ -496,7 +483,7 @@ static TOKEN t_num()
 		t = T_IMM;
 		goto FIN;
 	}
-		
+
 	if (xisdigit(c) || c == '.') {
 		//'c' is decimal.
 		if (c == '.') {
@@ -510,10 +497,10 @@ static TOKEN t_num()
 	 	} else {
 	 		while (xisdigit(c = get_next_char()) || c == '.') {
 				if (c == '.') {
-					if (!b_is_fp){ 
-						b_is_fp=1; 
-					} else { 
-						break; 
+					if (!b_is_fp){
+						b_is_fp=1;
+					} else {
+						break;
 					}
 				}
 				g_cur_token_string[g_cur_token_string_pos++] = c;
@@ -559,7 +546,7 @@ FIN:
 
 /*
 'g_cur_char' hold the current charactor right now.
-You should assign 'g_cur_char' the next valid charactor before 
+You should assign 'g_cur_char' the next valid charactor before
 the function return.
 */
 static TOKEN t_string()
@@ -602,10 +589,10 @@ static TOKEN t_string()
 				g_cur_token_string[g_cur_token_string_pos++] = '"';
 				c = get_next_char();
 			} else if (c >= '0' && c <= '9') {
-				/* 
+				/*
 				Finally, the escape \ddd consists of the backslash followed
-				by 
-				 1. not more than 3 octal digits or 
+				by
+				 1. not more than 3 octal digits or
 				 2. not more than 2 hex digits start with 'x' or
 				 3. any length of hex digits
 				which are taken to specify the desired character.
@@ -657,7 +644,7 @@ static TOKEN t_string()
 
 /*
 'g_cur_char' hold the current charactor right now.
-You should assign 'g_cur_char' the next valid charactor before 
+You should assign 'g_cur_char' the next valid charactor before
 the function return.
 */
 static TOKEN t_char_list()
@@ -696,10 +683,10 @@ static TOKEN t_char_list()
 				g_cur_token_string[g_cur_token_string_pos++] = '\'';
 				c = get_next_char();
 			} else if (c >= '0' && c <= '9') {
-				/* 
+				/*
 				Finally, the escape \ddd consists of the backslash followed
-				by 
-				 1. not more than 3 octal digits or 
+				by
+				 1. not more than 3 octal digits or
 				 2. not more than 2 hex digits start with 'x' or
 				 3. any length of hex digits
 				which are taken to specify the desired character.
@@ -737,7 +724,7 @@ static TOKEN t_char_list()
 				g_cur_token_string[g_cur_token_string_pos++] = '\\';
 				g_cur_token_string[g_cur_token_string_pos++] = c;
 				c = get_next_char();
-			}			
+			}
 		} else {
 			g_cur_token_string[g_cur_token_string_pos++] = c;
 			c = get_next_char();
@@ -746,12 +733,12 @@ static TOKEN t_char_list()
 	g_cur_char = get_next_char();
 	g_cur_token_string[g_cur_token_string_pos] = 0;
 	return T_CHAR_LIST;
-} 
+}
 
 
 /*
 'g_cur_char' hold the current charactor right now.
-You should assign 'g_cur_char' the next valid charactor before 
+You should assign 'g_cur_char' the next valid charactor before
 the function return.
 */
 static TOKEN t_id()
@@ -773,7 +760,7 @@ static TOKEN t_id()
 
 /*
 'g_cur_char' hold the current charactor right now.
-You should assign 'g_cur_char' the next valid charactor before 
+You should assign 'g_cur_char' the next valid charactor before
 the function return.
 */
 static TOKEN t_solidus()
@@ -786,7 +773,7 @@ static TOKEN t_solidus()
 		g_cur_token_string[g_cur_token_string_pos++] = '/';
 		g_cur_token_string[g_cur_token_string_pos++] = c;
 		g_cur_token_string[g_cur_token_string_pos] = 0;
-		g_cur_char = get_next_char();     
+		g_cur_char = get_next_char();
 	} else if (c == '/') { //single comment line
 		if((st = get_line()) == ST_SUCC){
 			g_cur_char = g_cur_line[g_cur_line_pos];
@@ -831,7 +818,7 @@ static TOKEN t_solidus()
 		t = T_DIV;
 		g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
 		g_cur_token_string[g_cur_token_string_pos] = 0;
-		g_cur_char=c;     
+		g_cur_char=c;
 	}//end elseif
 FIN:
 	return t;
@@ -840,7 +827,7 @@ FIN:
 
 /*
 'g_cur_char' hold the current charactor right now.
-You should assign 'g_cur_char' the next valid charactor before 
+You should assign 'g_cur_char' the next valid charactor before
 the function return.
 */
 TOKEN t_dot()
@@ -848,7 +835,7 @@ TOKEN t_dot()
 	//Here g_cur_char is '.'
 	CHAR c = 0;
 	TOKEN t;
-	g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;	
+	g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
 	c = get_next_char();
 	if (c == '.') {
 		// token string is ..
@@ -868,7 +855,7 @@ TOKEN t_dot()
 		t = T_DOT;
 	}
 	g_cur_token_string[g_cur_token_string_pos] = 0;
-	g_cur_char = c;     
+	g_cur_char = c;
 	return t;
 }
 
@@ -896,7 +883,7 @@ TOKEN get_token()
 		break;
 	case 0xa:
 	case 0xd:
-		//'\n'		
+		//'\n'
 		if (g_enable_newline_token && g_cur_char == 0xa) {
 			token = T_NEWLINE;
 			g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
@@ -987,11 +974,11 @@ TOKEN get_token()
 		g_cur_token_string[g_cur_token_string_pos] = 0;
 		g_cur_char = get_next_char();
 		break;
-	default: 
+	default:
 		if (g_cur_char == '"') { //string
 			token = t_string();
 		} else if (g_cur_char == '\'') { //char list
-			token = t_char_list(); 
+			token = t_char_list();
 		} else if (xisalpha(g_cur_char) || g_cur_char == '_') { //identifier
 			g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
 			token = t_id();
@@ -1007,7 +994,7 @@ TOKEN get_token()
 				token = T_IMM;
 				g_cur_token_string_pos = 1;
 			}
-		} else if (xisdigit(g_cur_char) != 0) { //imm			
+		} else if (xisdigit(g_cur_char) != 0) { //imm
 			g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
 			token = t_num();
 		} else if(g_cur_char == '-') {
@@ -1157,7 +1144,7 @@ TOKEN get_token()
 				} else { // >>
 					token = T_RSHIFT;
 					g_cur_token_string[g_cur_token_string_pos] = 0;
-				} 
+				}
 			} else if (g_cur_char == '=') { // '>='
 				token =	T_NOLESSTHAN;
 				g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
@@ -1172,7 +1159,7 @@ TOKEN get_token()
 			g_cur_char = get_next_char();
 			if (g_cur_char == '<') {
 				g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
-			    g_cur_char = get_next_char();  
+			    g_cur_char = get_next_char();
 			    if (g_cur_char == '=') { // <<=
 					token = T_LSHIFTEQU;
 					g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
@@ -1181,7 +1168,7 @@ TOKEN get_token()
 				} else { // <<
 					token = T_LSHIFT;
 					g_cur_token_string[g_cur_token_string_pos] = 0;
-				} 
+				}
 			} else if (g_cur_char == '=') {// '<='
 				token =	T_NOMORETHAN;
 				g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
@@ -1204,11 +1191,11 @@ TOKEN get_token()
 				g_cur_token_string[g_cur_token_string_pos] = 0;
 			}
 		} else if (g_cur_char == '/') {
-			token = t_solidus(); 
+			token = t_solidus();
 		} else if (g_cur_char == '.') {
-			token = t_dot(); 
+			token = t_dot();
 		}
-		//Do not add anything after this line.			
+		//Do not add anything after this line.
 		else if (g_cur_token == T_END) {
 			token = T_END;
 		} else {
@@ -1240,7 +1227,7 @@ void test_lex()
 			g_src_line_num);
 		get_token();
 	}
-	scr("\n\n\n");	
+	scr("\n\n\n");
 }
 #endif
 

@@ -1,5 +1,5 @@
 /*@
-Copyright (c) 2013-2014, Su Zhenyu steven.known@gmail.com 
+Copyright (c) 2013-2014, Su Zhenyu steven.known@gmail.com
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -11,18 +11,18 @@ modification, are permitted provided that the following conditions are met:
       notice, this list of conditions and the following disclaimer in the
       documentation and/or other materials provided with the distribution.
     * Neither the name of the Su Zhenyu nor the names of its contributors
-      may be used to endorse or promote products derived from this software 
+      may be used to endorse or promote products derived from this software
       without specific prior written permission.
 
 THIS SOFTWARE IS PROVIDED "AS IS" AND ANY
 EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
 DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL 
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR 
-SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER 
-CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, 
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE 
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 @*/
 #ifdef WIN32
@@ -38,14 +38,16 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "string.h"
 #include "smempool.h"
 #include "sstl.h"
+#include "bs.h"
 
-static CHAR g_hexdigits[] = "0123456789ABCDEF"; 
 
-static ASCII g_asc1[] = {
+static CHAR g_hexdigits[] = "0123456789ABCDEF";
+
+ASCII g_asc1[] = {
 	{27, '.'},
 	{32, ' '},
 	{33, '!'},
-	{34, '"'}, 
+	{34, '"'},
 	{35, '#'},
 	{36, '$'},
 	{37, '%'},
@@ -73,7 +75,7 @@ static ASCII g_asc1[] = {
 	{59, ';'},
 	{60, '<'},
 	{61, '='},
-	{62, '>'}, 
+	{62, '>'},
 	{63, '?'},
 	{64, '@'},
 	{65, 'A'},
@@ -138,12 +140,12 @@ static ASCII g_asc1[] = {
 	{124, '|'},
 	{125, '}'},
 	{126, '~'},
-};  
+};
 
 
-//Caculate number of bits for given constant value.
+//Caculate the number of bits which longer enough to represent given constant.
 UINT get_const_bit_len(LONGLONG v)
-{	
+{
 #ifdef _VC6_
 	if (!(v & 0xffffffffffffff00)) return 8;
 	if (!(v & 0xffffffffffff0000)) return 16;
@@ -166,7 +168,7 @@ CHAR * xstrcat(CHAR * buf, UINT bufl, CHAR const* info, ...)
 	va_list ptr;
 	va_start(ptr, info);
 	CHAR * lbuf = buf + l;
-	vsnprintf(lbuf, x, info, ptr);	
+	vsnprintf(lbuf, x, info, ptr);
 	buf[bufl - 1] = 0;
 	va_end(ptr);
 	return buf;
@@ -179,11 +181,11 @@ INT xfloor(INT a, INT b)
 	IS_TRUE(b != 0, ("div zero"));
 	if (a % b == 0) {
 		//This part could not be combined with third one.
-		return (a / b); 
-	} else if ((a < 0 && b < 0) || (a > 0 && b > 0)) { 
-		return (a / b); 
-	} else { 
-		return ((a - b) / b); 
+		return (a / b);
+	} else if ((a < 0 && b < 0) || (a > 0 && b > 0)) {
+		return (a / b);
+	} else {
+		return ((a - b) / b);
 	}
 }
 
@@ -198,9 +200,9 @@ INT xceiling(INT a, INT b)
 		CASE:ceil(-4, 2)
 		*/
 		return a / b;
-	} else if ((a < 0 && b < 0) || (a > 0 && b > 0)) {	
+	} else if ((a < 0 && b < 0) || (a > 0 && b > 0)) {
 		return ((a + b) / b);
-	} else {	
+	} else {
 		/*
 		(a+b-1)/b will be errorneous
 		CASE:ceil(5,-2)
@@ -264,7 +266,7 @@ INT gcdm(UINT num, ...)
 	if (num == 0) {
 		return 0;
 	}
-	INT *ptr = (INT*) (((BYTE*)(&num)) + sizeof(UINT));	
+	INT *ptr = (INT*) (((BYTE*)(&num)) + sizeof(UINT));
 	INT n1 = *ptr++;
 
 	UINT i = 0;
@@ -283,7 +285,7 @@ INT gcdm(UINT num, ...)
 static INT _exgcd(IN INT a, IN INT b, OUT INT & x, OUT INT & y)
 {
 	if (b == 0) {
-		x = 1; 
+		x = 1;
 		y = 0;
 		return a;
 	}
@@ -312,7 +314,7 @@ INT exgcd(IN INT a, IN INT b, OUT INT & x, OUT INT & y)
 
 
 /*
-Factorial of n, namely, requiring n!. 
+Factorial of n, namely, requiring n!.
 */
 UINT fact(UINT n)
 {
@@ -365,7 +367,7 @@ UINT combin(UINT n, UINT m)
 
 /*
 Convert char value into binary.
-e.g: 
+e.g:
 	char p = ' '; p is blank.
 */
 INT xctoi(CHAR const* cl)
@@ -403,9 +405,9 @@ return 12345.
 LONG xatol(CHAR const* nptr, bool is_oct)
 {
 	if (nptr == NULL) return 0;
-	while (*nptr == ' ' || *nptr == '\t') { 
-		nptr++; 
-	}	
+	while (*nptr == ' ' || *nptr == '\t') {
+		nptr++;
+	}
 	CHAR sign = *nptr;
 	if (sign == '-' || sign == '+') {
 		nptr++;
@@ -416,7 +418,7 @@ LONG xatol(CHAR const* nptr, bool is_oct)
 		UCHAR c = *nptr;
 		while ((c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
 			if (c >= '0' && c <= '9') {
-				res = 16 * res + c - '0';        	     
+				res = 16 * res + c - '0';
 			} else if (c >= 'A' && c <= 'F') {
 				res = 16 * res + c - 'A' + 10;
 			} else if (c >= 'a' && c <= 'f') {
@@ -424,7 +426,7 @@ LONG xatol(CHAR const* nptr, bool is_oct)
 			} else {
 				return 0;
 			}
-			c = *++nptr; 
+			c = *++nptr;
 		}
 	} else if (is_oct) { //octal
 		while (*nptr >= '0' && *nptr <= '7') {
@@ -452,7 +454,7 @@ LONGLONG xabs(LONGLONG a)
 
 
 /*
-Find partial string, return the subscript-index if substring found, 
+Find partial string, return the subscript-index if substring found,
 otherwise return -1.
 
 'src': input string.
@@ -514,13 +516,13 @@ UCHAR * xltoa(IN LONG v, OUT UCHAR * buf)
 	bool sign = false;
 	if (v < 0) { v = -v; sign = true; }
 	UCHAR * str = buf;
-	
+
 	LONG rem = 0;
 	while (v != 0) {
-		rem = v % 10;		
+		rem = v % 10;
 		v /= 10;
 		*str++ = p[rem];
-	}	
+	}
 	if (sign) {
 		*str++ = '-';
 	}
@@ -552,7 +554,7 @@ void prim(INT m, OUT INT * buf)
 	buf[0] = 0;
 	if (m < 0) {
 		sign = true;
-		m = -m; 
+		m = -m;
 	}
 	_prim(m, 2, buf, 0);
 	if (sign) {
@@ -573,7 +575,7 @@ void dumpf_svec(void * vec, UINT ty, CHAR const* name, bool is_del)
 	static INT g_count = 0;
 	FILE * h = fopen(name, "a+");
 	IS_TRUE(h, ("%s create failed!!!", name));
-	fprintf(h, "\nSVECOTR dump id:%d\n", g_count++);	
+	fprintf(h, "\nSVECOTR dump id:%d\n", g_count++);
 
 	///
 	switch (ty) {
@@ -581,9 +583,9 @@ void dumpf_svec(void * vec, UINT ty, CHAR const* name, bool is_del)
 		{
 			SVECTOR<bool> *p = (SVECTOR<bool> *)vec;
 			for (INT i = 0; i <= p->get_last_idx(); i++) {
-				fprintf(h, "%d", (INT)p->get(i));	
+				fprintf(h, "%d", (INT)p->get(i));
 				if (i != p->get_last_idx()) {
-					fprintf(h, ", ");	
+					fprintf(h, ", ");
 				}
 			}
 			break;
@@ -592,9 +594,9 @@ void dumpf_svec(void * vec, UINT ty, CHAR const* name, bool is_del)
 		{
 			SVECTOR<INT> *p = (SVECTOR<INT> *)vec;
 			for (INT i = 0; i <= p->get_last_idx(); i++) {
-				fprintf(h, "%d", (INT)p->get(i));	
+				fprintf(h, "%d", (INT)p->get(i));
 				if (i != p->get_last_idx()) {
-					fprintf(h, ", ");	
+					fprintf(h, ", ");
 				}
 			}
 			break;
@@ -604,8 +606,8 @@ void dumpf_svec(void * vec, UINT ty, CHAR const* name, bool is_del)
 	}
 
 	///
-	
-	fprintf(h, "\n");	
+
+	fprintf(h, "\n");
 	fclose(h);
 }
 
@@ -613,15 +615,15 @@ void dumpf_svec(void * vec, UINT ty, CHAR const* name, bool is_del)
 //Dumps() for SVECTOR<TY>.
 void dumps_svec(void * vec, UINT ty)
 {
-	printf("\n");	
+	printf("\n");
 	switch (ty) {
 	case D_BOOL:
 		{
 			SVECTOR<bool> *p = (SVECTOR<bool> *)vec;
 			for (INT i = 0; i <= p->get_last_idx(); i++) {
-				printf("%d", (INT)p->get(i));	
+				printf("%d", (INT)p->get(i));
 				if (i != p->get_last_idx()) {
-					printf(", ");	
+					printf(", ");
 				}
 			}
 			break;
@@ -630,9 +632,9 @@ void dumps_svec(void * vec, UINT ty)
 		{
 			SVECTOR<INT> *p = (SVECTOR<INT> *)vec;
 			for (INT i = 0; i <= p->get_last_idx(); i++) {
-				printf("%d", (INT)p->get(i));	
+				printf("%d", (INT)p->get(i));
 				if (i != p->get_last_idx()) {
-					printf(", ");	
+					printf(", ");
 				}
 			}
 			break;
@@ -640,7 +642,7 @@ void dumps_svec(void * vec, UINT ty)
 	default:
 		IS_TRUE(0, ("illegal ty"));
 	}//end switch
-	printf("\n");	
+	printf("\n");
 }
 
 
@@ -666,6 +668,8 @@ void af2i(IN CHAR * f, OUT BYTE * buf, UINT buflen, bool is_double)
 }
 
 
+//Compute the power of 2, return the result.
+//Note v must be power of 2.
 UINT get_power_of_2(ULONGLONG v)
 {
 	UINT n = 0;
@@ -677,27 +681,79 @@ UINT get_power_of_2(ULONGLONG v)
 }
 
 
+//Compute the number of 1.
+UINT get_sparse_popcount(ULONGLONG v)
+{
+	int n = 0;
+	while (v != 0) {
+		v = v & (v - 1);
+		n++;
+	}
+	return n;
+}
+
+
+//Compute the nearest power of 2 that not less than v.
+UINT get_nearest_power_of_2(UINT v)
+{
+	v--;
+	v |= v >> 1;
+	v |= v >> 2;
+	v |= v >> 4;
+	v |= v >> 8;
+	v |= v >> 16;
+	v++;
+	return v;
+}
+
+
+//Compute the nearest power of 2 that not less than v.
+ULONGLONG get_nearest_power_of_2(ULONGLONG v)
+{
+	v--;
+	v |= v >> 1;
+	v |= v >> 2;
+	v |= v >> 4;
+	v |= v >> 8;
+	v |= v >> 16;
+	v |= v >> 32;
+	v++;
+	return v;
+}
+
+
+//Compute the number of 1.
+UINT get_lookup_popcount(ULONGLONG v)
+{
+	IS_TRUE0((BYTE)-1 == 255);
+	BYTE * p = (BYTE*)&v;
+	return g_bit_count[p[0]] + g_bit_count[p[1]] +
+		   g_bit_count[p[2]] + g_bit_count[p[3]] +
+		   g_bit_count[p[4]] + g_bit_count[p[5]] +
+		   g_bit_count[p[6]] + g_bit_count[p[7]];
+}
+
+
 //Searchs for sub-string
 INT findstr(CHAR * src, CHAR * s)
 {
 	// can't have empty or NULL 'old'
-    INT srclen, pos = -1;
+    INT srclen = -1;
 	CHAR * startp = src, * p, * q;
 	INT l = 0, i = 0;
-	INT isfind = 0;
-	if (!src || !s) return 0; 
+	if (src == NULL || s == NULL) { return 0; }
 	srclen = strlen(src);
 	p = startp;
 	i = 0;
 	while (p[i] != 0) {
 		if (p[i] == s[0]) {
-			q = &p[i]; 
+			q = &p[i];
 			l = 0;
 			while (l < srclen && q[l] != 0) {
 				if (q[l] != s[l]) { break; }
 				l++;
 			}
-			if (s[l] == 0) {//match seacrching 
+			if (s[l] == 0) {//match seacrching
 				goto FIND;
 			}
 		}
@@ -705,7 +761,7 @@ INT findstr(CHAR * src, CHAR * s)
 	}
 	return 0;
 FIND:
-    return 1;
+	return 1;
 }
 
 
@@ -716,7 +772,7 @@ e.g  v=17 , align=4 , the result is 20
 LONGLONG ceil_align(LONGLONG v, LONGLONG align)
 {
 	if (align == 0 || align == 1) return v;
-	if ((v % align) != 0) { 
+	if ((v % align) != 0) {
 		v = (v / align + 1) * align;
 	}
 	return v;
@@ -739,32 +795,32 @@ CHAR * getfilepath(IN CHAR * n, OUT CHAR * buf, UINT bufl)
 	}
 	if (i < 0) {
 		return NULL;
-	} else {		
+	} else {
 		IS_TRUE0((UINT)i < bufl);
 		memcpy(buf, n, i);
 		buf[i] = 0;
 	}
-	return buf;	
+	return buf;
 }
 
 
 /*
 Shift a string to right side or left side
-OFST : greate than zero means shifting SRC to right side, 
-       and the displacement is abs(ofst); negative 
+OFST : greate than zero means shifting SRC to right side,
+       and the displacement is abs(ofst); negative
 	   means shifting SRC to left.
 */
 void strshift(CHAR * src, INT ofst)
 {
 	INT len = strlen(src), i;
 	if (!src) return;
-	
+
 	if (ofst>=0) { //shift to right
 		if (ofst >= len) {
 			src[0] = 0;
 		} else {
 			src[len - ofst] = 0;
-		}	  
+		}
 	} else if (ofst < 0) { //shift to left
 		if ((-ofst) >= len) {
 			src[0] = 0;
@@ -787,8 +843,8 @@ void strshift(CHAR * src, INT ofst)
 CHAR * getfilename(CHAR * n, OUT CHAR * buf, UINT bufl)
 {
 	INT l = strlen(n), i = 0;
-	CHAR * v = buf, * p;
-	if (n == NULL) return NULL;
+	CHAR * p;
+	if (n == NULL) { return NULL; }
 	i = l;
 	while (i >= 0) {
 		if (n[i] != '\\' && n[i] != '/') {
@@ -797,14 +853,16 @@ CHAR * getfilename(CHAR * n, OUT CHAR * buf, UINT bufl)
 			break;
 		}
 	}
+
 	if (i < 0) {
 		i = l;
 		p = n;
 	} else {
-		p = (CHAR*)calloc(l - i, 1);
+		p = (CHAR*)ALLOCA(l - i);
 		memcpy(p, n + i + 1, l - i);
-		i = l - i;   
-	}   
+		i = l - i;
+	}
+
 	while (i >= 0) {
 		if (p[i] != '.') {
 			i--;
@@ -812,6 +870,7 @@ CHAR * getfilename(CHAR * n, OUT CHAR * buf, UINT bufl)
 			break;
 		}
 	}
+
 	IS_TRUE0((UINT)i < bufl);
 	memcpy(buf, p, i);
 	buf[i] = 0;
@@ -836,7 +895,7 @@ CHAR * getfilesuffix(CHAR * n, OUT CHAR * buf)
 	}
 	memcpy(v, n + i + 1, l - i -1);
 	v[l - i -1] = 0;
-	return v;	
+	return v;
 }
 
 
@@ -846,7 +905,7 @@ UINT xstrlen(CHAR const* p)
 	while (*p != 0) {
 		if (*p == '\\' && *(p+1) == 'n') {
 			p += 2;
-		} else {			
+		} else {
 			p++;
 		}
 		len++;
@@ -908,11 +967,12 @@ INT get_first_one_pos(INT m)
 //Judge if 'f' is integer conform to IEEE754 spec.
 bool is_integer(float f)
 {
-	/*	
+	/*
 	0000 0000 0111 1111 1111 1111 1111 1111 //mantissa
 	0111 1111 1000 0000 0000 0000 0000 0000 //exp
 	*/
-	INT i = *(INT*)&f;
+	float * p = &f;
+	INT i = *(INT*)p;
 	INT m = i & 0x007FFFFF; //mantissa
 	INT n = ((i & 0x7F800000) >> 23) - 127; //number of exp
 	INT j = get_first_one_pos(m);
@@ -924,7 +984,8 @@ bool is_integer(float f)
 bool is_integerd(double d)
 {
 	//0000 0000 0000 1111 1111 1111 1111 1111 1111 1111 1111 1111 1111 1111 1111 1111 //mantissa
-	LONGLONG i = *(LONGLONG*)&d;
+	double * p = &d;
+	LONGLONG i = *(LONGLONG*)p;
 	LONGLONG m = i & 0x000FFFFFffffffffull; //mantissa
 	INT n = (INT)((i & 0xFFF0000000000000ull) >> 52) - 1023; //number of exp
 	INT j = 0;
@@ -958,10 +1019,10 @@ Return the position in array if find v.
 'v': search v in array.
 */
 bool binsearch(INT array[], UINT n, INT v, IN OUT UINT * ppos)
-{	
+{
 	if (n == 0) return false;
-	if (n == 1 && array[0] != v) return false; 
-	
+	if (n == 1 && array[0] != v) return false;
+
 	//n >= 2
 	UINT lo = 0;
 	UINT hi = n - 1;
@@ -998,17 +1059,17 @@ ULONGLONG getusec()
 #ifdef WIN32
 	time_t timer;
 	timer = time(&timer);
-	
+
 	//Time Format as: Local time is: Fri Jan 17 16:26:27 2013
 	//struct tm * tblock = localtime(&timer);
 	//printf("Local time is: %s", asctime(tblock));
 	return (ULONGLONG)timer;
-#else	
+#else
 	struct timeval tv;
 	struct timezone tz;
 	gettimeofday(&tv, &tz);
 	return (((ULONGLONG)tv.tv_sec) * 1000000LL + tv.tv_usec) / 1000000LL;
-#endif	
+#endif
 }
 
 
@@ -1016,7 +1077,7 @@ static inline bool prtchar(CHAR * buf, UINT buflen, UINT * pbufpos, CHAR c)
 {
 	if ((*pbufpos) >= buflen) {
 		return false;
-	} else {		
+	} else {
 		buf[*pbufpos] = c;
 		(*pbufpos)++;
 	}
@@ -1033,8 +1094,8 @@ static bool prt_ulong(CHAR * buf, UINT buflen, UINT * pbufpos, ULONG v)
 		return true;
 	}
 
-	//Count up the number of digits. 
-	//e.g: 123, digits=3 
+	//Count up the number of digits.
+	//e.g: 123, digits=3
 	INT digits = 0;
 	ULONG v2 = v;
 	while (v2 != 0) {
@@ -1069,7 +1130,7 @@ static bool prt_int(CHAR * buf, UINT buflen, UINT * pbufpos, INT v)
 }
 
 
-static bool prt_ulong_hex(CHAR * buf, UINT buflen, UINT * pbufpos, 
+static bool prt_ulong_hex(CHAR * buf, UINT buflen, UINT * pbufpos,
 						ULONG v, INT format_size)
 {
 	ULONG mask = 0xF0000000;
@@ -1104,14 +1165,14 @@ static bool prt_ansi_str(CHAR * buf, UINT buflen, UINT * pbufpos,
 			return false;
 		}
 		if (sized && (--format_size == 0)) {
-			break;  
+			break;
 		}
 	}
 	return true;
 }
 
 
-static bool prt_wide_str(CHAR * buf, UINT buflen, UINT * pbufpos, 
+static bool prt_wide_str(CHAR * buf, UINT buflen, UINT * pbufpos,
 						 wchar_t * ws, INT format_size)
 {
 	wchar_t ch;
@@ -1150,12 +1211,12 @@ static bool is_exist_mark(CHAR const* format)
 
 
 //Parse string that starts with '%'.
-static bool percent(CHAR * buf, UINT buflen, IN OUT UINT * bufpos, 
+static bool percent(CHAR * buf, UINT buflen, IN OUT UINT * bufpos,
 					IN OUT CHAR const** format, va_list stack_start)
 {
 	//The info related to %, e.g:'%d', can not longer than 255.
-	CHAR sbuf[255]; 
-	sbuf[0] = 0;	
+	CHAR sbuf[255];
+	sbuf[0] = 0;
 	UINT tpos = 0;
 	UINT format_size = 0;
 	CHAR const* format_pos = *format;
@@ -1165,7 +1226,7 @@ static bool percent(CHAR * buf, UINT buflen, IN OUT UINT * bufpos,
 	bool is_align_left = false;
 	bool is_stuf_zero_left = false;
 	bool is_nega = false;
-	
+
 	if (ch == '%') {
 		//put double '%' , if we encounter '%%...'
 		if (!prtchar(buf, buflen, bufpos, ch)) goto OVER;
@@ -1180,7 +1241,7 @@ static bool percent(CHAR * buf, UINT buflen, IN OUT UINT * bufpos,
 			if (!prtchar(buf, buflen, bufpos, '%')) goto OVER;
 			goto FIN;
 		}
-		is_mark_positive = true;  // add '+' 
+		is_mark_positive = true;  // add '+'
 		ch = *format_pos++;
 		goto DIGIT0;
 	} else if (ch == '-') {
@@ -1200,20 +1261,20 @@ static bool percent(CHAR * buf, UINT buflen, IN OUT UINT * bufpos,
 	} else {
 		goto LETTER;
 	}
-	
+
 DIGIT0:
 	while (ch == '0') {
 		if (!is_align_left) {
-			//e.g print '1234' such as '+00001234'	
+			//e.g print '1234' such as '+00001234'
 			is_stuf_zero_left = true;
 		}
 		ch = *format_pos++;
 	}
 
 	if (ch >= '1' && ch <= '9') {
-		//Digial.	
+		//Digial.
 		format_size = 0;
-		
+
 		//e.g: %20d, format_size is 20.
 		do {
 			format_size = (format_size * 10) + ch - '0';
@@ -1222,34 +1283,34 @@ DIGIT0:
 			}
 		} while (ch >= '1' && ch <= '9');
 	}
-	
+
 LETTER:
     tpos = 0;
 	//Switch on marker character
 	switch (ch) {
 	case 'c': //ANSI CHAR
-		{			
+		{
 			/*
 			CHAR is promoted to INT when passed through '...'.
 			So you should pass 'INT' not 'CHAR' to 'va_arg'.
 			If this code is reached, the program will abort.
 			*/
-            CHAR c = va_arg(stack_start, INT);   
+            CHAR c = va_arg(stack_start, INT);
 			if (!prtchar(buf, buflen, bufpos, c)) goto OVER;
 		}
-		break;		
+		break;
 	case 'd'://	Integer
 	case 'i'://	Integer
 		{
 			INT i = va_arg(stack_start, INT);
 			if (i < 0) is_nega = true;
-			if (!prt_int(sbuf, buflen, &tpos, i)) goto OVER;		
+			if (!prt_int(sbuf, buflen, &tpos, i)) goto OVER;
 		}
 		break;
 	case 'u'://	ULONG as decimal
 		{
 			ULONG uv = va_arg(stack_start, ULONG);
-			if (!prt_ulong(sbuf, buflen, &tpos, uv)) goto OVER;		
+			if (!prt_ulong(sbuf, buflen, &tpos, uv)) goto OVER;
 		}
 		break;
  	case 'x':// ULONG as hex
@@ -1261,7 +1322,7 @@ LETTER:
 	case 's'://	ANSI string
 		{
 			CHAR * s = va_arg(stack_start, CHAR*);
-			if (!prt_ansi_str(sbuf, buflen, &tpos, s, format_size)) goto OVER;		
+			if (!prt_ansi_str(sbuf, buflen, &tpos, s, format_size)) goto OVER;
 		}
 		break;
 	case 'S'://	Wide string
@@ -1270,15 +1331,14 @@ LETTER:
 			if (!prt_wide_str(sbuf, buflen, &tpos, s, format_size)) goto OVER;
 		}
 		break;
-	case 'f':		
+	case 'f':
 		; //TODO
 	default:
 		goto FIN;
 	}
-	
+
 	if (is_mark_positive) {
 		if (is_nega) {
-			INT tl = strlen(sbuf);
 			if (!prtchar(buf, buflen, bufpos, '-')) goto OVER;
 
 			//remove '-'
@@ -1337,7 +1397,7 @@ LETTER:
 	}
     memcpy(buf + *bufpos, sbuf, tpos);
 	*bufpos += tpos;
-FIN: 
+FIN:
 	*format = format_pos;
 	return true;
 OVER: //We got some problems, and going to the xsprintf.
@@ -1353,7 +1413,7 @@ static bool back_slash(CHAR * buf,
 {
 	CHAR const* pos = *format;
 	CHAR ch = *pos++;
-	
+
 	// '\n' '\t' '\b'
 	if (ch == '\\') {
 		if (!prtchar(buf, buflen, bufpos, ch)) goto OVER;
@@ -1370,7 +1430,7 @@ static bool back_slash(CHAR * buf,
 			break;
 		case 'b':
 			ch = *pos++;
-			if (!prtchar(buf, buflen, bufpos, ' ')) goto OVER;			
+			if (!prtchar(buf, buflen, bufpos, ' ')) goto OVER;
 			break;
 		}
 	}
@@ -1383,18 +1443,18 @@ OVER: //Get some problems.
 
 
 /*
-Format string and record in buf. 
+Format string and record in buf.
 'buf': output buffer record string.
 'stack_start': point to the first args.
 */
-CHAR * xsprintf(IN OUT CHAR * buf, 
-				IN UINT buflen, 
+CHAR * xsprintf(IN OUT CHAR * buf,
+				IN UINT buflen,
 				IN CHAR const* format,
 				...)
 {
 	UINT bufpos = 0;
 	CHAR ch = *format;
-	va_list stack_start;	
+	va_list stack_start;
 	va_start(stack_start, format);
 	//Walk through each characters.
 	while (ch != '\0') {
@@ -1421,7 +1481,7 @@ CHAR * xsprintf(IN OUT CHAR * buf,
 OVER:
 	// NULL terminate string
 	prtchar(buf, buflen, &bufpos, '\0');
-	
+
 	// Ensure string terminated
 	buf[buflen - 1] = '\0';
 	va_end(stack_start);

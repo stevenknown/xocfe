@@ -1,5 +1,5 @@
 /*@
-Copyright (c) 2013-2014, Su Zhenyu steven.known@gmail.com 
+Copyright (c) 2013-2014, Su Zhenyu steven.known@gmail.com
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -11,18 +11,18 @@ modification, are permitted provided that the following conditions are met:
       notice, this list of conditions and the following disclaimer in the
       documentation and/or other materials provided with the distribution.
     * Neither the name of the Su Zhenyu nor the names of its contributors
-      may be used to endorse or promote products derived from this software 
+      may be used to endorse or promote products derived from this software
       without specific prior written permission.
 
 THIS SOFTWARE IS PROVIDED "AS IS" AND ANY
 EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
 DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL 
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR 
-SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER 
-CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, 
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE 
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 @*/
 #include "cfecom.h"
@@ -31,7 +31,7 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 The outermost scope is global region which id is 0, and the inner
 scope scope is function body-stmt which id is 1, etc.
 */
-SCOPE * g_cur_scope = NULL; 
+SCOPE * g_cur_scope = NULL;
 LIST<SCOPE*> g_scope_list;
 UINT g_scope_count = 0;
 LAB2LINE_MAP g_lab2lineno;
@@ -42,7 +42,7 @@ static void * xmalloc(ULONG size)
 	IS_TRUE0(p);
 	memset(p, 0, size);
 	return p;
-} 
+}
 
 
 SCOPE * new_scope()
@@ -60,10 +60,10 @@ Return NULL if this function do not find 'sym' in 'sym_list', and
 'sym' will be appended  into list, otherwise return 'sym'.
 */
 SYM * add_to_symtab_list(SYM_LIST ** sym_list , SYM * sym)
-{   	
+{
 	if (sym_list == NULL || sym == NULL) {
 		return NULL;
-	}	
+	}
 	if ((*sym_list) == NULL) {
 		*sym_list = (SYM_LIST*)xmalloc(sizeof(SYM_LIST));
 		SYM_LIST_sym(*sym_list) = sym;
@@ -79,18 +79,18 @@ SYM * add_to_symtab_list(SYM_LIST ** sym_list , SYM * sym)
 			}
 			p = SYM_LIST_next(p);
 		}
-		SYM_LIST_next(q) = (SYM_LIST*)xmalloc(sizeof(SYM_LIST));                                                                 	
+		SYM_LIST_next(q) = (SYM_LIST*)xmalloc(sizeof(SYM_LIST));
 		SYM_LIST_prev(SYM_LIST_next(q)) = q;
 		q = SYM_LIST_next(q);
 		SYM_LIST_sym(q) = sym;
-	}	
+	}
 	return NULL;
 }
 
 
 /*
 'is_tmp_sc': true if the new scope is used for temprary.
-And it will be removed from the sub-scope-list while return to 
+And it will be removed from the sub-scope-list while return to
 the parent.
 */
 SCOPE * enter_sub_scope(bool is_tmp_sc)
@@ -99,7 +99,7 @@ SCOPE * enter_sub_scope(bool is_tmp_sc)
 	SCOPE_level(sc) = SCOPE_level(g_cur_scope) + 1;
 	SCOPE_parent(sc) = g_cur_scope;
 	SCOPE_is_tmp_sc(sc) = is_tmp_sc;
-	
+
 	//Add 'sc' as sub scope followed the most right one of subscope list.
 	//e.g: first_sub_scope -> second_sub_scope -> ...
 	add_next(&SCOPE_sub(g_cur_scope), sc);
@@ -114,12 +114,12 @@ SCOPE * return_to_parent_scope()
 	if (SCOPE_is_tmp_sc(g_cur_scope)) {
 		remove(&SCOPE_sub(parent), g_cur_scope);
 	}
-	g_cur_scope = parent;	
+	g_cur_scope = parent;
 	return g_cur_scope;
-} 
+}
 
 
-// Get GLOBAL_SCOPE level scope 
+// Get GLOBAL_SCOPE level scope
 SCOPE * get_global_scope()
 {
 	SCOPE * s = g_cur_scope;
@@ -147,12 +147,12 @@ SCOPE * get_last_sub_scope(SCOPE * s)
 //Dump scope in a cascade of tree.
 void dump_scope_tree(SCOPE * s, INT indent)
 {
-	if (g_tfile == NULL) return;	
-	if (s == NULL) return;	
+	if (g_tfile == NULL) return;
+	if (s == NULL) return;
 	fprintf(g_tfile, "\n");
 	INT i = indent;
 	while (i-- > 0) fprintf(g_tfile, "    ");
-	fprintf(g_tfile, "SCOPE(%d),level(%d)", SCOPE_id(s), SCOPE_level(s)); 
+	fprintf(g_tfile, "SCOPE(%d),level(%d)", SCOPE_id(s), SCOPE_level(s));
 	fflush(g_tfile);
 	dump_scope_tree(SCOPE_sub(s), indent+1);
 	dump_scope_tree(SCOPE_nsibling(s), indent);
@@ -167,7 +167,7 @@ void dump_scope(SCOPE * s, UINT flag)
 	buf[0] = 0;
 	note("\nSCOPE(id:%d, level:%d)", SCOPE_id(s), SCOPE_level(s));
 	g_indent++;
-	
+
 	//symbols
 	SYM_LIST * sym_list = SCOPE_sym_tab_list(s);
 	if (sym_list != NULL) {
@@ -182,12 +182,12 @@ void dump_scope(SCOPE * s, UINT flag)
 	}
 
 	//all of defined customer label in code
-	LABEL_INFO * li = SCOPE_label_list(s).get_head(); 
+	LABEL_INFO * li = SCOPE_label_list(s).get_head();
 	if (li != NULL) {
-		note("\nDEFINED LABEL:");		
+		note("\nDEFINED LABEL:");
 		g_indent++;
 		note("\n");
-		for (; li != NULL; li = SCOPE_label_list(s).get_next()) { 
+		for (; li != NULL; li = SCOPE_label_list(s).get_next()) {
 			IS_TRUE0(map_lab2lineno(li) != 0);
 			note("%s (def in line:%d)\n",
 				 SYM_name(LABEL_INFO_name(li)),
@@ -197,13 +197,13 @@ void dump_scope(SCOPE * s, UINT flag)
 	}
 
 	//refered customer label in code
-	li = SCOPE_ref_label_list(s).get_head(); 
+	li = SCOPE_ref_label_list(s).get_head();
 	if (li != NULL) {
 		note("\nREFED LABEL:");
-		g_indent++;		
+		g_indent++;
 		note("\n");
-		for (; li != NULL; li = SCOPE_ref_label_list(s).get_next()) { 
-			note("%s (use in line:%d)\n", 
+		for (; li != NULL; li = SCOPE_ref_label_list(s).get_next()) {
+			note("%s (use in line:%d)\n",
 				 SYM_name(LABEL_INFO_name(li)),
 				 map_lab2lineno(li));
 		}
@@ -229,7 +229,7 @@ void dump_scope(SCOPE * s, UINT flag)
 	USER_TYPE_LIST * utl = SCOPE_user_type_list(s);
 	if (utl != NULL) {
 		note("\nUSER TYPE:");
-		g_indent++;	
+		g_indent++;
 		note("\n");
 		while (utl != NULL) {
 			buf[0] = 0;
@@ -244,7 +244,7 @@ void dump_scope(SCOPE * s, UINT flag)
 	STRUCT * st = SCOPE_struct_list(s);
 	if (st != NULL) {
 		note("\nSTRUCT:");
-		g_indent++;	
+		g_indent++;
 		note("\n");
 		while (st != NULL) {
 			buf[0] = 0;
@@ -296,7 +296,7 @@ void dump_scope(SCOPE * s, UINT flag)
 				dump_tree(DECL_init_tree(DECL_decl_list(dcl)));
 				g_indent -= 2;
 			}
-			
+
 			note("\n");
 			dcl = DECL_next(dcl);
 		}
@@ -308,9 +308,9 @@ void dump_scope(SCOPE * s, UINT flag)
 		TREE * t = SCOPE_stmt_list(s);
 		if (t != NULL) {
 			note("\nSTATEMENT:");
-			g_indent++;	
+			g_indent++;
 			note("\n");
-			dump_trees(t);	
+			dump_trees(t);
 			g_indent--;
 		}
 	}

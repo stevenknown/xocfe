@@ -1,5 +1,5 @@
 /*@
-Copyright (c) 2013-2014, Su Zhenyu steven.known@gmail.com 
+Copyright (c) 2013-2014, Su Zhenyu steven.known@gmail.com
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -11,18 +11,18 @@ modification, are permitted provided that the following conditions are met:
       notice, this list of conditions and the following disclaimer in the
       documentation and/or other materials provided with the distribution.
     * Neither the name of the Su Zhenyu nor the names of its contributors
-      may be used to endorse or promote products derived from this software 
+      may be used to endorse or promote products derived from this software
       without specific prior written permission.
 
 THIS SOFTWARE IS PROVIDED "AS IS" AND ANY
 EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
 DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL 
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR 
-SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER 
-CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, 
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE 
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 @*/
 #ifndef _L_TYPE_
@@ -30,12 +30,16 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #ifdef _LINUX_
 #include "unistd.h" //for unlink declaration
+#define ALLOCA	alloca //linux version
 #else
 
 #ifdef _VC6_
 #include "windows.h"
 #include "errors.h"
 #endif
+
+#include "malloc.h"
+#define ALLOCA	_alloca //windows version
 
 #endif
 
@@ -47,7 +51,7 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 //These types may be defined, but we need to override them.
 #undef STATUS
-#undef BYTE 
+#undef BYTE
 #undef CHAR
 #undef UCHAR
 #undef SHORT
@@ -60,8 +64,8 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #undef ULONGLONG
 
 #define STATUS int
-#define BYTE unsigned char 
-#define CHAR char 
+#define BYTE unsigned char
+#define CHAR char
 #define UCHAR unsigned char
 #define SHORT short
 #define USHORT unsigned short
@@ -80,16 +84,16 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifdef _DEBUG_
 	#ifndef IS_TRUE
 		#include "stdio.h"
-		INT m518087(CHAR const* info, ...); 
+		INT m518087(CHAR const* info, ...);
 		INT m022138(CHAR const* filename, INT line);
-		#define IS_TRUE(a, b)  ((a) ? 0 : (m022138(__FILE__, __LINE__), m518087 b))	
+		#define IS_TRUE(a, b)  ((a) ? 0 : (m022138(__FILE__, __LINE__), m518087 b))
 	#endif
 
 	#ifndef IS_TRUE0
 		#include "stdio.h"
-		INT m518087(CHAR const* info, ...); 
+		INT m518087(CHAR const* info, ...);
 		INT m022138(CHAR const* filename, INT line);
-		#define IS_TRUE0(a)  ((a) ? 0 : (m022138(__FILE__, __LINE__), m518087 ("")))	
+		#define IS_TRUE0(a)  ((a) ? 0 : (m022138(__FILE__, __LINE__), m518087 ("")))
 	#endif
 #else
 	#define IS_TRUE(a, b)
@@ -135,17 +139,17 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define IS_UNSIGN_TY(type)		((type)0 - 1 > 0) //Be true if type is unsigned.
 #define IS_UNSIGN_VAR(var)			(var > 0 && ~var > 0) //Be true if variable is unsigned.
 
-#define IN //input 
-#define OUT //output 
+#define IN //input
+#define OUT //output
 #define TMP_BUF_LEN 256
 #define MAX_BUF_LEN 1024
 #define MAX_LOC_BUF_LEN 512
 
 //Misc Dumps/Dumpf of SVECTOR<T>
 #define D_BOOL			1
-#define D_INT			2	
+#define D_INT			2
 
-//If here compile failed, use its POSIX name "unlink" instead of 	
+//If here compile failed, use its POSIX name "unlink" instead of
 //ISO C++ conformat name "_unlink".
 #ifdef _VC2010_
 #define unlink 			_unlink
