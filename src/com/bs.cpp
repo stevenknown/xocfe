@@ -1592,6 +1592,11 @@ void BITSET::clean()
 void BITSET::copy(BITSET const& src)
 {
 	IS_TRUE(this != &src, ("copy self"));
+	if (src.m_size == 0) {
+		::memset(m_ptr, 0, m_size);
+		return;
+	}
+
 	UINT cp_sz = src.m_size; //size need to copy.
 	if (m_size < src.m_size) {
 		//src's last byte pos.
@@ -1600,6 +1605,7 @@ void BITSET::copy(BITSET const& src)
 			::memset(m_ptr, 0, m_size);
 			return;
 		}
+
 		cp_sz = l / BITS_PER_BYTE + 1;
 		if (m_size < cp_sz) {
 			::free(m_ptr);
@@ -1612,6 +1618,7 @@ void BITSET::copy(BITSET const& src)
 		cp_sz = src.m_size;
 		::memset(m_ptr + cp_sz, 0, m_size - cp_sz);
 	}
+
 	IS_TRUE(m_ptr != NULL, ("not yet init"));
 	::memcpy(m_ptr, src.m_ptr, cp_sz);
 }
@@ -1752,20 +1759,6 @@ UINT BITSET_MGR::count_mem(FILE * h)
     }
 	#endif
 	return count;
-}
-
-
-BITSET * BITSET_MGR::create(UINT init_sz)
-{
-	IS_TRUE(m_is_init, ("not yet init"));
-	BITSET * p = m_free_list.remove_head();
-	if (p == NULL) {
-		p = (BITSET*)::malloc(sizeof(BITSET));
-		::memset(p, 0, sizeof(BITSET));
-		p->init(init_sz);
-		m_bs_list.append_tail(p);
-	}
-	return p;
 }
 //END BITSET_MGR
 

@@ -85,7 +85,10 @@ static LABEL_INFO * add_label(CHAR * name, INT lineno)
 			return NULL;
 		}
 	}
+
+	//Allocate different LABEL_INFO for different lines.
 	li = new_clabel(g_fe_sym_tab->add(name), g_pool_general_used);
+	//li = g_labtab.append_and_retrieve(li);
 	set_map_lab2lineno(li, lineno);
 	SCOPE_label_list(sc).append_tail(li);
 	return li;
@@ -101,10 +104,14 @@ static LABEL_INFO * add_ref_label(CHAR * name, INT lineno)
 		sc = SCOPE_parent(sc);
 	}
 	if (sc == NULL) {
-		err(g_src_line_num, "label reference illegal, are you crazy?");
+		err(g_src_line_num,
+			"label reference illegal, and it should be used in function.");
 		return NULL;
 	}
+
+	//Allocate different LABEL_INFO for different lines.
 	li = new_clabel(g_fe_sym_tab->add(name), g_pool_general_used);
+	//li = g_labtab.append_and_retrieve(li);
 	LABEL_INFO_is_used(li) = true;
 	set_map_lab2lineno(li, lineno); //ONLY for debug-info or dumping
 	SCOPE_ref_label_list(sc).append_tail(li);
@@ -345,7 +352,7 @@ static bool is_constant(TREE_TYPE tt)
 bool is_user_type_exist_in_outer_scope(CHAR * cl, OUT DECL ** ut)
 {
 	SCOPE * sc = g_cur_scope;
-	while (sc) {
+	while (sc != NULL) {
 		if (is_user_type_exist(SCOPE_user_type_list(sc), cl, ut)) {
 			return true;
 		}
@@ -417,7 +424,7 @@ void set_parent(TREE * parent, TREE * child)
 	if (child == NULL) { return; }
 	while (child != NULL) {
 		TREE_parent(child) = parent;
-		child = TREE_nsibling(child);
+		child = TREE_nsib(child);
 	}
 }
 
@@ -644,16 +651,20 @@ UNMATCH:
 
 static TREE * param_list()
 {
-	TREE * t = exp(), * nt = NULL;
+	TREE * t = exp();
+
+	TREE * last = get_last(t);
+	TREE * nt = NULL;
 	while (g_real_token == T_COMMA) {
 		match(T_COMMA);
-		nt = exp();
+		TREE * nt = exp();
 		if (nt == NULL) {
 			err(g_real_line_num, "miss patameter, syntax error : '%s'",
 				g_real_token_string);
 			return t;
 		}
-		add_tree_nsibling(&t, nt);
+		add_next(&t, &last, nt);
+		last = get_last(nt);
 	}
 	return t;
 }
@@ -748,9 +759,9 @@ static TREE * primary_exp(IN OUT UINT * st)
 		break;
 	case T_LPAREN:
 		match(T_LPAREN);
-		t = exp();
+		t = exp_list();
 		if (match(T_RPAREN) != ST_SUCC) {
-			err(g_real_line_num, "miss ')'");
+			err(g_real_line_num, "miss ')' after expression");
 			*st = ST_ERR;
 			return NULL;
 		}
@@ -1134,7 +1145,7 @@ static TREE * cast_exp()
 {
 	TREE * t = NULL, * p;
 	p = unary_or_LP_typename_RP();
-	if (p == NULL) return NULL;
+	if (p == NULL) { return NULL; }
 
 	/*
 	It might be follow-set token.
@@ -1558,11 +1569,13 @@ FAILED:
 
 TREE * exp_list()
 {
-	TREE * t = exp(), * nt = NULL;
+	TREE * t = exp();
+	TREE * last = get_last(t);
 	while (g_real_token == T_COMMA) {
 		match(T_COMMA);
-		nt = exp();
-		add_tree_nsibling(&t, nt);
+		TREE * nt = exp();
+		add_next(&t, &last, nt);
+		last = get_last(nt);
 	}
 	return t;
 }
@@ -1780,7 +1793,7 @@ static TREE * do_while_stmt()
 	match(T_DO);
 
 	//do-body
-	pushst(st_DO,0); //push down inherit properties
+	pushst(st_DO, 0); //push down inherit properties
 	TREE_dowhile_body(t) = statement();
 	set_parent(t, TREE_dowhile_body(t));
 	popst();
@@ -1796,7 +1809,7 @@ static TREE * do_while_stmt()
 		goto FAILED;
 	}
 	TREE_dowhile_det(t) =  exp_list();
-	set_parent(t,TREE_dowhile_det(t));
+	set_parent(t, TREE_dowhile_det(t));
 	if (TREE_dowhile_det(t) == NULL) {
 		err(g_real_line_num, "while determination cannot be NULL");
 		goto FAILED;
@@ -1806,7 +1819,7 @@ static TREE * do_while_stmt()
 		goto FAILED;
 	}
 
-	if (g_real_token!=T_SEMI ) { //;
+	if (g_real_token != T_SEMI ) { //;
 		err(g_real_line_num, "miss ';' after 'while'");
 		goto FAILED;
 	}
@@ -1814,7 +1827,6 @@ static TREE * do_while_stmt()
 FAILED:
 	scr("error in do_while_stmt()");
 	return t;
-
 }
 
 
@@ -1830,7 +1842,7 @@ static TREE * while_do_stmt()
 		goto FAILED;
 	}
 	TREE_whiledo_det(t) =  exp_list();
-	set_parent(t,TREE_whiledo_det(t));
+	set_parent(t, TREE_whiledo_det(t));
 	if (TREE_whiledo_det(t) == NULL) {
 		err(g_real_line_num, "while determination cannot be NULL");
 		goto FAILED;
@@ -2030,34 +2042,38 @@ SCOPE * compound_stmt(DECL * para_list)
 {
 	TREE * t = NULL;
 	SCOPE * s = NULL;
+	TREE * last;
 	INT cerr = 0;
 	//enter a new sub-scope region
 	SCOPE * cur_scope = enter_sub_scope(false);
 
-	/*
-	Convert ARRAY of ID to ARRAY of POINTER.
-	In C, the parameter of function that declarated as 'int a[10]' is not
-	really array of a, but is a pointer that pointed to array 'a', and
-	should be 'int (*a)[10].
-		e.g: Convert 'void f(int a[10])' -> 'void f(int (*a)[10])'
-	*/
+	//Append parameters to declaration list of function body scope.
+	DECL * lastdcl = get_last(SCOPE_decl_list(cur_scope));
 	while (para_list != NULL) {
 		if (DECL_dt(para_list) != DCL_VARIABLE) {
-			//append parameter list to declaration list of function body scope
 			DECL * declaration = new_decl(DCL_DECLARATION);
 			DECL_spec(declaration) = DECL_spec(para_list);
 			DECL_decl_list(declaration) = cp_decl(DECL_decl_list(para_list));
 			PURE_DECL(declaration) = PURE_DECL(para_list);
 
-			//Array type formal parameter is always be treated as pointer type.
 			if (is_array(declaration)) {
+				/*
+				Array type formal parameter is always be treated
+				as pointer type.
+				Convert ARRAY of ID to ARRAY of POINTER.
+				In C, the parameter of function that declarated as
+				'int a[10]' is not really array of a, but is a pointer
+				that pointed to array 'a', and should be 'int (*a)[10].
+					e.g: Convert 'void f(int a[10])' -> 'void f(int (*a)[10])'.
+				*/
 				declaration = trans_to_pointer(declaration, true);
-				//dump_decl(declaration);
-				//dump_decl(declaration, 0);
 			}
+
 			DECL_is_formal_para(declaration) = true;
-			add_next(&SCOPE_decl_list(cur_scope), declaration);
+			add_next(&SCOPE_decl_list(cur_scope), &lastdcl, declaration);
 			DECL_decl_scope(declaration) = cur_scope;
+
+			lastdcl = declaration;
 
 			//Append parameter list to symbol list of function body scope.
 			SYM * sym = get_decl_sym(declaration);
@@ -2069,12 +2085,14 @@ SCOPE * compound_stmt(DECL * para_list)
 		}
 		para_list = DECL_next(para_list);
 	}
+
 	match(T_LLPAREN);
 	s = cur_scope;
 	declaration_list();
 
 	//statement list
 	cerr = g_err_msg_list.get_elem_count();
+	last = NULL;
 	while (1) {
 		if (g_real_token == T_END) {
 			break;
@@ -2085,18 +2103,30 @@ SCOPE * compound_stmt(DECL * para_list)
 		} else if (is_compound_terminal()) {
 			break;
 		}
+
 		t = statement();
+
 		verify(t);
-		add_tree_nsibling(&SCOPE_stmt_list(cur_scope), t);
+
+		if (last == NULL) {
+			last = get_last(SCOPE_stmt_list(cur_scope));
+		}
+		add_next(&SCOPE_stmt_list(cur_scope), &last, t);
+
+		last = get_last(t);
+
 		if ((cerr != (INT)g_err_msg_list.get_elem_count()) ||
 			(cerr > 0 && t == NULL)) {
 			suck_tok_to(0, T_SEMI, T_RLPAREN, T_END, T_NUL);
 		}
+
 		if (g_real_token == T_SEMI) {
 			match(T_SEMI);
 		}
+
 		cerr = g_err_msg_list.get_elem_count();
 	}
+
 	if (match(T_RLPAREN) != ST_SUCC) {
 		err(g_real_line_num, "miss '}'");
 		goto FAILED;

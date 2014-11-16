@@ -28,6 +28,50 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _COMF_H_
 #define _COMF_H_
 
+//Show const string before timer start.
+#define START_TIMER(s)  			\
+	LONG _start_time_count_; 		\
+	if (g_show_comp_time) {			\
+		_start_time_count_ =		\
+			getclockstart();		\
+		printf("\n==-- %s Time:", (s));	\
+	}
+#define END_TIMER()					\
+	if (g_show_comp_time) {			\
+		printf("%fsec --==", getclockend(_start_time_count_)); \
+	}
+
+
+//Show const string after timer finish.
+#define START_TIMER2()  			\
+	LONG _start_time_count_; 		\
+	if (g_show_comp_time) {			\
+		_start_time_count_ =		\
+				getclockstart();	\
+		printf("", (s));			\
+	}
+#define END_TIMER2(s)				\
+	if (g_show_comp_time) {			\
+		printf("\n==-- %s Time:%fsec --==", \
+			   (s), getclockend(_start_time_count_)); \
+	}
+
+
+//Show format string after timer finish.
+#define START_TIMER3()  			\
+	LONG _start_time_count_; 		\
+	if (g_show_comp_time) {			\
+		_start_time_count_ = getclockstart();	\
+	}
+#define END_TIMER3(s)				\
+	if (g_show_comp_time) {			\
+		printf("\n==-- ");			\
+		printf s;					\
+		printf(" Time:%fsec --==",	\
+			   getclockend(_start_time_count_)); \
+	}
+
+
 template <class T> class SVECTOR;
 
 UINT arra(UINT n, UINT m); //Arrangement
@@ -114,11 +158,12 @@ inline bool xisalpha(CHAR c)
 { return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z'); }
 LONGLONG xabs(LONGLONG a);
 
+
 //Exported Data Structures
 class ASCII {
 public:
 	UCHAR val;
 	CHAR ch;
 };
+extern ASCII g_asc1[];
 #endif
-

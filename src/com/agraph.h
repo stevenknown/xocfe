@@ -34,7 +34,7 @@ protected:
 	MATRIX<UINT> * m_spath_mat; //record shortest-path.
 	void build_adj_matrix(MATRIX<UINT> & adj_mat);
 public:
-	AGRAPH(UINT edge_hash_size = 47, UINT vex_hash_size = 47) :
+	AGRAPH(UINT edge_hash_size = 64, UINT vex_hash_size = 64) :
 		GRAPH(edge_hash_size, vex_hash_size)
 	{
 		m_edge_hash_size = edge_hash_size;

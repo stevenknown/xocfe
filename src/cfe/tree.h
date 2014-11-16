@@ -121,22 +121,22 @@ public:
 
 #define MAX_TREE_FLDS	4
 
-#define TREE_token(tn)				(tn)->tok
-#define TREE_lineno(tn)				(tn)->lineno
-#define TREE_type(tn)				(tn)->tree_node_type
-#define TREE_result_type(tn)		(tn)->result_type_name
-#define TREE_fld(tn,N)				(tn)->pfld[N] //access no.N child of tree
-#define TREE_parent(tn)				(tn)->parent //parent tree node
-#define TREE_nsibling(tn)			(tn)->nsibling //next sibling(default)
-#define TREE_psibling(tn)			(tn)->psibling //prev sibling
-#define TREE_rchild(tn)				(tn)->pfld[0] //rchild of the tree
-#define TREE_lchild(tn)				(tn)->pfld[1] //lchild of the tree
+#define TREE_token(tn)				((tn)->tok)
+#define TREE_lineno(tn)				((tn)->lineno)
+#define TREE_type(tn)				((tn)->tree_node_type)
+#define TREE_result_type(tn)		((tn)->result_type_name)
+#define TREE_fld(tn,N)				((tn)->pfld[N]) //access no.N child of tree
+#define TREE_parent(tn)				((tn)->parent) //parent tree node
+#define TREE_nsib(tn)				((tn)->next) //next sibling(default)
+#define TREE_psib(tn)				((tn)->prev) //prev sibling
+#define TREE_rchild(tn)				((tn)->pfld[0]) //rchild of the tree
+#define TREE_lchild(tn)				((tn)->pfld[1]) //lchild of the tree
 class TREE {
 public:
 	TREE_TYPE tree_node_type;
 	TREE * parent;
-	TREE * nsibling;
-	TREE * psibling;
+	TREE * next;
+	TREE * prev;
 	INT lineno; ///line number in src file
 	TOKEN tok; //record the token that tree-node related.
 	BYTE is_imm_unsigned:1; //if true, immediate is unsigned.
@@ -279,7 +279,6 @@ use TREE_lchild and TREE_rchild
 
 //Exported Functions
 extern TREE * new_tree_node(TREE_TYPE tnt, INT lineno);
-extern void add_tree_nsibling(TREE ** pheader, TREE * t);
 extern void dump_tree(TREE * t);
 extern void dump_trees(TREE * t);
 extern INT is_indirect_tree_node(TREE * t);

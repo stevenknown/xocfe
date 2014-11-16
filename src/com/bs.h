@@ -140,37 +140,60 @@ public:
 class BITSET_MGR
 {
 protected:
+	SMEM_POOL * m_pool;
 	LIST<BITSET*> m_bs_list;
 	LIST<BITSET*> m_free_list;
-	bool m_is_init;
+
+	void * _xmalloc(ULONG size)
+	{
+		IS_TRUE(m_pool != NULL, ("LIST not yet initialized."));
+		void * p = smpool_malloc_h(size, m_pool);
+		IS_TRUE0(p != NULL);
+		memset(p, 0, size);
+		return p;
+	}
 public:
 	BITSET_MGR()
 	{
-		m_is_init = false;
+		m_pool = NULL;
 		init();
 	}
 	~BITSET_MGR() { destroy(); }
+
 	inline void init()
 	{
-		if (m_is_init) return;
+		if (m_pool != NULL) { return; }
+		m_pool = smpool_create_handle(sizeof(BITSET) * 4);
 		m_bs_list.init();
-		m_is_init = true;
 	}
+
 	void destroy()
 	{
-		if (!m_is_init) return;
+		if (m_pool == NULL) { return; }
 		for (BITSET * bs = m_bs_list.get_head();
 			 bs != NULL; bs = m_bs_list.get_next()) {
 			bs->destroy();
 		}
 		m_bs_list.destroy();
-		m_is_init = false;
+		smpool_free_handle(m_pool);
+		m_pool = NULL;
 	}
 
-	BITSET * create(UINT init_sz = 0);
+	BITSET * create(UINT init_sz = 0)
+	{
+		IS_TRUE(m_pool, ("not yet init"));
+		BITSET * p = m_free_list.remove_head();
+		if (p == NULL) {
+			p = (BITSET*)_xmalloc(sizeof(BITSET));
+			p->init(init_sz);
+			m_bs_list.append_tail(p);
+		}
+		return p;
+	}
+
 	inline BITSET * copy(BITSET const& bs)
 	{
-		IS_TRUE(m_is_init, ("not yet init"));
+		IS_TRUE(m_pool, ("not yet init"));
 		BITSET * p = create();
 		p->copy(bs);
 		return p;
@@ -178,7 +201,7 @@ public:
 
 	inline void clean()
 	{
-		IS_TRUE(m_is_init, ("not yet init"));
+		IS_TRUE(m_pool, ("not yet init"));
 		destroy();
 		init();
 	}
@@ -186,7 +209,13 @@ public:
 
 	inline void free(IN BITSET * bs) //free bs for next use.
 	{
-		if (bs == NULL) return;
+		if (bs == NULL) { return; }
+		#ifdef _DEBUG_
+		for (BITSET * x = m_free_list.get_head();
+			 x != NULL; x = m_free_list.get_next()) {
+			IS_TRUE(x != bs, ("Already have been freed."));
+		}
+		#endif
 		bs->clean();
 		m_free_list.append_tail(bs);
 	}

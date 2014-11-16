@@ -54,8 +54,6 @@ typedef enum {
 #define MEMPOOL_grow_size(p)			((p)->grow_size)
 #define MEMPOOL_start_pos(p)			((p)->start_pos)
 #define MEMPOOL_pool_size(p)			((p)->mem_pool_size)
-#define MEMPOOL_pool_total_size(p)		((p)->mem_pool_total_size)
-#define MEMPOOL_pool_type(p)			((p)->mem_pool_type)
 #define MEMPOOL_pool_ptr(p)				((p)->ppool)
 typedef struct _mem_pool {
 	struct _mem_pool * next;
@@ -64,10 +62,6 @@ typedef struct _mem_pool {
 	ULONG start_pos; //represent the alloca postion of mem pool
 	ULONG mem_pool_size; //represent mem pool size
 	ULONG grow_size;
-
-	//represent total mem pool size, include pool's header and bound-words size.
-	ULONG mem_pool_total_size;
-	MEMPOOLTYPE mem_pool_type;
 	void * ppool; //start address of mem pool
 } SMEM_POOL;
 
@@ -76,8 +70,8 @@ typedef struct _mem_pool {
 extern "C" {
 #endif
 //create mem pool
-MEMPOOLIDX smpool_create_idx(ULONG size, MEMPOOLTYPE mpt);
-SMEM_POOL * smpool_create_handle(ULONG size, MEMPOOLTYPE mpt);
+MEMPOOLIDX smpool_create_idx(ULONG size, MEMPOOLTYPE mpt = MEM_COMM);
+SMEM_POOL * smpool_create_handle(ULONG size, MEMPOOLTYPE mpt = MEM_COMM);
 
 //delete mem pool
 INT smpool_free_idx(MEMPOOLIDX mpt_idx);
@@ -92,6 +86,8 @@ ULONG smpool_get_pool_size_idx(MEMPOOLIDX mpt_idx);
 ULONG smpool_get_pool_size_handle(SMEM_POOL const* handle);
 void smpool_init_pool(); //Initializing pool utilities
 void smpool_fini_pool(); //Finializing pool
+
+void dump_pool(SMEM_POOL * handler, FILE * h);
 #ifdef __cplusplus
 }
 #endif

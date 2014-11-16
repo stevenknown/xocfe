@@ -59,6 +59,25 @@ static bool g_is_pool_hashed = true;
 ULONG g_stat_mem_size = 0;
 
 
+void dump_pool(SMEM_POOL * handler, FILE * h)
+{
+	if (h == NULL) { return; }
+	fprintf(h, "\n= SMP, total size:%u ",
+			(UINT)smpool_get_pool_size_handle(handler));
+	while (handler != NULL) {
+		fprintf(h, "<T%u R%u>",
+				(UINT)MEMPOOL_pool_size(handler),
+				(UINT)(MEMPOOL_pool_size(handler) -
+					   MEMPOOL_start_pos(handler)));
+		handler = MEMPOOL_next(handler);
+		if (handler != NULL) {
+			fprintf(h, ", ");
+		}
+	}
+	fflush(h);
+}
+
+
 static SMEM_POOL * new_mem_pool(ULONG size, MEMPOOLTYPE mpt)
 {
 	SMEM_POOL * mp = NULL;
@@ -66,8 +85,7 @@ static SMEM_POOL * new_mem_pool(ULONG size, MEMPOOLTYPE mpt)
 	if (size_mp % WORD_ALIGN) {
 		size_mp = (sizeof(SMEM_POOL) / WORD_ALIGN + 1 ) * WORD_ALIGN;
 	}
-	INT total_size = size_mp + size + END_BOUND_BYTE;
-	mp = (SMEM_POOL*)malloc(total_size);
+	mp = (SMEM_POOL*)malloc(size_mp + size + END_BOUND_BYTE);
 	IS_TRUE(mp, ("create mem pool failed, no enough memory"));
 	#ifdef _DEBUG_
 	g_stat_mem_size += size_mp + size;//Only for statistic purpose
@@ -76,8 +94,6 @@ static SMEM_POOL * new_mem_pool(ULONG size, MEMPOOLTYPE mpt)
 	memset(((CHAR*)mp) + size_mp + size, BOUNDARY_NUM, END_BOUND_BYTE);
 	mp->ppool=((CHAR*)mp) + size_mp;
 	mp->mem_pool_size = size;
-	mp->mem_pool_total_size = total_size;
-	mp->mem_pool_type = mpt;
 	mp->start_pos = 0;
 	mp->grow_size = size;
 	return mp;
@@ -256,24 +272,11 @@ INT smpool_free_handle(SMEM_POOL * handler)
 		return ST_NO_SUCH_MEMPOOL_FIND;
 	}
 
-	switch (MEMPOOL_pool_type(handler)) {
-	case MEM_COMM:
-  		break;
-	case MEM_VOLATILE:
-    	return ST_SUCC;
-	default:
-		IS_TRUE0(0);
-	}
-
 	//Free local pool list
 	SMEM_POOL * tmp = handler;
 	while (tmp != NULL) {
 		SMEM_POOL * d_tmp = tmp;
 		tmp = MEMPOOL_next(tmp);
-		#ifdef _DEBUG_
-		//For ease debug.
-		memset(d_tmp, MAGIC_NUM, d_tmp->mem_pool_total_size);
-		#endif
 		free(d_tmp);
 	}
 	return ST_SUCC;
@@ -285,8 +288,7 @@ INT smpool_free_idx(MEMPOOLIDX mpt_idx)
 {
 	//search the mempool which indicated with 'mpt_idx'
 	SMEM_POOL * mp = g_Mem_Pool;
-	if (mpt_idx == MEM_NONE)
-		return ST_SUCC;
+	if (mpt_idx == MEM_NONE) { return ST_SUCC; }
 
 	//Searching the mempool which indicated with 'mpt_idx'
 	if (g_is_pool_hashed && g_is_pool_init) {

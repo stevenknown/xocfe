@@ -86,7 +86,10 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 		#include "stdio.h"
 		INT m518087(CHAR const* info, ...);
 		INT m022138(CHAR const* filename, INT line);
-		#define IS_TRUE(a, b)  ((a) ? 0 : (m022138(__FILE__, __LINE__), m518087 b))
+		#define IS_TRUE(a, b)  \
+					((a) ? 0 : (m022138(__FILE__, __LINE__), m518087 b))
+		#define IS_TRUEL(a, filename, line, b)  \
+					((a) ? 0 : (m022138(filename, line), m518087 b))
 	#endif
 
 	#ifndef IS_TRUE0
@@ -94,10 +97,14 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 		INT m518087(CHAR const* info, ...);
 		INT m022138(CHAR const* filename, INT line);
 		#define IS_TRUE0(a)  ((a) ? 0 : (m022138(__FILE__, __LINE__), m518087 ("")))
+		#define IS_TRUEL0(a, filename, line)  \
+					((a) ? 0 : (m022138(filename, line), m518087 ("")))
 	#endif
 #else
 	#define IS_TRUE(a, b)
+	#define IS_TRUEL(a, filename, line, b)
 	#define IS_TRUE0(a)
+	#define IS_TRUEL0(a, filename, line)
 #endif
 
 #undef MAX

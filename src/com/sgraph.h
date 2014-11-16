@@ -76,6 +76,7 @@ public:
 #define VERTEX_next(v)			(v)->next
 #define VERTEX_prev(v)			(v)->prev
 #define VERTEX_id(v)			(v)->id
+#define VERTEX_rpo(v)			(v)->rpo
 #define VERTEX_in_list(v)		(v)->in_list
 #define VERTEX_out_list(v)		(v)->out_list
 #define VERTEX_info(v)			(v)->info
@@ -94,6 +95,7 @@ public:
 	EDGE_C * in_list; //incoming edge list
 	EDGE_C * out_list;//outgoing edge list
 	UINT id;
+	UINT rpo;
 	void * info;
 };
 
@@ -204,13 +206,13 @@ class GRAPH {
 	friend class VERTEX_HASH;
 protected:
 	//it is true if the number of edges between any two
-	//vertexs are not more than one.
+	//vertices are not more than one.
 	BYTE m_is_unique:1;
 	BYTE m_is_direction:1; //true if graph is direction.
 	UINT m_edge_hash_size;
 	UINT m_vex_hash_size;
 	EDGE_HASH m_edges; //record all edges.
-	VERTEX_HASH m_vertexs; //record all vertices.
+	VERTEX_HASH m_vertices; //record all vertices.
 	FREE_LIST<EDGE> m_e_free_list; //record freed EDGE for reuse.
 	FREE_LIST<EDGE_C> m_el_free_list; //record freed EDGE_C for reuse.
 	FREE_LIST<VERTEX> m_v_free_list; //record freed VERTEX for reuse.
@@ -245,9 +247,10 @@ public:
 	inline VERTEX * add_vertex(UINT vid)
 	{
 		IS_TRUE(m_pool != NULL, ("not yet initialized."));
-		return m_vertexs.append(new_vertex(vid));
+		return m_vertices.append(new_vertex(vid));
 	}
 
+	void compute_rpo_norec(VERTEX * root, LIST<VERTEX*> & vlst);
 	bool clone(GRAPH & src);
 	UINT count_mem() const;
 
@@ -271,19 +274,12 @@ public:
 							   OUT EDGE ** e2 = NULL);
 	void insert_vertex_between(UINT v1, UINT v2, UINT newv,
 							   OUT EDGE ** e1 = NULL, OUT EDGE ** e2 = NULL);
-	inline bool is_graph_entry(VERTEX * v)
-	{
-		if (VERTEX_in_list(v) == NULL) { return true; }
-		return false;
-	}
+	bool is_graph_entry(VERTEX * v)
+	{ return VERTEX_in_list(v) == NULL;	}
+
 	//Return true if vertex is exit node of graph.
-	inline bool is_graph_exit(VERTEX * v)
-	{
-		if (VERTEX_out_list(v) == NULL) {
-			return true;
-		}
-		return false;
-	}
+	bool is_graph_exit(VERTEX * v)
+	{ return VERTEX_out_list(v) == NULL; }
 
 	void erasure();
 
@@ -292,7 +288,7 @@ public:
 	inline UINT get_degree(UINT vid)
 	{
 		IS_TRUE(m_pool != NULL, ("not yet initialized."));
-		return get_degree(m_vertexs.find(vid));
+		return get_degree(m_vertices.find(vid));
 	}
 	UINT get_degree(VERTEX const* vex) const;
 	UINT get_in_degree(VERTEX const* vex) const;
@@ -300,7 +296,7 @@ public:
 	inline UINT get_vertex_num()
 	{
 		IS_TRUE(m_pool != NULL, ("not yet initialized."));
-		return m_vertexs.get_elem_count();
+		return m_vertices.get_elem_count();
 	}
 	inline UINT get_edge_num()
 	{
@@ -310,7 +306,7 @@ public:
 	inline VERTEX * get_vertex(UINT vid)
 	{
 		IS_TRUE(m_pool != NULL, ("not yet initialized."));
-		return (VERTEX*)m_vertexs.find(vid);
+		return (VERTEX*)m_vertices.find(vid);
 	}
 	EDGE * get_edge(UINT from, UINT to);
 	EDGE * get_edge(VERTEX const* from, VERTEX const* to);
@@ -327,12 +323,12 @@ public:
 	inline VERTEX * get_first_vertex(INT & cur)
 	{
 		IS_TRUE(m_pool != NULL, ("not yet initialized."));
-		return m_vertexs.get_first(cur);
+		return m_vertices.get_first(cur);
 	}
 	inline VERTEX * get_next_vertex(INT & cur)
 	{
 		IS_TRUE(m_pool != NULL, ("not yet initialized."));
-		return m_vertexs.get_next(cur);
+		return m_vertices.get_next(cur);
 	}
 	inline EDGE * new_edge(UINT from, UINT to)
 	{
@@ -345,6 +341,7 @@ public:
 	VERTEX * new_vertex(UINT vid);
 	EDGE_C * new_ec(EDGE * e);
 
+	void resize(UINT vertex_hash_sz, UINT edge_hash_sz);
 	EDGE * rev_edge(EDGE * e); //Reverse edge direction.(e.g: a->b => b->a)
 	void rev_edges(); //Reverse all edges.
 	EDGE * remove_edge(EDGE * e);
@@ -390,7 +387,7 @@ public:
 
 
 //
-//GRAPH with dominator info.
+//GRAPH with Dominator info.
 //
 class DGRAPH : public GRAPH {
 protected:
@@ -410,42 +407,72 @@ public:
 		return GRAPH::clone(g);
 	}
 	bool clone_bs(DGRAPH & src);
+	bool compute_dom3(LIST<VERTEX*> * vlst, BITSET const* uni);
+	bool compute_dom2(LIST<VERTEX*> const& vlst);
 	bool compute_dom(LIST<VERTEX*> * vlst = NULL, BITSET const* uni = NULL);
 	bool compute_pdom_by_rpo(VERTEX * root, BITSET const* uni = NULL);
 	bool compute_pdom(LIST<VERTEX*> * vlst = NULL, BITSET const* uni = NULL);
 	bool compute_idom();
+	bool compute_idom2(LIST<VERTEX*> const& vlst);
 	bool compute_ipdom();
-	void compute_rpo_norec(VERTEX * root, LIST<VERTEX*> & vlst);
 	UINT count_mem() const;
 
 	void dump_dom(FILE * h, bool dump_dom_tree = true);
 
 	//idom must be positive
-	inline UINT get_idom(UINT bbid) { return m_idom_set.get(bbid); }
+	//NOTE: Entry does not have idom.
+	//'id': vertex id.
+	inline UINT get_idom(UINT id) { return m_idom_set.get(id); }
+
 	//ipdom must be positive
-	inline UINT get_ipdom(UINT bbid) { return m_ipdom_set.get(bbid); }
+	//NOTE: Exit does not have idom.
+	//'id': vertex id.
+	inline UINT get_ipdom(UINT id) { return m_ipdom_set.get(id); }
+
 	void get_dom_tree(OUT GRAPH & dom);
 	void get_pdom_tree(OUT GRAPH & pdom);
 
 	//Get vertices who dominate vertex 'id'.
+	//NOTE: set does NOT include 'v' itself.
 	inline BITSET * get_dom_set(UINT id)
 	{
 		IS_TRUE0(m_bs_mgr != NULL);
-		return get_dom_set(get_vertex(id));
-	}
-
-	//Get vertices who post dominated by vertex 'id'.
-	inline BITSET * get_pdom_set(UINT id)
-	{
-		IS_TRUE0(m_bs_mgr != NULL);
-		return get_pdom_set(get_vertex(id));
+		BITSET * set = m_dom_set.get(id);
+		if (set == NULL) {
+			set = m_bs_mgr->create();
+			m_dom_set.set(id, set);
+		}
+		return set;
 	}
 
 	//Get vertices who dominate vertex 'v'.
-	BITSET * get_dom_set(IN VERTEX * v);
+	//NOTE: set does NOT include 'v' itself.
+	BITSET * get_dom_set(VERTEX const* v)
+	{
+		IS_TRUE0(v != NULL);
+		return get_dom_set(VERTEX_id(v));
+	}
+
+	//Get vertices who post dominated by vertex 'id'.
+	//NOTE: set does NOT include 'v' itself.
+	inline BITSET * get_pdom_set(UINT id)
+	{
+		IS_TRUE0(m_bs_mgr != NULL);
+		BITSET * set = m_pdom_set.get(id);
+		if (set == NULL) {
+			set = m_bs_mgr->create();
+			m_pdom_set.set(id, set);
+		}
+		return set;
+	}
 
 	//Get vertices who post dominated by vertex 'v'.
-	BITSET * get_pdom_set(IN VERTEX * v);
+	//NOTE: set does NOT include 'v' itself.
+	BITSET * get_pdom_set(VERTEX const* v)
+	{
+		IS_TRUE0(v != NULL);
+		return get_pdom_set(VERTEX_id(v));
+	}
 
 	//Return true if 'v1' dominate 'v2'.
 	bool is_dom(UINT v1, UINT v2)

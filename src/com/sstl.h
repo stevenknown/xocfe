@@ -93,7 +93,8 @@ inline void add_next(T ** pheader, T * t)
 template <class T>
 inline void add_next(IN OUT T ** pheader, IN OUT T ** last, IN T * t)
 {
-	if (pheader == NULL || t == NULL) return ;
+	if (pheader == NULL || t == NULL) { return ; }
+
 	t->prev = NULL;
 	if ((*pheader) == NULL) {
 		*pheader = t;
@@ -164,7 +165,7 @@ inline T * removehead(T ** pheader)
 template <class T>
 inline T * removetail(T ** pheader)
 {
-	if (pheader == NULL || *pheader == NULL) return NULL;
+	if (pheader == NULL || *pheader == NULL) { return NULL; }
 	T * t = *pheader;
 	while (t->next != NULL) { t = t->next; }
 	remove(pheader, t);
@@ -175,7 +176,7 @@ inline T * removetail(T ** pheader)
 template <class T>
 inline void remove(T ** pheader, T * t)
 {
-	if (pheader == NULL || t == NULL) return;
+	if (pheader == NULL || t == NULL) { return; }
 	if (t == *pheader) {
 		*pheader = t->next;
 		if (*pheader != NULL) {
@@ -225,17 +226,17 @@ inline void insertbefore_one(T ** head, T * marker, T * t)
 
 
 /*
-Insert elems 't' before 'marker', 't' is the leading elements of inserted list.
+Insert a list that leading by 't' before 'marker'.
 
 'head': function might modify the header of list.
-'t': elements to insert. It might be a list.
+'t': the head element of list, that to be inserted.
 */
 template <class T>
 inline void insertbefore(T ** head, T * marker, T * t)
 {
-	if (t == NULL) return;
+	if (t == NULL) { return; }
 	IS_TRUE(head, ("absent parameter"));
-	if (t == marker) return;
+	if (t == marker) { return; }
 	if (*head == NULL) {
 		IS_TRUE(marker == NULL, ("marker must be NULL"));
 		*head = t;
@@ -244,13 +245,13 @@ inline void insertbefore(T ** head, T * marker, T * t)
 
 	if (marker == *head) {
 		//'marker' is head, and replace head.
-		T * first = get_first(t);
+		IS_TRUE(t->prev == NULL, ("t is not the first element"));
 		add_next(&t, *head);
-		*head = first;
+		*head = t;
 		return;
 	}
 
-	IS_TRUE(marker->prev != NULL, ("marker is head"));
+	IS_TRUE(marker->prev != NULL, ("marker should not be head"));
 	if (marker->prev != NULL) {
 		marker->prev->next = t;
 		t->prev = marker->prev;
@@ -424,16 +425,12 @@ T * FREE_LIST<T>::get_free_elem()
 {
 	T * t = NULL;
 	if (m_free_list == NULL) { return NULL; }
-	if (m_free_list->prev == NULL) {
-		//it is the last one.
-		t = m_free_list;
-		m_free_list = NULL;
-	    goto FIN;
-	}
 	t = m_free_list;
 	m_free_list = m_free_list->prev;
-	m_free_list->next = NULL;
-FIN:
+	if (m_free_list != NULL) {
+		m_free_list->next = NULL;
+	}
+
 	m_is_clean ? memset(t, 0, sizeof(T)) : t->next = t->prev = NULL;
 	return t;
 }
@@ -570,8 +567,13 @@ public:
 	}
 	inline T get_tail(OUT C<T> ** holder = NULL); //update 'm_cur'
 	inline T get_head(OUT C<T> ** holder = NULL); //update 'm_cur'
+
+	//Readonly
 	inline T get_tail_c(OUT C<T> ** holder = NULL) const; //not update 'm_cur'
+
+	//Readonly
 	inline T get_head_c(OUT C<T> ** holder = NULL) const; //not update 'm_cur'
+
 	inline T get_cur() //not update 'm_cur'
 	{
 		IS_TRUE(m_free_list_pool != NULL, ("LIST not yet initialized."));
@@ -581,8 +583,13 @@ public:
 	inline T get_cur(IN OUT C<T> ** holder); //not update 'm_cur'
 	inline T get_next(); //update 'm_cur'
 	inline T get_prev(); //update 'm_cur'
+
+	//Readonly
 	inline T get_next(IN OUT C<T> ** holder) const; //not update 'm_cur'
+
+	//Readonly
 	inline T get_prev(IN OUT C<T> ** holder) const; //not update 'm_cur'
+
 	inline T get_tail_nth(INT n, IN OUT C<T> ** holder = NULL);
 	inline T get_head_nth(INT n, IN OUT C<T> ** holder = NULL);
 	inline bool find(T t, OUT C<T> ** holder = NULL);
@@ -1655,7 +1662,8 @@ public:
 	{
 		IS_TRUE0(holder);
 		IS_TRUE(m_head != NULL, ("list is empty"));
-		IS_TRUE0(in_list(prev) && in_list(holder));
+		IS_TRUE0(in_list(prev));
+		IS_TRUE0(in_list(holder));
 		if (prev == NULL) {
 			IS_TRUE0(holder == m_head);
 			m_head = m_head->next;
@@ -1810,7 +1818,7 @@ The Extended LIST
 Add a hash-mapping table upon LIST in order to speed up the process
 when inserting or removing an element if a 'marker' given.
 
-NOTICE: User must define a mapping class, see Single Valued Mapping.
+NOTICE: User must define a mapping class bewteen.
 */
 template <class T, class MAP_T2HOLDER> class ELIST : public LIST<T> {
 protected:
@@ -1826,18 +1834,21 @@ public:
 		m_t2holder_map.clean();
 	}
 	inline UINT count_mem() const;
+
 	C<T> * append_tail(T t)
 	{
 		C<T> * c = LIST<T>::append_tail(t);
 		m_t2holder_map.aset(t, c);
 		return c;
 	}
+
 	C<T> * append_head(T t)
 	{
 		C<T> * c = LIST<T>::append_head(t);
 		m_t2holder_map.aset(t, c);
 		return c;
 	}
+
 	inline void append_tail(IN LIST<T> & list);
 	inline void append_head(IN LIST<T> & list);
 
@@ -2961,6 +2972,8 @@ T SHASH<T, HF>::removed(T t)
 /*
 Grow hash to 'bsize'.
 The default grow size is twice as the current bucket size.
+'bsize': expected bucket size.
+
 NOTE: Grow is costly function.
 */
 template <class T, class HF>
@@ -3024,7 +3037,7 @@ T SHASH<T, HF>::find(ULONG val)
 {
 	IS_TRUE(m_bucket != NULL, ("SHASH not yet initialized."));
 	HF hf;
-	UINT hashv = hf.get_hash_value(val, m_bucket_size);
+ 	UINT hashv = hf.get_hash_value(val, m_bucket_size);
 	IS_TRUE(hashv < m_bucket_size, ("hash value must less than bucket size"));
 	HC<T> * elemhc = (HC<T>*)SHB_member(m_bucket[hashv]);
 	if (elemhc != NULL) {
@@ -3231,7 +3244,14 @@ public:
 };
 
 
-template <class T, class Ttgt> class RBT {
+template <class T> class COMPARE_KEY_BASE {
+public:
+	bool is_less(T t1, T t2) const { return t1 < t2; }
+	bool is_equ(T t1, T t2) const { return t1 == t2; }
+};
+
+template <class T, class Ttgt, class Compare_Key = COMPARE_KEY_BASE<T> >
+class RBT {
 protected:
 	typedef RBTN<T, Ttgt> TN;
 	UINT m_num_of_tn;
@@ -3397,11 +3417,12 @@ public:
 	TN * find_with_key(T keyt)
 	{
 		if (m_root == NULL) { return NULL; }
+		Compare_Key ck;
 		TN * x = m_root;
 		while (x != NULL) {
-			if (keyt == x->key) {
+			if (ck.is_equ(keyt, x->key)) {
 				return x;
-			} else if (keyt < x->key) {
+			} else if (ck.is_less(keyt, x->key)) {
 				x = x->lchild;
 			} else {
 				x = x->rchild;
@@ -3430,11 +3451,12 @@ public:
 
 		TN * mark = NULL;
 		TN * x = m_root;
+		Compare_Key ck;
 		while (x != NULL) {
 			mark = x;
-			if (t == x->key) {
+			if (ck.is_equ(t, x->key)) {
 				break;
-			} else if (t < x->key) {
+			} else if (ck.is_less(t, x->key)) {
 				x = x->lchild;
 			} else {
 				x = x->rchild;
@@ -3442,7 +3464,7 @@ public:
 		}
 
 		if (x != NULL) {
-			IS_TRUE0(t == x->key);
+			IS_TRUE0(ck.is_equ(t, x->key));
 			if (find != NULL) {
 				*find = true;
 			}
@@ -3460,7 +3482,7 @@ public:
 			//The first node.
 			m_root = z;
 		} else {
-			if (t < mark->key) {
+			if (ck.is_less(t, mark->key)) {
 				mark->lchild = z;
 			} else {
 				mark->rchild = z;
@@ -3657,7 +3679,10 @@ public:
 	//iter should be clean by caller.
 	T get_first(LIST<TN*> & iter, Ttgt * mapped = NULL)
 	{
-		if (m_root == NULL) { return T(0); }
+		if (m_root == NULL) {
+			if (mapped != NULL) { *mapped = Ttgt(0); }
+			return T(0);
+		}
 		iter.append_tail(m_root);
 		if (mapped != NULL) { *mapped = m_root->mapped; }
 		return m_root->key;
@@ -3715,10 +3740,10 @@ template <class Tsrc, class Ttgt>
 class TMAP_ITER : public LIST<RBTN<Tsrc, Ttgt>*> {};
 
 
-template <class Tsrc, class Ttgt>
-class TMAP : public RBT<Tsrc, Ttgt> {
+template <class Tsrc, class Ttgt, class Compare_Key = COMPARE_KEY_BASE<Tsrc> >
+class TMAP : public RBT<Tsrc, Ttgt, Compare_Key> {
 public:
-	typedef RBT<Tsrc, Ttgt> BASE_TY;
+	typedef RBT<Tsrc, Ttgt, Compare_Key> BASE_TY;
 	typedef RBTN<Tsrc, Ttgt> TN;
 	TMAP() {}
 	~TMAP() {}
@@ -3786,10 +3811,13 @@ NOTICE:
 template <class T>
 class TAB_ITER : public LIST<RBTN<T, T>*> {};
 
-template <class T>
-class TTAB : public TMAP<T, T> {
+template <class T, class Compare_Key = COMPARE_KEY_BASE<T> >
+class TTAB : public TMAP<T, T, Compare_Key> {
 public:
-	typedef TMAP<T, T> BASE_TTY;
+	typedef TMAP<T, T, Compare_Key> BASE_TTY;
+
+	//Add element into table, if
+	//Note: the element in the table should be unqiue.
 	void append(T t)
 	{
 		IS_TRUE0(t != T(0));
@@ -3801,6 +3829,21 @@ public:
 		}
 		#endif
 		BASE_TTY::aset(t, t);
+	}
+
+	//Add element into table, if it is exist, return the exist one.
+	T append_and_retrieve(T t)
+	{
+		IS_TRUE0(t != T(0));
+
+		bool find = false;
+		T mapped = BASE_TTY::get(t, &find);
+		if (find) {
+			return mapped;
+		}
+
+		BASE_TTY::aset(t, t);
+		return t;
 	}
 
 	void remove(T t)
@@ -3833,7 +3876,7 @@ protected:
 	SVECTOR<Ttgt> m_mapped_elem_table;
 
 	//Find hash container
-	HC<Tsrc> * findhc(Tsrc t)
+	HC<Tsrc> * findhc(Tsrc t) const
 	{
 		if (t == Tsrc(0)) { return NULL; }
 		HF hf;
@@ -3875,6 +3918,19 @@ public:
 
 	//Get mapped pointer of 't'
 	Ttgt get(Tsrc t, bool * find = NULL)
+	{
+		IS_TRUE((SHASH<Tsrc, HF>::m_bucket != NULL), ("not yet initialize."));
+		HC<Tsrc> * elemhc = findhc(t);
+		if (elemhc != NULL) {
+			if (find != NULL) { *find = true; }
+			return m_mapped_elem_table.get(HC_vec_idx(elemhc));
+		}
+		if (find != NULL) { *find = false; }
+		return Ttgt(0);
+	}
+
+	//Readonly to get mapped pointer of 't'
+	Ttgt cget(Tsrc t, bool * find = NULL) const
 	{
 		IS_TRUE((SHASH<Tsrc, HF>::m_bucket != NULL), ("not yet initialize."));
 		HC<Tsrc> * elemhc = findhc(t);

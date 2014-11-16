@@ -50,7 +50,7 @@ UINT fe_process()
 
 static bool is_c_source_file(CHAR * fn)
 {
-	CHAR * buf = (CHAR*)calloc(strlen(fn) + 1, 1);
+	CHAR * buf = (CHAR*)ALLOCA(strlen(fn) + 1);
 	if (strcmp(upper(getfilesuffix(fn, buf)), "C") == 0) {
 		return true;
 	}

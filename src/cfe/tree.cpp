@@ -47,39 +47,6 @@ TREE * new_tree_node(TREE_TYPE tnt, INT lineno)
 }
 
 
-/*
-Add 't' as next node to the rightest of '*pheader'.
-e.g
-   pheader->n1->n2->t,    so 't' is tail node
-If '*pheader' is NULL, it recorded 't' as the first node.
-*/
-void add_tree_nsibling(TREE ** pheader, TREE * t)
-{
-	if (pheader == NULL || t == NULL) return ;
-	TREE * p = NULL;
-	TREE_nsibling(t) = TREE_psibling(t) = NULL;
-	if ((*pheader) == NULL) {
-		*pheader = t;
-	} else {
-		p = TREE_nsibling(*pheader);
-		IS_TRUE(t != *pheader,
-				("\n<add_tree_nsibling> : overlap list member\n"));
-		if (!p) {
-			TREE_nsibling(*pheader) = t;
-			TREE_psibling(t) = *pheader;
-		} else {
-			while (TREE_nsibling(p)) {
-				p = TREE_nsibling(p);
-				IS_TRUE(p != t,
-						("\n<add_tree_nsibling> : overlap list member\n"));
-			}
-			TREE_nsibling(p) = t;
-			TREE_psibling(t) = p;
-		}
-	}
-}
-
-
 INT is_indirect_tree_node(TREE *t)
 {
 	switch (TREE_type(t)) {
@@ -97,7 +64,7 @@ void dump_trees(TREE * t)
 {
 	while (t != NULL) {
 		dump_tree(t);
-		t = TREE_nsibling(t);
+		t = TREE_nsib(t);
 	}
 	fflush(g_tfile);
 }
@@ -130,7 +97,7 @@ void dump_tree(TREE * t)
 					CHAR * buf = res_type_buf + strlen(res_type_buf);
 					if (DECL_is_sub_field(TREE_id_decl(t))) {
 						TYPE * ty = DECL_base_type_spec(TREE_id_decl(t));
-						format_decl_spec(buf, ty, TREE_id_decl(t));
+						format_decl_spec(buf, ty, is_pointer(TREE_id_decl(t)));
 						note("\n%s base-type:%s", name, res_type_buf);
 					} else {
 						SCOPE * s = DECL_decl_scope(TREE_id_decl(t));

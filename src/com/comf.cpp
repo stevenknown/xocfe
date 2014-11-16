@@ -416,7 +416,9 @@ LONG xatol(CHAR const* nptr, bool is_oct)
 	if (nptr[0] == '0' && (nptr[1] == 'x' || nptr[1] == 'X')) { //hex
 		nptr += 2;
 		UCHAR c = *nptr;
-		while ((c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
+		while ((c >= 'a' && c <= 'f') ||
+			   (c >= 'A' && c <= 'F') ||
+			   (c >= '0' && c <= '9')) {
 			if (c >= '0' && c <= '9') {
 				res = 16 * res + c - '0';
 			} else if (c >= 'A' && c <= 'F') {

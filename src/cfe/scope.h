@@ -59,21 +59,22 @@ SCOPE
 #define GLOBAL_SCOPE    0  //Global memory space
 #define FUNCTION_SCOPE  1  //Function unit
 #define REGION_SCOPE    2    //Region unit
-#define SCOPE_id(sc)				(sc)->id
-#define SCOPE_is_tmp_sc(sc)			(sc)->is_tmp_scope
-#define SCOPE_parent(sc)			(sc)->parent //owner scope, namely parent node
-#define SCOPE_nsibling(sc)			(sc)->next //next sibling , growing to right way
-#define SCOPE_sub(sc)				(sc)->sub //sub scope
-#define SCOPE_level(sc)				(sc)->level
-#define SCOPE_enum_list(sc)			(sc)->enum_list
-#define SCOPE_sym_tab_list(sc)		(sc)->sym_tab_list
-#define SCOPE_user_type_list(sc)	(sc)->utl_list
-#define SCOPE_label_list(sc)		(sc)->li_list
-#define SCOPE_ref_label_list(sc)	(sc)->lref_list
-#define SCOPE_decl_list(sc)			(sc)->decl_list
-#define SCOPE_struct_list(sc)		(sc)->struct_list
-#define SCOPE_union_list(sc)		(sc)->union_list
-#define SCOPE_stmt_list(sc)			(sc)->stmt_list
+
+#define SCOPE_id(sc)				((sc)->id)
+#define SCOPE_is_tmp_sc(sc)			((sc)->is_tmp_scope)
+#define SCOPE_parent(sc)			((sc)->parent) //owner scope, namely parent node
+#define SCOPE_nsibling(sc)			((sc)->next) //next sibling , growing to right way
+#define SCOPE_sub(sc)				((sc)->sub) //sub scope
+#define SCOPE_level(sc)				((sc)->level)
+#define SCOPE_enum_list(sc)			((sc)->enum_list)
+#define SCOPE_sym_tab_list(sc)		((sc)->sym_tab_list)
+#define SCOPE_user_type_list(sc)	((sc)->utl_list)
+#define SCOPE_label_list(sc)		((sc)->li_list)
+#define SCOPE_ref_label_list(sc)	((sc)->lref_list)
+#define SCOPE_decl_list(sc)			((sc)->decl_list)
+#define SCOPE_struct_list(sc)		((sc)->struct_list)
+#define SCOPE_union_list(sc)		((sc)->union_list)
+#define SCOPE_stmt_list(sc)			((sc)->stmt_list)
 class SCOPE {
 public:
 	INT id; //unique id
@@ -120,6 +121,17 @@ public:
 typedef TMAP<LABEL_INFO*, UINT> LAB2LINE_MAP;
 
 
+class Compare_Lab {
+public:
+	bool is_less(LABEL_INFO * t1, LABEL_INFO * t2) const
+	{ return lab_hash_value(t1) < lab_hash_value(t2); }
+
+	bool is_equ(LABEL_INFO * t1, LABEL_INFO * t2) const
+	{ return is_same_label(t1, t2); }
+};
+typedef TTAB<LABEL_INFO*, Compare_Lab> LABTAB;
+
+
 //Exported functions
 #define DUMP_SCOPE_FUNC_BODY		1
 #define DUMP_SCOPE_STMT_TREE		2
@@ -138,6 +150,7 @@ void set_map_lab2lineno(LABEL_INFO * li, UINT lineno);
 
 //Export Variables
 extern SCOPE * g_cur_scope;
+extern LABTAB g_labtab;
 
 //Export Functions
 SYM * add_to_symtab_list(SYM_LIST ** sym_list , SYM * sym);
