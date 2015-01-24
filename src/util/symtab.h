@@ -106,7 +106,7 @@ public:
 			return NULL;
 		}
 		INT l = strlen(s);
-		CHAR * ns = (CHAR*)_xmalloc(l + 1);
+		CHAR * ns = (CHAR*)xmalloc(l + 1);
 		memcpy(ns, s, l);
 		ns[l] = 0;
 		return ns;
@@ -120,11 +120,14 @@ public:
 	}
 
 	inline SYM * add(CHAR const* s)
-	{ return SHASH<SYM*, SYM_HASH_FUNC>::append((ULONG)s); }
-	inline SYM * get(CHAR const* s)
 	{
-		SYM * sym = SHASH<SYM*, SYM_HASH_FUNC>::find((ULONG)s);
-		return sym;
-	}
+		UINT sz = SHASH<SYM*, SYM_HASH_FUNC>::get_bucket_size() * 4;
+		if (sz < SHASH<SYM*, SYM_HASH_FUNC>::get_elem_count()) {
+			SHASH<SYM*, SYM_HASH_FUNC>::grow(sz);
+		}
+		return SHASH<SYM*, SYM_HASH_FUNC>::append((ULONG)s); }
+
+	inline SYM * get(CHAR const* s)
+	{ return SHASH<SYM*, SYM_HASH_FUNC>::find((ULONG)s); }
 };
 #endif

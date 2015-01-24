@@ -27,6 +27,11 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 @*/
 #include "cfecom.h"
 
+#ifdef _DEBUG_
+static UINT g_tree_count = 1;
+#endif
+
+
 static void * xmalloc(ULONG size)
 {
 	void * p = smpool_malloc_h(size, g_pool_tree_used);
@@ -39,7 +44,10 @@ static void * xmalloc(ULONG size)
 //Alloc a new tree node from 'g_pool_tree_used'.
 TREE * new_tree_node(TREE_TYPE tnt, INT lineno)
 {
-    TREE * t = (TREE*)xmalloc(sizeof(TREE));
+    TREE * t = (TREE*)xmalloc(sizeof(TREE));	
+#ifdef _DEBUG_
+	t->id = g_tree_count++;
+#endif
 	TREE_type(t) = tnt;
 	TREE_lineno(t) = lineno;
 	TREE_parent(t) = NULL;

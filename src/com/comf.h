@@ -28,7 +28,11 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _COMF_H_
 #define _COMF_H_
 
-//Show const string before timer start.
+/* Singler timer, show const string before timer start.
+e.g:
+	START_TIMER("My Pass");
+	Run mypass();
+	END_TIMER(); */
 #define START_TIMER(s)  			\
 	LONG _start_time_count_; 		\
 	if (g_show_comp_time) {			\
@@ -42,7 +46,11 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 	}
 
 
-//Show const string after timer finish.
+/* Single timer, show const string after timer finish.
+e.g:
+	START_TIMER2();
+	Run mypass();
+	END_TIMER2("My Pass"); */
 #define START_TIMER2()  			\
 	LONG _start_time_count_; 		\
 	if (g_show_comp_time) {			\
@@ -57,13 +65,17 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 	}
 
 
-//Show format string after timer finish.
-#define START_TIMER3()  			\
+/* Single timer, show format string after timer finish.
+e.g:
+	START_TIMER();
+	Run mypass();
+	END_TIMER_FMT(("My Pass Name%s", get_opt_name())); */
+#define START_TIMER_FMT()  			\
 	LONG _start_time_count_; 		\
 	if (g_show_comp_time) {			\
 		_start_time_count_ = getclockstart();	\
 	}
-#define END_TIMER3(s)				\
+#define END_TIMER_FMT(s)			\
 	if (g_show_comp_time) {			\
 		printf("\n==-- ");			\
 		printf s;					\
@@ -72,7 +84,26 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 	}
 
 
-template <class T> class SVECTOR;
+/* Define multiple const string timers,
+and show const string before timer start.
+e.g:
+	START_TIMERS("My Pass", local_timer);
+	Run mypass();
+	END_TIMERS(local_timer); */
+#define START_TIMERS(s, _timer_timer_)	\
+	LONG _timer_timer_; 					\
+	if (g_show_comp_time) {					\
+		_timer_timer_ =						\
+			getclockstart();				\
+		printf("\n==-- %s Time:", (s));		\
+	}
+#define END_TIMERS(_timer_timer_)			\
+	if (g_show_comp_time) {					\
+		printf("%fsec --==", getclockend(_timer_timer_)); \
+	}
+
+
+template <class T, UINT GROW_SIZE> class SVECTOR;
 
 UINT arra(UINT n, UINT m); //Arrangement
 void af2i(IN CHAR * f, OUT BYTE * buf, INT buflen, bool is_double);
@@ -91,7 +122,7 @@ UINT fact(UINT n);
 INT findstr(CHAR * src, CHAR * s);
 
 INT gcdm(UINT num, ...);
-INT gcdm(UINT num, SVECTOR<INT> const& a);
+INT gcdm(UINT num, SVECTOR<INT, 8> const& a);
 UINT get_nearest_power_of_2(UINT v);
 ULONGLONG get_nearest_power_of_2(ULONGLONG v);
 UINT get_lookup_popcount(ULONGLONG v);

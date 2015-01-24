@@ -48,8 +48,12 @@ public:
 
 
 static MEMPOOL_HASH * g_mem_pool_hash_tab = NULL;
-static SMEM_POOL * g_Mem_Pool=NULL;
-static ULONG g_Mem_Pool_Idx=0;
+static SMEM_POOL * g_mem_pool=NULL;
+static ULONG g_mem_pool_count = 0;
+#ifdef _DEBUG_
+static ULONG g_mem_pool_chunk_count = 0;
+#endif
+
 
 //First of all marker of memory pool should be initialized
 static bool g_is_pool_init = false;
@@ -87,15 +91,18 @@ static SMEM_POOL * new_mem_pool(ULONG size, MEMPOOLTYPE mpt)
 	}
 	mp = (SMEM_POOL*)malloc(size_mp + size + END_BOUND_BYTE);
 	IS_TRUE(mp, ("create mem pool failed, no enough memory"));
-	#ifdef _DEBUG_
-	g_stat_mem_size += size_mp + size;//Only for statistic purpose
-	#endif
-	memset(mp , 0, size_mp);
+	memset(mp, 0, size_mp);
 	memset(((CHAR*)mp) + size_mp + size, BOUNDARY_NUM, END_BOUND_BYTE);
-	mp->ppool=((CHAR*)mp) + size_mp;
-	mp->mem_pool_size = size;
-	mp->start_pos = 0;
-	mp->grow_size = size;
+
+
+	#ifdef _DEBUG_
+	g_stat_mem_size += size_mp + size; //Only for statistic purpose
+	MEMPOOL_chunk_id(mp) = ++g_mem_pool_chunk_count;
+	#endif
+	MEMPOOL_pool_ptr(mp) = ((CHAR*)mp) + size_mp;
+	MEMPOOL_pool_size(mp) = size;
+	MEMPOOL_start_pos(mp) = 0;
+	MEMPOOL_grow_size(mp) = size;
 	return mp;
 }
 
@@ -149,7 +156,7 @@ void smpool_init_pool()
 
 	if (g_is_pool_hashed) {
 		g_mem_pool_hash_tab = new MEMPOOL_HASH();
-		SMEM_POOL * mp = g_Mem_Pool;
+		SMEM_POOL * mp = g_mem_pool;
 
 		//Record pool list into hash.
 		while (mp != NULL) {
@@ -157,17 +164,17 @@ void smpool_init_pool()
 			Mainly hash addr of 'mp' into hash
 			table corresponding to 'mpt_idx'.
 			*/
-			IS_TRUE(g_mem_pool_hash_tab->find(mp->mpt_idx) == NULL,
+			IS_TRUE(g_mem_pool_hash_tab->find(MEMPOOL_id(mp)) == NULL,
 					("Repetitive pool idx"));
 			g_mem_pool_hash_tab->append(mp);
-			mp = mp->next;
+			mp = MEMPOOL_next(mp);
 		}
 
 		//Clean up chain info
-		mp = g_Mem_Pool;
-		while (g_Mem_Pool != NULL) {
-			mp = g_Mem_Pool;
-			g_Mem_Pool = g_Mem_Pool->next;
+		mp = g_mem_pool;
+		while (g_mem_pool != NULL) {
+			mp = g_mem_pool;
+			g_mem_pool = g_mem_pool->next;
 			mp->prev = mp->next = NULL;
 		}
 	}
@@ -178,14 +185,14 @@ void smpool_init_pool()
 void smpool_fini_pool()
 {
 	if (g_is_pool_init && g_is_pool_hashed) {
-		IS_TRUE(g_Mem_Pool == NULL, ("illegal init process"));
+		IS_TRUE(g_mem_pool == NULL, ("illegal init process"));
 		SMEM_POOL * next = NULL;
 		INT c;
 		for (SMEM_POOL * mp = g_mem_pool_hash_tab->get_first(c);
 			 mp != NULL; mp = next) {
 			next = g_mem_pool_hash_tab->get_next(c);
 			g_mem_pool_hash_tab->removed(mp);
-			add_next(&g_Mem_Pool, mp);
+			add_next(&g_mem_pool, mp);
 		}
 		//Code must be placed here! The flag must be reset
 		//before the call of pool_hash_tab.destroy().
@@ -195,29 +202,26 @@ void smpool_fini_pool()
 	}
 
 	g_is_pool_init = false;
-	SMEM_POOL * mp = g_Mem_Pool;
+	SMEM_POOL * mp = g_mem_pool;
 	while (mp != NULL) {
 		SMEM_POOL * tmp = mp;
-		mp = mp->next;
-		smpool_free_idx(tmp->mpt_idx);
+		mp = MEMPOOL_next(mp);
+		smpool_free_idx(MEMPOOL_id(tmp));
 	}
-	g_Mem_Pool = NULL;
-	g_Mem_Pool_Idx = 0;
+	g_mem_pool = NULL;
+	g_mem_pool_count = 0;
 }
 
 
-/*
-Create new mem pool, return the pool handle.
+/* Create new mem pool, return the pool handle.
 NOTICE:
-	Since this type of pool will NOT to be recorded
-	in 'hash table of POOLs', pool index always be 0.
-*/
+Since this type of pool will NOT to be recorded
+in 'hash table of POOLs', pool index always be 0. */
 SMEM_POOL * smpool_create_handle(ULONG size, MEMPOOLTYPE mpt)
 {
 	SMEM_POOL * mp = NULL;
-	if (size <= 0 || mpt == MEM_NONE) return NULL;
-	mp = new_mem_pool(size, mpt);
-	mp->mpt_idx = 0;
+	if (size == 0 || mpt == MEM_NONE) return NULL;
+	mp = new_mem_pool(MAX(sizeof(SMEM_POOL)*2, size), mpt);
 	return mp;
 }
 
@@ -248,20 +252,20 @@ MEMPOOLIDX smpool_create_idx(ULONG size, MEMPOOLTYPE mpt)
 			return 0;
 		}
 		mp = smpool_create_handle(size, mpt);
-		mp->mpt_idx = idx;
+		MEMPOOL_id(mp) = idx;
 		g_mem_pool_hash_tab->append(mp);
 	} else {
 		mp = smpool_create_handle(size, mpt);
-		mp->mpt_idx = ++g_Mem_Pool_Idx;
-		if (g_Mem_Pool == NULL) {
-			g_Mem_Pool = mp;
+		MEMPOOL_id(mp) = ++g_mem_pool_count;
+		if (g_mem_pool == NULL) {
+			g_mem_pool = mp;
 		} else {
-			mp->next = g_Mem_Pool;
-			g_Mem_Pool->prev = mp;
-			g_Mem_Pool = mp;
+			mp->next = g_mem_pool;
+			g_mem_pool->prev = mp;
+			g_mem_pool = mp;
 		}
 	}
-	return mp->mpt_idx;
+	return MEMPOOL_id(mp);
 }
 
 
@@ -287,7 +291,7 @@ INT smpool_free_handle(SMEM_POOL * handler)
 INT smpool_free_idx(MEMPOOLIDX mpt_idx)
 {
 	//search the mempool which indicated with 'mpt_idx'
-	SMEM_POOL * mp = g_Mem_Pool;
+	SMEM_POOL * mp = g_mem_pool;
 	if (mpt_idx == MEM_NONE) { return ST_SUCC; }
 
 	//Searching the mempool which indicated with 'mpt_idx'
@@ -307,7 +311,7 @@ INT smpool_free_idx(MEMPOOLIDX mpt_idx)
 		g_mem_pool_hash_tab->removed(mp);
 	} else {
 		while (mp != NULL) {
-			if (mp->mpt_idx == mpt_idx) {
+			if (MEMPOOL_id(mp) == mpt_idx) {
 				break;
 			}
 			mp = mp->next;
@@ -323,11 +327,11 @@ INT smpool_free_idx(MEMPOOLIDX mpt_idx)
 		if (mp->next != NULL) {
 	  		mp->next->prev = mp->prev;
 		}
-		if (mp == g_Mem_Pool) {
+		if (mp == g_mem_pool) {
 	  		if (mp->next != NULL) {
-	    		g_Mem_Pool = mp->next;
+	    		g_mem_pool = mp->next;
 	  		} else {
-	    		g_Mem_Pool = NULL;
+	    		g_mem_pool = NULL;
 	  		}
 		}
 	}
@@ -406,7 +410,7 @@ FIN:
 //Quering memory space from pool via pool index.
 void * smpool_malloc_i(ULONG size, MEMPOOLIDX mpt_idx, UINT grow_size)
 {
-	SMEM_POOL * mp = g_Mem_Pool;
+	SMEM_POOL * mp = g_mem_pool;
 	if (size <= 0) {
 		return NULL;
 	}
@@ -416,7 +420,7 @@ void * smpool_malloc_i(ULONG size, MEMPOOLIDX mpt_idx, UINT grow_size)
 		mp = g_mem_pool_hash_tab->find(mpt_idx);
 	} else {
 		while (mp != NULL) {
-			if (mp->mpt_idx == mpt_idx) {
+			if (MEMPOOL_id(mp) == mpt_idx) {
 				break;
 			}
 			mp = mp->next;
@@ -449,14 +453,14 @@ ULONG smpool_get_pool_size_handle(SMEM_POOL const* handle)
 //Get total pool byte-size.
 ULONG smpool_get_pool_size_idx(MEMPOOLIDX mpt_idx)
 {
-	SMEM_POOL * mp = g_Mem_Pool;
+	SMEM_POOL * mp = g_mem_pool;
 
 	if (g_is_pool_hashed && g_is_pool_init) {
 		mp = g_mem_pool_hash_tab->find(mpt_idx);
 	} else {
 		//Searching the mempool which indicated with 'mpt_idx'
 		while (mp!=NULL) {
-			if(mp->mpt_idx == mpt_idx ){
+			if(MEMPOOL_id(mp) == mpt_idx ){
 				break;
 			}
 			mp = mp->next;

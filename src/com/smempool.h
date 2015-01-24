@@ -50,19 +50,25 @@ typedef enum {
 
 #define MEMPOOL_next(p)					((p)->next)
 #define MEMPOOL_prev(p)					((p)->prev)
-#define MEMPOOL_idx(p)					((p)->mpt_idx)
+#define MEMPOOL_id(p)					((p)->mpt_id)
 #define MEMPOOL_grow_size(p)			((p)->grow_size)
 #define MEMPOOL_start_pos(p)			((p)->start_pos)
 #define MEMPOOL_pool_size(p)			((p)->mem_pool_size)
 #define MEMPOOL_pool_ptr(p)				((p)->ppool)
+#ifdef _DEBUG_
+#define MEMPOOL_chunk_id(p)				((p)->chunk_id)
+#endif
 typedef struct _mem_pool {
 	struct _mem_pool * next;
 	struct _mem_pool * prev;
-	MEMPOOLIDX mpt_idx; //identification of mem pool
+	MEMPOOLIDX mpt_id; //identification of mem pool
 	ULONG start_pos; //represent the alloca postion of mem pool
 	ULONG mem_pool_size; //represent mem pool size
 	ULONG grow_size;
 	void * ppool; //start address of mem pool
+	#ifdef _DEBUG_
+	ULONG chunk_id;
+	#endif
 } SMEM_POOL;
 
 

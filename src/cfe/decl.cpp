@@ -1504,7 +1504,9 @@ static DECL * parameter_declaration()
 	DECL * declaration = new_decl(DCL_DECLARATION);
 	DECL_spec(declaration) = type_spec;
 	DECL_decl_list(declaration) = dcl;
-	compute_array_dim(declaration, false); //array parameter has at least one elem.
+
+	//array parameter has at least one elem.
+	compute_array_dim(declaration, false); 
 
 	if (IS_USER_TYPE(type_spec)) {
 		declaration = factor_user_type(declaration);
@@ -1751,7 +1753,7 @@ DECL * type_name()
 	DECL * type_name = new_decl(DCL_TYPE_NAME);
 	DECL_spec(type_name) = type_spec;
 	DECL_decl_list(type_name) = new_decl(DCL_ABS_DECLARATOR);
-	DECL_child(DECL_decl_list(type_name)) = abs_decl;
+	DECL_child(DECL_decl_list(type_name)) = reverse_list(abs_decl);
 	complement_qua(type_spec);
 	compute_array_dim(type_name, false);
 	return type_name;
@@ -1938,16 +1940,41 @@ DECL * get_pure_declarator(DECL * decl)
 	default: IS_TRUE(0, ("unknown DECL"));
 	}
 	return decl;
+}
+
+
+/* Get the number of element to given dimension.
+Note the field DECL_array_dim of array is only
+available after compute_array_dim() invoked, and
+it compute the really number of array element via
+DECL_array_dim_exp, that is a constant expression.
+'arr': array declaration.
+'dim': given dimension to compute, start at 0. */
+ULONG get_array_elemnum_to_dim(DECL * arr, UINT dim)
+{
+	DECL * dcl = get_array_decl(arr);
+	IS_TRUE0(dcl);
+	UINT i = 0;
+	while (i < dim && dcl != NULL) {
+		if (DECL_dt(dcl) != DCL_ARRAY) {
+			break;
+		}
+		dcl = DECL_next(dcl);
+		i++;
 	}
 
+	if (dcl == NULL || DECL_dt(dcl) != DCL_ARRAY) {
+		return 0;
+	}
+	return (ULONG)DECL_array_dim(dcl);
+}
 
-/*
-Calculate constant expression when parsing the variable
+
+/* Calculate constant expression when parsing the variable
 declaration of array type.
 
 'allow_dim0_is_empty': parameter array's lowest dimension size
-	can NOT be zero.
-*/
+can NOT be zero. */
 static INT compute_array_dim(DECL * dclr, bool allow_dim0_is_empty)
 {
 	//e.g: int (*(a[1][2]))[3][4];
@@ -2954,6 +2981,49 @@ INT get_declarator_size_in_byte(DECL * d)
 }
 
 
+/* Return the *first* DECL structure which indicate an array
+in pure-list of declaration.
+
+e.g: int p[10][20]; the declarator is: DCL_ID(p)->DCL_ARRAY(20)->DCL_ARRAY(10).
+return DCL_ARRAY(20).
+*/
+DECL * get_array_decl(DECL * decl)
+{
+	IS_TRUE(DECL_dt(decl) == DCL_TYPE_NAME ||
+			DECL_dt(decl) == DCL_DECLARATION ,
+			("expect DCRLARATION"));
+	IS_TRUE(is_array(decl), ("expect pointer type"));
+	DECL * x = get_pure_declarator(decl);
+	while (x != NULL) {
+		switch (DECL_dt(x)) {
+		case DCL_FUN:
+		case DCL_POINTER:
+			return NULL;
+		case DCL_ARRAY:
+			return x;
+		case DCL_ID:
+		case DCL_VARIABLE:
+			break;
+		default:
+			IS_TRUE(DECL_dt(x) != DCL_DECLARATION &&
+					DECL_dt(x) != DCL_DECLARATOR &&
+					DECL_dt(x) != DCL_ABS_DECLARATOR &&
+					DECL_dt(x) != DCL_TYPE_NAME,
+					("\nunsuitable DECL type locate here in is_pointer()\n"));
+			return NULL;
+		}
+		x = DECL_next(x);
+	}
+	return NULL;
+}
+
+
+/* Return the *first* DECL structure which indicate a pointer
+in pure-list of declaration.
+
+e.g: int * p; the declarator is: DCL_ID(p)->DCL_POINTER(*).
+return DCL_POINTER.
+*/
 DECL * get_pointer_decl(DECL * decl)
 {
 	IS_TRUE(DECL_dt(decl) == DCL_TYPE_NAME ||

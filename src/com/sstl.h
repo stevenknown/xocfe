@@ -31,8 +31,6 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define NO_BASIC_MAT_DUMP //Default option
 #define MAX_SHASH_BUCKET 97 //Default option
 
-template <class T> class SVECTOR;
-
 /*
 Structure chain operations.
 For easing implementation, there must be 2 fields declared by T
@@ -495,7 +493,7 @@ protected:
 	C<T> * m_start_pt; //starting pos of list that to be used in next searching
 	FREE_LIST<C<T> > m_free_list; //Hold for available containers
 
-	void * _xmalloc(ULONG size)
+	void * xmalloc(ULONG size)
 	{
 		IS_TRUE(m_free_list_pool != NULL, ("LIST not yet initialized."));
 		void * p = smpool_malloc_h(size, m_free_list_pool);
@@ -622,7 +620,7 @@ C<T> * LIST<T>::newc()
 	IS_TRUE(m_free_list_pool != NULL, ("LIST not yet initialized."));
 	C<T> * c = m_free_list.get_free_elem();
 	if (c == NULL) {
-		c = (C<T>*)_xmalloc(sizeof(C<T>));
+		c = (C<T>*)xmalloc(sizeof(C<T>));
 	}
 	return c;
 }
@@ -820,7 +818,7 @@ T LIST<T>::remove(T t)
 }
 
 
-//Remove from tail
+//Remove from tail.
 template <class T>
 T LIST<T>::remove_tail()
 {
@@ -851,7 +849,7 @@ FREE_COLLECT:
 }
 
 
-//Remove from head
+//Remove from head.
 template <class T>
 T LIST<T>::remove_head()
 {
@@ -894,10 +892,7 @@ void LIST<T>::copy(IN LIST<T> & src)
 }
 
 
-/*
-Clean list, recycle element container, instead of
-free memory.
-*/
+//Clean list, recycle element container, instead of free memory.
 template <class T>
 void LIST<T>::clean()
 {
@@ -1404,7 +1399,7 @@ protected:
 	SC<T> * m_head;
 	SC<T> * m_tail;
 
-	void * _xmalloc(ULONG size, SMEM_POOL * pool)
+	void * xmalloc(ULONG size, SMEM_POOL * pool)
 	{
 		IS_TRUE(pool != NULL, ("LIST not yet initialized."));
 		void * p = smpool_malloc_h(size, pool);
@@ -1424,11 +1419,7 @@ protected:
 		return false;
 	}
 public:
-	SLISTC()
-	{
-		m_elem_count = 0;
-		m_head = m_tail = NULL;
-	}
+	SLISTC() { init(); }
 	~SLISTC() {}
 
 	SC<T> * get_one_sc(SC<T> ** free_list)
@@ -1451,7 +1442,7 @@ public:
 	{
 		SC<T> * c = get_one_sc(free_list);
 		if (c == NULL) {
-			c = (SC<T>*)_xmalloc(sizeof(SC<T>), pool);
+			c = (SC<T>*)xmalloc(sizeof(SC<T>), pool);
 		}
 		return c;
 	}
@@ -1519,7 +1510,20 @@ public:
 
 	void clean(SC<T> ** free_list)
 	{
-		SC<T> * c = m_head;
+		IS_TRUE0(free_list);
+		if (m_tail != NULL) {
+
+
+			m_tail->next = *free_list;
+			IS_TRUE0(m_head);
+			*free_list = m_head;
+			m_head = m_tail = NULL;
+			m_elem_count = 0;
+		}
+		IS_TRUE0(m_head == m_tail && m_head == NULL &&
+				 m_elem_count == 0);
+
+		/* SC<T> * c = m_head;
 		while (c != NULL) {
 			SC<T> * next = c->next;
 			c->next = NULL;
@@ -1527,7 +1531,7 @@ public:
 			c = next;
 		}
 		m_elem_count = 0;
-		m_head = m_tail = NULL;
+		m_head = m_tail = NULL; */
 	}
 
 	UINT count_mem() const
@@ -1537,6 +1541,13 @@ public:
 		count += sizeof(m_tail);
 		//Do not count SC, they belong to input pool.
 		return count;
+	}
+
+	void init()
+	{
+		m_elem_count = 0;
+		m_head = NULL;
+		m_tail = NULL;
 	}
 
 	//Insert 'c' into list after the 'marker'.
@@ -2088,99 +2099,40 @@ template <class T> class SSTACK : public LIST<T> {
 protected:
 	bool m_is_init;
 public:
-	SSTACK();
-	~SSTACK();
-	void init();
-	void destroy();
-	inline void push(T t);
-	inline UINT count_mem() const;
-	inline T pop();
-	inline T get_top();
-	inline T get_bottom();
-	inline T get_top_nth(INT n);
-	inline T get_bottom_nth(INT n);
+	SSTACK()
+	{
+		m_is_init = false;
+		init();
+	}
+
+	~SSTACK() { destroy(); }
+
+	void init()
+	{
+		if (m_is_init) return;
+		m_is_init = true;
+	}
+
+	void destroy()
+	{
+		if (!m_is_init) { return; }
+		m_is_init = false;
+	}
+
+	UINT count_mem() const
+	{
+		return ((LIST<T>*)this)->count_mem() +
+				sizeof(m_is_init);
+	}
+
+	void push(T t) { LIST<T>::append_tail(t); }
+	T pop() { return LIST<T>::remove_tail(); }
+
+	T get_bottom() { return LIST<T>::get_head(); }
+	T get_top() { return LIST<T>::get_tail(); }
+	T get_top_nth(INT n) { return LIST<T>::get_tail_nth(n); }
+	T get_bottom_nth(INT n) { return LIST<T>::get_head_nth(n); }
 };
-
-
-template <class T>
-SSTACK<T>::SSTACK()
-{
-	m_is_init = false;
-	init();
-}
-
-
-template <class T>
-SSTACK<T>::~SSTACK()
-{
-	destroy();
-}
-
-
-template <class T>
-void SSTACK<T>::init()
-{
-	if (m_is_init) return;
-	m_is_init = true;
-}
-
-
-template <class T>
-void SSTACK<T>::destroy()
-{
-	if (!m_is_init) return;
-	m_is_init = false;
-}
-
-
-template <class T>
-UINT SSTACK<T>::count_mem() const
-{
-	return ((LIST<T>*)this)->count_mem() +
-			sizeof(m_is_init);
-}
-
-
-template <class T>
-void SSTACK<T>::push(T t)
-{
-	LIST<T>::append_tail(t);
-}
-
-
-template <class T>
-T SSTACK<T>::pop()
-{
-	return LIST<T>::remove_tail();
-}
-
-
-template <class T>
-T SSTACK<T>::get_bottom()
-{
-	return LIST<T>::get_head();
-}
-
-
-template <class T>
-T SSTACK<T>::get_top()
-{
-	return LIST<T>::get_tail();
-}
-
-
-template <class T>
-T SSTACK<T>::get_top_nth(INT n)
-{
-	return LIST<T>::get_tail_nth(n);
-}
-
-
-template <class T>
-T SSTACK<T>::get_bottom_nth(INT n)
-{
-	return LIST<T>::get_head_nth(n);
-}
 //END SSTACK
 
 
@@ -2189,18 +2141,17 @@ T SSTACK<T>::get_bottom_nth(INT n)
 SVECTOR
 
 T refer to element type.
-Zero is treated as the default NULL when we
+NOTE: Zero is treated as the default NULL when we
 determine the element existence.
-
-Growth dynamic
-
+The vector grow dynamic.
 */
-#define ELEM_GROW_SIZE 8
-template <class T> class SVECTOR {
-private:
+#define SVEC_grow_sz(s)		((s)->s1.m_grow_size)
+#define SVEC_init(s)		((s)->s1.m_is_init)
+template <class T, UINT GROW_SIZE = 8> class SVECTOR {
+protected:
 	void operator = (SVECTOR const&)
 	{ IS_TRUE(0, ("Do not invoke copy-constructor.")); }
-protected:
+
 	INT m_elem_num;	//The number of element in vector.
 	INT m_last_idx;	//Last element idx
 
@@ -2209,310 +2160,413 @@ protected:
 	INT m_free_idx;
 
 	//The number of element when vector is growing.
-	INT m_grow_size:30;
-
-	INT m_is_init:1;
+	struct {
+		UINT m_grow_size:31;
+		UINT m_is_init:1;
+	} s1;
 public:
 	T * m_vec;
 
-	SVECTOR();
-	explicit SVECTOR(INT size);
-	SVECTOR(SVECTOR const& vec);
-	~SVECTOR();
-	void init();
-	void destroy();
-	inline void copy(LIST<T> & list);
-	inline void copy(SVECTOR<T> const& vec);
-	inline void clean();
-	inline UINT count_mem() const;
-	inline void set_grow_size(UINT i);
-	inline void set(INT i, T elem);
-	inline T get(INT i) const;
-	inline const T operator[](INT i) const;
-	inline T & operator[](INT i);
-	inline INT get_size() const;
-	inline INT get_last_idx() const;
-	inline INT get_free_idx(T v = T(0));
-	inline void add(T t);
-	inline void grow(INT size);
-};
-
-
-template <class T>
-SVECTOR<T>::SVECTOR()
-{
-	m_is_init = false;
-	init();
-}
-
-
-template <class T>
-SVECTOR<T>::SVECTOR(INT size)
-{
-	m_is_init = false;
-	init();
-	grow(size);
-}
-
-
-template <class T>
-SVECTOR<T>::SVECTOR(SVECTOR const& vec)
-{
-	copy(vec);
-}
-
-
-template <class T>
-SVECTOR<T>::~SVECTOR()
-{
-	destroy();
-}
-
-
-template <class T>
-void SVECTOR<T>::init()
-{
-	if (m_is_init) return;
-	m_elem_num = 0;
-	m_grow_size = ELEM_GROW_SIZE;
-	m_vec = NULL;
-	m_last_idx = -1;
-	m_free_idx = -1;
-	m_is_init = true;
-}
-
-
-template <class T>
-void SVECTOR<T>::destroy()
-{
-	if (!m_is_init) return;
-	m_elem_num = 0;
-	if (m_vec != NULL) {
-		::free(m_vec);
-	}
-	m_vec = NULL;
-	m_last_idx = -1;
-	m_free_idx = -1;
-	m_is_init = false;
-}
-
-
-template <class T>
-void SVECTOR<T>::set_grow_size(UINT i)
-{
-	IS_TRUE(m_is_init, ("VECTOR not yet initialized."));
-	m_grow_size = i;
-}
-
-
-template <class T>
-T SVECTOR<T>::get(INT i) const
-{
-	IS_TRUE(m_is_init, ("VECTOR not yet initialized."));
-	if (i < 0 || i >= m_elem_num) return T(0);
-	return m_vec[i];
-}
-
-
-//Overloaded [] for const array reference create an rvalue.
-//Be equal to 'get()'
-template <class T>
-T const SVECTOR<T>::operator[](INT i) const
-{
-	IS_TRUE(m_is_init, ("VECTOR not yet initialized."));
-	IS_TRUE(i >= 0 && i < m_elem_num, ("array subscript over boundary."));
-	return m_vec[i];
-}
-
-
-//Overloaded [] for non-const array reference create an lvalue.
-//Be equal to 'set()'
-template <class T>
-T & SVECTOR<T>::operator[](INT i)
-{
-	IS_TRUE(m_is_init, ("VECTOR not yet initialized."));
-	IS_TRUE(i >= 0, ("array subscript over boundary."));
-	if (i >= m_elem_num) {
-		set(i, T(0));
-	}
-	m_last_idx = MAX(i, m_last_idx);
-	return m_vec[i];
-}
-
-
-/*
-Copy each elements of 'list' into vector.
-
-CAUTION: The default termination factor is '0'.
-HINT: While we traversing elements of LIST one by one, or from head to
-	tail or on opposition way, one can copy list into vector first and
-	iterating the vector instead of travering list.
-*/
-template <class T>
-void SVECTOR<T>::copy(LIST<T> & list)
-{
-	INT count = 0;
-	set(list.get_elem_count() - 1, 0); //Alloc memory right away.
-	for (T elem = list.get_head();
-		 elem != T(0); elem = list.get_next(), count++) {
-		set(count, elem);
-	}
-}
-
-
-template <class T>
-void SVECTOR<T>::copy(SVECTOR<T> const& vec)
-{
-	IS_TRUE0(vec.m_elem_num > 0 ||
-			 (vec.m_elem_num == 0 && vec.m_last_idx == -1));
-	if (m_elem_num < vec.m_elem_num) {
-		destroy();
+	SVECTOR()
+	{
+		SVEC_init(this) = false;
 		init();
-		grow(vec.m_elem_num);
 	}
-	if (vec.m_elem_num > 0) {
-		memcpy(m_vec, vec.m_vec, sizeof(T) * vec.m_elem_num);
+	explicit SVECTOR(INT size)
+	{
+		SVEC_init(this) = false;
+		init();
+		grow(size);
 	}
-	m_last_idx = vec.m_last_idx;
-	m_free_idx = vec.m_free_idx;
-}
+	SVECTOR(SVECTOR const& vec) { copy(vec); }
+	~SVECTOR() { destroy();	}
 
-
-template <class T>
-UINT SVECTOR<T>::count_mem() const
-{
-	return m_elem_num + sizeof(SVECTOR<T>);
-}
-
-
-//Clean to zero(default) till 'last_idx'
-template <class T>
-void SVECTOR<T>::clean()
-{
-	IS_TRUE(m_is_init, ("VECTOR not yet initialized."));
-	if (m_last_idx < 0) {
-		return;
+	void add(T t)
+	{
+		IS_TRUE(is_init(), ("VECTOR not yet initialized."));
+		set(m_last_idx < 0 ? 0 : m_last_idx, t);
 	}
-	memset(m_vec, 0, sizeof(T) * (m_last_idx + 1));
-	m_free_idx = 0;
-	m_last_idx = -1; //Not any elements
-}
 
-
-//Return NULL if 'i' is illegal, otherwise return 'elem'.
-template <class T>
-void SVECTOR<T>::set(INT i, T elem)
-{
-	IS_TRUE(m_is_init, ("VECTOR not yet initialized."));
-	if (i < 0) return;
-	if (i >= m_elem_num) {
-		UINT l = i;
-		l = (l / m_grow_size + 1) * m_grow_size;
-		grow(l);
+	inline void init()
+	{
+		if (SVEC_init(this)) { return; }
+		m_elem_num = 0;
+		SVEC_grow_sz(this) = GROW_SIZE;
+		m_vec = NULL;
+		m_last_idx = -1;
+		m_free_idx = -1;
+		SVEC_init(this) = true;
 	}
-	m_last_idx = MAX(i, m_last_idx);
-	m_vec[i] = elem;
-	return;
-}
 
-
-/*
-Growing vector by size, if 'm_size' is NULL , alloc vector.
-Reallocate memory if necessory.
-*/
-template <class T>
-void SVECTOR<T>::grow(INT size)
-{
-	IS_TRUE(m_is_init, ("VECTOR not yet initialized."));
-	if (size <= 0) return;
-	if (m_elem_num == 0) {
-		IS_TRUE(m_vec == NULL, ("vector should be NULL if size is zero."));
+	inline void init(UINT size)
+	{
+		if (SVEC_init(this)) { return; }
+		SVEC_grow_sz(this) = GROW_SIZE;
+		IS_TRUE0(size != 0);
 		m_vec = (T*)::malloc(sizeof(T) * size);
-		memset(m_vec, 0, sizeof(T) * size);
+		IS_TRUE0(m_vec);
+		::memset(m_vec, 0, sizeof(T) * size);
 		m_elem_num = size;
 		m_free_idx = 0;
+		m_last_idx = -1;
+		SVEC_init(this) = true;
+	}
+
+	bool is_init() const { return SVEC_init(this); }
+
+	inline void destroy()
+	{
+		if (!SVEC_init(this)) { return; }
+		m_elem_num = 0;
+		if (m_vec != NULL) {
+			::free(m_vec);
+		}
+		m_vec = NULL;
+		m_last_idx = -1;
+		m_free_idx = -1;
+		SVEC_init(this) = false;
+	}
+
+	//The function often invoked by destructor, to speed up destruction time.
+	//Since reset other members is dispensable.
+	void destroy_vec()
+	{
+		if (m_vec != NULL) {
+			::free(m_vec);
+		}
+	}
+
+	void set_grow_size(UINT i)
+	{
+		IS_TRUE(is_init(), ("VECTOR not yet initialized."));
+		SVEC_grow_sz(this) = i;
+	}
+
+	T get(UINT i) const
+	{
+		IS_TRUE(is_init(), ("VECTOR not yet initialized."));
+		if (i >= (UINT)m_elem_num) { return T(0); }
+		return m_vec[i];
+	}
+
+	T * get_vec() { return m_vec; }
+
+	//Overloaded [] for const array reference create an rvalue.
+	//Be equal to 'get()'
+	T const operator[](UINT i) const
+	{
+		IS_TRUE(is_init(), ("VECTOR not yet initialized."));
+		IS_TRUE(i < (UINT)m_elem_num, ("array subscript over boundary."));
+		return m_vec[i];
+	}
+
+	//Overloaded [] for non-const array reference create an lvalue.
+	//Be equal to 'set()'.
+	inline T & operator[](UINT i)
+	{
+		IS_TRUE(is_init(), ("VECTOR not yet initialized."));
+		if (i >= (UINT)m_elem_num) {
+			set(i, T(0));
+		}
+		m_last_idx = MAX((INT)i, m_last_idx);
+		return m_vec[i];
+	}
+
+
+	/* Copy each elements of 'list' into vector.
+	NOTE: The default termination factor is '0'.
+		While we traversing elements of LIST one by one, or from head to
+		tail or on opposition way, one can copy list into vector first and
+		iterating the vector instead of travering list. */
+	void copy(LIST<T> & list)
+	{
+		INT count = 0;
+		set(list.get_elem_count() - 1, 0); //Alloc memory right away.
+		for (T elem = list.get_head();
+			 elem != T(0); elem = list.get_next(), count++) {
+			set(count, elem);
+		}
+	}
+
+	void copy(SVECTOR const& vec)
+	{
+		IS_TRUE0(vec.m_elem_num > 0 ||
+				 (vec.m_elem_num == 0 && vec.m_last_idx == -1));
+		INT n = vec.m_elem_num;
+		if (m_elem_num < n) {
+			destroy();
+			init(n);
+		}
+		if (n > 0) {
+			memcpy(m_vec, vec.m_vec, sizeof(T) * n);
+		}
+		m_last_idx = vec.m_last_idx;
+		m_free_idx = vec.m_free_idx;
+	}
+
+	//Clean to zero(default) till 'last_idx'.
+	void clean()
+	{
+		IS_TRUE(is_init(), ("VECTOR not yet initialized."));
+		if (m_last_idx < 0) {
+			return;
+		}
+		memset(m_vec, 0, sizeof(T) * (m_last_idx + 1));
+		m_free_idx = 0;
+		m_last_idx = -1; //No any elements
+	}
+
+	inline UINT count_mem() const
+	{ return m_elem_num * sizeof(T) + sizeof(SVECTOR<T>); }
+
+	//Return NULL if 'i' is illegal, otherwise return 'elem'.
+	void set(UINT i, T elem)
+	{
+		IS_TRUE(is_init(), ("VECTOR not yet initialized."));
+		if (i >= (UINT)m_elem_num) {
+			grow((i / SVEC_grow_sz(this) + 1) * SVEC_grow_sz(this));
+		}
+		m_last_idx = MAX((INT)i, m_last_idx);
+		m_vec[i] = elem;
 		return;
 	}
-	T * tmp = (T*)::malloc((m_elem_num + size) * sizeof(T));
-	memcpy(tmp, m_vec, m_elem_num * sizeof(T));
-	memset(((CHAR*)tmp) + m_elem_num * sizeof(T), 0 , size * sizeof(T));
-	::free(m_vec);
-	m_vec = tmp;
-	m_elem_num += size;
-}
 
+	INT get_size() const
+	{
+		IS_TRUE(is_init(), ("VECTOR not yet initialized."));
+		return m_elem_num;
+	}
+	INT get_last_idx() const
+	{
+		IS_TRUE(is_init(), ("VECTOR not yet initialized."));
+		IS_TRUE(m_last_idx < m_elem_num,
+				("Last index ran over SVECTOR's size."));
+		return m_last_idx;
+	}
 
-template <class T>
-INT SVECTOR<T>::get_size() const
-{
-	IS_TRUE(m_is_init, ("VECTOR not yet initialized."));
-	return m_elem_num;
-}
+	/* Return index of free-slot into SVECTOR, and realloc memory if there are
+	not any free-slot
+	NOTICE:
+		The condition that we considered a slot is free is that whether if the
+		value of the slot equals v(means void). */
+	INT get_free_idx(T v = T(0))
+	{
+		IS_TRUE(is_init(), ("VECTOR not yet initialized."));
+		if (m_free_idx < 0) {
+			IS_TRUE(m_elem_num == 0 && m_last_idx < 0 && !m_vec,
+					("exception occur in SVECTOR"));
+			grow(SVEC_grow_sz(this));
 
+			//Free space is started at position '0',
+			//so next free space is position '1'.
+			m_free_idx = 1;
+			return 0;
+		} else {
+			INT ret = m_free_idx;
+			INT i;
 
-template <class T>
-void SVECTOR<T>::add(T t)
-{
-	IS_TRUE(m_is_init, ("VECTOR not yet initialized."));
-	set(m_last_idx < 0 ? 0 : m_last_idx, t);
-}
+			//Seaching in second-half SVECTOR of m_free_idx.
+			for (i = m_free_idx + 1; i < m_elem_num; i++) {
+				if (v == m_vec[i]) {
+					m_free_idx = i;
+					return ret;
+				}
+			}
 
+			//Seaching in first-half SVECTOR of m_free_idx.
+			for (i = 0; i < m_free_idx; i++) {
+				if (v == m_vec[i]) {
+					m_free_idx = i;
+					return ret;
+				}
+			}
+			m_free_idx = m_elem_num;
+			grow(m_elem_num * 2);
+			return ret;
+		}
+		IS_TRUE(0, ("Over here?!"));
+	}
 
-template <class T>
-INT SVECTOR<T>::get_last_idx() const
-{
-	IS_TRUE(m_is_init, ("VECTOR not yet initialized."));
-	IS_TRUE(m_last_idx < m_elem_num, ("Last index ran over SVECTOR's size."));
-	return m_last_idx;
-}
+	/* Growing vector by size, if 'm_size' is NULL , alloc vector.
+	Reallocate memory if necessory. */
+	void grow(UINT size)
+	{
+		IS_TRUE(is_init(), ("VECTOR not yet initialized."));
+		if (size == 0) { return; }
+		if (m_elem_num == 0) {
+			IS_TRUE(m_vec == NULL, ("vector should be NULL if size is zero."));
+			m_vec = (T*)::malloc(sizeof(T) * size);
+			IS_TRUE0(m_vec);
+			memset(m_vec, 0, sizeof(T) * size);
+			m_elem_num = size;
+			m_free_idx = 0;
+			return;
+		}
+
+		IS_TRUE0(size > (UINT)m_elem_num);
+		T * tmp = (T*)::malloc(size * sizeof(T));
+		IS_TRUE0(tmp);
+		memcpy(tmp, m_vec, m_elem_num * sizeof(T));
+		memset(((CHAR*)tmp) + m_elem_num * sizeof(T), 0,
+			   (size - m_elem_num)* sizeof(T));
+		::free(m_vec);
+		m_vec = tmp;
+		m_elem_num = size;
+	}
+};
+//END SVECTOR
+
 
 
 /*
-Return index of free-slot into SVECTOR, and realloc memory if there are
-not any free-slot
-NOTICE:
-	The condition that we considered a slot is free is that whether if the
-	value of the slot equals v(means void).
+Simply Vector.
+
+T: refer to element type.
+NOTE: Zero is treated as the default NULL when we
+determine the element existence.
 */
-template <class T>
-INT SVECTOR<T>::get_free_idx(T v)
-{
-	IS_TRUE(m_is_init, ("VECTOR not yet initialized."));
-	if (m_free_idx < 0) {
-		IS_TRUE(!m_elem_num && m_last_idx < 0 && !m_vec,
-				("exception occur in SVECTOR"));
-		grow(m_grow_size);
+#define SSVEC_elem_num(s)		((s)->s1.m_elem_num)
+template <class T, UINT GROW_SIZE> class SSVEC {
+private:
+	void operator = (SSVEC const&)
+	{ IS_TRUE(0, ("Do not invoke copy-constructor.")); }
+protected:
+	struct {
+		UINT m_elem_num:31;	//The number of element in vector.
+		UINT m_is_init:1;
+	} s1;
+public:
+	T * m_vec;
 
-		//Free space is started at position '0',
-		//so next free space is position '1'.
-		m_free_idx = 1;
-		return 0;
-	} else {
-		INT ret = m_free_idx;
-		INT i;
-
-		//Seaching in second-half SVECTOR of m_free_idx.
-		for (i = m_free_idx + 1; i < m_elem_num; i++) {
-			if (v == m_vec[i]) {
-				m_free_idx = i;
-				return ret;
-			}
-		}
-
-		//Seaching in first-half SVECTOR of m_free_idx.
-		for (i = 0; i < m_free_idx; i++) {
-			if (v == m_vec[i]) {
-				m_free_idx = i;
-				return ret;
-			}
-		}
-		m_free_idx = m_elem_num;
-		grow(m_elem_num);
-		return ret;
+	SSVEC()
+	{
+		s1.m_is_init = false;
+		init();
 	}
-	IS_TRUE(0,("Over here?!"));
-}
-//END SVECTOR
+	explicit SSVEC(INT size)
+	{
+		s1.m_is_init = false;
+		init(size);
+	}
+	SSVEC(SSVEC const& src) { copy(src); }
+	~SSVEC() { destroy(); }
+
+	inline void init()
+	{
+		if (s1.m_is_init) { return; }
+		SSVEC_elem_num(this) = 0;
+		m_vec = NULL;
+		s1.m_is_init = true;
+	}
+
+	inline void init(UINT size)
+	{
+		if (s1.m_is_init) { return; }
+		IS_TRUE0(size != 0);
+		m_vec = (T*)::malloc(sizeof(T) * size);
+		IS_TRUE0(m_vec);
+		::memset(m_vec, 0, sizeof(T) * size);
+		SSVEC_elem_num(this) = size;
+		s1.m_is_init = true;
+	}
+
+	inline void destroy()
+	{
+		if (!s1.m_is_init) { return; }
+		SSVEC_elem_num(this) = 0;
+		if (m_vec != NULL) {
+			::free(m_vec);
+		}
+		m_vec = NULL;
+		s1.m_is_init = false;
+	}
+
+	//The function often invoked by destructor, to speed up destruction time.
+	//Since reset other members is dispensable.
+	void destroy_vec()
+	{
+		if (m_vec != NULL) {
+			::free(m_vec);
+		}
+	}
+
+	T get(UINT i) const
+	{
+		IS_TRUE(s1.m_is_init, ("VECTOR not yet initialized."));
+		if (i >= SSVEC_elem_num(this)) { return T(0); }
+		return m_vec[i];
+	}
+
+	T * get_vec() { return m_vec; }
+
+	void copy(SSVEC const& vec)
+	{
+		UINT n = SSVEC_elem_num(&vec);
+		if (SSVEC_elem_num(this) < n) {
+			destroy();
+			init(n);
+		}
+		if (n > 0) {
+			::memcpy(m_vec, vec.m_vec, sizeof(T) * n);
+		}
+	}
+
+	//Clean to zero(default) till 'last_idx'.
+	void clean()
+	{
+		IS_TRUE(s1.m_is_init, ("VECTOR not yet initialized."));
+		memset(m_vec, 0, sizeof(T) * SSVEC_elem_num(this));
+	}
+
+	inline UINT count_mem() const
+	{ return SSVEC_elem_num(this) + sizeof(SVECTOR<T>); }
+
+	//Return NULL if 'i' is illegal, otherwise return 'elem'.
+	void set(UINT i, T elem)
+	{
+		IS_TRUE(is_init(), ("VECTOR not yet initialized."));
+		IS_TRUE0(GROW_SIZE > 0);
+		if (i >= SSVEC_elem_num(this)) {
+			grow((i / GROW_SIZE + 1) * GROW_SIZE);
+		}
+		m_vec[i] = elem;
+		return;
+	}
+
+	UINT get_size() const
+	{
+		IS_TRUE(is_init(), ("VECTOR not yet initialized."));
+		return SSVEC_elem_num(this);
+	}
+
+	/* Growing vector by size, if 'm_size' is NULL , alloc vector.
+	Reallocate memory if necessory. */
+	void grow(UINT size)
+	{
+		IS_TRUE(is_init(), ("VECTOR not yet initialized."));
+		if (size == 0) { return; }
+		if (SSVEC_elem_num(this) == 0) {
+			IS_TRUE(m_vec == NULL, ("vector should be NULL if size is zero."));
+			m_vec = (T*)::malloc(sizeof(T) * size);
+			IS_TRUE0(m_vec);
+			memset(m_vec, 0, sizeof(T) * size);
+			SSVEC_elem_num(this) = size;
+			return;
+		}
+
+		IS_TRUE0(size > SSVEC_elem_num(this));
+		T * tmp = (T*)::malloc(size * sizeof(T));
+		IS_TRUE0(tmp);
+		memcpy(tmp, m_vec, SSVEC_elem_num(this) * sizeof(T));
+		memset(((CHAR*)tmp) + SSVEC_elem_num(this) * sizeof(T),
+			   0 , (size - SSVEC_elem_num(this))* sizeof(T));
+		::free(m_vec);
+		m_vec = tmp;
+		SSVEC_elem_num(this) = size;
+	}
+
+	bool is_init() const { return s1.m_is_init; }
+};
 
 
 
@@ -2666,12 +2720,12 @@ protected:
 		IS_TRUE(m_bucket != NULL, ("HASH not yet initialized."));
 		HC<T> * c = m_free_list.get_free_elem();
 		if (c == NULL) {
-			c = (HC<T>*)_xmalloc(sizeof(HC<T>));
+			c = (HC<T>*)xmalloc(sizeof(HC<T>));
 		}
 		return c;
 	}
 
-	void * _xmalloc(ULONG size)
+	void * xmalloc(ULONG size)
 	{
 		IS_TRUE(m_bucket != NULL, ("HASH not yet initialized."));
 		void * p = smpool_malloc_h(size, m_free_list_pool);
@@ -2854,16 +2908,14 @@ bool SHASH<T, HF>::insert_t(IN OUT HC<T> ** bucket_entry,
 }
 
 
-/*
-Append 't' into hash table and record its reference into
+/* Append 't' into hash table and record its reference into
 SVECTOR in order to walk through the table rapidly.
 If 't' already exists, return the element immediately.
 'find': set to true if 't' already exist.
 
 NOTE:
 	Do NOT append 0 to table.
-	Maximum size of T equals sizeof(void*).
-*/
+	Maximum size of T equals sizeof(void*). */
 template <class T, class HF>
 T SHASH<T, HF>::append(T t, OUT HC<T> ** hct, bool * find)
 {
@@ -2896,13 +2948,11 @@ T SHASH<T, HF>::append(T t, OUT HC<T> ** hct, bool * find)
 }
 
 
-/*
-Append 'val' into hash table.
+/* Append 'val' into hash table.
 More comment see above function.
 'find': set to true if 't' already exist.
 
-NOTE: Do NOT append T(0) to table.
-*/
+NOTE: Do NOT append T(0) to table. */
 template <class T, class HF>
 T SHASH<T, HF>::append(ULONG val, OUT HC<T> ** hct, bool * find)
 {
@@ -2932,11 +2982,9 @@ T SHASH<T, HF>::append(ULONG val, OUT HC<T> ** hct, bool * find)
 }
 
 
-/*
-Do NOT change the order that elements in m_elem_vector and the value of m_cur.
-Because it will impact the effect of get_first(), get_next(),
-get_last() and get_prev().
-*/
+/* Do NOT change the order that elements in m_elem_vector and the
+value of m_cur. Because it will impact the effect of get_first(),
+get_next(), get_last() and get_prev(). */
 template <class T, class HF>
 T SHASH<T, HF>::removed(T t)
 {
@@ -2969,13 +3017,11 @@ T SHASH<T, HF>::removed(T t)
 }
 
 
-/*
-Grow hash to 'bsize'.
+/* Grow hash to 'bsize'.
 The default grow size is twice as the current bucket size.
 'bsize': expected bucket size.
 
-NOTE: Grow is costly function.
-*/
+NOTE: Grow is costly function. */
 template <class T, class HF>
 void SHASH<T, HF>::grow(UINT bsize)
 {
@@ -3020,18 +3066,17 @@ void SHASH<T, HF>::grow(UINT bsize)
 		bool doit = insert_t((HC<T>**)&SHB_member(m_bucket[hashv]),
 							 &elemhc, t);
 		IS_TRUE0(!doit);
+		doit = doit; //to avoid -Werror=unused-variable.
 		HC_vec_idx(elemhc) = i;
 		SHB_count(m_bucket[hashv])++;
 	}
 }
 
 
-/*
-You can implement your own find(), but do NOT
+/* You can implement your own find(), but do NOT
 change the order that elements in m_elem_vector and the value of m_cur.
 Because it will impact the effect of get_first(), get_next(),
-get_last() and get_prev().
-*/
+get_last() and get_prev(). */
 template <class T, class HF>
 T SHASH<T, HF>::find(ULONG val)
 {
@@ -3048,18 +3093,16 @@ T SHASH<T, HF>::find(ULONG val)
 				return HC_val(elemhc);
 			}
 			elemhc = HC_next(elemhc);
-		} //end while
+		}
 	}
 	return T(0);
 }
 
 
-/*
-You can implement your own find(), but do NOT
+/* You can implement your own find(), but do NOT
 change the order that elements in m_elem_vector and the value of m_cur.
 Because it will impact the effect of get_first(), get_next(),
-get_last() and get_prev().
-*/
+get_last() and get_prev(). */
 template <class T, class HF>
 bool SHASH<T, HF>::find(T t, HC<T> ** ct)
 {
@@ -3088,14 +3131,12 @@ bool SHASH<T, HF>::find(T t, HC<T> ** ct)
 }
 
 
-/*
-You can implement your own find(), but do NOT
+/* You can implement your own find(), but do NOT
 change the order that elements in m_elem_vector and the value of m_cur.
 Because it will impact the effect of get_first(), get_next(),
 get_last() and get_prev().
 
-'ot': output the element if found it.
-*/
+'ot': output the element if found it. */
 template <class T, class HF>
 bool SHASH<T, HF>::find(T t, T * ot)
 {
@@ -3109,7 +3150,14 @@ bool SHASH<T, HF>::find(T t, T * ot)
 }
 
 
-//When T is type of integer, return zero may be fuzzy and ambiguous.
+/* This function return the first element if it exists, otherwise
+return T(0), where T is the template parameter.
+When T is type of integer, return zero may be fuzzy and ambiguous.
+Invoke get_next() to get the next element.
+
+'cur': iterator, when the function return, cur will be updated.
+	If the first element exist, cur is a value that great and equal 0,
+	or is -1. */
 template <class T, class HF>
 T SHASH<T, HF>::get_first(INT & cur)
 {
@@ -3128,6 +3176,14 @@ T SHASH<T, HF>::get_first(INT & cur)
 }
 
 
+/* This function return the next element of element that indicated
+by parameter 'cur'. If it exists, record its index at 'cur' and
+return the element, otherwise set 'cur' to -1, and return T(0),
+where T is the template parameter.
+
+'cur': iterator, when the function return, cur will be updated.
+	If the first element exist, cur is a value that great and equal 0,
+	or is -1. */
 template <class T, class HF>
 T SHASH<T, HF>::get_next(INT & cur)
 {
@@ -3141,11 +3197,19 @@ T SHASH<T, HF>::get_next(INT & cur)
 			return t;
 		}
 	}
+	cur = -1;
 	return T(0);
 }
 
 
-//When T is type of integer, return zero may be fuzzy and ambiguous.
+/* This function return the last element if it exists, otherwise
+return T(0), where T is the template parameter.
+When T is type of integer, return zero may be fuzzy and ambiguous.
+Invoke get_prev() to get the prev element.
+
+'cur': iterator, when the function return, cur will be updated.
+	If the first element exist, cur is a value that great and equal 0,
+	or is -1. */
 template <class T, class HF>
 T SHASH<T, HF>::get_last(INT & cur)
 {
@@ -3164,7 +3228,14 @@ T SHASH<T, HF>::get_last(INT & cur)
 }
 
 
-//When T is type of integer, return zero may be fuzzy and ambiguous.
+/* This function return the prev element of element that indicated
+by parameter 'cur'. If it exists, record its index at 'cur' and
+return the element, otherwise set 'cur' to -1, and return T(0),
+where T is the template parameter.
+
+'cur': iterator, when the function return, cur will be updated.
+	If the first element exist, cur is a value that great and equal 0,
+	or is -1. */
 template <class T, class HF>
 T SHASH<T, HF>::get_prev(INT & cur)
 {
@@ -3177,6 +3248,7 @@ T SHASH<T, HF>::get_prev(INT & cur)
 			return t;
 		}
 	}
+	cur = -1;
 	return T(0);
 }
 
@@ -3259,7 +3331,7 @@ protected:
 	SMEM_POOL * m_pool;
 	TN * m_free_list;
 
-	void * _xmalloc(ULONG size)
+	void * xmalloc(ULONG size)
 	{
 		void * p = smpool_malloc_h(size, m_pool);
 		IS_TRUE0(p);
@@ -3414,7 +3486,7 @@ public:
 	TN const* get_root_c() const { return m_root; }
 	TN * get_root() { return m_root; }
 
-	TN * find_with_key(T keyt)
+	TN * find_with_key(T keyt) const
 	{
 		if (m_root == NULL) { return NULL; }
 		Compare_Key ck;
@@ -3431,7 +3503,7 @@ public:
 		return NULL;
 	}
 
-	inline TN * find_rbtn(T t)
+	inline TN * find_rbtn(T t) const
 	{
 		if (m_root == NULL) { return NULL; }
 		return find_with_key(t);
@@ -3505,7 +3577,7 @@ public:
 	{
 		TN * x = removehead(&m_free_list);
 		if (x == NULL) {
-			x = (TN*)_xmalloc(sizeof(TN));
+			x = (TN*)xmalloc(sizeof(TN));
 		} else {
 			x->lchild = NULL;
 			x->rchild = NULL;
@@ -3770,6 +3842,13 @@ public:
 	//Get mapped element of 't'. Set find to true if t is already be mapped.
 	Ttgt get(Tsrc t, bool * f = NULL)
 	{
+		return get_c(t, f);
+	}
+
+	//Get mapped element of 't'. Set find to true if t is already be mapped.
+	//Note this function is readonly.
+	Ttgt get_c(Tsrc t, bool * f = NULL) const
+	{
 		TN * z = BASE_TY::find_rbtn(t);
 		if (z == NULL) {
 			if (f != NULL) {
@@ -3816,8 +3895,8 @@ class TTAB : public TMAP<T, T, Compare_Key> {
 public:
 	typedef TMAP<T, T, Compare_Key> BASE_TTY;
 
-	//Add element into table, if
-	//Note: the element in the table should be unqiue.
+	//Add element into table.
+	//Note: the element in the table must be unqiue.
 	void append(T t)
 	{
 		IS_TRUE0(t != T(0));
@@ -3929,8 +4008,8 @@ public:
 		return Ttgt(0);
 	}
 
-	//Readonly to get mapped pointer of 't'
-	Ttgt cget(Tsrc t, bool * find = NULL) const
+	//Get mapped object of 't', this function is readonly.
+	Ttgt get_c(Tsrc t, bool * find = NULL) const
 	{
 		IS_TRUE((SHASH<Tsrc, HF>::m_bucket != NULL), ("not yet initialize."));
 		HC<Tsrc> * elemhc = findhc(t);
@@ -4140,7 +4219,7 @@ public:
 		TAB_Ttgt * tgttab = HMAP<Tsrc, TAB_Ttgt*, HF>::get(t);
 		if (tgttab == NULL) {
 			/*
-			Do NOT use SHASH::_xmalloc(sizeof(TAB_Ttgt)) to allocate memory,
+			Do NOT use SHASH::xmalloc(sizeof(TAB_Ttgt)) to allocate memory,
 			because __vfptr is NULL. __vfptr points to TAB_Ttgt::vftable.
 			*/
 			tgttab = new TAB_Ttgt;

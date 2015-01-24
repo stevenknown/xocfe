@@ -72,7 +72,7 @@ GRAPH::GRAPH(GRAPH & g) :
 }
 
 
-void * GRAPH::_xmalloc(ULONG size)
+void * GRAPH::xmalloc(ULONG size)
 {
 	IS_TRUE(m_pool != NULL, ("not init"));
 	void * p = smpool_malloc_h(size, m_pool);
@@ -96,6 +96,7 @@ void GRAPH::init()
 	m_vertices.init(m_vex_hash_size);
 	m_is_unique = true;
 	m_is_direction = true;
+	m_dense_vertex = NULL;
 }
 
 
@@ -137,6 +138,9 @@ UINT GRAPH::count_mem() const
 	count += m_el_free_list.count_mem();
 	count += m_v_free_list.count_mem();
 	count += smpool_get_pool_size_handle(m_pool);
+	if (m_dense_vertex != NULL) {
+		count += m_dense_vertex->count_mem();
+	}
 	return count;
 }
 
@@ -155,6 +159,10 @@ void GRAPH::destroy()
 	m_v_free_list.clean(); //vertex free list
 	smpool_free_handle(m_pool);
 	m_pool = NULL;
+	if (m_dense_vertex != NULL) {
+		delete m_dense_vertex;
+		m_dense_vertex = NULL;
+	}
 }
 
 
@@ -172,6 +180,14 @@ void GRAPH::erasure()
 		 v != NULL; v = m_vertices.get_next(c)) {
 		 remove_vertex(v);
 	}
+	#ifdef _DEBUG_
+	if (m_dense_vertex != NULL) {
+		for (INT i = 0; i <= m_dense_vertex->get_last_idx(); i++) {
+			//Should be removed in remove_vertex().
+			IS_TRUE0(m_dense_vertex->get(i) == NULL);
+		}
+	}
+	#endif
 }
 
 
@@ -266,8 +282,12 @@ VERTEX * GRAPH::new_vertex(UINT vid)
 		}
 	}
 	vex = m_v_free_list.get_free_elem();
-	vex = (vex == NULL) ? (VERTEX*)_xmalloc(sizeof(VERTEX)) : vex;
+	vex = (vex == NULL) ? (VERTEX*)xmalloc(sizeof(VERTEX)) : vex;
 	VERTEX_id(vex) = vid;
+	if (m_dense_vertex != NULL) {
+		IS_TRUE0(m_dense_vertex->get(vid) == NULL);
+		m_dense_vertex->set(vid, vex);
+	}
 	return vex;
 }
 
@@ -276,7 +296,7 @@ EDGE * GRAPH::new_edge_c(VERTEX * from, VERTEX * to)
 {
 	EDGE * e = m_e_free_list.get_free_elem();
 	if (e == NULL) {
-		e = (EDGE*)_xmalloc(sizeof(EDGE));
+		e = (EDGE*)xmalloc(sizeof(EDGE));
 	}
 	EDGE_from(e) = from;
 	EDGE_to(e) = to;
@@ -354,7 +374,7 @@ EDGE_C * GRAPH::new_ec(EDGE * e)
 	IS_TRUE(m_pool != NULL, ("not yet initialized."));
 	if (e == NULL) return NULL;
 	EDGE_C * el = m_el_free_list.get_free_elem();
-	el = (el == NULL) ? (EDGE_C*)_xmalloc(sizeof(EDGE_C)) : el;
+	el = (el == NULL) ? (EDGE_C*)xmalloc(sizeof(EDGE_C)) : el;
 	EC_edge(el) = e;
 	return el;
 }
@@ -483,6 +503,9 @@ VERTEX * GRAPH::remove_vertex(VERTEX * vex)
 	}
 	vex = m_vertices.removed(vex);
 	m_v_free_list.add_free_elem(vex);
+	if (m_dense_vertex != NULL) {
+		m_dense_vertex->set(VERTEX_id(vex), NULL);
+	}
 	return vex;
 }
 
@@ -494,15 +517,16 @@ Return false if 'vid' is not on graph.
 'ni_list': record the neighbours of 'vid'.
 	Note that this function ensure each neighbours in ni_list is unique.
 */
-bool GRAPH::get_neighbor_list(OUT LIST<UINT> & ni_list, IN UINT vid) const
+bool GRAPH::get_neighbor_list(OUT LIST<UINT> & ni_list, UINT vid) const
 {
 	IS_TRUE(m_pool != NULL, ("not yet initialized."));
 	UINT degree = 0;
 
 	//Ensure VERTEX_HASH::find is readonly.
 	GRAPH * pthis = const_cast<GRAPH*>(this);
-	VERTEX * vex  = pthis->m_vertices.find(vid);
-	if (vex == NULL) return false;
+	VERTEX * vex  = pthis->get_vertex(vid);
+	if (vex == NULL) { return false; }
+
 	EDGE_C * el = VERTEX_in_list(vex);
 	while (el != NULL) {
 		INT v = VERTEX_id(EDGE_from(EC_edge(el)));
@@ -511,6 +535,7 @@ bool GRAPH::get_neighbor_list(OUT LIST<UINT> & ni_list, IN UINT vid) const
 		}
 		el = EC_next(el);
 	}
+
 	el = VERTEX_out_list(vex);
 	while (el != NULL) {
 		INT v = VERTEX_id(EDGE_to(EC_edge(el)));
@@ -531,21 +556,23 @@ Return false if 'vid' is not on graph.
 	Note that this function ensure each neighbours in niset is unique.
 	Using sparse bitset is faster than list in most cases.
 */
-bool GRAPH::get_neighbor_set(OUT SBITSET & niset, IN UINT vid) const
+bool GRAPH::get_neighbor_set(OUT SBITSET & niset, UINT vid) const
 {
 	IS_TRUE(m_pool != NULL, ("not yet initialized."));
 	UINT degree = 0;
 
 	//Ensure VERTEX_HASH::find is readonly.
 	GRAPH * pthis = const_cast<GRAPH*>(this);
-	VERTEX * vex  = pthis->m_vertices.find(vid);
-	if (vex == NULL) return false;
+	VERTEX * vex  = pthis->get_vertex(vid);
+	if (vex == NULL) { return false; }
+
 	EDGE_C * el = VERTEX_in_list(vex);
 	while (el != NULL) {
 		INT v = VERTEX_id(EDGE_from(EC_edge(el)));
 		niset.bunion(v);
 		el = EC_next(el);
 	}
+
 	el = VERTEX_out_list(vex);
 	while (el != NULL) {
 		INT v = VERTEX_id(EDGE_to(EC_edge(el)));
@@ -567,7 +594,7 @@ UINT GRAPH::get_degree(VERTEX const* vex) const
 UINT GRAPH::get_in_degree(VERTEX const* vex) const
 {
 	IS_TRUE(m_pool != NULL, ("not yet initialized."));
-	if (vex == NULL) return 0;
+	if (vex == NULL) { return 0; }
 	UINT degree = 0;
 	EDGE_C * el = VERTEX_in_list(vex);
 	while (el != NULL) {
@@ -581,7 +608,8 @@ UINT GRAPH::get_in_degree(VERTEX const* vex) const
 UINT GRAPH::get_out_degree(VERTEX const* vex) const
 {
 	IS_TRUE(m_pool != NULL, ("not yet initialized."));
-	if (vex == NULL) return 0;
+	if (vex == NULL) { return 0; }
+
 	UINT degree = 0;
 	EDGE_C * el = VERTEX_out_list(vex);
 	while (el != NULL) {
@@ -595,7 +623,8 @@ UINT GRAPH::get_out_degree(VERTEX const* vex) const
 EDGE * GRAPH::get_edge(VERTEX const* from, VERTEX const* to)
 {
 	IS_TRUE(m_pool != NULL, ("not yet initialized."));
-	if (from == NULL || to == NULL) return NULL;
+	if (from == NULL || to == NULL) { return NULL; }
+
 	EDGE_C * el = VERTEX_out_list(from);
 	while (el != NULL) {
 		EDGE * e = EC_edge(el);
@@ -658,6 +687,7 @@ bool GRAPH::is_equal(GRAPH & g)
 			}
 			continue;
 		}
+
 		for (e = EC_edge(el); e != NULL; el = EC_next(el),
 			 e = el ? EC_edge(el) : NULL) {
 			vs.bunion(VERTEX_id(EDGE_to(e)));
@@ -689,7 +719,7 @@ bool GRAPH::is_reachable(VERTEX * from, VERTEX * to)
 	IS_TRUE(from != NULL && to != NULL, ("parameters cannot be NULL"));
 	EDGE_C * el = VERTEX_out_list(from);
 	EDGE * e = NULL;
-	if (el == NULL) return false;
+	if (el == NULL) { return false; }
 
 	//Walk through each succ of 'from'
 	for (e = EC_edge(el); e != NULL; el = EC_next(el),

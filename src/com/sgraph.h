@@ -180,7 +180,7 @@ public:
 
 	virtual VERTEX * create(ULONG v)
 	{
-		VERTEX * ver = (VERTEX*)_xmalloc(sizeof(VERTEX));
+		VERTEX * ver = (VERTEX*)xmalloc(sizeof(VERTEX));
 		VERTEX_id(ver) = v;
 		return ver;
 	}
@@ -218,7 +218,11 @@ protected:
 	FREE_LIST<VERTEX> m_v_free_list; //record freed VERTEX for reuse.
 	SMEM_POOL * m_pool;
 
-	void * _xmalloc(ULONG size);
+	//record vertex if vertex id is densen distribution.
+	//map vertex id to vertex.
+	SVECTOR<VERTEX*> * m_dense_vertex;
+
+	void * xmalloc(ULONG size);
 	void _scan_scc(SSTACK<UINT> * sccpath, VERTEX * v);
 	virtual void * clone_edge_info(EDGE * e)
 	{ IS_TRUE(0, ("should be overloaded")); return NULL; }
@@ -288,7 +292,7 @@ public:
 	inline UINT get_degree(UINT vid)
 	{
 		IS_TRUE(m_pool != NULL, ("not yet initialized."));
-		return get_degree(m_vertices.find(vid));
+		return get_degree(get_vertex(vid));
 	}
 	UINT get_degree(VERTEX const* vex) const;
 	UINT get_in_degree(VERTEX const* vex) const;
@@ -306,6 +310,9 @@ public:
 	inline VERTEX * get_vertex(UINT vid)
 	{
 		IS_TRUE(m_pool != NULL, ("not yet initialized."));
+		if (m_dense_vertex != NULL) {
+			return m_dense_vertex->get(vid);
+		}
 		return (VERTEX*)m_vertices.find(vid);
 	}
 	EDGE * get_edge(UINT from, UINT to);
@@ -355,15 +362,28 @@ public:
 	void remove_transitive_edge();
 
 	bool sort_in_toplog_order(OUT SVECTOR<UINT> & vex_vec, bool is_topdown);
-	inline void set_unique(bool is_unique)
+	void set_unique(bool is_unique)
 	{
 		IS_TRUE(m_pool != NULL, ("not yet initialized."));
 		m_is_unique = is_unique;
 	}
-	inline void set_direction(bool has_direction)
+	void set_direction(bool has_direction)
 	{
 		IS_TRUE(m_pool != NULL, ("not yet initialized."));
 		m_is_direction = has_direction;
+	}
+	void set_dense(bool is_dense)
+	{
+		if (is_dense) {
+			if (m_dense_vertex == NULL) {
+				m_dense_vertex = new SVECTOR<VERTEX*>();
+			}
+			return;
+		}
+		if (m_dense_vertex == NULL) {
+			delete m_dense_vertex;
+			m_dense_vertex = NULL;
+		}
 	}
 };
 

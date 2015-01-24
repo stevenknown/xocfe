@@ -234,14 +234,14 @@ INT sgcd(INT x, INT y)
 }
 
 
-//Least common multiple
+//Least common multiple.
 INT slcm(INT x, INT y)
 {
 	return x*y/sgcd(x,y);
 }
 
 
-INT gcdm(UINT num, SVECTOR<INT> const& a)
+INT gcdm(UINT num, SVECTOR<INT, 8> const& a)
 {
 	if (num == 0) {
 		return 0;

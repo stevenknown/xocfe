@@ -275,7 +275,9 @@ public:
 		DECL * declarator_list; //declarator list
 		SCOPE * scope; //declaration reside in
 	} u0; //only for DCL_DECLARATION used
+
 	TYPE * qualifier; //quanlifier for POINTER/ID
+
 	union {
 		struct {
 			union {
@@ -521,6 +523,8 @@ ULONG get_complex_type_size_in_byte(DECL * decl);
 INT get_decl_size(DECL * decl);
 INT get_pointer_base_size(DECL * decl);
 DECL * get_pointer_decl(DECL * decl);
+DECL * get_array_decl(DECL * decl);
+ULONG get_array_elemnum_to_dim(DECL * arr, UINT dim);
 DECL * get_pointer_base_decl(DECL * decl, TYPE ** ty);
 TYPE * get_pure_type_spec(TYPE * type);
 INT get_declarator_size_in_byte(DECL * d);

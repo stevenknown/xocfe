@@ -32,18 +32,6 @@ LABEL_INFO * new_label(SMEM_POOL * pool)
 }
 
 
-bool is_same_label(LABEL_INFO const* li1, LABEL_INFO const* li2)
-{
-	IS_TRUE0(li1 && li2);
-	if (li1 == li2) return true;
-	if (LABEL_INFO_type(li1) == LABEL_INFO_type(li2) &&
-		LABEL_INFO_num(li1) == LABEL_INFO_num(li2)) {
-		return true;
-	}
-	return false;
-}
-
-
 void dump_lab(LABEL_INFO const* li)
 {
 	if (g_tfile == NULL) return;
@@ -78,4 +66,3 @@ void dump_lab(LABEL_INFO const* li)
 	}
 	fflush(g_tfile);
 }
-

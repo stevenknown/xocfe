@@ -39,14 +39,6 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 class BITSET;
 class BITSET_MGR;
 
-extern BITSET * bs_create(BITSET_MGR & bs_mgr);
-extern BITSET * bs_union(IN BITSET const& set1, IN BITSET const& set2,
-						OUT BITSET & res);
-extern BITSET * bs_diff(IN BITSET const& set1, IN BITSET const& set2,
-						OUT BITSET & res);
-extern BITSET * bs_intersect(IN BITSET const& set1, IN BITSET const& set2,
-						OUT BITSET & res);
-
 class BITSET
 {
 	friend BITSET * bs_union(IN BITSET const& set1, IN BITSET const& set2,
@@ -144,7 +136,7 @@ protected:
 	LIST<BITSET*> m_bs_list;
 	LIST<BITSET*> m_free_list;
 
-	void * _xmalloc(ULONG size)
+	void * xmalloc(ULONG size)
 	{
 		IS_TRUE(m_pool != NULL, ("LIST not yet initialized."));
 		void * p = smpool_malloc_h(size, m_pool);
@@ -184,7 +176,7 @@ public:
 		IS_TRUE(m_pool, ("not yet init"));
 		BITSET * p = m_free_list.remove_head();
 		if (p == NULL) {
-			p = (BITSET*)_xmalloc(sizeof(BITSET));
+			p = (BITSET*)xmalloc(sizeof(BITSET));
 			p->init(init_sz);
 			m_bs_list.append_tail(p);
 		}
@@ -225,7 +217,7 @@ public:
 //
 //START BVEC
 //
-template <class T> class BVEC : public SVECTOR <T> {
+template <class T> class BVEC : public SVECTOR<T> {
 protected:
 	BITSET m_bs; //Record position set by 'set()'
 public:
@@ -285,7 +277,7 @@ BVEC<T>::~BVEC()
 template <class T>
 void BVEC<T>::init()
 {
-	if (SVECTOR<T>::m_is_init) return;
+	if (SVECTOR<T>::s1.m_is_init) return;
 	SVECTOR<T>::init();
 	m_bs.init();
 }
@@ -294,7 +286,7 @@ void BVEC<T>::init()
 template <class T>
 void BVEC<T>::destroy()
 {
-	if (!SVECTOR<T>::m_is_init) return;
+	if (!SVECTOR<T>::s1.m_is_init) return;
 	m_bs.destroy();
 	SVECTOR<T>::destroy();
 }
@@ -303,7 +295,7 @@ void BVEC<T>::destroy()
 template <class T>
 void BVEC<T>::copy(LIST<T> & list)
 {
-	IS_TRUE(SVECTOR<T>::m_is_init, ("VECTOR not yet initialized."));
+	IS_TRUE(SVECTOR<T>::s1.m_is_init, ("VECTOR not yet initialized."));
 	INT count = 0;
 	set(list.get_elem_count()-1, 0); //Alloc memory right away.
 	for (T elem = list.get_head();
@@ -317,7 +309,7 @@ void BVEC<T>::copy(LIST<T> & list)
 template <class T>
 void BVEC<T>::clone(BVEC<T> & vec)
 {
-	IS_TRUE(SVECTOR<T>::m_is_init, ("VECTOR not yet initialized."));
+	IS_TRUE(SVECTOR<T>::s1.m_is_init, ("VECTOR not yet initialized."));
 	SVECTOR<T>::copy(vec);
 	m_bs.copy(vec.m_bs);
 }
@@ -326,7 +318,7 @@ void BVEC<T>::clone(BVEC<T> & vec)
 template <class T>
 void BVEC<T>::clean()
 {
-	IS_TRUE(SVECTOR<T>::m_is_init, ("VECTOR not yet initialized."));
+	IS_TRUE(SVECTOR<T>::s1.m_is_init, ("VECTOR not yet initialized."));
 	SVECTOR<T>::clean();
 	m_bs.clean();
 }
@@ -335,14 +327,14 @@ void BVEC<T>::clean()
 template <class T>
 UINT BVEC<T>::count_mem() const
 {
-	return m_bs.count_mem() + ((SVECTOR<T>*)this)->count_mem();
+	return m_bs.count_mem() + SVECTOR<T>::count_mem();
 }
 
 
 template <class T>
 void BVEC<T>::set(INT i, T elem)
 {
-	IS_TRUE(SVECTOR<T>::m_is_init, ("VECTOR not yet initialized."));
+	IS_TRUE(SVECTOR<T>::s1.m_is_init, ("VECTOR not yet initialized."));
 	SVECTOR<T>::set(i, elem);
 	m_bs.bunion(i);
 }
@@ -355,7 +347,7 @@ Create an lvalue, equal to 'set()'
 template <class T>
 T & BVEC<T>::operator[](INT i)
 {
-	IS_TRUE(SVECTOR<T>::m_is_init, ("VECTOR not yet initialized."));
+	IS_TRUE(SVECTOR<T>::s1.m_is_init, ("VECTOR not yet initialized."));
 	if (i >= SVECTOR<T>::m_size) {
 		set(i, (T)0);
 	}
@@ -366,7 +358,7 @@ T & BVEC<T>::operator[](INT i)
 template <class T>
 INT BVEC<T>::get_first() const
 {
-	IS_TRUE(SVECTOR<T>::m_is_init, ("VECTOR not yet initialized."));
+	IS_TRUE(SVECTOR<T>::s1.m_is_init, ("VECTOR not yet initialized."));
 	return m_bs.get_first();
 }
 
@@ -374,7 +366,7 @@ INT BVEC<T>::get_first() const
 template <class T>
 T BVEC<T>::get_first(OUT INT * idx)
 {
-	IS_TRUE(SVECTOR<T>::m_is_init, ("VECTOR not yet initialized."));
+	IS_TRUE(SVECTOR<T>::s1.m_is_init, ("VECTOR not yet initialized."));
 	INT i = m_bs.get_first();
 	if (idx) { *idx = i; }
 	return SVECTOR<T>::get(i);
@@ -385,7 +377,7 @@ T BVEC<T>::get_first(OUT INT * idx)
 template <class T>
 T BVEC<T>::get_next(OUT INT * curidx)
 {
-	IS_TRUE(SVECTOR<T>::m_is_init, ("VECTOR not yet initialized."));
+	IS_TRUE(SVECTOR<T>::s1.m_is_init, ("VECTOR not yet initialized."));
 	*curidx = m_bs.get_next(*curidx);
 	return SVECTOR<T>::get(*curidx);
 }
@@ -394,7 +386,7 @@ T BVEC<T>::get_next(OUT INT * curidx)
 template <class T>
 INT BVEC<T>::get_next(UINT curidx) const
 {
-	IS_TRUE(SVECTOR<T>::m_is_init, ("VECTOR not yet initialized."));
+	IS_TRUE(SVECTOR<T>::s1.m_is_init, ("VECTOR not yet initialized."));
 	return m_bs.get_next(curidx);
 }
 
@@ -403,7 +395,7 @@ INT BVEC<T>::get_next(UINT curidx) const
 template <class T>
 UINT BVEC<T>::get_elem_count() const
 {
-	IS_TRUE(SVECTOR<T>::m_is_init, ("VECTOR not yet initialized."));
+	IS_TRUE(SVECTOR<T>::s1.m_is_init, ("VECTOR not yet initialized."));
 	return m_bs.get_elem_count();
 }
 
@@ -682,22 +674,23 @@ public:
 
 	void bunion(SBITSETC const& src, SEG_MGR * sm,
 				SC<SEG*> ** free_list, SMEM_POOL * pool);
-	void bunion(SBITSETC const& src, SDBITSET_MGR &m);
+
 	void bunion(UINT elem, SEG_MGR * sm,
 				SC<SEG*> ** free_list, SMEM_POOL * pool);
-	void bunion(UINT elem, SDBITSET_MGR & m);
+	inline void bunion(UINT elem, SDBITSET_MGR & m);
+	inline void bunion(SBITSETC const& src, SDBITSET_MGR &m);
 
 	void copy(SBITSETC const& src, SEG_MGR * sm,
 			  SC<SEG*> ** free_list, SMEM_POOL * pool);
-	void copy(SBITSETC const& src, SDBITSET_MGR & m);
+	inline void copy(SBITSETC const& src, SDBITSET_MGR & m);
 	void clean(SEG_MGR * sm, SC<SEG*> ** free_list);
-	void clean(SDBITSET_MGR & m);
+	inline void clean(SDBITSET_MGR & m);
 	UINT count_mem() const;
 
 	void diff(UINT elem, SEG_MGR * sm, SC<SEG*> ** free_list);
-	void diff(UINT elem, SDBITSET_MGR & m);
+	inline void diff(UINT elem, SDBITSET_MGR & m);
 	void diff(SBITSETC const& src, SEG_MGR * sm, SC<SEG*> ** free_list);
-	void diff(SBITSETC const& src, SDBITSET_MGR & m);
+	inline void diff(SBITSETC const& src, SDBITSET_MGR & m);
 	void dump(FILE * h) const;
 	void dump2(FILE * h) const;
 
@@ -706,8 +699,9 @@ public:
 	INT get_last(SC<SEG*> ** cur) const;
 	INT get_next(UINT elem, SC<SEG*> ** cur) const;
 
+	void init() { segs.init(); }
 	void intersect(SBITSETC const& src, SEG_MGR * sm, SC<SEG*> ** free_list);
-	void intersect(SBITSETC const& src, SDBITSET_MGR & m);
+	inline void intersect(SBITSETC const& src, SDBITSET_MGR & m);
 	bool is_equal(SBITSETC const& src) const;
 	bool is_contain(UINT elem) const;
 	bool is_intersect(SBITSETC const& src) const;
@@ -777,17 +771,14 @@ public:
 	{ SBITSETC::diff(elem, m_sm, &m_flst); }
 
 
-	/*
-	Difference between current bitset and 'src', current bitset
-	will be modified.
-	*/
+
+	//Difference between current bitset and 'src', current bitset
+	//will be modified.
 	void diff(SBITSET const& src)
 	{ SBITSETC::diff(src, m_sm, &m_flst); }
 
-	/*
-	Do intersection for current bitset and 'src', current bitset
-	will be modified.
-	*/
+	//Do intersection for current bitset and 'src', current bitset
+	//will be modified.
 	void intersect(SBITSET const& src)
 	{ SBITSETC::intersect(src, m_sm, &m_flst); }
 };
@@ -856,7 +847,7 @@ public:
 			tgtbs->bunion(*srcbs);
 		}
 	}
-	void bunion(DBITSETC const& src, SDBITSET_MGR & m);
+	inline void bunion(DBITSETC const& src, SDBITSET_MGR & m);
 
 	void bunion(UINT elem, SEG_MGR * sm, SC<SEG*> ** free_list,
 				SMEM_POOL * pool)
@@ -868,7 +859,7 @@ public:
 			tgtbs->bunion(elem);
 		}
 	}
-	void bunion(UINT elem, SDBITSET_MGR & m);
+	inline void bunion(UINT elem, SDBITSET_MGR & m);
 
 	void copy(DBITSETC const& src, SEG_MGR * sm, SC<SEG*> ** free_list,
 			  SMEM_POOL * pool)
@@ -887,7 +878,7 @@ public:
 			tgtbs->copy(*srcbs);
 		}
 	}
-	void copy(DBITSETC const& src, SDBITSET_MGR & m);
+	inline void copy(DBITSETC const& src, SDBITSET_MGR & m);
 
 	UINT count_mem() const { return SBITSETC::count_mem() + 1; }
 
@@ -901,7 +892,7 @@ public:
 			tgtbs->diff(elem);
 		}
 	}
-	void diff(UINT elem, SDBITSET_MGR & m);
+	inline void diff(UINT elem, SDBITSET_MGR & m);
 
 	void diff(DBITSETC const& src, SEG_MGR * sm, SC<SEG*> ** free_list)
 	{
@@ -917,7 +908,7 @@ public:
 			tgtbs->diff(*srcbs);
 		}
 	}
-	void diff(DBITSETC const& src, SDBITSET_MGR & m);
+	inline void diff(DBITSETC const& src, SDBITSET_MGR & m);
 
 	void intersect(DBITSETC const& src, SEG_MGR * sm, SC<SEG*> ** free_list)
 	{
@@ -936,7 +927,7 @@ public:
 			tgtbs->intersect(*srcbs);
 		}
 	}
-	void intersect(DBITSETC const& src, SDBITSET_MGR & m);
+	inline void intersect(DBITSETC const& src, SDBITSET_MGR & m);
 
 	bool is_contain(UINT elem) const
 	{
@@ -1041,17 +1032,19 @@ public:
 };
 
 
+#define SDBITSET_MGR_sc_free_list(sbs)		((sbs)->scflst)
 class SDBITSET_MGR
 {
 protected:
 	SLIST<SBITSET*> m_sbs_list;
 	SLIST<DBITSET*> m_dbs_list;
 	SLIST<DBITSETC*> m_dcbs_list;
+	SLIST<SBITSETC*> m_freesc_list;
 	SLIST<SBITSET*> m_frees_list;
 	SLIST<DBITSET*> m_freed_list;
 	SLIST<DBITSETC*> m_freedc_list;
 
-	void * _xmalloc(ULONG size)
+	void * xmalloc(ULONG size)
 	{
 		IS_TRUE(pool != NULL, ("LIST not yet initialized."));
 		void * p = smpool_malloc_h(size, pool);
@@ -1070,6 +1063,7 @@ public:
 		m_sbs_list.set_pool(pool);
 		m_dbs_list.set_pool(pool);
 		m_dcbs_list.set_pool(pool);
+		m_freesc_list.set_pool(pool);
 		m_frees_list.set_pool(pool);
 		m_freed_list.set_pool(pool);
 		m_freedc_list.set_pool(pool);
@@ -1083,6 +1077,7 @@ public:
 			 s != NULL; s = m_sbs_list.get_next(&st)) {
 			delete s;
 		}
+
 		SC<DBITSET*> * dt;
 		for (DBITSET * d = m_dbs_list.get_head(&dt);
 			 d != NULL; d = m_dbs_list.get_next(&dt)) {
@@ -1108,6 +1103,15 @@ public:
 		return p;
 	}
 
+	inline SBITSETC * createsc()
+	{
+		SBITSETC * p = m_freesc_list.remove_head();
+		if (p == NULL) {
+			p = (SBITSETC*)xmalloc(sizeof(SBITSETC));
+		}
+		return p;
+	}
+
 	inline DBITSET * created()
 	{
 		DBITSET * p = m_freed_list.remove_head();
@@ -1122,7 +1126,7 @@ public:
 	{
 		DBITSETC * p = m_freedc_list.remove_head();
 		if (p == NULL) {
-			p = (DBITSETC*)_xmalloc(sizeof(DBITSETC));
+			p = (DBITSETC*)xmalloc(sizeof(DBITSETC));
 			p->set_sparse(true);
 			m_dcbs_list.append_tail(p);
 		}
@@ -1131,21 +1135,32 @@ public:
 
 	UINT count_mem(FILE * h = NULL);
 
-	inline void frees(SBITSET * bs) //free bs for next use.
+	//free bs for next use.
+	inline void frees(SBITSET * bs)
 	{
 		if (bs == NULL) return;
 		bs->clean();
 		m_frees_list.append_head(bs);
 	}
 
-	inline void freed(DBITSET * bs) //free bs for next use.
+	//free bs for next use.
+	inline void freesc(SBITSETC * bs)
+	{
+		if (bs == NULL) return;
+		bs->clean(*this);
+		m_freesc_list.append_head(bs);
+	}
+
+	//free bs for next use.
+	inline void freed(DBITSET * bs)
 	{
 		if (bs == NULL) return;
 		bs->clean();
 		m_freed_list.append_head(bs);
 	}
 
-	inline void freedc(DBITSETC * bs) //free bs for next use.
+	//free bs for next use.
+	inline void freedc(DBITSETC * bs)
 	{
 		if (bs == NULL) return;
 		bs->clean(&sm, &scflst);
@@ -1156,5 +1171,100 @@ public:
 };
 
 
+//
+//START SBITSETC
+//
+void SBITSETC::bunion(UINT elem, SDBITSET_MGR & m)
+{
+	bunion(elem, &m.sm, &m.scflst, m.pool);
+}
+
+
+void SBITSETC::bunion(SBITSETC const& src, SDBITSET_MGR &m)
+{
+	bunion(src, &m.sm, &m.scflst, m.pool);
+}
+
+
+void SBITSETC::copy(SBITSETC const& src, SDBITSET_MGR & m)
+{
+	copy(src, &m.sm, &m.scflst, m.pool);
+}
+
+
+void SBITSETC::clean(SDBITSET_MGR & m)
+{
+	clean(&m.sm, &m.scflst);
+}
+
+
+void SBITSETC::diff(UINT elem, SDBITSET_MGR & m)
+{
+	diff(elem, &m.sm, &m.scflst);
+}
+
+
+void SBITSETC::diff(SBITSETC const& src, SDBITSET_MGR & m)
+{
+	diff(src, &m.sm, &m.scflst);
+}
+
+
+void SBITSETC::intersect(SBITSETC const& src, SDBITSET_MGR & m)
+{
+	intersect(src, &m.sm, &m.scflst);
+}
+//END SBITSETC
+
+
+//
+//START DBITSETC
+//
+void DBITSETC::bunion(DBITSETC const& src, SDBITSET_MGR & m)
+{
+	bunion(src, &m.sm, &m.scflst, m.pool);
+}
+
+
+void DBITSETC::bunion(UINT elem, SDBITSET_MGR & m)
+{
+	bunion(elem, &m.sm, &m.scflst, m.pool);
+}
+
+
+void DBITSETC::copy(DBITSETC const& src, SDBITSET_MGR & m)
+{
+	copy(src, &m.sm, &m.scflst, m.pool);
+}
+
+
+void DBITSETC::diff(UINT elem, SDBITSET_MGR & m)
+{
+	diff(elem, &m.sm, &m.scflst);
+}
+
+
+void DBITSETC::diff(DBITSETC const& src, SDBITSET_MGR & m)
+{
+	diff(src, &m.sm, &m.scflst);
+}
+
+
+void DBITSETC::intersect(DBITSETC const& src, SDBITSET_MGR & m)
+{
+	intersect(src, &m.sm, &m.scflst);
+}
+//END DBITSETC
+
 extern BYTE const g_bit_count[];
+extern inline BITSET * bs_create(BITSET_MGR & bs_mgr)
+{
+	return bs_mgr.create();
+}
+extern BITSET * bs_union(IN BITSET const& set1, IN BITSET const& set2,
+						OUT BITSET & res);
+extern BITSET * bs_diff(IN BITSET const& set1, IN BITSET const& set2,
+						OUT BITSET & res);
+extern BITSET * bs_intersect(IN BITSET const& set1, IN BITSET const& set2,
+						OUT BITSET & res);
 #endif

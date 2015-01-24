@@ -119,8 +119,14 @@ public:
 };
 
 
+/* The following macro defined accessing method of AST node.
+1. Unary operator: & * + - ~ ! indicate via TREE_lchild
+2. Binary operator: '=' '*=' '/=' '%=' '+=' '-=' '<<=' '>>=' '&=' '^='
+   indicated via TREE_lchild and TREE_rchild. */
 #define MAX_TREE_FLDS	4
-
+#ifdef _DEBUG_
+#define TREE_uid(tn)				((tn)->id)
+#endif
 #define TREE_token(tn)				((tn)->tok)
 #define TREE_lineno(tn)				((tn)->lineno)
 #define TREE_type(tn)				((tn)->tree_node_type)
@@ -131,80 +137,28 @@ public:
 #define TREE_psib(tn)				((tn)->prev) //prev sibling
 #define TREE_rchild(tn)				((tn)->pfld[0]) //rchild of the tree
 #define TREE_lchild(tn)				((tn)->pfld[1]) //lchild of the tree
-class TREE {
-public:
-	TREE_TYPE tree_node_type;
-	TREE * parent;
-	TREE * next;
-	TREE * prev;
-	INT lineno; ///line number in src file
-	TOKEN tok; //record the token that tree-node related.
-	BYTE is_imm_unsigned:1; //if true, immediate is unsigned.
-	union {
-		struct {
-			ENUM * e;
-			INT indx;
-		} u11; //record a enum constant
-		struct {
-			SYM * id; //record a id in SYM_TAB
-			DECL * id_decl; //record a legal declaration
-		} u12;
-		SYM * sval; //record a string in SYM_TAB
-		SYM * lab_name; //record a label name in SYM_TAB
-		HOST_INT_TYPE ival; //record a integer value
-		LABEL_INFO * lab_info; //record a label info defined in
-							//function level
-		INT  case_value; //record a constant value of jump-case table
-		//TYPE * ty;       //C standard type description
-		//USER_TYPE * uty;  //user type description
-		DECL * type_name;
-		SCOPE * scope; //tree record a scope node
-		TREE * exp_scope; //record a exp-list
-		TOKEN_LIST * token_list; //record a token-list.
-	} u1;
+#define TREE_pragma_tok_lst(tn)    (tn)->u1.token_list //Pragma
 
-	/*
-	Record DCL_TYPE_NAME that is an abstract type
-	specifier to describing the result-data-type while current
-	TREE operator is acted.
-	*/
-	DECL * result_type_name;
-    TREE * pfld[MAX_TREE_FLDS]; //for any other use
-};
-
-
-/*
-The following macro defined accessing method of
-C language tree node.
-
-unary operator: & * + - ~ ! use TREE_lchild
-binary operator: '=' '*=' '/=' '%=' '+=' '-=' '<<=' '>>=' '&=' '^='
-use TREE_lchild and TREE_rchild
-*/
-
-//Pragma
-#define TREE_pragma_tok_lst(tn)    (tn)->u1.token_list
-
-//If(determiannt){then-stmt}else{else-stmt}
+//If (determiannt) { then-stmt-list } else { else-stmt-list }
 #define TREE_if_det(tn)        (tn)->pfld[0]  // determinant of if-stmt
 #define TREE_if_true_stmt(tn)  (tn)->pfld[1]  // then-stmt of if-stmt
 #define TREE_if_false_stmt(tn) (tn)->pfld[2]  // else-stmt of if-stmt
 
-//for(init;determinant;step){ for-body }
+//for (init-list; determinant; step-list) { stmt-list }
 #define TREE_for_init(tn)      (tn)->pfld[0]  // initialize of for-stmt
 #define TREE_for_det(tn)       (tn)->pfld[1]  // determinant of for-stmt
 #define TREE_for_step(tn)      (tn)->pfld[2]  // step of for-stmt
 #define TREE_for_body(tn)      (tn)->pfld[3]  // body of for-stmt
 
-//do{body}while(determinant)
+//do {body} while (determinant)
 #define TREE_dowhile_det(tn)   (tn)->pfld[0]  // determinant of dowhile-stmt
 #define TREE_dowhile_body(tn)  (tn)->pfld[1]  // body of dowhile-stmt
 
-//while(determinant)do{body}
+//while (determinant) do {body}
 #define TREE_whiledo_det(tn)   (tn)->pfld[0]  // determinant of whiledo-stmt
 #define TREE_whiledo_body(tn)  (tn)->pfld[1]  // body of whiledo-stmt
 
-//switch(determinant){statement}
+//switch (determinant) { stmt-list }
 #define TREE_switch_det(tn)    (tn)->pfld[0]  // determinant of switch-stmt
 #define TREE_switch_body(tn)   (tn)->pfld[1]  // statement of switch-stmt
 
@@ -231,8 +185,8 @@ use TREE_lchild and TREE_rchild
 #define TREE_base_region(tn)   (tn)->pfld[0]
 #define TREE_field(tn)         (tn)->pfld[1]
 
-//return def
-#define TREE_ret_exp(tn)       (tn)->pfld[0]  // return expression
+//return expression
+#define TREE_ret_exp(tn)       (tn)->pfld[0]
 
 //inc/pos-inc
 #define TREE_inc_exp(tn)       (tn)->pfld[0]
@@ -276,13 +230,54 @@ use TREE_lchild and TREE_rchild
 //record a exp-list
 #define TREE_exp_scope(t)      (t)->u1.exp_scope
 
+class TREE {
+public:
+	#ifdef _DEBUG_
+	UINT id;
+	#endif
+	TREE_TYPE tree_node_type;
+	TREE * parent;
+	TREE * next;
+	TREE * prev;
+	INT lineno; ///line number in src file
+	TOKEN tok; //record the token that tree-node related.
+	BYTE is_imm_unsigned:1; //if true, immediate is unsigned.
+	union {
+		struct {
+			ENUM * e;
+			INT indx;
+		} u11; //record a enum constant
+		struct {
+			SYM * id; //record a id in SYM_TAB
+			DECL * id_decl; //record a legal declaration
+		} u12;
+		SYM * sval; //record a string in SYM_TAB
+		SYM * lab_name; //record a label name in SYM_TAB
+		HOST_INT ival; //record a integer value
+		LABEL_INFO * lab_info; //record a label info defined in
+							//function level
+		INT  case_value; //record a constant value of jump-case table
+		//TYPE * ty;       //C standard type description
+		//USER_TYPE * uty;  //user type description
+		DECL * type_name;
+		SCOPE * scope; //tree record a scope node
+		TREE * exp_scope; //record a exp-list
+		TOKEN_LIST * token_list; //record a token-list.
+	} u1;
+
+	/*
+	Record DCL_TYPE_NAME that is an abstract type
+	specifier to describing the result-data-type while current
+	TREE operator is acted.
+	*/
+	DECL * result_type_name;
+    TREE * pfld[MAX_TREE_FLDS]; //for any other use
+};
+
 
 //Exported Functions
 extern TREE * new_tree_node(TREE_TYPE tnt, INT lineno);
 extern void dump_tree(TREE * t);
 extern void dump_trees(TREE * t);
 extern INT is_indirect_tree_node(TREE * t);
-
-extern INT g_indent;
 #endif
-
