@@ -2271,8 +2271,7 @@ public:
 		m_last_idx = MAX((INT)i, m_last_idx);
 		return m_vec[i];
 	}
-
-
+	
 	/* Copy each elements of 'list' into vector.
 	NOTE: The default termination factor is '0'.
 		While we traversing elements of LIST one by one, or from head to
@@ -2476,8 +2475,8 @@ public:
 		SSVEC_elem_num(this) = 0;
 		if (m_vec != NULL) {
 			::free(m_vec);
+			m_vec = NULL;
 		}
-		m_vec = NULL;
 		s1.m_is_init = false;
 	}
 
@@ -2713,6 +2712,7 @@ protected:
 	UINT m_bucket_size;
 	SHASH_BUCKET * m_bucket;
 	SVECTOR<T> m_elem_vector;
+	HF m_hf;
 	UINT m_elem_count;
 
 	inline HC<T> * newhc() //Allocate hash container.
@@ -2845,12 +2845,11 @@ bool SHASH<T, HF>::insert_v(OUT HC<T> ** bucket_entry,
 							OUT HC<T> ** hc, ULONG val)
 {
 	HC<T> * elemhc = *bucket_entry;
-	HC<T> * prev = NULL;
-	HF hf;
+	HC<T> * prev = NULL;	
 	while (elemhc != NULL) {
 		IS_TRUE(HC_val(elemhc) != T(0),
 				("Hash element has so far as to be overrided!"));
-		if (hf.compare(HC_val(elemhc), val)) {
+		if (m_hf.compare(HC_val(elemhc), val)) {
 			*hc = elemhc;
 			return true;
 		}
@@ -2882,10 +2881,9 @@ bool SHASH<T, HF>::insert_t(IN OUT HC<T> ** bucket_entry,
 {
 	HC<T> * prev = NULL;
 	HC<T> * elemhc = *bucket_entry;
-	HF hf;
 	while (elemhc != NULL) {
 		IS_TRUE(HC_val(elemhc) != T(0), ("Container is empty"));
-		if (hf.compare(HC_val(elemhc), t)) {
+		if (m_hf.compare(HC_val(elemhc), t)) {
 			t = HC_val(elemhc);
 			*hc = elemhc;
 			return true;
@@ -2922,8 +2920,7 @@ T SHASH<T, HF>::append(T t, OUT HC<T> ** hct, bool * find)
 	IS_TRUE(m_bucket != NULL, ("SHASH not yet initialized."));
 	if (t == T(0)) return T(0);
 
-	HF hf;
-	UINT hashv = hf.get_hash_value(t, m_bucket_size);
+	UINT hashv = m_hf.get_hash_value(t, m_bucket_size);
 	IS_TRUE(hashv < m_bucket_size,
 			("hash value must less than bucket size"));
 
@@ -2957,8 +2954,7 @@ template <class T, class HF>
 T SHASH<T, HF>::append(ULONG val, OUT HC<T> ** hct, bool * find)
 {
 	IS_TRUE(m_bucket != NULL, ("SHASH not yet initialized."));
-	HF hf;
-	UINT hashv = hf.get_hash_value(val, m_bucket_size);
+	UINT hashv = m_hf.get_hash_value(val, m_bucket_size);
 
 	IS_TRUE(hashv < m_bucket_size, ("hash value must less than bucket size"));
 	HC<T> * elemhc = NULL;
@@ -2991,15 +2987,14 @@ T SHASH<T, HF>::removed(T t)
 	IS_TRUE(m_bucket != NULL, ("SHASH not yet initialized."));
 	if (t == 0) return T(0);
 
-	HF hf;
-	UINT hashv = hf.get_hash_value(t, m_bucket_size);
+	UINT hashv = m_hf.get_hash_value(t, m_bucket_size);
 	IS_TRUE(hashv < m_bucket_size, ("hash value must less than bucket size"));
 	HC<T> * elemhc = (HC<T>*)SHB_member(m_bucket[hashv]);
 	if (elemhc != NULL) {
  		while (elemhc != NULL) {
 			IS_TRUE(HC_val(elemhc) != T(0),
 					("Hash element has so far as to be overrided!"));
-			if (hf.compare(HC_val(elemhc), t)) {
+			if (m_hf.compare(HC_val(elemhc), t)) {
 				break;
 			}
 			elemhc = HC_next(elemhc);
@@ -3054,12 +3049,11 @@ void SHASH<T, HF>::grow(UINT bsize)
 	m_bucket_size = bsize;
 
 	INT l = m_elem_vector.get_last_idx();
-	HF hf;
 	for (INT i = 0; i <= l; i++) {
 		T t = m_elem_vector.get(i);
 		if (t == T(0)) { continue; }
 
-		UINT hashv = hf.get_hash_value(t, m_bucket_size);
+		UINT hashv = m_hf.get_hash_value(t, m_bucket_size);
 		IS_TRUE(hashv < m_bucket_size,
 				("hash value must less than bucket size"));
 		HC<T> * elemhc = NULL;
@@ -3081,15 +3075,14 @@ template <class T, class HF>
 T SHASH<T, HF>::find(ULONG val)
 {
 	IS_TRUE(m_bucket != NULL, ("SHASH not yet initialized."));
-	HF hf;
- 	UINT hashv = hf.get_hash_value(val, m_bucket_size);
+ 	UINT hashv = m_hf.get_hash_value(val, m_bucket_size);
 	IS_TRUE(hashv < m_bucket_size, ("hash value must less than bucket size"));
 	HC<T> * elemhc = (HC<T>*)SHB_member(m_bucket[hashv]);
 	if (elemhc != NULL) {
 		while (elemhc != NULL) {
 			IS_TRUE(HC_val(elemhc) != T(0),
 					("Hash element has so far as to be overrided!"));
-			if (hf.compare(HC_val(elemhc), val)) {
+			if (m_hf.compare(HC_val(elemhc), val)) {
 				return HC_val(elemhc);
 			}
 			elemhc = HC_next(elemhc);
@@ -3109,8 +3102,7 @@ bool SHASH<T, HF>::find(T t, HC<T> ** ct)
 	IS_TRUE(m_bucket != NULL, ("SHASH not yet initialized."));
 	if (t == T(0)) { return false; }
 
-	HF hf;
-	UINT hashv = hf.get_hash_value(t, m_bucket_size);
+	UINT hashv = m_hf.get_hash_value(t, m_bucket_size);
 	IS_TRUE(hashv < m_bucket_size,
 			("hash value must less than bucket size"));
 	HC<T> * elemhc = (HC<T>*)SHB_member(m_bucket[hashv]);
@@ -3118,7 +3110,7 @@ bool SHASH<T, HF>::find(T t, HC<T> ** ct)
 		while (elemhc != NULL) {
 			IS_TRUE(HC_val(elemhc) != T(0),
 					("Hash element has so far as to be overrided!"));
-			if (hf.compare(HC_val(elemhc), t)) {
+			if (m_hf.compare(HC_val(elemhc), t)) {
 				if (ct != NULL) {
 					*ct = elemhc;
 				}
@@ -3330,6 +3322,7 @@ protected:
 	TN * m_root;
 	SMEM_POOL * m_pool;
 	TN * m_free_list;
+	Compare_Key m_ck;
 
 	void * xmalloc(ULONG size)
 	{
@@ -3488,13 +3481,12 @@ public:
 
 	TN * find_with_key(T keyt) const
 	{
-		if (m_root == NULL) { return NULL; }
-		Compare_Key ck;
+		if (m_root == NULL) { return NULL; }		
 		TN * x = m_root;
 		while (x != NULL) {
-			if (ck.is_equ(keyt, x->key)) {
+			if (m_ck.is_equ(keyt, x->key)) {
 				return x;
-			} else if (ck.is_less(keyt, x->key)) {
+			} else if (m_ck.is_less(keyt, x->key)) {
 				x = x->lchild;
 			} else {
 				x = x->rchild;
@@ -3523,12 +3515,11 @@ public:
 
 		TN * mark = NULL;
 		TN * x = m_root;
-		Compare_Key ck;
 		while (x != NULL) {
 			mark = x;
-			if (ck.is_equ(t, x->key)) {
+			if (m_ck.is_equ(t, x->key)) {
 				break;
-			} else if (ck.is_less(t, x->key)) {
+			} else if (m_ck.is_less(t, x->key)) {
 				x = x->lchild;
 			} else {
 				x = x->rchild;
@@ -3536,7 +3527,7 @@ public:
 		}
 
 		if (x != NULL) {
-			IS_TRUE0(ck.is_equ(t, x->key));
+			IS_TRUE0(m_ck.is_equ(t, x->key));
 			if (find != NULL) {
 				*find = true;
 			}
@@ -3554,7 +3545,7 @@ public:
 			//The first node.
 			m_root = z;
 		} else {
-			if (ck.is_less(t, mark->key)) {
+			if (m_ck.is_less(t, mark->key)) {
 				mark->lchild = z;
 			} else {
 				mark->rchild = z;
@@ -3807,9 +3798,15 @@ NOTICE:
 	   nor pointer type.
 */
 
-//Iterator of TMAP.
+/* 
+TMAP Iterator.
+This class is used to iterate elements in TMAP.
+You should call clean() to initialize the iterator.
+*/
 template <class Tsrc, class Ttgt>
-class TMAP_ITER : public LIST<RBTN<Tsrc, Ttgt>*> {};
+class TMAP_ITER : public LIST<RBTN<Tsrc, Ttgt>*> {
+public:
+};
 
 
 template <class Tsrc, class Ttgt, class Compare_Key = COMPARE_KEY_BASE<Tsrc> >
@@ -3863,6 +3860,14 @@ public:
 		return z->mapped;
 	}
 
+	
+	//iter should be clean by caller.
+	Tsrc get_first(TMAP_ITER<Tsrc, Ttgt> & iter, Ttgt * mapped = NULL)
+	{ return BASE_TY::get_first(iter, mapped); }
+
+	Tsrc get_next(TMAP_ITER<Tsrc, Ttgt> & iter, Ttgt * mapped = NULL)
+	{ return BASE_TY::get_next(iter, mapped); }
+
 	bool find(Tsrc t)
 	{
 		bool f;
@@ -3887,12 +3892,21 @@ NOTICE:
 		public:
 		};
 */
+
+/* 
+TTAB Iterator.
+This class is used to iterate elements in TTAB.
+You should call clean() to initialize the iterator.
+*/
 template <class T>
-class TAB_ITER : public LIST<RBTN<T, T>*> {};
+class TAB_ITER : public LIST<RBTN<T, T>*> {
+public:
+};
 
 template <class T, class Compare_Key = COMPARE_KEY_BASE<T> >
 class TTAB : public TMAP<T, T, Compare_Key> {
 public:
+	typedef RBT<T, T, Compare_Key> BASE_TY;
 	typedef TMAP<T, T, Compare_Key> BASE_TTY;
 
 	//Add element into table.
@@ -3930,6 +3944,13 @@ public:
 		IS_TRUE0(t != T(0));
 		BASE_TTY::remove(t);
 	}
+
+	//iter should be clean by caller.
+	T get_first(TAB_ITER<T> & iter)
+	{ return BASE_TY::get_first(iter, NULL); }	
+
+	T get_next(TAB_ITER<T> & iter)
+	{ return BASE_TY::get_next(iter, NULL); }
 };
 //END TTAB
 
@@ -3958,8 +3979,8 @@ protected:
 	HC<Tsrc> * findhc(Tsrc t) const
 	{
 		if (t == Tsrc(0)) { return NULL; }
-		HF hf;
-		UINT hashv = hf.get_hash_value(t, SHASH<Tsrc, HF>::m_bucket_size);
+		UINT hashv = SHASH<Tsrc, HF>::m_hf.get_hash_value(t, 
+								SHASH<Tsrc, HF>::m_bucket_size);
 		IS_TRUE((hashv < SHASH<Tsrc, HF>::m_bucket_size),
 				("hash value must less than bucket size"));
 		HC<Tsrc> * elemhc =
@@ -3968,7 +3989,7 @@ protected:
 			while (elemhc != NULL) {
 				IS_TRUE(HC_val(elemhc) != Tsrc(0),
 						("Hash element has so far as to be overrided!"));
-				if (hf.compare(HC_val(elemhc), t)) {
+				if (SHASH<Tsrc, HF>::m_hf.compare(HC_val(elemhc), t)) {
 					return elemhc;
 				}
 				elemhc = HC_next(elemhc);
