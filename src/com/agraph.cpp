@@ -42,14 +42,12 @@ void AGRAPH::build_adj_matrix(MATRIX<UINT> & adj_mat)
 }
 
 
-/*
-Nonrecursive algo to compute the shorest-path.
+/* Nonrecursive algo to compute the shorest-path.
 See <Shortest_Path-Dijkstra.txt>
-'infinite': the value indiates infinity.
-*/
+'infinite': the value indiates infinity. */
 void AGRAPH::shortest_path(UINT infinite)
 {
-	IS_TRUE(m_pool != NULL, ("not yet initialized."));
+	IS_TRUE(m_ec_pool != NULL, ("not yet initialized."));
 	MATRIX<UINT> adj_mat;
 	build_adj_matrix(adj_mat);
 	UINT row = adj_mat.get_row_size();
@@ -89,4 +87,3 @@ void AGRAPH::shortest_path(UINT infinite)
 		}
 	}
 }
-

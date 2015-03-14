@@ -347,9 +347,7 @@ static bool is_valid_type_name(DECL * dcl)
 }
 
 
-/*
-Constructing TYPE-NAME declaration
-*/
+//Constructing TYPE-NAME declaration
 static DECL * build_type_name(TYPE * ty)
 {
 	DECL * decl = new_decl(DCL_TYPE_NAME);
@@ -359,9 +357,7 @@ static DECL * build_type_name(TYPE * ty)
 }
 
 
-/*
-Only construct simply base type-spec
-*/
+//Only construct simply base type-spec
 static TYPE * build_base_type_spec(INT des)
 {
     if (!is_simple_base_type(des)) {
@@ -1152,19 +1148,24 @@ static INT c_type_tran(TREE * t, TY_CONTEXT * cont)
 			}
 		case TR_CALL:
 			{
-				if (ST_SUCC != c_type_tran(TREE_para_list(t), cont)) goto FAILED;
-				if (ST_SUCC != c_type_tran(TREE_fun_exp(t), cont)) goto FAILED;
+				if (ST_SUCC != c_type_tran(TREE_para_list(t), cont)) {
+					goto FAILED;
+				}
+				if (ST_SUCC != c_type_tran(TREE_fun_exp(t), cont)) {
+					goto FAILED;
+				}
 				DECL * ld = TREE_result_type(TREE_fun_exp(t));
 				IS_TRUE(DECL_dt(ld) == DCL_TYPE_NAME, ("expect TYPE-NAME"));
 
-				//Return value type is the CALL node type. So constructing return value type.
+				//Return value type is the CALL node type.
+				//So constructing return value type.
 				TYPE * ty = DECL_spec(ld);
 				ld = PURE_DECL(ld);
 				if (DECL_dt(ld) == DCL_FUN) {
 					ld = DECL_next(ld);
 				}
 
-				if (ld) {
+				if (ld != NULL) {
 					IS_TRUE(DECL_dt(ld) != DCL_FUN, ("Illegal dcl list"));
 				}
 
@@ -1270,10 +1271,8 @@ static INT c_type_tran(TREE * t, TY_CONTEXT * cont)
 					cp_decl_begin_at(PURE_DECL(rd));
 				break;
 			}
-		case TR_PRAGMA:
-			break;
-		default:
-			IS_TRUE(0,("unknown tree type:%d",TREE_type(t)));
+		case TR_PRAGMA:	break;
+		default: IS_TRUE(0,("unknown tree type:%d",TREE_type(t)));
 		}//end switch
 		t = TREE_nsib(t);
 	}//end while
@@ -1580,4 +1579,3 @@ INT type_ck()
 	tfree();
 	return st;
 }
-

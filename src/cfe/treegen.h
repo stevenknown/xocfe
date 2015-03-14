@@ -44,20 +44,26 @@ extern bool g_dump_token;
 //Exported Functions
 void init_parser();
 void fini_parser();
+
 INT c_parser();
-void set_parent(TREE * parent, TREE * child);
+SCOPE * compound_stmt(DECL * para_list);
+TREE * conditional_exp();
+
+void dump_tok_list();
+
+TREE * id();
 bool is_in_first_set_of_exp_list(TOKEN tok);
 bool is_user_type_exist_in_outer_scope(CHAR * cl, OUT DECL ** ut);
-INT match(TOKEN tok);
-TREE * conditional_exp();
+bool is_in_first_set_of_declarator();
+
 TREE * exp();
 TREE * exp_list();
-TREE * id();
-SCOPE * compound_stmt(DECL * para_list);
+
 bool look_forward_token(INT num, ...);
+
+INT match(TOKEN tok);
+
+void set_parent(TREE * parent, TREE * child);
 INT suck_tok();
 void suck_tok_to(INT placeholder, ...);
-void dump_tok_list();
-bool is_in_first_set_of_declarator();
 #endif
-

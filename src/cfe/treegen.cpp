@@ -61,12 +61,10 @@ static void * xmalloc(ULONG size)
 }
 
 
-/*
-Return NULL indicate we haven't found it in 'l_list', and
+/* Return NULL indicate we haven't found it in 'l_list', and
 append 'label' to tail of the list as correct,
 otherwise return 'l'.
-Add a label into outmost scope of current function
-*/
+Add a label into outmost scope of current function */
 static LABEL_INFO * add_label(CHAR * name, INT lineno)
 {
 	LABEL_INFO * li;
@@ -254,7 +252,8 @@ bool is_in_first_set_of_exp_list(TOKEN tok)
 	switch (g_real_token) {
 	case T_ID:
 		if (is_user_type_exist_in_outer_scope(g_real_token_string, &ut)) {
-			//If there is a type-name, then it belongs to first-set of declarator.
+			//If there is a type-name, then it
+			//belongs to first-set of declarator.
 			return false;
 		} else {
 			//May be identifier or enum-constant.
@@ -373,49 +372,59 @@ INT is_user_type_exist_in_cur_scope(CHAR * cl, OUT DECL ** ut)
 
 
 //Find if ID with named 'cl' exists and return the DECL.
-static INT is_id_exist_in_outer_scope(CHAR * cl, OUT DECL ** d)
+static inline INT is_id_exist_in_outer_scope(CHAR * cl, OUT DECL ** d)
 {
 	return is_decl_exist_in_outer_scope(cl, d);
 }
 
 
-static INT is_first_set_of_unary_exp(TOKEN tok)
+static inline INT is_first_set_of_unary_exp(TOKEN tok)
 {
-	return (tok == T_LPAREN    ||
-			tok == T_ID        ||
-			tok == T_IMM       ||
-			tok == T_IMML      ||
-			tok == T_IMMU      ||
-			tok == T_IMMUL      ||
-			tok == T_FP        ||
-			tok == T_STRING    ||
-			tok == T_CHAR_LIST ||
-			tok == T_AND       ||
-			tok == T_ADDADD    ||
-			tok == T_SUBSUB    ||
-			tok == T_ADD       ||
-			tok == T_SUB       ||
-			tok == T_NOT       ||
-			tok == T_REV       ||
-			tok == T_ASTERISK  ||
-			tok == T_BITAND    ||
-			tok == T_SIZEOF );
+	switch (tok) {
+	case T_LPAREN:
+	case T_ID    :
+	case T_IMM   :
+	case T_IMML  :
+	case T_IMMU  :
+	case T_IMMUL :
+	case T_FP    :
+	case T_STRING:
+	case T_CHAR_LIST:
+	case T_AND      :
+	case T_ADDADD   :
+	case T_SUBSUB   :
+	case T_ADD      :
+	case T_SUB      :
+	case T_NOT      :
+	case T_REV      :
+	case T_ASTERISK :
+	case T_BITAND   :
+	case T_SIZEOF:
+		return true;
+	default:;
+	}
+	return false;
 }
 
 
-static INT is_assign_op(TOKEN tok)
+static inline INT is_assign_op(TOKEN tok)
 {
- return (g_real_token == T_ASSIGN ||
-		 g_real_token == T_BITANDEQU ||
-		 g_real_token == T_BITOREQU  ||
-         g_real_token == T_ADDEQU ||
-		 g_real_token == T_SUBEQU ||
-		 g_real_token == T_MULEQU ||
-		 g_real_token == T_DIVEQU ||
-		 g_real_token == T_XOREQU ||
-		 g_real_token == T_RSHIFTEQU ||
-		 g_real_token == T_LSHIFTEQU ||
-		 g_real_token == T_REMEQU );
+	switch (g_real_token) {
+	case T_ASSIGN:
+	case T_BITANDEQU:
+	case T_BITOREQU:
+	case T_ADDEQU:
+	case T_SUBEQU:
+	case T_MULEQU:
+	case T_DIVEQU:
+	case T_XOREQU:
+	case T_RSHIFTEQU:
+	case T_LSHIFTEQU:
+	case T_REMEQU:
+		return true;
+	default:;
+	}
+	return false;
 }
 
 
@@ -707,20 +716,16 @@ static TREE * primary_exp(IN OUT UINT * st)
 		break;
 	case T_IMM:
 		t = NEWT(TR_IMM);
-		/*
-		If the target integer hold in 'g_real_token_string' is longer than
-		host ULONG type, it will be truncated now.
-		*/
+		//If the target integer hold in 'g_real_token_string' is longer than
+		//host ULONG type, it will be truncated now.
 		TREE_token(t) = g_real_token;
 		TREE_imm_val(t) = xatol(g_real_token_string, false);
 		match(T_IMM);
 		return t;
 	case T_IMML:
 		t = NEWT(TR_IMML);
-		/*
-		If the target integer hold in 'g_real_token_string' is longer than
-		host ULONG type, it will be truncated now.
-		*/
+		//If the target integer hold in 'g_real_token_string' is longer than
+		//host ULONG type, it will be truncated now.
 		TREE_token(t) = g_real_token;
 		TREE_imm_val(t) = xatol(g_real_token_string, false);
 		match(T_IMML);
@@ -1005,6 +1010,7 @@ FAILED:
 	return t;
 }
 
+
 /*
 unary_operator:  one of
 	&  *  +  -  ~  !
@@ -1016,7 +1022,6 @@ unary_expression:
 	(&  *  +  -  ~  !) cast_expression
 	sizeof unary_expression
 	sizeof ( type_name )
-
 */
 static TREE * unary_exp()
 {
@@ -1139,7 +1144,6 @@ FIRST_SET:
 cast_exp :
 	id imm imml floatpoint string charlist ( + -
 	* & ! ~ ++ -- sizeof
-
 */
 static TREE * cast_exp()
 {
@@ -1482,6 +1486,7 @@ FAILED:
 	return t;
 }
 
+
 static TREE * logical_OR_exp()
 {
 	TREE * t = logical_AND_exp(), * p = NULL;
@@ -1781,9 +1786,7 @@ static TREE * label_stmt()
 
 
 /*
-{
-do-body
-}
+{ do-body }
 while (determination)
 */
 static TREE * do_while_stmt()
@@ -1808,7 +1811,8 @@ static TREE * do_while_stmt()
 		err(g_real_line_num, "syntax error : '%s'", g_real_token_string);
 		goto FAILED;
 	}
-	TREE_dowhile_det(t) =  exp_list();
+
+	TREE_dowhile_det(t) = exp_list();
 	set_parent(t, TREE_dowhile_det(t));
 	if (TREE_dowhile_det(t) == NULL) {
 		err(g_real_line_num, "while determination cannot be NULL");
@@ -2515,7 +2519,7 @@ INT c_parser()
  		id
 	*/
 	IS_TRUE0(g_hsrc != NULL);
-	gettok();
+	gettok(); //Get first token.
 
 	//Create outermost scope for top region.
 	g_cur_scope = new_scope();

@@ -1228,4 +1228,3 @@ void test_lex()
 	scr("\n\n\n");
 }
 #endif
-

@@ -106,7 +106,7 @@ public:
 			return NULL;
 		}
 		INT l = strlen(s);
-		CHAR * ns = (CHAR*)xmalloc(l + 1);
+		CHAR * ns = (CHAR*)smpool_malloc_h(l + 1, m_pool);
 		memcpy(ns, s, l);
 		ns[l] = 0;
 		return ns;

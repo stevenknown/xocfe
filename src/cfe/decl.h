@@ -32,6 +32,10 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 class SCOPE;
 
+#define EVAL_LIST_val(el)			((el)->val)
+#define EVAL_LIST_name(el)			((el)->str)
+#define EVAL_LIST_next(el)			((el)->next)
+#define EVAL_LIST_prev(el)			((el)->prev)
 class EVAL_LIST {
 public:
 	INT val;
@@ -39,10 +43,6 @@ public:
 	EVAL_LIST * next;
 	EVAL_LIST * prev;
 };
-#define EVAL_LIST_val(el) (el)->val
-#define EVAL_LIST_name(el) (el)->str
-#define EVAL_LIST_next(el) (el)->next
-#define EVAL_LIST_prev(el) (el)->prev
 
 
 /*
@@ -50,8 +50,8 @@ ENUM
 
 Record ENUM info, and field 'name' reserved its character description.
 */
-#define ENUM_name(e)    	(e)->name
-#define ENUM_vallist(e)     (e)->pevlist
+#define ENUM_name(e)				((e)->name)
+#define ENUM_vallist(e)				((e)->pevlist)
 class ENUM {
 public:
 	INT val;
@@ -61,9 +61,9 @@ public:
 
 
 //ENUM_LIST
-#define ENUM_LIST_enum(el) (el)->e
-#define ENUM_LIST_next(el) (el)->next
-#define ENUM_LIST_prev(el) (el)->prev
+#define ENUM_LIST_enum(el)			((el)->e)
+#define ENUM_LIST_next(el)			((el)->next)
+#define ENUM_LIST_prev(el)			((el)->prev)
 class ENUM_LIST {
 public:
 	ENUM_LIST * next;
@@ -73,9 +73,9 @@ public:
 
 
 //USER_TYPE_LIST record user defined type with 'typedef'
-#define USER_TYPE_LIST_utype(utl)	(utl)->ut
-#define USER_TYPE_LIST_next(utl)	(utl)->next
-#define USER_TYPE_LIST_prev(utl)	(utl)->prev
+#define USER_TYPE_LIST_utype(utl)	((utl)->ut)
+#define USER_TYPE_LIST_next(utl)	((utl)->next)
+#define USER_TYPE_LIST_prev(utl)	((utl)->prev)
 class USER_TYPE_LIST {
 public:
 	USER_TYPE_LIST * next;
@@ -85,12 +85,12 @@ public:
 
 
 //STRUCT
-#define STRUCT_next(s)           (s)->next
-#define STRUCT_prev(s)           (s)->prev
-#define STRUCT_decl_list(s)      (s)->decl_list
-#define STRUCT_tag(s)            (s)->tag
-#define STRUCT_is_complete(s)    (s)->is_complete
-#define STRUCT_align(s)          (s)->align
+#define STRUCT_next(s)				((s)->next)
+#define STRUCT_prev(s)				((s)->prev)
+#define STRUCT_decl_list(s)			((s)->decl_list)
+#define STRUCT_tag(s)				((s)->tag)
+#define STRUCT_is_complete(s)		((s)->is_complete)
+#define STRUCT_align(s)				((s)->align)
 class STRUCT {
 public:
 	STRUCT * next;
@@ -103,12 +103,12 @@ public:
 
 
 //UNION
-#define UNION_next(s)			(s)->next
-#define UNION_prev(s)			(s)->prev
-#define UNION_decl_list(s)		(s)->decl_list
-#define UNION_tag(s)			(s)->tag
-#define UNION_is_complete(s)	(s)->is_complete
-#define UNION_align(s)			(s)->align
+#define UNION_next(s)				((s)->next)
+#define UNION_prev(s)				((s)->prev)
+#define UNION_decl_list(s)			((s)->decl_list)
+#define UNION_tag(s)				((s)->tag)
+#define UNION_is_complete(s)		((s)->is_complete)
+#define UNION_align(s)				((s)->align)
 class UNION {
 public:
 	UNION * next;
@@ -227,15 +227,15 @@ public:
 //
 typedef enum {
 	DCL_NULL = 0,
-	DCL_ARRAY,     //array    declarator
-	DCL_POINTER,   //pointer  declarator
-	DCL_FUN,       //function declarator
-	DCL_ID,        //identifier
-	DCL_VARIABLE,  //variable length parameter, e.g: ...
-	DCL_TYPE_NAME,   //if current decl is TYPE_NAME,  it descript a
-					 //abstract type spec
-	DCL_DECLARATOR,  //declarator
-	DCL_DECLARATION, //declaration
+	DCL_ARRAY,          //array    declarator
+	DCL_POINTER,        //pointer  declarator
+	DCL_FUN,            //function declarator
+	DCL_ID,             //identifier
+	DCL_VARIABLE,       //variable length parameter, e.g: ...
+	DCL_TYPE_NAME,      //if current decl is TYPE_NAME,  it descript a
+					    //abstract type spec
+	DCL_DECLARATOR,     //declarator
+	DCL_DECLARATION,    //declaration
 	DCL_ABS_DECLARATOR, //abstract declarator
 } DCL;
 
@@ -533,6 +533,7 @@ CHAR * get_enum_const_name(ENUM * e, INT idx);
 UINT get_struct_field_ofst(STRUCT * st, CHAR * name);
 
 DECL * expand_user_type(DECL * ut);
+
 DECL * factor_user_type(DECL * decl);
 
 DECL * new_declaration(TYPE * spec, DECL * declor, SCOPE * sc);

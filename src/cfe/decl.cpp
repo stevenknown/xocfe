@@ -1506,7 +1506,7 @@ static DECL * parameter_declaration()
 	DECL_decl_list(declaration) = dcl;
 
 	//array parameter has at least one elem.
-	compute_array_dim(declaration, false); 
+	compute_array_dim(declaration, false);
 
 	if (IS_USER_TYPE(type_spec)) {
 		declaration = factor_user_type(declaration);

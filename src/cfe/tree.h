@@ -137,98 +137,98 @@ public:
 #define TREE_psib(tn)				((tn)->prev) //prev sibling
 #define TREE_rchild(tn)				((tn)->pfld[0]) //rchild of the tree
 #define TREE_lchild(tn)				((tn)->pfld[1]) //lchild of the tree
-#define TREE_pragma_tok_lst(tn)    (tn)->u1.token_list //Pragma
+#define TREE_pragma_tok_lst(tn)		((tn)->u1.token_list) //Pragma
 
 //If (determiannt) { then-stmt-list } else { else-stmt-list }
-#define TREE_if_det(tn)        (tn)->pfld[0]  // determinant of if-stmt
-#define TREE_if_true_stmt(tn)  (tn)->pfld[1]  // then-stmt of if-stmt
-#define TREE_if_false_stmt(tn) (tn)->pfld[2]  // else-stmt of if-stmt
+#define TREE_if_det(tn)				((tn)->pfld[0])  // determinant of if-stmt
+#define TREE_if_true_stmt(tn)		((tn)->pfld[1])  // then-stmt of if-stmt
+#define TREE_if_false_stmt(tn)		((tn)->pfld[2])  // else-stmt of if-stmt
 
 //for (init-list; determinant; step-list) { stmt-list }
-#define TREE_for_init(tn)      (tn)->pfld[0]  // initialize of for-stmt
-#define TREE_for_det(tn)       (tn)->pfld[1]  // determinant of for-stmt
-#define TREE_for_step(tn)      (tn)->pfld[2]  // step of for-stmt
-#define TREE_for_body(tn)      (tn)->pfld[3]  // body of for-stmt
+#define TREE_for_init(tn)			((tn)->pfld[0])  // initialize of for-stmt
+#define TREE_for_det(tn)			((tn)->pfld[1])  // determinant of for-stmt
+#define TREE_for_step(tn)			((tn)->pfld[2])  // step of for-stmt
+#define TREE_for_body(tn)			((tn)->pfld[3])  // body of for-stmt
 
 //do {body} while (determinant)
-#define TREE_dowhile_det(tn)   (tn)->pfld[0]  // determinant of dowhile-stmt
-#define TREE_dowhile_body(tn)  (tn)->pfld[1]  // body of dowhile-stmt
+#define TREE_dowhile_det(tn)		((tn)->pfld[0])  // determinant of dowhile-stmt
+#define TREE_dowhile_body(tn)		((tn)->pfld[1])  // body of dowhile-stmt
 
 //while (determinant) do {body}
-#define TREE_whiledo_det(tn)   (tn)->pfld[0]  // determinant of whiledo-stmt
-#define TREE_whiledo_body(tn)  (tn)->pfld[1]  // body of whiledo-stmt
+#define TREE_whiledo_det(tn)		((tn)->pfld[0])  // determinant of whiledo-stmt
+#define TREE_whiledo_body(tn)		((tn)->pfld[1])  // body of whiledo-stmt
 
 //switch (determinant) { stmt-list }
-#define TREE_switch_det(tn)    (tn)->pfld[0]  // determinant of switch-stmt
-#define TREE_switch_body(tn)   (tn)->pfld[1]  // statement of switch-stmt
+#define TREE_switch_det(tn)			((tn)->pfld[0])  // determinant of switch-stmt
+#define TREE_switch_body(tn)		((tn)->pfld[1])  // statement of switch-stmt
 
 //conditional exp
-#define TREE_det(tn)           (tn)->pfld[0]
-#define TREE_true_part(tn)     (tn)->pfld[1]
-#define TREE_false_part(tn)    (tn)->pfld[2]
+#define TREE_det(tn)				((tn)->pfld[0])
+#define TREE_true_part(tn)			((tn)->pfld[1])
+#define TREE_false_part(tn)			((tn)->pfld[2])
 
 //converting exp
-#define TREE_cvt_type(tn)      (tn)->pfld[0]
-#define TREE_type_name(tn)     (tn)->u1.type_name
-//#define TREE_ct_type(tn)       (tn)->u1.ty
-#define TREE_cast_exp(tn)      (tn)->pfld[1]
+#define TREE_cvt_type(tn)			((tn)->pfld[0])
+#define TREE_type_name(tn)			((tn)->u1.type_name)
+//#define TREE_ct_type(tn)			((tn)->u1.ty)
+#define TREE_cast_exp(tn)			((tn)->pfld[1])
 
 //array referecne
-#define TREE_array_base(tn)    (tn)->pfld[0]
-#define TREE_array_indx(tn)    (tn)->pfld[1]
+#define TREE_array_base(tn)			(tn)->pfld[0]
+#define TREE_array_indx(tn)			(tn)->pfld[1]
 
 //function invoke
-#define TREE_fun_exp(tn)       (tn)->pfld[0]
-#define TREE_para_list(tn)     (tn)->pfld[1]
+#define TREE_fun_exp(tn)			(tn)->pfld[0]
+#define TREE_para_list(tn)			(tn)->pfld[1]
 
 //struct member reference
-#define TREE_base_region(tn)   (tn)->pfld[0]
-#define TREE_field(tn)         (tn)->pfld[1]
+#define TREE_base_region(tn)		(tn)->pfld[0]
+#define TREE_field(tn)				(tn)->pfld[1]
 
 //return expression
-#define TREE_ret_exp(tn)       (tn)->pfld[0]
+#define TREE_ret_exp(tn)			(tn)->pfld[0]
 
 //inc/pos-inc
-#define TREE_inc_exp(tn)       (tn)->pfld[0]
+#define TREE_inc_exp(tn)			(tn)->pfld[0]
 
 //dec/post-dec
-#define TREE_dec_exp(tn)       (tn)->pfld[0]
+#define TREE_dec_exp(tn)			(tn)->pfld[0]
 
 //sizeof exp
-#define TREE_sizeof_exp(tn)    (tn)->pfld[0]
+#define TREE_sizeof_exp(tn)			(tn)->pfld[0]
 
 //enum def
-#define TREE_enum(t)           (t)->u1.u11.e
-#define TREE_enum_val_idx(t)   (t)->u1.u11.indx
+#define TREE_enum(t)				(t)->u1.u11.e
+#define TREE_enum_val_idx(t)		(t)->u1.u11.indx
 
 //imm def
-#define TREE_imm_val(t)        (t)->u1.ival
-#define TREE_is_unsigned(t)    (t)->is_imm_unsigned
+#define TREE_imm_val(t)				(t)->u1.ival
+#define TREE_is_unsigned(t)			(t)->is_imm_unsigned
 
 //string def
-#define TREE_string_val(t)     (t)->u1.sval
+#define TREE_string_val(t)			(t)->u1.sval
 
 //float number def
-#define TREE_fp_str_val(t)     (t)->u1.sval
+#define TREE_fp_str_val(t)			(t)->u1.sval
 
 //LABEL_STMT
 //label def info
-#define TREE_lab_info(t)       (t)->u1.lab_info
+#define TREE_lab_info(t)			(t)->u1.lab_info
 //case label def info
-#define TREE_case_value(t)     (t)->u1.case_value
+#define TREE_case_value(t)			(t)->u1.case_value
 
 //goto target label name
-#define TREE_lab_name(t)       (t)->u1.lab_name
+#define TREE_lab_name(t)			(t)->u1.lab_name
 
 //represent a identifier and its declaration
-#define TREE_id(t)             (t)->u1.u12.id
-#define TREE_id_decl(t)        (t)->u1.u12.id_decl
+#define TREE_id(t)					(t)->u1.u12.id
+#define TREE_id_decl(t)				(t)->u1.u12.id_decl
 
 //record a scope
-#define TREE_scope(t)          (t)->u1.scope
+#define TREE_scope(t)				(t)->u1.scope
 
 //record a exp-list
-#define TREE_exp_scope(t)      (t)->u1.exp_scope
+#define TREE_exp_scope(t)			(t)->u1.exp_scope
 
 class TREE {
 public:
@@ -254,22 +254,19 @@ public:
 		SYM * sval; //record a string in SYM_TAB
 		SYM * lab_name; //record a label name in SYM_TAB
 		HOST_INT ival; //record a integer value
-		LABEL_INFO * lab_info; //record a label info defined in
-							//function level
+		LABEL_INFO * lab_info; //record a label info defined in function level
 		INT  case_value; //record a constant value of jump-case table
-		//TYPE * ty;       //C standard type description
-		//USER_TYPE * uty;  //user type description
+		//TYPE * ty; //C standard type description
+		//USER_TYPE * uty; //user type description
 		DECL * type_name;
 		SCOPE * scope; //tree record a scope node
 		TREE * exp_scope; //record a exp-list
 		TOKEN_LIST * token_list; //record a token-list.
 	} u1;
 
-	/*
-	Record DCL_TYPE_NAME that is an abstract type
+	/* Record DCL_TYPE_NAME that is an abstract type
 	specifier to describing the result-data-type while current
-	TREE operator is acted.
-	*/
+	TREE operator is acted. */
 	DECL * result_type_name;
     TREE * pfld[MAX_TREE_FLDS]; //for any other use
 };

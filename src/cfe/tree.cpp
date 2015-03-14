@@ -44,7 +44,7 @@ static void * xmalloc(ULONG size)
 //Alloc a new tree node from 'g_pool_tree_used'.
 TREE * new_tree_node(TREE_TYPE tnt, INT lineno)
 {
-    TREE * t = (TREE*)xmalloc(sizeof(TREE));	
+    TREE * t = (TREE*)xmalloc(sizeof(TREE));
 #ifdef _DEBUG_
 	t->id = g_tree_count++;
 #endif

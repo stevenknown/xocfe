@@ -34,7 +34,7 @@ e.g:
 	Run mypass();
 	END_TIMER(); */
 #define START_TIMER(s)  			\
-	LONG _start_time_count_; 		\
+	LONG _start_time_count_ = 0;	\
 	if (g_show_comp_time) {			\
 		_start_time_count_ =		\
 			getclockstart();		\
@@ -42,25 +42,24 @@ e.g:
 	}
 #define END_TIMER()					\
 	if (g_show_comp_time) {			\
-		printf("%fsec --==", getclockend(_start_time_count_)); \
+		printf("%fsec", getclockend(_start_time_count_)); \
 	}
 
 
 /* Single timer, show const string after timer finish.
 e.g:
-	START_TIMER2();
+	START_TIMER_AFTER();
 	Run mypass();
-	END_TIMER2("My Pass"); */
-#define START_TIMER2()  			\
-	LONG _start_time_count_; 		\
+	END_TIMER_AFTER("My Pass"); */
+#define START_TIMER_AFTER() 		\
+	LONG _start_time_count_ = 0;	\
 	if (g_show_comp_time) {			\
 		_start_time_count_ =		\
 				getclockstart();	\
-		printf("", (s));			\
 	}
-#define END_TIMER2(s)				\
+#define END_TIMER_AFTER(s)			\
 	if (g_show_comp_time) {			\
-		printf("\n==-- %s Time:%fsec --==", \
+		printf("\n==-- %s Time:%fsec", \
 			   (s), getclockend(_start_time_count_)); \
 	}
 
@@ -71,7 +70,7 @@ e.g:
 	Run mypass();
 	END_TIMER_FMT(("My Pass Name%s", get_opt_name())); */
 #define START_TIMER_FMT()  			\
-	LONG _start_time_count_; 		\
+	LONG _start_time_count_ = 0;	\
 	if (g_show_comp_time) {			\
 		_start_time_count_ = getclockstart();	\
 	}
@@ -79,7 +78,7 @@ e.g:
 	if (g_show_comp_time) {			\
 		printf("\n==-- ");			\
 		printf s;					\
-		printf(" Time:%fsec --==",	\
+		printf(" Time:%fsec",	\
 			   getclockend(_start_time_count_)); \
 	}
 
@@ -91,7 +90,7 @@ e.g:
 	Run mypass();
 	END_TIMERS(local_timer); */
 #define START_TIMERS(s, _timer_timer_)	\
-	LONG _timer_timer_; 					\
+	LONG _timer_timer_ = 0; 				\
 	if (g_show_comp_time) {					\
 		_timer_timer_ =						\
 			getclockstart();				\
@@ -99,7 +98,7 @@ e.g:
 	}
 #define END_TIMERS(_timer_timer_)			\
 	if (g_show_comp_time) {					\
-		printf("%fsec --==", getclockend(_timer_timer_)); \
+		printf("%fsec", getclockend(_timer_timer_)); \
 	}
 
 

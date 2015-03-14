@@ -44,7 +44,7 @@ EDGE * EDGE_HASH::create(ULONG v)
 	VERTEX * from = m_g->get_vertex(VERTEX_id(EDGE_from(t)));
 	VERTEX * to = m_g->get_vertex(VERTEX_id(EDGE_to(t)));
 	IS_TRUE0(from && to);
-	t = m_g->new_edge_c(from, to);
+	t = m_g->new_edge_impl(from, to);
 	return t;
 }
 //END EDGE_HASH
@@ -56,7 +56,7 @@ GRAPH::GRAPH(UINT edge_hash_size, UINT vex_hash_size) :
 {
 	m_edge_hash_size = edge_hash_size;
 	m_vex_hash_size = vex_hash_size;
-	m_pool = NULL;
+	m_ec_pool = NULL;
 	init();
 }
 
@@ -66,28 +66,24 @@ GRAPH::GRAPH(GRAPH & g) :
 {
 	m_edge_hash_size = g.m_edge_hash_size;
 	m_vex_hash_size = g.m_vex_hash_size;
-	m_pool = NULL;
+	m_ec_pool = NULL;
 	init();
 	clone(g);
 }
 
 
-void * GRAPH::xmalloc(ULONG size)
-{
-	IS_TRUE(m_pool != NULL, ("not init"));
-	void * p = smpool_malloc_h(size, m_pool);
-	IS_TRUE0(p);
-	memset(p, 0, size);
-	return p;
-}
-
-
 void GRAPH::init()
 {
-	if (m_pool != NULL) { return; }
-	m_pool = smpool_create_handle((m_edge_hash_size + m_vex_hash_size) / 2,
-								   MEM_COMM);
-	IS_TRUE(m_pool != NULL, ("create mem pool failed"));
+	if (m_ec_pool != NULL) { return; }
+
+	m_ec_pool = smpool_create_handle(sizeof(EDGE_C), MEM_CONST_SIZE);
+	IS_TRUE(m_ec_pool, ("create mem pool failed"));
+
+	m_vertex_pool = smpool_create_handle(sizeof(VERTEX) * 4, MEM_CONST_SIZE);
+	IS_TRUE(m_vertex_pool, ("create mem pool failed"));
+
+	m_edge_pool = smpool_create_handle(sizeof(EDGE) * 4, MEM_CONST_SIZE);
+	IS_TRUE(m_edge_pool, ("create mem pool failed"));
 
 	//If m_edges already initialized, this call will do nothing.
 	m_edges.init(this, m_edge_hash_size);
@@ -100,15 +96,13 @@ void GRAPH::init()
 }
 
 
-/*
-Reconstruct vertex hash table, and edge hash table with new bucket size.
+/* Reconstruct vertex hash table, and edge hash table with new bucket size.
 'vertex_hash_sz': new vertex table size to be resized.
 'edge_hash_sz': new edge table size to be resized.
-NOTE: mem pool should have been initialized.
-*/
+NOTE: mem pool should have been initialized. */
 void GRAPH::resize(UINT vertex_hash_sz, UINT edge_hash_sz)
 {
-	IS_TRUE0(m_pool);
+	IS_TRUE0(m_ec_pool);
 	IS_TRUE(m_vertices.get_elem_count() == 0, ("graph is not empty"));
 	IS_TRUE(m_edges.get_elem_count() == 0, ("graph is not empty"));
 
@@ -137,7 +131,9 @@ UINT GRAPH::count_mem() const
 	count += m_e_free_list.count_mem();
 	count += m_el_free_list.count_mem();
 	count += m_v_free_list.count_mem();
-	count += smpool_get_pool_size_handle(m_pool);
+	count += smpool_get_pool_size_handle(m_ec_pool);
+	count += smpool_get_pool_size_handle(m_vertex_pool);
+	count += smpool_get_pool_size_handle(m_edge_pool);
 	if (m_dense_vertex != NULL) {
 		count += m_dense_vertex->count_mem();
 	}
@@ -147,7 +143,7 @@ UINT GRAPH::count_mem() const
 
 void GRAPH::destroy()
 {
-	if (m_pool == NULL) return;
+	if (m_ec_pool == NULL) return;
 	m_edges.destroy();
 	m_vertices.destroy();
 
@@ -157,8 +153,16 @@ void GRAPH::destroy()
 	m_e_free_list.clean(); //edge free list
 	m_el_free_list.clean(); //edge-list free list
 	m_v_free_list.clean(); //vertex free list
-	smpool_free_handle(m_pool);
-	m_pool = NULL;
+
+	smpool_free_handle(m_ec_pool);
+	m_ec_pool = NULL;
+
+	smpool_free_handle(m_vertex_pool);
+	m_vertex_pool = NULL;
+
+	smpool_free_handle(m_edge_pool);
+	m_edge_pool = NULL;
+
 	if (m_dense_vertex != NULL) {
 		delete m_dense_vertex;
 		m_dense_vertex = NULL;
@@ -172,7 +176,7 @@ except for mempool, freelist.
 */
 void GRAPH::erasure()
 {
-	IS_TRUE(m_pool != NULL, ("Graph must be initialized before clone."));
+	IS_TRUE(m_ec_pool != NULL, ("Graph must be initialized before clone."));
 	//Collect edge, vertex data structure into free-list
 	//for allocation on demand.
 	INT c;
@@ -191,11 +195,9 @@ void GRAPH::erasure()
 }
 
 
-/*
-Sort vertice by rporder, and update rpo of vertex.
+/* Sort vertice by rporder, and update rpo of vertex.
 Record sorted vertex into vlst in incremental order of rpo.
-NOTE: rpo start at 1, and 0 means undefined.
-*/
+NOTE: rpo start at 1, and 0 means undefined. */
 void GRAPH::compute_rpo_norec(VERTEX * root, OUT LIST<VERTEX*> & vlst)
 {
 	IS_TRUE0(root && is_graph_entry(root));
@@ -269,9 +271,11 @@ bool GRAPH::clone(GRAPH & src)
 //NOTE: Do NOT use 0 as vertex id.
 VERTEX * GRAPH::new_vertex(UINT vid)
 {
-	IS_TRUE(m_pool != NULL, ("not yet initialized."));
+	IS_TRUE(m_vertex_pool, ("not yet initialized."));
 	IS_TRUE(vid != 0, ("Do not use 0 as vertex id"));
+
 	VERTEX * vex = NULL;
+
 	#ifndef ALWAYS_VERTEX_UNIQUE
 	if (m_is_unique)
 	#endif
@@ -281,9 +285,16 @@ VERTEX * GRAPH::new_vertex(UINT vid)
 			return v;
 		}
 	}
+
 	vex = m_v_free_list.get_free_elem();
-	vex = (vex == NULL) ? (VERTEX*)xmalloc(sizeof(VERTEX)) : vex;
+	if (vex == NULL) {
+		vex = (VERTEX*)smpool_malloc_h_const_size(sizeof(VERTEX),
+												  m_vertex_pool);
+		IS_TRUE0(vex);
+		memset(vex, 0, sizeof(VERTEX));
+	}
 	VERTEX_id(vex) = vid;
+
 	if (m_dense_vertex != NULL) {
 		IS_TRUE0(m_dense_vertex->get(vid) == NULL);
 		m_dense_vertex->set(vid, vex);
@@ -292,23 +303,9 @@ VERTEX * GRAPH::new_vertex(UINT vid)
 }
 
 
-EDGE * GRAPH::new_edge_c(VERTEX * from, VERTEX * to)
-{
-	EDGE * e = m_e_free_list.get_free_elem();
-	if (e == NULL) {
-		e = (EDGE*)xmalloc(sizeof(EDGE));
-	}
-	EDGE_from(e) = from;
-	EDGE_to(e) = to;
-	add_in_list(to, e);
-	add_out_list(from, e);
-	return e;
-}
-
-
 EDGE * GRAPH::new_edge(VERTEX * from, VERTEX * to)
 {
-	IS_TRUE(m_pool != NULL, ("not yet initialized."));
+	IS_TRUE(m_ec_pool != NULL, ("not yet initialized."));
 	if (from == NULL || to == NULL) return NULL;
 	EDGE teste;
 	VERTEX testfrom, testto;
@@ -333,14 +330,14 @@ EDGE * GRAPH::new_edge(VERTEX * from, VERTEX * to)
 		}
 		IS_TRUE0(0);
 	}
-	return m_edges.append(new_edge_c(from, to));
+	return m_edges.append(new_edge_impl(from, to));
 }
 
 
 //Reverse edge direction
 EDGE * GRAPH::rev_edge(EDGE * e)
 {
-	IS_TRUE(m_pool != NULL, ("not yet initialized."));
+	IS_TRUE(m_ec_pool != NULL, ("not yet initialized."));
 	IS_TRUE(m_is_direction, ("graph is indirection"));
 	void * einfo = EDGE_info(e);
 	VERTEX * from = EDGE_from(e);
@@ -355,7 +352,7 @@ EDGE * GRAPH::rev_edge(EDGE * e)
 //Reverse all edge direction
 void GRAPH::rev_edges()
 {
-	IS_TRUE(m_pool != NULL, ("not yet initialized."));
+	IS_TRUE(m_ec_pool != NULL, ("not yet initialized."));
 	IS_TRUE(m_is_direction, ("graph is indirection"));
 	LIST<EDGE*> list;
 	EDGE * e;
@@ -366,49 +363,6 @@ void GRAPH::rev_edges()
 	for (e = list.get_head(); e != NULL; e = list.get_next()) {
 		rev_edge(e);
 	}
-}
-
-
-EDGE_C * GRAPH::new_ec(EDGE * e)
-{
-	IS_TRUE(m_pool != NULL, ("not yet initialized."));
-	if (e == NULL) return NULL;
-	EDGE_C * el = m_el_free_list.get_free_elem();
-	el = (el == NULL) ? (EDGE_C*)xmalloc(sizeof(EDGE_C)) : el;
-	EC_edge(el) = e;
-	return el;
-}
-
-
-//Add 'e' into in-edges of 'vex'
-void GRAPH::add_in_list(VERTEX * vex, EDGE * e)
-{
-	IS_TRUE(m_pool != NULL, ("not yet initialized."));
-	if (vex == NULL || e == NULL) return;
-
-	EDGE_C * el = VERTEX_in_list(vex);
-	while (el != NULL) {
-		if (EC_edge(el) == e) return;
-		el = EC_next(el);
-	}
-	el = new_ec(e);
-	add_next(&VERTEX_in_list(vex), el);
-}
-
-
-//Add 'e' into out-edges of 'vex'
-void GRAPH::add_out_list(VERTEX * vex, EDGE * e)
-{
-	IS_TRUE(m_pool != NULL, ("not yet initialized."));
-	if (vex == NULL || e == NULL)return;
-
-	EDGE_C * el = VERTEX_out_list(vex);
-	while (el != NULL) {
-		if (EC_edge(el) == e) return;
-		el = EC_next(el);
-	}
-	el = new_ec(e);
-	add_next(&VERTEX_out_list(vex), el);
 }
 
 
@@ -450,7 +404,7 @@ void GRAPH::insert_vertex_between(UINT v1, UINT v2, UINT newv,
 
 EDGE * GRAPH::remove_edge(EDGE * e)
 {
-	IS_TRUE(m_pool != NULL, ("not yet initialized."));
+	IS_TRUE(m_ec_pool != NULL, ("not yet initialized."));
 	if (e == NULL) return NULL;
 	VERTEX * from = EDGE_from(e);
 	VERTEX * to = EDGE_to(e);
@@ -484,7 +438,7 @@ EDGE * GRAPH::remove_edge(EDGE * e)
 
 VERTEX * GRAPH::remove_vertex(VERTEX * vex)
 {
-	IS_TRUE(m_pool != NULL, ("not yet initialized."));
+	IS_TRUE(m_ec_pool != NULL, ("not yet initialized."));
 	if (vex == NULL) return NULL;
 	EDGE_C * el = VERTEX_out_list(vex);
 	//remove all out-edge
@@ -519,7 +473,7 @@ Return false if 'vid' is not on graph.
 */
 bool GRAPH::get_neighbor_list(OUT LIST<UINT> & ni_list, UINT vid) const
 {
-	IS_TRUE(m_pool != NULL, ("not yet initialized."));
+	IS_TRUE(m_ec_pool != NULL, ("not yet initialized."));
 	UINT degree = 0;
 
 	//Ensure VERTEX_HASH::find is readonly.
@@ -558,7 +512,7 @@ Return false if 'vid' is not on graph.
 */
 bool GRAPH::get_neighbor_set(OUT SBITSET & niset, UINT vid) const
 {
-	IS_TRUE(m_pool != NULL, ("not yet initialized."));
+	IS_TRUE(m_ec_pool != NULL, ("not yet initialized."));
 	UINT degree = 0;
 
 	//Ensure VERTEX_HASH::find is readonly.
@@ -585,7 +539,7 @@ bool GRAPH::get_neighbor_set(OUT SBITSET & niset, UINT vid) const
 
 UINT GRAPH::get_degree(VERTEX const* vex) const
 {
-	IS_TRUE(m_pool != NULL, ("not yet initialized."));
+	IS_TRUE(m_ec_pool != NULL, ("not yet initialized."));
 	if (vex == NULL) return 0;
 	return get_in_degree(vex) + get_out_degree(vex);
 }
@@ -593,7 +547,7 @@ UINT GRAPH::get_degree(VERTEX const* vex) const
 
 UINT GRAPH::get_in_degree(VERTEX const* vex) const
 {
-	IS_TRUE(m_pool != NULL, ("not yet initialized."));
+	IS_TRUE(m_ec_pool != NULL, ("not yet initialized."));
 	if (vex == NULL) { return 0; }
 	UINT degree = 0;
 	EDGE_C * el = VERTEX_in_list(vex);
@@ -607,7 +561,7 @@ UINT GRAPH::get_in_degree(VERTEX const* vex) const
 
 UINT GRAPH::get_out_degree(VERTEX const* vex) const
 {
-	IS_TRUE(m_pool != NULL, ("not yet initialized."));
+	IS_TRUE(m_ec_pool != NULL, ("not yet initialized."));
 	if (vex == NULL) { return 0; }
 
 	UINT degree = 0;
@@ -622,7 +576,7 @@ UINT GRAPH::get_out_degree(VERTEX const* vex) const
 
 EDGE * GRAPH::get_edge(VERTEX const* from, VERTEX const* to)
 {
-	IS_TRUE(m_pool != NULL, ("not yet initialized."));
+	IS_TRUE(m_ec_pool != NULL, ("not yet initialized."));
 	if (from == NULL || to == NULL) { return NULL; }
 
 	EDGE_C * el = VERTEX_out_list(from);
@@ -654,7 +608,7 @@ EDGE * GRAPH::get_edge(VERTEX const* from, VERTEX const* to)
 
 EDGE * GRAPH::get_edge(UINT from, UINT to)
 {
-	IS_TRUE(m_pool != NULL, ("not yet initialized."));
+	IS_TRUE(m_ec_pool != NULL, ("not yet initialized."));
 	VERTEX * fp = get_vertex(from);
 	VERTEX * tp = get_vertex(to);
 	return get_edge(fp, tp);
@@ -715,7 +669,7 @@ bool GRAPH::is_equal(GRAPH & g)
 //Is there exist a path connect 'from' and 'to'.
 bool GRAPH::is_reachable(VERTEX * from, VERTEX * to)
 {
-	IS_TRUE(m_pool != NULL, ("not yet initialized."));
+	IS_TRUE(m_ec_pool != NULL, ("not yet initialized."));
 	IS_TRUE(from != NULL && to != NULL, ("parameters cannot be NULL"));
 	EDGE_C * el = VERTEX_out_list(from);
 	EDGE * e = NULL;
@@ -750,7 +704,7 @@ NOTE: current graph will be empty at function return.
 */
 bool GRAPH::sort_in_toplog_order(OUT SVECTOR<UINT> & vex_vec, bool is_topdown)
 {
-	IS_TRUE(m_pool != NULL, ("Graph still not yet initialize."));
+	IS_TRUE(m_ec_pool != NULL, ("Graph still not yet initialize."));
 	if (get_vertex_num() == 0) {
 		return true;
 	}
@@ -962,7 +916,7 @@ void GRAPH::dump_dot(CHAR const* name)
 
 void GRAPH::dump_vcg(CHAR const* name)
 {
-	IS_TRUE(m_pool != NULL, ("not yet initialized."));
+	IS_TRUE(m_ec_pool != NULL, ("not yet initialized."));
 	if (name == NULL) {
 		name = "graph.vcg";
 	}
@@ -1356,7 +1310,7 @@ bool DGRAPH::compute_dom2(LIST<VERTEX*> const& vlst)
 {
 	C<VERTEX*> * ct;
 	BITSET avail;
-	for (VERTEX * v = vlst.get_head_c(&ct); v != NULL; v = vlst.get_next(&ct)) {
+	for (VERTEX * v = vlst.get_head(&ct); v != NULL; v = vlst.get_next(&ct)) {
 		BITSET * doms = get_dom_set(VERTEX_id(v));
 		doms->clean();
 		IS_TRUE0(doms);
@@ -1396,7 +1350,7 @@ bool DGRAPH::compute_idom2(LIST<VERTEX*> const& vlst)
 		change = false;
 		//Access with topological order.
 		C<VERTEX*> * ct;
-		for (VERTEX * v = vlst.get_head_c(&ct);
+		for (VERTEX * v = vlst.get_head(&ct);
 			 v != NULL; v = vlst.get_next(&ct)) {
 			INT cur_id = VERTEX_id(v);
 			if (is_graph_entry(v)) {
@@ -1470,7 +1424,7 @@ bool DGRAPH::compute_idom2(LIST<VERTEX*> const& vlst)
 	}
 
 	C<VERTEX*> * ct;
-	for (VERTEX * v = vlst.get_head_c(&ct); v != NULL; v = vlst.get_next(&ct)) {
+	for (VERTEX * v = vlst.get_head(&ct); v != NULL; v = vlst.get_next(&ct)) {
 		if (is_graph_entry(v)) {
 			m_idom_set.set(VERTEX_id(v), 0);
 			nentry--;
@@ -1623,7 +1577,7 @@ Dump dom set, pdom set, idom, ipdom.
 void DGRAPH::dump_dom(FILE * h, bool dump_dom_tree)
 {
 	if (h == NULL) return;
-	fprintf(h, "\n\n\n\n========= DUMP DOM/PDOM/IDOM/IPDOM =======");
+	fprintf(h, "\n\n\n\n==---- DUMP DOM/PDOM/IDOM/IPDOM ----==");
 	INT c;
 	for (VERTEX * v = m_vertices.get_first(c);
 		 v != NULL; v = m_vertices.get_next(c)) {

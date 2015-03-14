@@ -30,6 +30,7 @@ typedef enum {
 #define LABEL_INFO_is_catch_start(l)	((l)->u2.s1.is_catch_start)
 #define LABEL_INFO_is_try_start(l)		((l)->u2.s1.is_try_start)
 #define LABEL_INFO_is_try_end(l)		((l)->u2.s1.is_try_end)
+#define LABEL_INFO_is_unreachable(l)	((l)->u2.s1.is_unreachable)
 #define LABEL_INFO_is_pragma(l)			(LABEL_INFO_type(l) == L_PRAGMA)
 #define LABEL_INFO_b1(l)				((l)->u2.b1)
 class LABEL_INFO {
@@ -43,12 +44,22 @@ public:
 	union {
 		struct {
 			BYTE is_used:1;
-			BYTE is_catch_start:1; //Set if current label is the start
-								   //label of exception catch block.
-			BYTE is_try_start:1;   //Set if current label is the start
-								   //label of exception try block.
-			BYTE is_try_end:1;	   //Set if current label is the end
-								   //label of exception try block.
+
+			//Set true if current label is the start
+			//label of exception catch block.
+			BYTE is_catch_start:1;
+
+			//Set true if current label is the start
+			//label of exception try block.
+			BYTE is_try_start:1;
+
+			//Set true if current label is the end
+			//label of exception try block.
+			BYTE is_try_end:1;
+
+			//Set true if current label is a placeholer to indicate that
+			//program control flow is terminate here.
+			BYTE is_unreachable:1;
 		} s1;
 		BYTE b1;
 	} u2;
@@ -62,10 +73,8 @@ public:
 };
 
 
-/*
-Exported Functions
-Simplest method to compute hash value.
-*/
+//Exported Functions
+//Simplest method to compute hash value.
 inline INT lab_hash_value(LABEL_INFO const* li)
 {
 	INT v = 0;

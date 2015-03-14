@@ -45,9 +45,12 @@ typedef enum {
 	MEM_NONE = 0,
 	MEM_COMM,     //can be realloc, free
 	MEM_VOLATILE, //can be realloc , but free is forbidded
+	MEM_CONST_SIZE, //the element in the pool should be in same size.
 } MEMPOOLTYPE;
 
 
+
+#define MEMPOOL_type(p)					((p)->pool_type)
 #define MEMPOOL_next(p)					((p)->next)
 #define MEMPOOL_prev(p)					((p)->prev)
 #define MEMPOOL_id(p)					((p)->mpt_id)
@@ -59,6 +62,7 @@ typedef enum {
 #define MEMPOOL_chunk_id(p)				((p)->chunk_id)
 #endif
 typedef struct _mem_pool {
+	MEMPOOLTYPE pool_type;
 	struct _mem_pool * next;
 	struct _mem_pool * prev;
 	MEMPOOLIDX mpt_id; //identification of mem pool
@@ -86,6 +90,7 @@ INT smpool_free_handle(SMEM_POOL * handle);
 //alloc memory from corresponding mem pool
 void * smpool_malloc_i(ULONG size, MEMPOOLIDX mpt_idx, UINT grow_size = 0);
 void * smpool_malloc_h(ULONG size, SMEM_POOL * handle, UINT grow_size = 0);
+void * smpool_malloc_h_const_size(ULONG elem_size, IN SMEM_POOL * handler);
 
 //Get whole pool size with byte
 ULONG smpool_get_pool_size_idx(MEMPOOLIDX mpt_idx);
