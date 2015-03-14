@@ -44,12 +44,12 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 /*
 Host integer and float point type.
-e.g: Build XOCC on x8664, HOST_INT_TYPE should be 64bit.
-Or build XOCC on ARM, HOST_INT_TYPE should be 32bit,
+e.g: Build XOCC on x8664, HOST_INT should be 64bit.
+Or build XOCC on ARM, HOST_INT should be 32bit,
 of course 64bit is ok if you want.
 */
-#define HOST_INT_TYPE LONGLONG
-#define HOST_FP_TYPE double
+#define HOST_INT LONGLONG
+#define HOST_FP double
 
 
 //Const float-point byte size.

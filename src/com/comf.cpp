@@ -234,14 +234,14 @@ INT sgcd(INT x, INT y)
 }
 
 
-//Least common multiple
+//Least common multiple.
 INT slcm(INT x, INT y)
 {
 	return x*y/sgcd(x,y);
 }
 
 
-INT gcdm(UINT num, SVECTOR<INT> const& a)
+INT gcdm(UINT num, SVECTOR<INT, 8> const& a)
 {
 	if (num == 0) {
 		return 0;
@@ -416,7 +416,9 @@ LONG xatol(CHAR const* nptr, bool is_oct)
 	if (nptr[0] == '0' && (nptr[1] == 'x' || nptr[1] == 'X')) { //hex
 		nptr += 2;
 		UCHAR c = *nptr;
-		while ((c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F')) {
+		while ((c >= 'a' && c <= 'f') ||
+			   (c >= 'A' && c <= 'F') ||
+			   (c >= '0' && c <= '9')) {
 			if (c >= '0' && c <= '9') {
 				res = 16 * res + c - '0';
 			} else if (c >= 'A' && c <= 'F') {

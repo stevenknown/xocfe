@@ -384,4 +384,3 @@ RATIONAL operator + (RATIONAL const& a, RATIONAL const& b)
 	rat.m_den = rden;
 	return rat;
 }
-

@@ -31,8 +31,6 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define NO_BASIC_MAT_DUMP //Default option
 #define MAX_SHASH_BUCKET 97 //Default option
 
-template <class T> class SVECTOR;
-
 /*
 Structure chain operations.
 For easing implementation, there must be 2 fields declared by T
@@ -93,7 +91,8 @@ inline void add_next(T ** pheader, T * t)
 template <class T>
 inline void add_next(IN OUT T ** pheader, IN OUT T ** last, IN T * t)
 {
-	if (pheader == NULL || t == NULL) return ;
+	if (pheader == NULL || t == NULL) { return ; }
+
 	t->prev = NULL;
 	if ((*pheader) == NULL) {
 		*pheader = t;
@@ -164,7 +163,7 @@ inline T * removehead(T ** pheader)
 template <class T>
 inline T * removetail(T ** pheader)
 {
-	if (pheader == NULL || *pheader == NULL) return NULL;
+	if (pheader == NULL || *pheader == NULL) { return NULL; }
 	T * t = *pheader;
 	while (t->next != NULL) { t = t->next; }
 	remove(pheader, t);
@@ -175,7 +174,7 @@ inline T * removetail(T ** pheader)
 template <class T>
 inline void remove(T ** pheader, T * t)
 {
-	if (pheader == NULL || t == NULL) return;
+	if (pheader == NULL || t == NULL) { return; }
 	if (t == *pheader) {
 		*pheader = t->next;
 		if (*pheader != NULL) {
@@ -225,17 +224,17 @@ inline void insertbefore_one(T ** head, T * marker, T * t)
 
 
 /*
-Insert elems 't' before 'marker', 't' is the leading elements of inserted list.
+Insert a list that leading by 't' before 'marker'.
 
 'head': function might modify the header of list.
-'t': elements to insert. It might be a list.
+'t': the head element of list, that to be inserted.
 */
 template <class T>
 inline void insertbefore(T ** head, T * marker, T * t)
 {
-	if (t == NULL) return;
+	if (t == NULL) { return; }
 	IS_TRUE(head, ("absent parameter"));
-	if (t == marker) return;
+	if (t == marker) { return; }
 	if (*head == NULL) {
 		IS_TRUE(marker == NULL, ("marker must be NULL"));
 		*head = t;
@@ -244,13 +243,13 @@ inline void insertbefore(T ** head, T * marker, T * t)
 
 	if (marker == *head) {
 		//'marker' is head, and replace head.
-		T * first = get_first(t);
+		IS_TRUE(t->prev == NULL, ("t is not the first element"));
 		add_next(&t, *head);
-		*head = first;
+		*head = t;
 		return;
 	}
 
-	IS_TRUE(marker->prev != NULL, ("marker is head"));
+	IS_TRUE(marker->prev != NULL, ("marker should not be head"));
 	if (marker->prev != NULL) {
 		marker->prev->next = t;
 		t->prev = marker->prev;
@@ -334,9 +333,15 @@ inline T * reverse_list(T * t)
 #define C_prev(c)   ((c)->prev)
 template <class T> class C {
 public:
-   C<T> * prev;
-   C<T> * next;
-   T val;
+	C<T> * prev;
+	C<T> * next;
+	T val;
+
+	C()
+	{
+		prev = next = NULL;
+		val = T(0);
+	}
 };
 
 
@@ -345,8 +350,13 @@ public:
 #define SC_next(c)   ((c)->next)
 template <class T> class SC {
 public:
-   SC<T> * next;
-   T v;
+	SC<T> * next;
+	T v;
+	SC()
+	{
+		next = NULL;
+		v = T(0);
+	}
 };
 
 
@@ -366,123 +376,80 @@ For easing implementation, there are 2 fields should be declared in T,
 */
 template <class T>
 class FREE_LIST {
-protected:
-	T * m_free_list;
-	bool m_is_clean;
 public:
-	FREE_LIST();
-	~FREE_LIST();
-	inline void add_free_elem(T * t);
-	inline T * get_free_elem();
-	inline void set_clean(bool is_clean);
-	inline void free_system_memory();
-	inline void clean();
-	inline UINT count_mem() const { return sizeof(FREE_LIST<T>); }
+	T * m_tail;
+	bool m_is_clean;
+
+	FREE_LIST()
+	{
+		m_is_clean = true;
+		m_tail = NULL;
+	}
+
+	~FREE_LIST()
+	{ m_tail = NULL; }
+
+	UINT count_mem() const { return sizeof(FREE_LIST<T>); }
+
+	//Note the element in list should be freed by user.
+	void clean()
+	{ m_tail = NULL; }
+
+	//True if invoke memset when user query free element.
+	void set_clean(bool is_clean)
+	{ m_is_clean = is_clean; }
+
+	//Add t to tail of the list.
+	//Do not clean t's content.
+	inline void add_free_elem(T * t)
+	{
+		if (t == NULL) {return;}
+		IS_TRUE0(t->next == NULL && t->prev == NULL); //clean by user.
+		if (m_tail == NULL) {
+			m_tail = t;
+			return;
+		}
+		t->prev = m_tail;
+		m_tail->next = t;
+		m_tail = t;
+	}
+
+	//Remove an element from tail of list.
+	inline T * get_free_elem()
+	{
+		if (m_tail == NULL) { return NULL; }
+		T * t = m_tail;
+		m_tail = m_tail->prev;
+		if (m_tail != NULL) {
+			IS_TRUE0(t->next == NULL);
+			m_tail->next = NULL;
+			m_is_clean ? memset(t, 0, sizeof(T)) : t->prev = NULL;
+		} else {
+			IS_TRUE0(t->prev == NULL && t->next == NULL);
+			if (m_is_clean) {
+				memset(t, 0, sizeof(T));
+			}
+		}
+		return t;
+	}
 };
+//END FREE_LIST
 
-
-template <class T>
-FREE_LIST<T>::FREE_LIST()
-{
-	m_is_clean = true;
-	m_free_list = NULL;
-}
-
-
-template <class T>
-FREE_LIST<T>::~FREE_LIST()
-{
-	m_free_list = NULL;
-}
-
-
-template <class T>
-void FREE_LIST<T>::set_clean(bool is_clean)
-{
-	m_is_clean = is_clean;
-}
-
-
-template <class T>
-void FREE_LIST<T>::add_free_elem(T * t)
-{
-	if (t == NULL) {return;}
-	if (m_free_list == NULL) {
-		m_free_list = t;
-		m_free_list->next = m_free_list->prev = NULL;
-		return;
-	}
-	t->prev = m_free_list;
-	m_free_list->next = t;
-	m_free_list = t;
-	m_free_list->next = NULL;
-}
-
-
-template <class T>
-T * FREE_LIST<T>::get_free_elem()
-{
-	T * t = NULL;
-	if (m_free_list == NULL) { return NULL; }
-	if (m_free_list->prev == NULL) {
-		//it is the last one.
-		t = m_free_list;
-		m_free_list = NULL;
-	    goto FIN;
-	}
-	t = m_free_list;
-	m_free_list = m_free_list->prev;
-	m_free_list->next = NULL;
-FIN:
-	m_is_clean ? memset(t, 0, sizeof(T)) : t->next = t->prev = NULL;
-	return t;
-}
-
-
-template <class T>
-void FREE_LIST<T>::clean()
-{
-	m_free_list = NULL;
-}
-
-
-//NOTE: the list elements should NOT be freed again by other functions.
-template <class T>
-void FREE_LIST<T>::free_system_memory()
-{
-	if (m_free_list == NULL) {
-		return;
-	}
-	while (m_free_list != NULL) {
-		T * t = m_free_list;
-		m_free_list = m_free_list->prev;
-		::free(t);
-	}
-	m_free_list = NULL;
-}
 
 
 /*
-LIST
+Dual Linked List.
 
 NOTICE:
-	The following 3 operations are the key points which you should
-	attention to:
+	The following operations are the key points which you should
+	pay attention to:
 	1.	If you REMOVE one element, its container will be collect by FREE-LIST.
 		So if you need a new container, please check the FREE-LIST first,
 		accordingly, you should first invoke 'get_free_list' which get free
 		containers out from 'm_free_list'.
-  	2.	If you want to invoke APPEND, please call 'newXXX' first to
+  	2.	If you want to invoke APPEND, please call 'newc' first to
 		allocate a new container memory space, record your elements in
 		container, then APPEND it at list.
-		newXXX such as:
-			T * newXXX(INT type)
-			{
-				T * t = get_free_T();
-				if (t == 0) { t = (T*)malloc(sizeof(T)); }
-				T_type(c) = type;
-				return t;
-			}
 */
 template <class T> class LIST {
 private:
@@ -490,902 +457,902 @@ private:
 	void operator = (LIST const&)
 	{ IS_TRUE(0, ("Do not invoke copy-constructor.")); }
 protected:
-	SMEM_POOL * m_free_list_pool;
-	INT m_elem_count;
+	UINT m_elem_count;
 	C<T> * m_head;
 	C<T> * m_tail;
-	C<T> * m_cur;
-	C<T> * m_start_pt; //starting pos of list that to be used in next searching
-	FREE_LIST<C<T> > m_free_list; //Hold for available containers
 
-	void * _xmalloc(ULONG size)
+	//It is a marker that used internally by LIST. Some function will
+	//update the variable, see comments.
+	C<T> * m_cur;
+
+	//Starting pos of list that to be used in next searching, which is
+	//used internally by LIST.
+	C<T> * m_start_pt;
+
+	//Hold the freed containers for next request.
+	FREE_LIST<C<T> > m_free_list;
+
+	bool in_list(C<T> const* p) const
 	{
-		IS_TRUE(m_free_list_pool != NULL, ("LIST not yet initialized."));
-		void * p = smpool_malloc_h(size, m_free_list_pool);
-		IS_TRUE0(p != NULL);
-		memset(p, 0, size);
-		return p;
+		if (p == NULL) { return true; }
+		C<T> const* t = m_head;
+		while (t != NULL) {
+			if (t == p) { return true; }
+			t = C_next(t);
+		}
+		return false;
 	}
 public:
-	LIST()
-	{
-		m_free_list_pool = NULL;
-		init();
-	}
+	LIST() { init(); }
 	~LIST() { destroy(); }
 
 	void init()
 	{
-		if (m_free_list_pool != NULL) return;
 		m_elem_count = 0;
 		m_head = m_tail = m_cur = m_start_pt = NULL;
-		m_free_list_pool = smpool_create_handle(sizeof(C<T>), MEM_COMM);
 		m_free_list.clean();
-		m_free_list.set_clean(true);
+		m_free_list.set_clean(false);
 	}
 
 	void destroy()
 	{
-		if (m_free_list_pool == NULL) return;
-		smpool_free_handle(m_free_list_pool);
-		m_free_list_pool = NULL;
+		C<T> * ct = m_free_list.m_tail;
+		while (ct != NULL) {
+			C<T> * t = ct;
+			ct = ct->prev;
+			delete t;
+		}
+		ct = m_head;
+		while (ct != NULL) {
+			C<T> * t = ct;
+			ct = ct->next;
+			delete t;
+		}
+		m_free_list.clean();
 		m_elem_count = 0;
 		m_head = m_tail = m_cur = m_start_pt = NULL;
 	}
-	inline C<T> * newc();
-	inline C<T> * append_tail(T t);
-	inline void append_tail(IN LIST<T> & list);
-	inline C<T> * append_head(T t);
-	inline void append_head(IN LIST<T> & list);
-	inline void append_tail(IN C<T> * c);
-	inline void append_head(IN C<T> * c);
 
-	inline void clean();
-	inline void copy(IN LIST<T> & src);
-	inline UINT count_mem() const;
-
-	inline C<T> * insert_before(T t, T marker);
-	inline C<T> * insert_before(T t, IN C<T> * marker);
-	inline void insert_before(IN C<T> * c, IN C<T> * marker);
-	inline void insert_before(IN LIST<T> & list, T marker,
-							  OUT C<T> ** list_head_ct,
-							  OUT C<T> ** list_tail_ct);
-	inline void insert_before(IN LIST<T> & list, IN C<T> * marker,
-							  OUT C<T> ** list_head_ct,
-							  OUT C<T> ** list_tail_ct);
-	inline C<T> * insert_after(T t, T marker);
-	inline C<T> * insert_after(T t, IN C<T> * marker);
-	inline void insert_after(IN C<T> * c, IN C<T> * marker);
-	inline void insert_after(IN LIST<T> & list, T marker,
-							 OUT C<T> ** list_head_ct,
-							 OUT C<T> ** list_tail_ct);
-	inline void insert_after(IN LIST<T> & list, IN C<T> * marker,
-							 OUT C<T> ** list_head_ct,
-							 OUT C<T> ** list_tail_ct);
-
-	UINT get_elem_count() const
+	inline C<T> * newc()
 	{
-		IS_TRUE(m_free_list_pool != NULL, ("LIST not yet initialized."));
-		return m_elem_count;
+		C<T> * c = m_free_list.get_free_elem();
+		if (c == NULL) {
+			return new C<T>();
+		} else {
+			C_val(c) = T(0);
+		}
+		return c;
 	}
-	inline T get_tail(OUT C<T> ** holder = NULL); //update 'm_cur'
-	inline T get_head(OUT C<T> ** holder = NULL); //update 'm_cur'
-	inline T get_tail_c(OUT C<T> ** holder = NULL) const; //not update 'm_cur'
-	inline T get_head_c(OUT C<T> ** holder = NULL) const; //not update 'm_cur'
-	inline T get_cur() //not update 'm_cur'
+
+	//Clean list, and add element containers to free list.
+	void clean()
 	{
-		IS_TRUE(m_free_list_pool != NULL, ("LIST not yet initialized."));
-		if (m_cur == NULL) return T(0);
+		C<T> * c = m_head;
+		while (c != NULL) {
+			C<T> * next = C_next(c);
+			C_prev(c) = C_next(c) = NULL;
+			m_free_list.add_free_elem(c);
+			c = next;
+		}
+		m_elem_count = 0;
+		m_head = m_tail = m_cur = m_start_pt = NULL;
+	}
+
+	void copy(IN LIST<T> & src)
+	{
+		clean();
+		T t = src.get_head();
+		for (INT n = src.get_elem_count(); n > 0; n--) {
+			append_tail(t);
+			t = src.get_next();
+		}
+	}
+
+	UINT count_mem() const
+	{
+		UINT count = 0;
+		count += sizeof(m_elem_count);
+		count += sizeof(m_head);
+		count += sizeof(m_tail);
+		count += sizeof(m_cur);
+		count += sizeof(m_start_pt);
+		count += m_free_list.count_mem();
+
+		C<T> * ct = m_free_list.m_tail;
+		while (ct != NULL) {
+			count += sizeof(C<T>);
+			ct = ct->next;
+		}
+
+		ct = m_head;
+		while (ct != NULL) {
+			count += sizeof(C<T>);
+			ct = ct->next;
+		}
+		return count;
+	}
+
+	C<T> * append_tail(T t)
+	{
+		C<T> * c = newc();
+		IS_TRUE(c != NULL, ("newc return NULL"));
+		C_val(c) = t;
+		append_tail(c);
+		return c;
+	}
+
+	void append_tail(C<T> * c)
+	{
+		if (m_head == NULL) {
+			IS_TRUE(m_tail == NULL, ("tail should be NULL"));
+			m_head = m_tail = c;
+			C_next(m_head) = C_prev(m_head) = NULL;
+			m_elem_count = 1;
+			return;
+		}
+		C_prev(c) = m_tail;
+		C_next(m_tail) = c;
+		m_tail = c;
+		IS_TRUE0(C_next(c) == NULL);
+		m_elem_count++;
+		return;
+	}
+
+
+	//This function will remove all elements in 'src' and
+	//append to current list tail.
+	//Note 'src' will be clean.
+	void append_tail(IN OUT LIST<T> & src)
+	{
+		if (src.m_head == NULL) { return; }
+		if (m_tail == NULL) {
+			m_head = src.m_head;
+			m_tail = src.m_tail;
+			m_elem_count = src.m_elem_count;
+			src.m_head = NULL;
+			src.m_tail = NULL;
+			src.m_elem_count = 0;
+			return;
+		}
+
+		C_next(m_tail) = src.m_head;
+		C_prev(src.m_head) = m_tail;
+		m_elem_count += src.m_elem_count;
+
+		IS_TRUE0(src.m_tail != NULL);
+		m_tail = src.m_tail;
+
+		src.m_head = NULL;
+		src.m_tail = NULL;
+		src.m_elem_count = 0;
+	}
+
+	void append_and_copy_to_tail(LIST<T> const& src)
+	{
+		C<T> * t = src.m_head;
+		if (t == NULL) { return; }
+
+		if (m_head == NULL) {
+			C<T> * c  = newc();
+			IS_TRUE0(c);
+			C_val(c) = C_val(t);
+
+			IS_TRUE(m_tail == NULL, ("tail should be NULL"));
+			m_head = m_tail = c;
+			IS_TRUE0(C_next(c) == NULL && C_prev(c) == NULL);
+			t = C_next(t);
+		}
+
+		for (; t != T(0); t = C_next(t)) {
+			C<T> * c  = newc();
+			IS_TRUE0(c);
+			C_val(c) = C_val(t);
+			C_prev(c) = m_tail;
+			C_next(m_tail) = c;
+			m_tail = c;
+		}
+		C_next(m_tail) = NULL;
+		m_elem_count += src.get_elem_count();
+	}
+
+	C<T> * append_head(T t)
+	{
+		C<T> * c  = newc();
+		IS_TRUE(c != NULL, ("newc return NULL"));
+		C_val(c) = t;
+		append_head(c);
+		return c;
+	}
+
+	void append_head(C<T> * c)
+	{
+		if (m_head == NULL) {
+			IS_TRUE(m_tail == NULL, ("tail should be NULL"));
+			m_head = m_tail = c;
+			C_next(m_head) = C_prev(m_head) = NULL;
+			m_elem_count = 1;
+			return;
+		}
+		C_next(c) = m_head;
+		C_prev(m_head) = c;
+		m_head = c;
+
+		IS_TRUE0(C_prev(c) == NULL);
+		//C_prev(m_head) = NULL;
+
+		m_elem_count++;
+		return;
+	}
+
+	//This function will remove all elements in 'src' and
+	//append to current list head.
+	//Note 'src' will be clean.
+	void append_head(IN OUT LIST<T> & src)
+	{
+		if (src.m_head == NULL) { return; }
+		if (m_tail == NULL) {
+			m_head = src.m_head;
+			m_tail = src.m_tail;
+			m_elem_count = src.m_elem_count;
+			src.m_head = NULL;
+			src.m_tail = NULL;
+			src.m_elem_count = 0;
+			return;
+		}
+
+		IS_TRUE0(src.m_tail != NULL);
+		C_prev(m_head) = src.m_tail;
+		C_next(src.m_tail) = m_head;
+		m_elem_count += src.m_elem_count;
+		m_head = src.m_head;
+		src.m_head = NULL;
+		src.m_tail = NULL;
+		src.m_elem_count = 0;
+	}
+
+	//This function copy all elements in 'src' and
+	//append to current list head.
+	void append_and_copy_to_head(LIST<T> const& src)
+	{
+		C<T> * t = src.m_tail;
+		if (t == NULL) { return; }
+
+		if (m_head == NULL) {
+			C<T> * c  = newc();
+			IS_TRUE0(c);
+			C_val(c) = C_val(t);
+
+			IS_TRUE(m_tail == NULL, ("tail should be NULL"));
+			m_head = m_tail = c;
+			IS_TRUE0(C_next(c) == NULL && C_prev(c) == NULL);
+			t = C_prev(t);
+		}
+
+		for (; t != T(0); t = C_prev(t)) {
+			C<T> * c  = newc();
+			IS_TRUE0(c);
+			C_val(c) = C_val(t);
+			C_next(c) = m_head;
+			C_prev(m_head) = c;
+			m_head = c;
+		}
+		C_prev(m_head) = NULL;
+		m_elem_count += src.get_elem_count();
+	}
+
+	C<T> * insert_before(T t, T marker)
+	{
+		IS_TRUE(t != marker, ("element of list cannot be identical"));
+		if (m_head == NULL || marker == C_val(m_head)) {
+			return append_head(t);
+		}
+
+		C<T> * c = newc();
+		IS_TRUE0(c);
+		C_val(c) = t;
+
+		IS_TRUE0(m_tail);
+		if (marker == C_val(m_tail)) {
+			if (C_prev(m_tail) != NULL) {
+				C_next(C_prev(m_tail)) = c;
+				C_prev(c) = C_prev(m_tail);
+			}
+			C_next(c) = m_tail;
+			C_prev(m_tail) = c;
+		} else {
+			//find marker
+			C<T> * mc = m_head;
+			while (mc != NULL) {
+				if (C_val(mc) == marker) {
+					break;
+				}
+				mc = C_next(mc);
+			}
+			if (mc == NULL) { return NULL; }
+
+			if (C_prev(mc) != NULL) {
+				C_next(C_prev(mc)) = c;
+				C_prev(c) = C_prev(mc);
+			}
+			C_next(c) = mc;
+			C_prev(mc) = c;
+		}
+		m_elem_count++;
+		return c;
+	}
+
+	//Insert 'c' into list before the 'marker'.
+	void insert_before(IN C<T> * c, IN C<T> * marker)
+	{
+		IS_TRUE0(marker && c && C_prev(c) == NULL && C_next(c) == NULL);
+		if (c == marker) { return; }
+		IS_TRUE0(m_tail && in_list(marker));
+		if (C_prev(marker) != NULL) {
+			C_next(C_prev(marker)) = c;
+			C_prev(c) = C_prev(marker);
+		}
+		C_next(c) = marker;
+		C_prev(marker) = c;
+		m_elem_count++;
+		if (marker == m_head) {
+
+			m_head = c;
+		}
+	}
+
+	//Insert 't' into list before the 'marker'.
+	C<T> * insert_before(T t, IN C<T> * marker)
+	{
+		C<T> * c = newc();
+		IS_TRUE(c != NULL, ("newc return NULL"));
+		C_val(c) = t;
+		insert_before(c, marker);
+		return c;
+	}
+
+	//Insert 'src' before 'marker', and return the CONTAINER
+	//of src head and src tail.
+	//This function move all element in 'src' into current list.
+	void insert_before(IN OUT LIST<T> & src,
+						IN C<T> * marker,
+						OUT C<T> ** list_head_ct = NULL,
+						OUT C<T> ** list_tail_ct = NULL)
+	{
+		if (src.m_head == NULL) { return; }
+		IS_TRUE0(m_head && marker && in_list(marker));
+		IS_TRUE0(src.m_tail);
+
+		if (C_prev(marker) != NULL) {
+			C_next(C_prev(marker)) = src.m_head;
+			C_prev(src.m_head) = C_prev(marker);
+		}
+		C_next(src.m_tail) = marker;
+		C_prev(marker) = src.m_tail;
+		m_elem_count += src.m_elem_count;
+		if (marker == m_head) {
+			m_head = src.m_head;
+		}
+
+		if (list_head_ct != NULL) {
+			*list_head_ct = src.m_head;
+		}
+		if (list_tail_ct != NULL) {
+			*list_tail_ct = src.m_tail;
+		}
+
+		src.m_head = NULL;
+		src.m_tail = NULL;
+		src.m_elem_count = 0;
+	}
+
+	//Insert 'list' before 'marker', and return the CONTAINER
+	//of list head and list tail.
+	void insert_and_copy_before(IN LIST<T> const& list, T marker,
+								OUT C<T> ** list_head_ct = NULL,
+								OUT C<T> ** list_tail_ct = NULL)
+	{
+		C<T> * ct = NULL;
+		find(marker, &ct);
+		insert_before(list, ct, list_head_ct, list_tail_ct);
+	}
+
+	//Insert 'list' before 'marker', and return the CONTAINER
+	//of list head and list tail.
+	void insert_and_copy_before(IN LIST<T> const& list, IN C<T> * marker,
+								OUT C<T> ** list_head_ct = NULL,
+								OUT C<T> ** list_tail_ct = NULL)
+	{
+		if (list.m_head == NULL) { return; }
+		IS_TRUE0(marker);
+		C<T> * list_ct = list.m_tail;
+		marker = insert_before(C_val(list_ct), marker);
+		if (list_tail_ct != NULL) {
+			*list_tail_ct = marker;
+		}
+		list_ct = C_prev(list_ct);
+		C<T> * prev_ct = marker;
+
+		for (; list_ct != NULL; list_ct = C_prev(list_ct)) {
+			marker = insert_before(C_val(list_ct), marker);
+			prev_ct = marker;
+		}
+
+		if (list_head_ct != NULL) {
+			*list_head_ct = prev_ct;
+		}
+	}
+
+	C<T> * insert_after(T t, T marker)
+	{
+		IS_TRUE(t != marker,("element of list cannot be identical"));
+		if (m_tail == NULL || marker == C_val(m_tail)) {
+			append_tail(t);
+			return m_tail;
+		}
+		IS_TRUE(m_head != NULL, ("Tail is non empty, but head is NULL!"));
+		C<T> * c = newc();
+		IS_TRUE(c != NULL, ("newc return NULL"));
+		C_val(c) = t;
+		if (marker == C_val(m_head)) {
+			if (C_next(m_head) != NULL) {
+				C_prev(C_next(m_head)) = c;
+				C_next(c) = C_next(m_head);
+			}
+			C_prev(c) = m_head;
+			C_next(m_head) = c;
+		} else {
+			//find marker
+			C<T> * mc = m_head;
+			while (mc != NULL) {
+				if (C_val(mc) == marker) {
+					break;
+				}
+				mc = C_next(mc);
+			}
+			if (mc == NULL) return NULL;
+			if (C_next(mc) != NULL) {
+				C_prev(C_next(mc)) = c;
+				C_next(c) = C_next(mc);
+			}
+			C_prev(c) = mc;
+			C_next(mc) = c;
+		}
+		m_elem_count++;
+		return c;
+	}
+
+	//Insert 'c' into list after the 'marker'.
+	void insert_after(IN C<T> * c, IN C<T> * marker)
+	{
+		IS_TRUE0(marker && c && C_prev(c) == NULL && C_next(c) == NULL);
+		if (c == marker) { return; }
+
+		IS_TRUE0(m_head && in_list(marker));
+		if (C_next(marker) != NULL) {
+			C_prev(C_next(marker)) = c;
+			C_next(c) = C_next(marker);
+		}
+		C_prev(c) = marker;
+		C_next(marker) = c;
+		if (marker == m_tail) {
+			m_tail = c;
+		}
+		m_elem_count++;
+	}
+
+	//Insert 't' into list after the 'marker'.
+	C<T> * insert_after(T t, IN C<T> * marker)
+	{
+		C<T> * c = newc();
+		IS_TRUE(c != NULL, ("newc return NULL"));
+		C_val(c) = t;
+		insert_after(c, marker);
+		return c;
+	}
+
+	//Insert 'src' after 'marker', and return the CONTAINER
+	//of src head and src tail.
+	//This function move all element in 'src' into current list.
+	void insert_after(IN OUT LIST<T> & src, IN C<T> * marker,
+					OUT C<T> ** list_head_ct = NULL,
+					OUT C<T> ** list_tail_ct = NULL)
+	{
+		if (src.m_head == NULL) { return; }
+		IS_TRUE0(m_head && marker && in_list(marker));
+		IS_TRUE0(src.m_tail);
+
+		if (C_next(marker) != NULL) {
+			C_prev(C_next(marker)) = src.m_tail;
+			C_next(src.m_tail) = C_next(marker);
+		}
+		C_prev(src.m_head) = marker;
+		C_next(marker) = src.m_head;
+		m_elem_count += src.m_elem_count;
+		if (marker == m_tail) {
+			m_tail = src.m_tail;
+		}
+
+		if (list_head_ct != NULL) {
+			*list_head_ct = src.m_head;
+		}
+		if (list_tail_ct != NULL) {
+			*list_tail_ct = src.m_tail;
+		}
+
+		src.m_head = NULL;
+		src.m_tail = NULL;
+		src.m_elem_count = 0;
+	}
+
+	//Insert 'list' after 'marker', and return the CONTAINER
+	//of list head and list tail.
+	void insert_and_copy_after(IN LIST<T> const& list, T marker,
+							OUT C<T> ** list_head_ct = NULL,
+							OUT C<T> ** list_tail_ct = NULL)
+	{
+		C<T> * ct = NULL;
+		find(marker, &ct);
+		insert_after(list, ct, list_head_ct, list_tail_ct);
+	}
+
+	//Insert 'list' after 'marker', and return the CONTAINER
+	//of head and tail of members in 'list'.
+	void insert_and_copy_after(IN LIST<T> const& list, IN C<T> * marker,
+							OUT C<T> ** list_head_ct = NULL,
+							OUT C<T> ** list_tail_ct = NULL)
+	{
+		if (list.m_head == NULL) { return; }
+		IS_TRUE0(marker);
+		C<T> * list_ct = list.m_head;
+		marker = insert_after(C_val(list_ct), marker);
+		if (list_head_ct != NULL) {
+			*list_head_ct = marker;
+		}
+		list_ct = C_next(list_ct);
+		C<T> * prev_ct = marker;
+
+		for (; list_ct != NULL; list_ct = C_next(list_ct)) {
+			marker = insert_after(C_val(list_ct), marker);
+			prev_ct = marker;
+		}
+
+		if (list_tail_ct != NULL) {
+			*list_tail_ct = prev_ct;
+		}
+	}
+
+	UINT get_elem_count() const { return m_elem_count; }
+
+	T get_cur() const
+	{
+		if (m_cur == NULL) { return T(0); }
 		return C_val(m_cur);
 	}
-	inline T get_cur(IN OUT C<T> ** holder); //not update 'm_cur'
-	inline T get_next(); //update 'm_cur'
-	inline T get_prev(); //update 'm_cur'
-	inline T get_next(IN OUT C<T> ** holder) const; //not update 'm_cur'
-	inline T get_prev(IN OUT C<T> ** holder) const; //not update 'm_cur'
-	inline T get_tail_nth(INT n, IN OUT C<T> ** holder = NULL);
-	inline T get_head_nth(INT n, IN OUT C<T> ** holder = NULL);
-	inline bool find(T t, OUT C<T> ** holder = NULL);
 
-	inline void reverse();
-	inline T remove(T t);
-	inline T remove(IN C<T> * holder);
-	inline T remove_tail();
-	inline T remove_head();
+	//Return m_cur and related container, and it does not modify m_cur.
+	T get_cur(IN OUT C<T> ** holder) const
+	{
+		if (m_cur == NULL) {
+			*holder = NULL;
+			return T(0);
+		}
+		IS_TRUE0(holder != NULL);
+		*holder = m_cur;
+		return C_val(m_cur);
+	}
+
+	//Get tail of list, return the CONTAINER.
+	//This function does not modify m_cur.
+	T get_tail(OUT C<T> ** holder) const
+	{
+		IS_TRUE0(holder);
+		*holder = m_tail;
+		if (m_tail != NULL) {
+			return C_val(m_tail);
+		}
+		return T(0);
+	}
+
+	//Get tail of list, return the CONTAINER.
+	//This function will modify m_cur.
+	T get_tail()
+	{
+		m_cur = m_tail;
+		if (m_tail != NULL) {
+			return C_val(m_tail);
+		}
+		return T(0);
+	}
+
+	//Get head of list, return the CONTAINER.
+	//This function will modify m_cur.
+	T get_head()
+	{
+		m_cur = m_head;
+		if (m_head != NULL) {
+			return C_val(m_head);
+		}
+		return T(0);
+	}
+
+	//Get head of list, return the CONTAINER.
+	//This function does not modify m_cur.
+	T get_head(OUT C<T> ** holder) const
+	{
+		IS_TRUE0(holder);
+		*holder = m_head;
+		if (m_head != NULL) {
+			return C_val(m_head);
+		}
+		return T(0);
+	}
+
+	//Get element next to m_cur.
+	//This function will modify m_cur.
+	T get_next()
+	{
+		if (m_cur == NULL || m_cur->next == NULL) {
+			m_cur = NULL;
+			return T(0);
+		}
+		m_cur = m_cur->next;
+		return C_val(m_cur);
+	}
+
+	//Get element previous to m_cur.
+	//This function will modify m_cur.
+	T get_prev()
+	{
+		if (m_cur == NULL || m_cur->prev == NULL) {
+			m_cur = NULL;
+			return T(0);
+		}
+		m_cur = m_cur->prev;
+		return C_val(m_cur);
+	}
+
+	//Return list member and update holder to next member.
+	//This function does not modify m_cur.
+	T get_next(IN OUT C<T> ** holder) const
+	{
+		IS_TRUE0(holder != NULL);
+		C<T> * c = *holder;
+		if (c == NULL || C_next(c) == NULL) {
+			*holder = NULL;
+			return T(0);
+		}
+		c  = C_next(c);
+		*holder = c;
+		return C_val(c);
+	}
+
+	//Return list member and update holder to prev member.
+	//This function does not modify m_cur.
+	T get_prev(IN OUT C<T> ** holder) const
+	{
+		C<T> * c = *holder;
+		IS_TRUE0(holder != NULL);
+		if (c == NULL || C_prev(c) == NULL) {
+			*holder = NULL;
+			return T(0);
+		}
+		c  = C_prev(c);
+		*holder = c;
+		return C_val(c);
+	}
+
+	//Get element for nth at tail.
+	//'n': starting at 0.
+	//This function will modify m_cur.
+	T get_tail_nth(UINT n, IN OUT C<T> ** holder = NULL)
+	{
+		IS_TRUE(n < m_elem_count,("Access beyond list"));
+		m_cur = NULL;
+		if (m_elem_count == 0) return T(0);
+		C<T> * c;
+		if (n <= (m_elem_count>>1)) {// n<floor(elem_count,2)
+			c = m_tail;
+			while (n > 0) {
+				c = C_prev(c);
+				n--;
+			}
+		} else {
+			return get_head_nth(m_elem_count - n - 1);
+		}
+		m_cur = c;
+		if (holder != NULL) {
+			*holder = c;
+		}
+		return C_val(c);
+	}
+
+	//Get element for nth at head.
+	//'n': getting start with zero.
+	//This function will modify m_cur.
+	T get_head_nth(UINT n, IN OUT C<T> ** holder = NULL)
+	{
+		IS_TRUE(n < m_elem_count,("Access beyond list"));
+		m_cur = NULL;
+		if (m_head == NULL) {
+			return T(0);
+		}
+		C<T> * c;
+		if (n <= (m_elem_count>>1)) {// n<floor(elem_count,2)
+			c = m_head;
+			while (n > 0) {
+				c = C_next(c);
+				n--;
+			}
+		} else {
+			return get_tail_nth(m_elem_count - n - 1);
+		}
+		m_cur = c;
+		if (holder != NULL) {
+			*holder = c;
+		}
+		return C_val(c);
+	}
+
+	bool find(IN T t, OUT C<T> ** holder = NULL)
+	{
+		C<T> * c = m_head;
+		while (c != NULL) {
+			if (C_val(c) == t) {
+				if (holder	!= NULL) {
+					*holder = c;
+				}
+				return true;
+			}
+			c = C_next(c);
+		}
+		if (holder	!= NULL) {
+			*holder = NULL;
+		}
+		return false;
+	}
+
+	//Reverse list.
+	void reverse()
+	{
+		C<T> * next_ct;
+		for (C<T> * ct = m_head; ct != NULL; ct = next_ct) {
+			next_ct = ct->next;
+			ct->next = ct->prev;
+			ct->prev = next_ct;
+		}
+		next_ct = m_head;
+		m_head = m_tail;
+		m_tail = next_ct;
+	}
+
+	//Remove from list directly.
+	T remove(C<T> * holder)
+	{
+		IS_TRUE0(holder);
+		if (holder == m_cur) {
+			m_cur = m_cur->next;
+		}
+		IS_TRUE(m_head != NULL, ("list is empty"));
+		if (m_head == holder) {
+			return remove_head();
+		}
+		if (m_tail == holder) {
+			return remove_tail();
+		}
+		IS_TRUE(C_prev(holder) != NULL &&
+				C_next(holder) != NULL, ("illegal t in list"));
+		m_start_pt = C_next(holder); //recording next search point
+		C_next(C_prev(holder)) = C_next(holder);
+		C_prev(C_next(holder)) = C_prev(holder);
+		m_elem_count--;
+		C_prev(holder) = C_next(holder) = NULL;
+		m_free_list.add_free_elem(holder);
+		return C_val(holder);
+	}
+
+	//Remove from list, and searching for 't' begin at head
+	T remove(T t)
+	{
+		if (m_head == NULL) return T(0);
+		if (C_val(m_head) == t) {
+			return remove_head();
+		}
+		if (C_val(m_tail) == t) {
+			return remove_tail();
+		}
+
+		C<T> * c;
+		if (m_start_pt != NULL) {
+			//Searching for element where starting at the point be visited latest.
+			c = m_start_pt;
+			while (c != NULL) {
+				if (C_val(c) == t) { break; }
+				c = C_next(c);
+			}
+			if (c == NULL) {
+				c = C_prev(m_start_pt);
+				while (c != NULL) {
+					if (C_val(c) == t) { break; }
+					c = C_prev(c);
+				}
+			}
+		} else {
+			c = m_head;
+			while (c != NULL) {
+				if (C_val(c) == t) { break; }
+				c = C_next(c);
+			}
+		}
+		if (c == NULL) return T(0);
+		return remove(c);
+	}
+
+	//Remove from tail.
+	T remove_tail()
+	{
+		if (m_tail == NULL) { return T(0); }
+
+		C<T> * c = NULL;
+		if (C_prev(m_tail) == NULL) {
+			//tail is the only one
+			IS_TRUE(m_tail == m_head && m_elem_count == 1,
+					("illegal list-remove"));
+			c = m_tail;
+			m_head = m_tail = m_cur = NULL;
+		} else {
+			c = m_tail;
+			if (m_cur == m_tail) {
+				m_cur = C_prev(m_tail);
+			}
+			m_tail = C_prev(m_tail);
+			C_next(m_tail) = NULL;
+			C_prev(c) = NULL;
+		}
+
+		m_start_pt = m_head;
+		m_elem_count--;
+		m_free_list.add_free_elem(c);
+		return C_val(c);
+	}
+
+	//Remove from head.
+	T remove_head()
+	{
+		C<T> * c = NULL;
+		if (m_head == NULL) { return T(0); }
+		if (C_next(m_head) == NULL) {
+			//list_head is the only one
+			IS_TRUE(m_tail == m_head && m_elem_count == 1,
+					("illegal list-remove"));
+			c = m_head;
+			m_head = m_tail = m_cur = NULL;
+		} else {
+			c = m_head;
+			if (m_cur == m_head) {
+				m_cur = C_next(m_head);
+			}
+			m_head = C_next(m_head);
+			C_prev(m_head) = NULL;
+			C_prev(c) = C_next(c) = NULL;
+		}
+
+		m_start_pt = m_head;
+		m_free_list.add_free_elem(c);
+		m_elem_count--;
+		return C_val(c);
+	}
 };
 
 
-template <class T>
-UINT LIST<T>::count_mem() const
-{
-	UINT count = smpool_get_pool_size_handle(m_free_list_pool);
-	count += sizeof(m_elem_count);
-	count += sizeof(m_head);
-	count += sizeof(m_tail);
-	count += sizeof(m_cur);
-	count += sizeof(m_start_pt);
-	count += m_free_list.count_mem();
-	return count;
-}
-
-
-template <class T>
-C<T> * LIST<T>::newc()
-{
-	IS_TRUE(m_free_list_pool != NULL, ("LIST not yet initialized."));
-	C<T> * c = m_free_list.get_free_elem();
-	if (c == NULL) {
-		c = (C<T>*)_xmalloc(sizeof(C<T>));
-	}
-	return c;
-}
-
-
-template <class T>
-C<T> * LIST<T>::append_tail(T t)
-{
-	IS_TRUE(m_free_list_pool != NULL, ("LIST not yet initialized."));
-	C<T> * c  = newc();
-	IS_TRUE(c != NULL, ("newc return NULL"));
-	C_val(c) = t;
-	append_tail(c);
-	return c;
-}
-
-
-template <class T>
-void LIST<T>::append_tail(C<T> * c)
-{
-	IS_TRUE(m_free_list_pool != NULL, ("LIST not yet initialized."));
-	if (m_head == NULL) {
-		IS_TRUE(m_tail == NULL, ("tail should be NULL"));
-		m_head = m_tail = c;
-		C_next(m_head) = C_prev(m_head) =
-		C_next(m_tail) = C_prev(m_tail) = NULL;
-		m_elem_count++;
-		return;
-	}
-	C_prev(c) = m_tail;
-	C_next(m_tail) = c;
-	m_tail = c;
-	C_next(m_tail) = NULL;
-	m_elem_count++;
-	return;
-}
-
-
-template <class T>
-void LIST<T>::append_tail(LIST<T> & list)
-{
-	IS_TRUE(m_free_list_pool != NULL && list.m_free_list_pool != NULL,
-			("LIST not yet initialized."));
-	for (T t = list.get_head(); t != T(0); t = list.get_next()) {
-		append_tail(t);
-	}
-}
-
-
-template <class T>
-C<T> * LIST<T>::append_head(T t)
-{
-	IS_TRUE(m_free_list_pool != NULL, ("LIST not yet initialized."));
-	C<T> * c  = newc();
-	IS_TRUE(c != NULL, ("newc return NULL"));
-	C_val(c) = t;
-	append_head(c);
-	return c;
-}
-
-
-template <class T>
-void LIST<T>::append_head(C<T> * c)
-{
-	IS_TRUE(m_free_list_pool != NULL, ("LIST not yet initialized."));
-	if (m_head == NULL) {
-		IS_TRUE(m_tail == NULL, ("tail should be NULL"));
-		m_head = m_tail = c;
-		C_next(m_head) = C_prev(m_head) = NULL;
-		m_elem_count++;
-		return;
-	}
-	C_next(c) = m_head;
-	C_prev(m_head) = c;
-	m_head = c;
-	C_prev(m_head) = NULL;
-	m_elem_count++;
-    return;
-}
-
-
-template <class T>
-void LIST<T>::append_head(LIST<T> & list)
-{
-	IS_TRUE(m_free_list_pool != NULL && list.m_free_list_pool != NULL,
-			("LIST not yet initialized."));
-	for (T t = list.get_tail(); t != T(0); t = list.get_prev()) {
-		append_head(t);
-	}
-}
-
-
-template <class T>
-bool LIST<T>::find(IN T t, OUT C<T> ** holder)
-{
-	IS_TRUE(m_free_list_pool != NULL, ("LIST not yet initialized."));
-	C<T> * c = m_head;
-	while (c != NULL) {
-		if (C_val(c) == t) {
-			if (holder  != NULL) {
-				*holder = c;
-			}
-			return true;
-		}
-		c = C_next(c);
-	}
-	if (holder  != NULL) {
-		*holder = NULL;
-	}
-	return false;
-}
-
-
-//Reverse list.
-template <class T>
-void LIST<T>::reverse()
-{
-	C<T> * next_ct;
-	for (C<T> * ct = m_head; ct != NULL; ct = next_ct) {
-		next_ct = ct->next;
-		ct->next = ct->prev;
-		ct->prev = next_ct;
-	}
-	next_ct = m_head;
-	m_head = m_tail;
-	m_tail = next_ct;
-}
-
-
-//Remove from list directly.
-template <class T>
-T LIST<T>::remove(C<T> * holder)
-{
-	IS_TRUE(m_free_list_pool != NULL, ("LIST not yet initialized."));
-	IS_TRUE0(holder);
-	if (holder == m_cur) {
-		m_cur = m_cur->next;
-	}
-	IS_TRUE(m_head != NULL, ("list is empty"));
-	if (m_head == holder) {
-		return remove_head();
-	}
-	if (m_tail == holder) {
-		return remove_tail();
-	}
-	IS_TRUE(C_prev(holder) != NULL &&
-			C_next(holder) != NULL, ("illegal t in list"));
-	m_start_pt = C_next(holder); //recording next search point
-	C_next(C_prev(holder)) = C_next(holder);
-	C_prev(C_next(holder)) = C_prev(holder);
-	m_elem_count--;
-	T t = C_val(holder);
-	m_free_list.add_free_elem(holder);
-	return t;
-}
-
-
-//Remove from list, and searching for 't' begin at head
-template <class T>
-T LIST<T>::remove(T t)
-{
-	IS_TRUE(m_free_list_pool != NULL, ("LIST not yet initialized."));
-	if (m_head == NULL) return T(0);
-	if (C_val(m_head) == t) {
-		return remove_head();
-	}
-	if (C_val(m_tail) == t) {
-		return remove_tail();
-	}
-
-	C<T> * c;
-	if (m_start_pt != NULL) {
-		//Searching for element where starting at the point be visited latest.
-		c = m_start_pt;
-		while (c != NULL) {
-			if (C_val(c) == t) { break; }
-			c = C_next(c);
-		}
-		if (c == NULL) {
-			c = C_prev(m_start_pt);
-			while (c != NULL) {
-				if (C_val(c) == t) { break; }
-				c = C_prev(c);
-			}
-		}
-	} else {
-		c = m_head;
-		while (c != NULL) {
-			if (C_val(c) == t) { break; }
-			c = C_next(c);
-		}
-	}
-	if (c == NULL) return T(0);
-	return remove(c);
-}
-
-
-//Remove from tail
-template <class T>
-T LIST<T>::remove_tail()
-{
-	IS_TRUE(m_free_list_pool != NULL, ("LIST not yet initialized."));
-	C<T> * c = NULL;
-	if (m_tail == NULL) { return T(0); }
-	if (C_prev(m_tail) == NULL) {
-		//list_tail is the only one
-		IS_TRUE(m_tail == m_head && m_elem_count == 1,
-				("illegal list-remove"));
-		c = m_tail;
-		m_head = m_tail = m_cur = NULL;
-		goto FREE_COLLECT;
-	}
-	c = m_tail;
-	if (m_cur == m_tail) {
-		m_cur = C_prev(m_tail);
-	}
-	m_tail = C_prev(m_tail);
-	C_next(m_tail) = NULL;
-
-FREE_COLLECT:
-	m_start_pt = m_head;
-	T t = C_val(c);
-	m_elem_count--;
-	m_free_list.add_free_elem(c);
-	return t;
-}
-
-
-//Remove from head
-template <class T>
-T LIST<T>::remove_head()
-{
-	IS_TRUE(m_free_list_pool != NULL, ("LIST not yet initialized."));
-	C<T> * c = NULL;
-	if (m_head == NULL) { return T(0); }
-	if (C_next(m_head) == NULL) {
-		//list_head is the only one
-		IS_TRUE(m_tail == m_head && m_elem_count == 1,
-				("illegal list-remove"));
-		c = m_head;
-		m_head = m_tail = m_cur = NULL;
-		goto FREE_COLLECT;
-	}
-	c = m_head;
-	if (m_cur == m_head) {
-		m_cur = C_next(m_head);
-	}
-	m_head = C_next(m_head);
-	C_prev(m_head) = NULL;
-
-FREE_COLLECT:
-	m_start_pt = m_head;
-	T t = C_val(c);
-	m_free_list.add_free_elem(c);
-	m_elem_count--;
-	return t;
-}
-
-
-template <class T>
-void LIST<T>::copy(IN LIST<T> & src)
-{
-	clean();
-	T t = src.get_head();
-	for (INT n = src.get_elem_count(); n > 0; n--) {
-		append_tail(t);
-		t = src.get_next();
-	}
-}
-
 
 /*
-Clean list, recycle element container, instead of
-free memory.
-*/
-template <class T>
-void LIST<T>::clean()
-{
-	IS_TRUE(m_free_list_pool != NULL, ("LIST not yet initialized."));
-	C<T> * c = m_head;
-	while (c != NULL) {
-		C<T> * next = C_next(c);
-		m_free_list.add_free_elem(c);
-		c = next;
-	}
-	m_elem_count = 0;
-	m_head = m_tail = m_cur = m_start_pt = NULL;
-}
+Single Linked LIST Core.
 
+Encapsulate most operations for single list.
 
-template <class T>
-C<T> * LIST<T>::insert_before(T t, T marker)
-{
-	IS_TRUE(m_free_list_pool != NULL, ("LIST not yet initialized."));
-	IS_TRUE(t != marker,("element of list cannot be identical"));
-	if (m_head == NULL || marker == C_val(m_head)) {
-		append_head(t);
-		return m_head;
-	}
-	C<T> * c = newc();
-	IS_TRUE(c != NULL, ("newc return NULL"));
-	C_val(c) = t;
-	IS_TRUE(m_tail != NULL, ("head is not empty, but tail is NULL!"));
-	if (marker == C_val(m_tail)) {
-		if (C_prev(m_tail) != NULL) {
-			C_next(C_prev(m_tail)) = c;
-			C_prev(c) = C_prev(m_tail);
-		}
-		C_next(c) = m_tail;
-		C_prev(m_tail) = c;
-	} else {
-		//find marker
-		C<T> * mc = m_head;
-		while (mc != NULL) {
-			if (C_val(mc) == marker) {
-				break;
-			}
-			mc = C_next(mc);
-		}
-		if (mc == NULL) return NULL;
-		if (C_prev(mc) != NULL) {
-			C_next(C_prev(mc)) = c;
-			C_prev(c) = C_prev(mc);
-		}
-		C_next(c) = mc;
-		C_prev(mc) = c;
-	}
-	m_elem_count++;
-	return c;
-}
-
-
-//Insert 'c' into list before the 'marker'.
-template <class T>
-void LIST<T>::insert_before(IN C<T> * c, IN C<T> * marker)
-{
-	IS_TRUE(m_free_list_pool != NULL, ("LIST not yet initialized."));
-	if (marker == NULL || c == NULL) {
-		return;
-	}
-	if (c == marker) return;
-	if (m_head == NULL || marker == m_head) {
-		append_head(c);
-		return;
-	}
-	IS_TRUE(m_tail, ("head is not empty, but tail is NULL!"));
-	if (C_prev(marker) != NULL) {
-		C_next(C_prev(marker)) = c;
-		C_prev(c) = C_prev(marker);
-	}
-	C_next(c) = marker;
-	C_prev(marker) = c;
-	m_elem_count++;
-}
-
-
-//Insert 't' into list before the 'marker'.
-template <class T>
-C<T> * LIST<T>::insert_before(T t, IN C<T> * marker)
-{
-	IS_TRUE(m_free_list_pool != NULL, ("LIST not yet initialized."));
-	C<T> * c = newc();
-	IS_TRUE(c != NULL, ("newc return NULL"));
-	C_val(c) = t;
-	insert_before(c, marker);
-	return c;
-}
-
-
-/*
-Insert 'list' before 'marker', and return the CONTAINER
-of list head and list tail.
-*/
-template <class T>
-void LIST<T>::insert_before(IN LIST<T> & list,
-							T marker,
-							OUT C<T> ** list_head_ct,
-							OUT C<T> ** list_tail_ct)
-{
-	C<T> * ct = NULL;
-	find(marker, &ct);
-	insert_before(list, ct, list_head_ct, list_tail_ct);
-}
-
-
-/*
-Insert 'list' before 'marker', and return the CONTAINER
-of list head and list tail.
-*/
-template <class T>
-void LIST<T>::insert_before(IN LIST<T> & list,
-							IN C<T> * marker,
-							OUT C<T> ** list_head_ct,
-							OUT C<T> ** list_tail_ct)
-{
-	IS_TRUE(m_free_list_pool != NULL, ("LIST not yet initialized."));
-	IS_TRUE0(marker);
-	UINT i = 0;
-	C<T> * head_ct = NULL;
-	C<T> * tail_ct = NULL;
-	UINT n = list.get_elem_count();
-	for (T t = list.get_tail(); i < n; i++, t = list.get_prev()) {
-		marker = insert_before(t, marker);
-		if (i == 0) {
-			tail_ct = marker;
-		} else if (i == n - 1) {
-			head_ct = marker;
-		}
-	}
-	if (list_head_ct != NULL) {
-		*list_head_ct = head_ct;
-	}
-	if (list_tail_ct != NULL) {
-		*list_tail_ct = tail_ct;
-	}
-}
-
-
-template <class T>
-C<T> * LIST<T>::insert_after(T t, T marker)
-{
-	IS_TRUE(m_free_list_pool != NULL, ("LIST not yet initialized."));
-	IS_TRUE(t != marker,("element of list cannot be identical"));
-	if (m_tail == NULL || marker == C_val(m_tail)) {
-		append_tail(t);
-		return m_tail;
-	}
-	IS_TRUE(m_head != NULL, ("Tail is non empty, but head is NULL!"));
-	C<T> * c = newc();
-	IS_TRUE(c != NULL, ("newc return NULL"));
-	C_val(c) = t;
-	if (marker == C_val(m_head)) {
-		if (C_next(m_head) != NULL) {
-			C_prev(C_next(m_head)) = c;
-			C_next(c) = C_next(m_head);
-		}
-		C_prev(c) = m_head;
-		C_next(m_head) = c;
-	} else {
-		//find marker
-		C<T> * mc = m_head;
-		while (mc != NULL) {
-			if (C_val(mc) == marker) {
-				break;
-			}
-			mc = C_next(mc);
-		}
-		if (mc == NULL) return NULL;
-		if (C_next(mc) != NULL) {
-			C_prev(C_next(mc)) = c;
-			C_next(c) = C_next(mc);
-		}
-		C_prev(c) = mc;
-		C_next(mc) = c;
-	}
-	m_elem_count++;
-	return c;
-}
-
-
-//Insert 'c' into list after the 'marker'.
-template <class T>
-void LIST<T>::insert_after(IN C<T> * c, IN C<T> * marker)
-{
-	IS_TRUE(m_free_list_pool != NULL, ("LIST not yet initialized."));
-	if (marker == NULL || c == NULL)
-		return;
-	if (c == marker)
-		return;
-	if (m_tail == NULL || marker == m_tail) {
-		append_tail(c);
-		return;
-	}
-	IS_TRUE(m_head != NULL, ("tail is not empty, but head is NULL!"));
-	if (C_next(marker) != NULL) {
-		C_prev(C_next(marker)) = c;
-		C_next(c) = C_next(marker);
-	}
-	C_prev(c) = marker;
-	C_next(marker) = c;
-	m_elem_count++;
-}
-
-
-//Insert 't' into list after the 'marker'.
-template <class T>
-C<T> * LIST<T>::insert_after(T t, IN C<T> * marker)
-{
-	IS_TRUE(m_free_list_pool != NULL, ("LIST not yet initialized."));
-	C<T> * c = newc();
-	IS_TRUE(c != NULL, ("newc return NULL"));
-	C_val(c) = t;
-	insert_after(c, marker);
-	return c;
-}
-
-
-/*
-Insert 'list' after 'marker', and return the CONTAINER
-of list head and list tail.
-*/
-template <class T>
-void LIST<T>::insert_after(IN LIST<T> & list, T marker,
-						   OUT C<T> ** list_head_ct,
-						   OUT C<T> ** list_tail_ct)
-{
-	IS_TRUE(m_free_list_pool != NULL, ("LIST not yet initialized."));
-	C<T> * ct = NULL;
-	find(marker, &ct);
-	insert_after(list, ct, list_head_ct, list_tail_ct);
-}
-
-
-/*
-Insert 'list' after 'marker', and return the CONTAINER
-of head and tail of members in 'list'.
-*/
-template <class T>
-void LIST<T>::insert_after(IN LIST<T> & list, IN C<T> * marker,
-						   OUT C<T> ** list_head_ct,
-						   OUT C<T> ** list_tail_ct)
-{
-	IS_TRUE(m_free_list_pool != NULL, ("LIST not yet initialized."));
-	IS_TRUE0(marker);
-	UINT i = 0;
-	C<T> * head_ct = NULL;
-	C<T> * tail_ct = NULL;
-	UINT n = list.get_elem_count();
-	for (T t = list.get_head(); i < n;
-		 i++, t = list.get_next()) {
-		marker = insert_after(t, marker);
-		if (i == 0) {
-			head_ct = marker;
-		} else if (i == n - 1) {
-			tail_ct = marker;
-		}
-	}
-	if (list_head_ct) {
-		*list_head_ct = head_ct;
-	}
-	if (list_tail_ct) {
-		*list_tail_ct = tail_ct;
-	}
-}
-
-
-//Get tail of list, return the CONTAINER.
-template <class T>
-T LIST<T>::get_tail(OUT C<T> ** holder)
-{
-	IS_TRUE(m_free_list_pool != NULL, ("LIST not yet initialized."));
-	if (m_head == NULL) {
-		if (holder != NULL) {
-			*holder = NULL;
-		}
-		return T(0);
-	}
-	m_cur = m_tail;
-	if (holder != NULL) {
-		*holder = m_tail;
-	}
-	return C_val(m_tail);
-}
-
-
-/*
-Get tail of list, return the CONTAINER.
-This function will not modify m_cur.
-*/
-template <class T>
-T LIST<T>::get_tail_c(OUT C<T> ** holder) const
-{
-	IS_TRUE(m_free_list_pool != NULL, ("LIST not yet initialized."));
-	if (m_head == NULL) {
-		if (holder != NULL) {
-			*holder = NULL;
-		}
-		return T(0);
-	}
-	if (holder != NULL) {
-		*holder = m_tail;
-	}
-	return C_val(m_tail);
-}
-
-
-/*
-Get head of list, return the CONTAINER.
-This function will not modify m_cur.
-*/
-template <class T>
-T LIST<T>::get_head_c(OUT C<T> ** holder) const
-{
-	IS_TRUE(m_free_list_pool != NULL, ("LIST not yet initialized."));
-	if (m_head == NULL) {
-		if (holder != NULL) {
-			*holder = NULL;
-		}
-		return T(0);
-	}
-	if (holder != NULL) {
-		*holder = m_head;
-	}
-	return C_val(m_head);
-}
-
-
-//Get head of list, return the CONTAINER.
-template <class T>
-T LIST<T>::get_head(OUT C<T> ** holder)
-{
-	IS_TRUE(m_free_list_pool != NULL, ("LIST not yet initialized."));
-	if (m_head == NULL) {
-		if (holder != NULL) {
-			*holder = NULL;
-		}
-		return T(0);
-	}
-	m_cur = m_head;
-	if (holder != NULL) {
-		*holder = m_head;
-	}
-	return C_val(m_head);
-}
-
-
-template <class T>
-T LIST<T>::get_next()
-{
-	IS_TRUE(m_free_list_pool != NULL, ("LIST not yet initialized."));
-	if (m_cur == NULL || m_cur->next == NULL) {
-		m_cur = NULL;
-		return T(0);
-	}
-	m_cur = m_cur->next;
-	return C_val(m_cur);
-}
-
-
-template <class T>
-T LIST<T>::get_prev()
-{
-	IS_TRUE(m_free_list_pool != NULL, ("LIST not yet initialized."));
-	if (m_cur == NULL || m_cur->prev == NULL) {
-		m_cur = NULL;
-		return T(0);
-	}
-	m_cur = m_cur->prev;
-	return C_val(m_cur);
-}
-
-
-template <class T>
-T LIST<T>::get_cur(IN OUT C<T> ** holder)
-{
-	IS_TRUE(m_free_list_pool != NULL, ("LIST not yet initialized."));
-	if (m_cur == NULL) {
-		*holder = NULL;
-		return T(0);
-	}
-	IS_TRUE0(holder != NULL);
-	*holder = m_cur;
-	return C_val(m_cur);
-}
-
-
-/*
-Return list member and update holder to next member.
-NOTICE: 'm_cur' will not be updated.
-*/
-template <class T>
-T LIST<T>::get_next(IN OUT C<T> ** holder) const
-{
-	IS_TRUE(m_free_list_pool != NULL, ("LIST not yet initialized."));
-	IS_TRUE0(holder != NULL);
-	C<T> * c = *holder;
-	if (c == NULL || C_next(c) == NULL) {
-		*holder = NULL;
-		return T(0);
-	}
-	c  = C_next(c);
-	*holder = c;
-	return C_val(c);
-}
-
-
-/*
-Return list member and update holder to prev member.
-NOTICE: 'm_cur' will not be updated.
-*/
-template <class T>
-T LIST<T>::get_prev(IN OUT C<T> ** holder) const
-{
-	IS_TRUE(m_free_list_pool != NULL, ("LIST not yet initialized."));
-	C<T> * c = *holder;
-	IS_TRUE0(holder != NULL);
-	if (c == NULL || C_prev(c) == NULL) {
-		*holder = NULL;
-		return T(0);
-	}
-	c  = C_prev(c);
-	*holder = c;
-	return C_val(c);
-}
-
-
-/*
-Get element for nth at tail.
-'n': starting at 0.
-*/
-template <class T>
-T LIST<T>::get_tail_nth(INT n, IN OUT C<T> ** holder)
-{
-	IS_TRUE(m_free_list_pool != NULL, ("LIST not yet initialized."));
-	IS_TRUE(n >= 0 && n < m_elem_count,("Access beyond list"));
-	m_cur = NULL;
-	if (m_elem_count == 0) return T(0);
-	C<T> * c;
-	if (n <= (m_elem_count>>1)) {// n<floor(elem_count,2)
-		c = m_tail;
-		while (n > 0) {
-			c = C_prev(c);
-			n--;
-		}
-	} else {
-		return get_head_nth(m_elem_count - n - 1);
-	}
-	m_cur = c;
-	if (holder != NULL) {
-		*holder = c;
-	}
-	return C_val(c);
-}
-
-
-/*
-Get element for nth at head.
-'n': getting start with zero.
-*/
-template <class T>
-T LIST<T>::get_head_nth(INT n, IN OUT C<T> ** holder)
-{
-	IS_TRUE(m_free_list_pool != NULL, ("LIST not yet initialized."));
-	IS_TRUE(n >= 0 && n < m_elem_count,("Access beyond list"));
-	m_cur = NULL;
-	if (m_head == NULL) {
-		return T(0);
-	}
-	C<T> * c;
-	if (n <= (m_elem_count>>1)) {// n<floor(elem_count,2)
-		c = m_head;
-		while (n > 0) {
-			c = C_next(c);
-			n--;
-		}
-	} else {
-		return get_tail_nth(m_elem_count - n - 1);
-	}
-	m_cur = c;
-	if (holder != NULL) {
-		*holder = c;
-	}
-	return C_val(c);
-}
-//END LIST
-
-
-/*
-Single LIST Core
-Encapsulate most operations for list.
+Note the single linked list is different with dual linked list,
+the dual linker list does not use mempool to hold the container,
+but single linker list allocate the container in const size pool.
 */
 template <class T> class SLISTC {
 private:
@@ -1397,12 +1364,13 @@ protected:
 	SC<T> * m_head;
 	SC<T> * m_tail;
 
-	void * _xmalloc(ULONG size, SMEM_POOL * pool)
+	SC<T> * new_sc_container(SMEM_POOL * pool)
 	{
-		IS_TRUE(pool != NULL, ("LIST not yet initialized."));
-		void * p = smpool_malloc_h(size, pool);
+		IS_TRUE(pool, ("need mem pool"));
+		IS_TRUE(MEMPOOL_type(pool) == MEM_CONST_SIZE, ("need const size pool"));
+		SC<T> * p = (SC<T>*)smpool_malloc_h_const_size(sizeof(SC<T>), pool);
 		IS_TRUE0(p != NULL);
-		memset(p, 0, size);
+		memset(p, 0, sizeof(SC<T>));
 		return p;
 	}
 
@@ -1417,11 +1385,7 @@ protected:
 		return false;
 	}
 public:
-	SLISTC()
-	{
-		m_elem_count = 0;
-		m_head = m_tail = NULL;
-	}
+	SLISTC() { init(); }
 	~SLISTC() {}
 
 	SC<T> * get_one_sc(SC<T> ** free_list)
@@ -1444,7 +1408,7 @@ public:
 	{
 		SC<T> * c = get_one_sc(free_list);
 		if (c == NULL) {
-			c = (SC<T>*)_xmalloc(sizeof(SC<T>), pool);
+			c = new_sc_container(pool);
 		}
 		return c;
 	}
@@ -1452,7 +1416,7 @@ public:
 	SC<T> * append_tail(T t, SC<T> ** free_list, SMEM_POOL * pool)
 	{
 		SC<T> * c  = newsc(free_list, pool);
-		IS_TRUE(c != NULL, ("newc return NULL"));
+		IS_TRUE(c != NULL, ("newsc return NULL"));
 		SC_val(c) = t;
 		append_tail(c);
 		return c;
@@ -1477,7 +1441,7 @@ public:
 	SC<T> * append_head(T t, SC<T> ** free_list, SMEM_POOL * pool)
 	{
 		SC<T> * c = newsc(free_list, pool);
-		IS_TRUE(c != NULL, ("newc return NULL"));
+		IS_TRUE(c != NULL, ("newsc return NULL"));
 		SC_val(c) = t;
 		append_head(c);
 		return c;
@@ -1512,7 +1476,18 @@ public:
 
 	void clean(SC<T> ** free_list)
 	{
-		SC<T> * c = m_head;
+		IS_TRUE0(free_list);
+		if (m_tail != NULL) {
+			m_tail->next = *free_list;
+			IS_TRUE0(m_head);
+			*free_list = m_head;
+			m_head = m_tail = NULL;
+			m_elem_count = 0;
+		}
+		IS_TRUE0(m_head == m_tail && m_head == NULL &&
+				 m_elem_count == 0);
+
+		/* SC<T> * c = m_head;
 		while (c != NULL) {
 			SC<T> * next = c->next;
 			c->next = NULL;
@@ -1520,7 +1495,7 @@ public:
 			c = next;
 		}
 		m_elem_count = 0;
-		m_head = m_tail = NULL;
+		m_head = m_tail = NULL; */
 	}
 
 	UINT count_mem() const
@@ -1530,6 +1505,13 @@ public:
 		count += sizeof(m_tail);
 		//Do not count SC, they belong to input pool.
 		return count;
+	}
+
+	void init()
+	{
+		m_elem_count = 0;
+		m_head = NULL;
+		m_tail = NULL;
 	}
 
 	//Insert 'c' into list after the 'marker'.
@@ -1655,7 +1637,8 @@ public:
 	{
 		IS_TRUE0(holder);
 		IS_TRUE(m_head != NULL, ("list is empty"));
-		IS_TRUE0(in_list(prev) && in_list(holder));
+		IS_TRUE0(in_list(prev));
+		IS_TRUE0(in_list(holder));
 		if (prev == NULL) {
 			IS_TRUE0(holder == m_head);
 			m_head = m_head->next;
@@ -1715,6 +1698,9 @@ NOTICE:
 				T_type(c) = type;
 				return t;
 			}
+	3.  The single linked list is different with dual linked list,
+		the dual linker list does not use mempool to hold the container,
+		but single linker list allocate the container in const size pool.
 */
 template <class T> class SLIST : public SLISTC<T> {
 private:
@@ -1725,15 +1711,16 @@ protected:
 	SMEM_POOL * m_free_list_pool;
 	SC<T> * m_free_list; //Hold for available containers
 public:
-	SLIST(SMEM_POOL * pool = NULL)
+	SLIST(SMEM_POOL * pool = NULL) { set_pool(pool); }
+	~SLIST() {}
+
+	void set_pool(SMEM_POOL * pool)
 	{
+		IS_TRUE(pool == NULL ||
+				MEMPOOL_type(pool) == MEM_CONST_SIZE, ("need const size pool"));
 		m_free_list_pool = pool;
 		m_free_list = NULL;
 	}
-
-	~SLIST() {}
-
-	void set_pool(SMEM_POOL * pool) { m_free_list_pool = pool; }
 	SMEM_POOL * get_pool() { return m_free_list_pool; }
 
 	SC<T> * append_tail(T t)
@@ -1804,14 +1791,12 @@ public:
 
 
 
-/*
-The Extended LIST
+/* The Extended LIST
 
 Add a hash-mapping table upon LIST in order to speed up the process
 when inserting or removing an element if a 'marker' given.
 
-NOTICE: User must define a mapping class, see Single Valued Mapping.
-*/
+NOTICE: User must define a mapping class bewteen. */
 template <class T, class MAP_T2HOLDER> class ELIST : public LIST<T> {
 protected:
 	MAP_T2HOLDER m_t2holder_map; //map 't' to its LIST HOLDER.
@@ -1819,29 +1804,76 @@ public:
 	ELIST(UINT bsize = MAX_SHASH_BUCKET) {}
 	virtual ~ELIST() {} //MAP_T2HOLDER has virtual function.
 
-	inline void copy(IN LIST<T> & src);
+	void copy(IN LIST<T> & src)
+	{
+		clean();
+		T t = src.get_head();
+		for (INT n = src.get_elem_count(); n > 0; n--) {
+			append_tail(t);
+			t = src.get_next();
+		}
+	}
+
 	void clean()
 	{
 		LIST<T>::clean();
 		m_t2holder_map.clean();
 	}
-	inline UINT count_mem() const;
+
+	UINT count_mem() const
+	{
+		UINT count = m_t2holder_map.count_mem();
+		count += ((LIST<T>*)this)->count_mem();
+		return count;
+	}
+
 	C<T> * append_tail(T t)
 	{
 		C<T> * c = LIST<T>::append_tail(t);
 		m_t2holder_map.aset(t, c);
 		return c;
 	}
+
 	C<T> * append_head(T t)
 	{
 		C<T> * c = LIST<T>::append_head(t);
 		m_t2holder_map.aset(t, c);
 		return c;
 	}
-	inline void append_tail(IN LIST<T> & list);
-	inline void append_head(IN LIST<T> & list);
 
-	inline T remove(T t);
+	void append_tail(IN LIST<T> & list)
+	{
+		UINT i = 0;
+		C<T> * c;
+		for (T t = list.get_head(); i < list.get_elem_count();
+			 i++, t = list.get_next()) {
+			c = LIST<T>::append_tail(t);
+			m_t2holder_map.aset(t, c);
+		}
+	}
+
+	void append_head(IN LIST<T> & list)
+	{
+		UINT i = 0;
+		C<T> * c;
+		for (T t = list.get_tail(); i < list.get_elem_count();
+			 i++, t = list.get_prev()) {
+			c = LIST<T>::append_head(t);
+			m_t2holder_map.aset(t, c);
+		}
+	}
+
+	T remove(T t)
+	{
+		C<T> * c = m_t2holder_map.get(t);
+		if (c == NULL) {
+			return T(0);
+		}
+		T tt = LIST<T>::remove(c);
+		m_t2holder_map.aset(t, NULL);
+		return tt;
+	}
+
 	T remove(C<T> * holder)
 	{
 		IS_TRUE0(m_t2holder_map.get(C_val(holder)) == holder);
@@ -1862,13 +1894,82 @@ public:
 		return t;
 	}
 
-	inline C<T> * insert_before(T t, T marker);
-	inline C<T> * insert_before(T t, C<T> * marker);
-	inline void insert_before(C<T> * c, C<T> * marker);
-	inline C<T> * insert_after(T t, T marker);
-	inline C<T> * insert_after(T t, C<T> * marker);
-	inline void insert_after(C<T> * c, C<T> * marker);
-	inline bool find(T t, C<T> ** holder = NULL);
+	//NOTICE: 'marker' should have been in the list.
+	C<T> * insert_before(T t, T marker)
+	{
+		C<T> * marker_holder = m_t2holder_map.get(marker);
+		if (marker_holder == NULL) {
+			IS_TRUE0(LIST<T>::get_elem_count() == 0);
+			C<T> * t_holder = LIST<T>::append_head(t);
+			m_t2holder_map.aset(t, t_holder);
+			return t_holder;
+		}
+		C<T> * t_holder = LIST<T>::insert_before(t, marker_holder);
+		m_t2holder_map.aset(t, t_holder);
+		return t_holder;
+	}
+
+	//NOTICE: 'marker' should have been in the list.
+	C<T> * insert_before(T t, C<T> * marker)
+	{
+		IS_TRUE0(marker && m_t2holder_map.get(C_val(marker)) == marker);
+		C<T> * t_holder = LIST<T>::insert_before(t, marker);
+		m_t2holder_map.aset(t, t_holder);
+		return t_holder;
+	}
+
+	//NOTICE: 'marker' should have been in the list.
+	void insert_before(C<T> * c, C<T> * marker)
+	{
+		IS_TRUE0(c && marker && m_t2holder_map.get(C_val(marker)) == marker);
+		LIST<T>::insert_before(c, marker);
+		m_t2holder_map.aset(C_val(c), c);
+	}
+
+	//NOTICE: 'marker' should have been in the list.
+	C<T> * insert_after(T t, T marker)
+	{
+		C<T> * marker_holder = m_t2holder_map.get(marker);
+		if (marker_holder == NULL) {
+			IS_TRUE0(LIST<T>::get_elem_count() == 0);
+			C<T> * t_holder = LIST<T>::append_tail(t);
+			m_t2holder_map.aset(t, t_holder);
+			return t_holder;
+		}
+		C<T> * t_holder = LIST<T>::insert_after(t, marker_holder);
+		m_t2holder_map.aset(t, t_holder);
+		return t_holder;
+	}
+
+	//NOTICE: 'marker' should have been in the list.
+	C<T> * insert_after(T t, C<T> * marker)
+	{
+		IS_TRUE0(marker && m_t2holder_map.get(C_val(marker)) == marker);
+		C<T> * marker_holder = marker;
+		C<T> * t_holder = LIST<T>::insert_after(t, marker_holder);
+		m_t2holder_map.aset(t, t_holder);
+		return t_holder;
+	}
+
+	//NOTICE: 'marker' should have been in the list.
+	void insert_after(C<T> * c, C<T> * marker)
+	{
+		IS_TRUE0(c && marker && m_t2holder_map.get(C_val(marker)) == marker);
+		LIST<T>::insert_after(c, marker);
+		m_t2holder_map.aset(C_val(c), c);
+	}
+
+	bool find(T t, C<T> ** holder = NULL)
+	{
+		C<T> * c = m_t2holder_map.get(t);
+		if (c == NULL) {
+			return false;
+		}
+		if (holder != NULL) {
+			*holder = c;
+		}
+		return true;
+	}
 
 	MAP_T2HOLDER * get_holder_map() { return &m_t2holder_map; }
 	T get_cur() //Do NOT update 'm_cur'
@@ -1899,277 +2000,37 @@ public:
 		return LIST<T>::get_prev(&holder);
 	}
 
-	inline C<T> * replace(T oldt, T newt);
+	//Return the container of 'newt'.
+	C<T> * replace(T oldt, T newt)
+	{
+		C<T> * old_holder = m_t2holder_map.get(oldt);
+		IS_TRUE(old_holder != NULL, ("old elem not exist"));
+
+		//add new one
+		C<T> * new_holder = LIST<T>::insert_before(newt, old_holder);
+		m_t2holder_map.aset(newt, new_holder);
+
+		//remove old one
+		m_t2holder_map.aset(oldt, NULL);
+		LIST<T>::remove(old_holder);
+		return new_holder;
+	}
 };
-
-
-template <class T, class MAP_T2HOLDER>
-void ELIST<T, MAP_T2HOLDER>::append_tail(IN LIST<T> & list)
-{
-	UINT i = 0;
-	C<T> * c;
-	for (T t = list.get_head(); i < list.get_elem_count();
-		 i++, t = list.get_next()) {
-		c = LIST<T>::append_tail(t);
-		m_t2holder_map.aset(t, c);
-	}
-}
-
-
-template <class T, class MAP_T2HOLDER>
-void ELIST<T, MAP_T2HOLDER>::append_head(IN LIST<T> & list)
-{
-	UINT i = 0;
-	C<T> * c;
-	for (T t = list.get_tail(); i < list.get_elem_count();
-		 i++, t = list.get_prev()) {
-		c = LIST<T>::append_head(t);
-		m_t2holder_map.aset(t, c);
-	}
-}
-
-
-template <class T, class MAP_T2HOLDER>
-bool ELIST<T, MAP_T2HOLDER>::find(T t, OUT C<T> ** holder)
-{
-	C<T> * c = m_t2holder_map.get(t);
-	if (c == NULL) {
-		return false;
-	}
-	if (holder != NULL) {
-		*holder = c;
-	}
-	return true;
-}
-
-
-template <class T, class MAP_T2HOLDER>
-T ELIST<T, MAP_T2HOLDER>::remove(T t)
-{
-	C<T> * c = m_t2holder_map.get(t);
-	if (c == NULL) {
-		return T(0);
-	}
-	T tt = LIST<T>::remove(c);
-	m_t2holder_map.aset(t, NULL);
-	return tt;
-}
-
-
-template <class T, class MAP_T2HOLDER>
-void ELIST<T, MAP_T2HOLDER>::copy(IN LIST<T> & src)
-{
-	clean();
-	T t = src.get_head();
-	for (INT n = src.get_elem_count(); n > 0; n--) {
-		append_tail(t);
-		t = src.get_next();
-	}
-}
-
-
-template <class T, class MAP_T2HOLDER>
-UINT ELIST<T, MAP_T2HOLDER>::count_mem() const
-{
-	UINT count = m_t2holder_map.count_mem();
-	count += ((LIST<T>*)this)->count_mem();
-	return count;
-}
-
-
-template <class T, class MAP_T2HOLDER>
-C<T> * ELIST<T, MAP_T2HOLDER>::insert_before(T t, T marker)
-{
-	C<T> * marker_holder = m_t2holder_map.get(marker);
-	if (marker_holder == NULL) {
-		IS_TRUE0(LIST<T>::get_elem_count() == 0);
-		C<T> * t_holder = LIST<T>::append_head(t);
-		m_t2holder_map.aset(t, t_holder);
-		return t_holder;
-	}
-	C<T> * t_holder = LIST<T>::insert_before(t, marker_holder);
-	m_t2holder_map.aset(t, t_holder);
-	return t_holder;
-}
-
-
-//NOTICE: 'marker' should have been in the list.
-template <class T, class MAP_T2HOLDER>
-C<T> * ELIST<T, MAP_T2HOLDER>::insert_before(T t, IN C<T> * marker)
-{
-	IS_TRUE0(marker && m_t2holder_map.get(C_val(marker)) == marker);
-	C<T> * t_holder = LIST<T>::insert_before(t, marker);
-	m_t2holder_map.aset(t, t_holder);
-	return t_holder;
-}
-
-
-//NOTICE: 'marker' should have been in the list.
-template <class T, class MAP_T2HOLDER>
-void ELIST<T, MAP_T2HOLDER>::insert_before(IN C<T> * c, IN C<T> * marker)
-{
-	IS_TRUE0(c && marker && m_t2holder_map.get(C_val(marker)) == marker);
-	LIST<T>::insert_before(c, marker);
-	m_t2holder_map.aset(C_val(c), c);
-}
-
-
-//NOTICE: 'marker' should have been in the list.
-template <class T, class MAP_T2HOLDER>
-C<T> * ELIST<T, MAP_T2HOLDER>::insert_after(T t, IN C<T> * marker)
-{
-	IS_TRUE0(marker && m_t2holder_map.get(C_val(marker)) == marker);
-	C<T> * marker_holder = marker;
-	C<T> * t_holder = LIST<T>::insert_after(t, marker_holder);
-	m_t2holder_map.aset(t, t_holder);
-	return t_holder;
-}
-
-
-//NOTICE: 'marker' should have been in the list.
-template <class T, class MAP_T2HOLDER>
-void ELIST<T, MAP_T2HOLDER>::insert_after(IN C<T> * c, IN C<T> * marker)
-{
-	IS_TRUE0(c && marker && m_t2holder_map.get(C_val(marker)) == marker);
-	LIST<T>::insert_after(c, marker);
-	m_t2holder_map.aset(C_val(c), c);
-}
-
-
-template <class T, class MAP_T2HOLDER>
-C<T> * ELIST<T, MAP_T2HOLDER>::insert_after(T t, T marker)
-{
-	C<T> * marker_holder = m_t2holder_map.get(marker);
-	if (marker_holder == NULL) {
-		IS_TRUE0(LIST<T>::get_elem_count() == 0);
-		C<T> * t_holder = LIST<T>::append_tail(t);
-		m_t2holder_map.aset(t, t_holder);
-		return t_holder;
-	}
-	C<T> * t_holder = LIST<T>::insert_after(t, marker_holder);
-	m_t2holder_map.aset(t, t_holder);
-	return t_holder;
-}
-
-
-//Return the container of 'newt'.
-template <class T, class MAP_T2HOLDER>
-C<T> * ELIST<T, MAP_T2HOLDER>::replace(T oldt, T newt)
-{
-	C<T> * old_holder = m_t2holder_map.get(oldt);
-	IS_TRUE(old_holder != NULL, ("old elem not exist"));
-
-	//add new one
-	C<T> * new_holder = LIST<T>::insert_before(newt, old_holder);
-	m_t2holder_map.aset(newt, new_holder);
-
-	//remove old one
-	m_t2holder_map.aset(oldt, NULL);
-	LIST<T>::remove(old_holder);
-	return new_holder;
-}
 //END ELIST
 
 
 
 //STACK
 template <class T> class SSTACK : public LIST<T> {
-protected:
-	bool m_is_init;
 public:
-	SSTACK();
-	~SSTACK();
-	void init();
-	void destroy();
-	inline void push(T t);
-	inline UINT count_mem() const;
-	inline T pop();
-	inline T get_top();
-	inline T get_bottom();
-	inline T get_top_nth(INT n);
-	inline T get_bottom_nth(INT n);
+	void push(T t) { LIST<T>::append_tail(t); }
+	T pop() { return LIST<T>::remove_tail(); }
+
+	T get_bottom() { return LIST<T>::get_head(); }
+	T get_top() { return LIST<T>::get_tail(); }
+	T get_top_nth(INT n) { return LIST<T>::get_tail_nth(n); }
+	T get_bottom_nth(INT n) { return LIST<T>::get_head_nth(n); }
 };
-
-
-template <class T>
-SSTACK<T>::SSTACK()
-{
-	m_is_init = false;
-	init();
-}
-
-
-template <class T>
-SSTACK<T>::~SSTACK()
-{
-	destroy();
-}
-
-
-template <class T>
-void SSTACK<T>::init()
-{
-	if (m_is_init) return;
-	m_is_init = true;
-}
-
-
-template <class T>
-void SSTACK<T>::destroy()
-{
-	if (!m_is_init) return;
-	m_is_init = false;
-}
-
-
-template <class T>
-UINT SSTACK<T>::count_mem() const
-{
-	return ((LIST<T>*)this)->count_mem() +
-			sizeof(m_is_init);
-}
-
-
-template <class T>
-void SSTACK<T>::push(T t)
-{
-	LIST<T>::append_tail(t);
-}
-
-
-template <class T>
-T SSTACK<T>::pop()
-{
-	return LIST<T>::remove_tail();
-}
-
-
-template <class T>
-T SSTACK<T>::get_bottom()
-{
-	return LIST<T>::get_head();
-}
-
-
-template <class T>
-T SSTACK<T>::get_top()
-{
-	return LIST<T>::get_tail();
-}
-
-
-template <class T>
-T SSTACK<T>::get_top_nth(INT n)
-{
-	return LIST<T>::get_tail_nth(n);
-}
-
-
-template <class T>
-T SSTACK<T>::get_bottom_nth(INT n)
-{
-	return LIST<T>::get_head_nth(n);
-}
 //END SSTACK
 
 
@@ -2178,18 +2039,17 @@ T SSTACK<T>::get_bottom_nth(INT n)
 SVECTOR
 
 T refer to element type.
-Zero is treated as the default NULL when we
+NOTE: Zero is treated as the default NULL when we
 determine the element existence.
-
-Growth dynamic
-
+The vector grow dynamic.
 */
-#define ELEM_GROW_SIZE 8
-template <class T> class SVECTOR {
-private:
+#define SVEC_grow_sz(s)		((s)->s1.m_grow_size)
+#define SVEC_init(s)		((s)->s1.m_is_init)
+template <class T, UINT GROW_SIZE = 8> class SVECTOR {
+protected:
 	void operator = (SVECTOR const&)
 	{ IS_TRUE(0, ("Do not invoke copy-constructor.")); }
-protected:
+
 	INT m_elem_num;	//The number of element in vector.
 	INT m_last_idx;	//Last element idx
 
@@ -2198,310 +2058,412 @@ protected:
 	INT m_free_idx;
 
 	//The number of element when vector is growing.
-	INT m_grow_size:30;
-
-	INT m_is_init:1;
+	struct {
+		UINT m_grow_size:31;
+		UINT m_is_init:1;
+	} s1;
 public:
 	T * m_vec;
 
-	SVECTOR();
-	explicit SVECTOR(INT size);
-	SVECTOR(SVECTOR const& vec);
-	~SVECTOR();
-	void init();
-	void destroy();
-	inline void copy(LIST<T> & list);
-	inline void copy(SVECTOR<T> const& vec);
-	inline void clean();
-	inline UINT count_mem() const;
-	inline void set_grow_size(UINT i);
-	inline void set(INT i, T elem);
-	inline T get(INT i) const;
-	inline const T operator[](INT i) const;
-	inline T & operator[](INT i);
-	inline INT get_size() const;
-	inline INT get_last_idx() const;
-	inline INT get_free_idx(T v = T(0));
-	inline void add(T t);
-	inline void grow(INT size);
-};
-
-
-template <class T>
-SVECTOR<T>::SVECTOR()
-{
-	m_is_init = false;
-	init();
-}
-
-
-template <class T>
-SVECTOR<T>::SVECTOR(INT size)
-{
-	m_is_init = false;
-	init();
-	grow(size);
-}
-
-
-template <class T>
-SVECTOR<T>::SVECTOR(SVECTOR const& vec)
-{
-	copy(vec);
-}
-
-
-template <class T>
-SVECTOR<T>::~SVECTOR()
-{
-	destroy();
-}
-
-
-template <class T>
-void SVECTOR<T>::init()
-{
-	if (m_is_init) return;
-	m_elem_num = 0;
-	m_grow_size = ELEM_GROW_SIZE;
-	m_vec = NULL;
-	m_last_idx = -1;
-	m_free_idx = -1;
-	m_is_init = true;
-}
-
-
-template <class T>
-void SVECTOR<T>::destroy()
-{
-	if (!m_is_init) return;
-	m_elem_num = 0;
-	if (m_vec != NULL) {
-		::free(m_vec);
-	}
-	m_vec = NULL;
-	m_last_idx = -1;
-	m_free_idx = -1;
-	m_is_init = false;
-}
-
-
-template <class T>
-void SVECTOR<T>::set_grow_size(UINT i)
-{
-	IS_TRUE(m_is_init, ("VECTOR not yet initialized."));
-	m_grow_size = i;
-}
-
-
-template <class T>
-T SVECTOR<T>::get(INT i) const
-{
-	IS_TRUE(m_is_init, ("VECTOR not yet initialized."));
-	if (i < 0 || i >= m_elem_num) return T(0);
-	return m_vec[i];
-}
-
-
-//Overloaded [] for const array reference create an rvalue.
-//Be equal to 'get()'
-template <class T>
-T const SVECTOR<T>::operator[](INT i) const
-{
-	IS_TRUE(m_is_init, ("VECTOR not yet initialized."));
-	IS_TRUE(i >= 0 && i < m_elem_num, ("array subscript over boundary."));
-	return m_vec[i];
-}
-
-
-//Overloaded [] for non-const array reference create an lvalue.
-//Be equal to 'set()'
-template <class T>
-T & SVECTOR<T>::operator[](INT i)
-{
-	IS_TRUE(m_is_init, ("VECTOR not yet initialized."));
-	IS_TRUE(i >= 0, ("array subscript over boundary."));
-	if (i >= m_elem_num) {
-		set(i, T(0));
-	}
-	m_last_idx = MAX(i, m_last_idx);
-	return m_vec[i];
-}
-
-
-/*
-Copy each elements of 'list' into vector.
-
-CAUTION: The default termination factor is '0'.
-HINT: While we traversing elements of LIST one by one, or from head to
-	tail or on opposition way, one can copy list into vector first and
-	iterating the vector instead of travering list.
-*/
-template <class T>
-void SVECTOR<T>::copy(LIST<T> & list)
-{
-	INT count = 0;
-	set(list.get_elem_count() - 1, 0); //Alloc memory right away.
-	for (T elem = list.get_head();
-		 elem != T(0); elem = list.get_next(), count++) {
-		set(count, elem);
-	}
-}
-
-
-template <class T>
-void SVECTOR<T>::copy(SVECTOR<T> const& vec)
-{
-	IS_TRUE0(vec.m_elem_num > 0 ||
-			 (vec.m_elem_num == 0 && vec.m_last_idx == -1));
-	if (m_elem_num < vec.m_elem_num) {
-		destroy();
+	SVECTOR()
+	{
+		SVEC_init(this) = false;
 		init();
-		grow(vec.m_elem_num);
 	}
-	if (vec.m_elem_num > 0) {
-		memcpy(m_vec, vec.m_vec, sizeof(T) * vec.m_elem_num);
+	explicit SVECTOR(INT size)
+	{
+		SVEC_init(this) = false;
+		init();
+		grow(size);
 	}
-	m_last_idx = vec.m_last_idx;
-	m_free_idx = vec.m_free_idx;
-}
+	SVECTOR(SVECTOR const& vec) { copy(vec); }
+	~SVECTOR() { destroy();	}
 
-
-template <class T>
-UINT SVECTOR<T>::count_mem() const
-{
-	return m_elem_num + sizeof(SVECTOR<T>);
-}
-
-
-//Clean to zero(default) till 'last_idx'
-template <class T>
-void SVECTOR<T>::clean()
-{
-	IS_TRUE(m_is_init, ("VECTOR not yet initialized."));
-	if (m_last_idx < 0) {
-		return;
+	void add(T t)
+	{
+		IS_TRUE(is_init(), ("VECTOR not yet initialized."));
+		set(m_last_idx < 0 ? 0 : m_last_idx, t);
 	}
-	memset(m_vec, 0, sizeof(T) * (m_last_idx + 1));
-	m_free_idx = 0;
-	m_last_idx = -1; //Not any elements
-}
 
-
-//Return NULL if 'i' is illegal, otherwise return 'elem'.
-template <class T>
-void SVECTOR<T>::set(INT i, T elem)
-{
-	IS_TRUE(m_is_init, ("VECTOR not yet initialized."));
-	if (i < 0) return;
-	if (i >= m_elem_num) {
-		UINT l = i;
-		l = (l / m_grow_size + 1) * m_grow_size;
-		grow(l);
+	inline void init()
+	{
+		if (SVEC_init(this)) { return; }
+		m_elem_num = 0;
+		SVEC_grow_sz(this) = GROW_SIZE;
+		m_vec = NULL;
+		m_last_idx = -1;
+		m_free_idx = -1;
+		SVEC_init(this) = true;
 	}
-	m_last_idx = MAX(i, m_last_idx);
-	m_vec[i] = elem;
-	return;
-}
 
-
-/*
-Growing vector by size, if 'm_size' is NULL , alloc vector.
-Reallocate memory if necessory.
-*/
-template <class T>
-void SVECTOR<T>::grow(INT size)
-{
-	IS_TRUE(m_is_init, ("VECTOR not yet initialized."));
-	if (size <= 0) return;
-	if (m_elem_num == 0) {
-		IS_TRUE(m_vec == NULL, ("vector should be NULL if size is zero."));
+	inline void init(UINT size)
+	{
+		if (SVEC_init(this)) { return; }
+		SVEC_grow_sz(this) = GROW_SIZE;
+		IS_TRUE0(size != 0);
 		m_vec = (T*)::malloc(sizeof(T) * size);
-		memset(m_vec, 0, sizeof(T) * size);
+		IS_TRUE0(m_vec);
+		::memset(m_vec, 0, sizeof(T) * size);
 		m_elem_num = size;
 		m_free_idx = 0;
+		m_last_idx = -1;
+		SVEC_init(this) = true;
+	}
+
+	bool is_init() const { return SVEC_init(this); }
+
+	inline void destroy()
+	{
+		if (!SVEC_init(this)) { return; }
+		m_elem_num = 0;
+		if (m_vec != NULL) {
+			::free(m_vec);
+		}
+		m_vec = NULL;
+		m_last_idx = -1;
+		m_free_idx = -1;
+		SVEC_init(this) = false;
+	}
+
+	//The function often invoked by destructor, to speed up destruction time.
+	//Since reset other members is dispensable.
+	void destroy_vec()
+	{
+		if (m_vec != NULL) {
+			::free(m_vec);
+		}
+	}
+
+	void set_grow_size(UINT i)
+	{
+		IS_TRUE(is_init(), ("VECTOR not yet initialized."));
+		SVEC_grow_sz(this) = i;
+	}
+
+	T get(UINT i) const
+	{
+		IS_TRUE(is_init(), ("VECTOR not yet initialized."));
+		if (i >= (UINT)m_elem_num) { return T(0); }
+		return m_vec[i];
+	}
+
+	T * get_vec() { return m_vec; }
+
+	//Overloaded [] for const array reference create an rvalue.
+	//Be equal to 'get()'
+	T const operator[](UINT i) const
+	{
+		IS_TRUE(is_init(), ("VECTOR not yet initialized."));
+		IS_TRUE(i < (UINT)m_elem_num, ("array subscript over boundary."));
+		return m_vec[i];
+	}
+
+	//Overloaded [] for non-const array reference create an lvalue.
+	//Be equal to 'set()'.
+	inline T & operator[](UINT i)
+	{
+		IS_TRUE(is_init(), ("VECTOR not yet initialized."));
+		if (i >= (UINT)m_elem_num) {
+			set(i, T(0));
+		}
+		m_last_idx = MAX((INT)i, m_last_idx);
+		return m_vec[i];
+	}
+
+	/* Copy each elements of 'list' into vector.
+	NOTE: The default termination factor is '0'.
+		While we traversing elements of LIST one by one, or from head to
+		tail or on opposition way, one can copy list into vector first and
+		iterating the vector instead of travering list. */
+	void copy(LIST<T> & list)
+	{
+		INT count = 0;
+		set(list.get_elem_count() - 1, 0); //Alloc memory right away.
+		for (T elem = list.get_head();
+			 elem != T(0); elem = list.get_next(), count++) {
+			set(count, elem);
+		}
+	}
+
+	void copy(SVECTOR const& vec)
+	{
+		IS_TRUE0(vec.m_elem_num > 0 ||
+				 (vec.m_elem_num == 0 && vec.m_last_idx == -1));
+		INT n = vec.m_elem_num;
+		if (m_elem_num < n) {
+			destroy();
+			init(n);
+		}
+		if (n > 0) {
+			memcpy(m_vec, vec.m_vec, sizeof(T) * n);
+		}
+		m_last_idx = vec.m_last_idx;
+		m_free_idx = vec.m_free_idx;
+	}
+
+	//Clean to zero(default) till 'last_idx'.
+	void clean()
+	{
+		IS_TRUE(is_init(), ("VECTOR not yet initialized."));
+		if (m_last_idx < 0) {
+			return;
+		}
+		memset(m_vec, 0, sizeof(T) * (m_last_idx + 1));
+		m_free_idx = 0;
+		m_last_idx = -1; //No any elements
+	}
+
+	inline UINT count_mem() const
+	{ return m_elem_num * sizeof(T) + sizeof(SVECTOR<T>); }
+
+	//Return NULL if 'i' is illegal, otherwise return 'elem'.
+	void set(UINT i, T elem)
+	{
+		IS_TRUE(is_init(), ("VECTOR not yet initialized."));
+		if (i >= (UINT)m_elem_num) {
+			grow((i / SVEC_grow_sz(this) + 1) * SVEC_grow_sz(this));
+		}
+		m_last_idx = MAX((INT)i, m_last_idx);
+		m_vec[i] = elem;
 		return;
 	}
-	T * tmp = (T*)::malloc((m_elem_num + size) * sizeof(T));
-	memcpy(tmp, m_vec, m_elem_num * sizeof(T));
-	memset(((CHAR*)tmp) + m_elem_num * sizeof(T), 0 , size * sizeof(T));
-	::free(m_vec);
-	m_vec = tmp;
-	m_elem_num += size;
-}
 
+	INT get_size() const
+	{
+		IS_TRUE(is_init(), ("VECTOR not yet initialized."));
+		return m_elem_num;
+	}
+	INT get_last_idx() const
+	{
+		IS_TRUE(is_init(), ("VECTOR not yet initialized."));
+		IS_TRUE(m_last_idx < m_elem_num,
+				("Last index ran over SVECTOR's size."));
+		return m_last_idx;
+	}
 
-template <class T>
-INT SVECTOR<T>::get_size() const
-{
-	IS_TRUE(m_is_init, ("VECTOR not yet initialized."));
-	return m_elem_num;
-}
+	/* Return index of free-slot into SVECTOR, and realloc memory if there are
+	not any free-slot
+	NOTICE:
+		The condition that we considered a slot is free is that whether if the
+		value of the slot equals v(means void). */
+	INT get_free_idx(T v = T(0))
+	{
+		IS_TRUE(is_init(), ("VECTOR not yet initialized."));
+		if (m_free_idx < 0) {
+			IS_TRUE(m_elem_num == 0 && m_last_idx < 0 && !m_vec,
+					("exception occur in SVECTOR"));
+			grow(SVEC_grow_sz(this));
 
+			//Free space is started at position '0',
+			//so next free space is position '1'.
+			m_free_idx = 1;
+			return 0;
+		} else {
+			INT ret = m_free_idx;
+			INT i;
 
-template <class T>
-void SVECTOR<T>::add(T t)
-{
-	IS_TRUE(m_is_init, ("VECTOR not yet initialized."));
-	set(m_last_idx < 0 ? 0 : m_last_idx, t);
-}
+			//Seaching in second-half SVECTOR of m_free_idx.
+			for (i = m_free_idx + 1; i < m_elem_num; i++) {
+				if (v == m_vec[i]) {
+					m_free_idx = i;
+					return ret;
+				}
+			}
 
+			//Seaching in first-half SVECTOR of m_free_idx.
+			for (i = 0; i < m_free_idx; i++) {
+				if (v == m_vec[i]) {
+					m_free_idx = i;
+					return ret;
+				}
+			}
+			m_free_idx = m_elem_num;
+			grow(m_elem_num * 2);
+			return ret;
+		}
+		IS_TRUE(0, ("Over here?!"));
+	}
 
-template <class T>
-INT SVECTOR<T>::get_last_idx() const
-{
-	IS_TRUE(m_is_init, ("VECTOR not yet initialized."));
-	IS_TRUE(m_last_idx < m_elem_num, ("Last index ran over SVECTOR's size."));
-	return m_last_idx;
-}
+	/* Growing vector by size, if 'm_size' is NULL , alloc vector.
+	Reallocate memory if necessory. */
+	void grow(UINT size)
+	{
+		IS_TRUE(is_init(), ("VECTOR not yet initialized."));
+		if (size == 0) { return; }
+		if (m_elem_num == 0) {
+			IS_TRUE(m_vec == NULL, ("vector should be NULL if size is zero."));
+			m_vec = (T*)::malloc(sizeof(T) * size);
+			IS_TRUE0(m_vec);
+			memset(m_vec, 0, sizeof(T) * size);
+			m_elem_num = size;
+			m_free_idx = 0;
+			return;
+		}
+
+		IS_TRUE0(size > (UINT)m_elem_num);
+		T * tmp = (T*)::malloc(size * sizeof(T));
+		IS_TRUE0(tmp);
+		memcpy(tmp, m_vec, m_elem_num * sizeof(T));
+		memset(((CHAR*)tmp) + m_elem_num * sizeof(T), 0,
+			   (size - m_elem_num)* sizeof(T));
+		::free(m_vec);
+		m_vec = tmp;
+		m_elem_num = size;
+	}
+};
+//END SVECTOR
+
 
 
 /*
-Return index of free-slot into SVECTOR, and realloc memory if there are
-not any free-slot
-NOTICE:
-	The condition that we considered a slot is free is that whether if the
-	value of the slot equals v(means void).
+Simply Vector.
+
+T: refer to element type.
+NOTE: Zero is treated as the default NULL when we
+determine the element existence.
 */
-template <class T>
-INT SVECTOR<T>::get_free_idx(T v)
-{
-	IS_TRUE(m_is_init, ("VECTOR not yet initialized."));
-	if (m_free_idx < 0) {
-		IS_TRUE(!m_elem_num && m_last_idx < 0 && !m_vec,
-				("exception occur in SVECTOR"));
-		grow(m_grow_size);
+#define SSVEC_elem_num(s)		((s)->s1.m_elem_num)
+template <class T, UINT GROW_SIZE> class SSVEC {
+private:
+	void operator = (SSVEC const&)
+	{ IS_TRUE(0, ("Do not invoke copy-constructor.")); }
+protected:
+	struct {
+		UINT m_elem_num:31;	//The number of element in vector.
+		UINT m_is_init:1;
+	} s1;
+public:
+	T * m_vec;
 
-		//Free space is started at position '0',
-		//so next free space is position '1'.
-		m_free_idx = 1;
-		return 0;
-	} else {
-		INT ret = m_free_idx;
-		INT i;
-
-		//Seaching in second-half SVECTOR of m_free_idx.
-		for (i = m_free_idx + 1; i < m_elem_num; i++) {
-			if (v == m_vec[i]) {
-				m_free_idx = i;
-				return ret;
-			}
-		}
-
-		//Seaching in first-half SVECTOR of m_free_idx.
-		for (i = 0; i < m_free_idx; i++) {
-			if (v == m_vec[i]) {
-				m_free_idx = i;
-				return ret;
-			}
-		}
-		m_free_idx = m_elem_num;
-		grow(m_elem_num);
-		return ret;
+	SSVEC()
+	{
+		s1.m_is_init = false;
+		init();
 	}
-	IS_TRUE(0,("Over here?!"));
-}
-//END SVECTOR
+	explicit SSVEC(INT size)
+	{
+		s1.m_is_init = false;
+		init(size);
+	}
+	SSVEC(SSVEC const& src) { copy(src); }
+	~SSVEC() { destroy(); }
+
+	inline void init()
+	{
+		if (s1.m_is_init) { return; }
+		SSVEC_elem_num(this) = 0;
+		m_vec = NULL;
+		s1.m_is_init = true;
+	}
+
+	inline void init(UINT size)
+	{
+		if (s1.m_is_init) { return; }
+		IS_TRUE0(size != 0);
+		m_vec = (T*)::malloc(sizeof(T) * size);
+		IS_TRUE0(m_vec);
+		::memset(m_vec, 0, sizeof(T) * size);
+		SSVEC_elem_num(this) = size;
+		s1.m_is_init = true;
+	}
+
+	inline void destroy()
+	{
+		if (!s1.m_is_init) { return; }
+		SSVEC_elem_num(this) = 0;
+		if (m_vec != NULL) {
+			::free(m_vec);
+			m_vec = NULL;
+		}
+		s1.m_is_init = false;
+	}
+
+	//The function often invoked by destructor, to speed up destruction time.
+	//Since reset other members is dispensable.
+	void destroy_vec()
+	{
+		if (m_vec != NULL) {
+			::free(m_vec);
+		}
+	}
+
+	T get(UINT i) const
+	{
+		IS_TRUE(s1.m_is_init, ("VECTOR not yet initialized."));
+		if (i >= SSVEC_elem_num(this)) { return T(0); }
+		return m_vec[i];
+	}
+
+	T * get_vec() { return m_vec; }
+
+	void copy(SSVEC const& vec)
+	{
+		UINT n = SSVEC_elem_num(&vec);
+		if (SSVEC_elem_num(this) < n) {
+			destroy();
+			init(n);
+		}
+		if (n > 0) {
+			::memcpy(m_vec, vec.m_vec, sizeof(T) * n);
+		}
+	}
+
+	//Clean to zero(default) till 'last_idx'.
+	void clean()
+	{
+		IS_TRUE(s1.m_is_init, ("VECTOR not yet initialized."));
+		memset(m_vec, 0, sizeof(T) * SSVEC_elem_num(this));
+	}
+
+	inline UINT count_mem() const
+	{ return SSVEC_elem_num(this) + sizeof(SVECTOR<T>); }
+
+	//Return NULL if 'i' is illegal, otherwise return 'elem'.
+	void set(UINT i, T elem)
+	{
+		IS_TRUE(is_init(), ("VECTOR not yet initialized."));
+		IS_TRUE0(GROW_SIZE > 0);
+		if (i >= SSVEC_elem_num(this)) {
+			grow((i / GROW_SIZE + 1) * GROW_SIZE);
+		}
+		m_vec[i] = elem;
+		return;
+	}
+
+	UINT get_size() const
+	{
+		IS_TRUE(is_init(), ("VECTOR not yet initialized."));
+		return SSVEC_elem_num(this);
+	}
+
+	/* Growing vector by size, if 'm_size' is NULL , alloc vector.
+	Reallocate memory if necessory. */
+	void grow(UINT size)
+	{
+		IS_TRUE(is_init(), ("VECTOR not yet initialized."));
+		if (size == 0) { return; }
+		if (SSVEC_elem_num(this) == 0) {
+			IS_TRUE(m_vec == NULL, ("vector should be NULL if size is zero."));
+			m_vec = (T*)::malloc(sizeof(T) * size);
+			IS_TRUE0(m_vec);
+			memset(m_vec, 0, sizeof(T) * size);
+			SSVEC_elem_num(this) = size;
+			return;
+		}
+
+		IS_TRUE0(size > SSVEC_elem_num(this));
+		T * tmp = (T*)::malloc(size * sizeof(T));
+		IS_TRUE0(tmp);
+		memcpy(tmp, m_vec, SSVEC_elem_num(this) * sizeof(T));
+		memset(((CHAR*)tmp) + SSVEC_elem_num(this) * sizeof(T),
+			   0 , (size - SSVEC_elem_num(this))* sizeof(T));
+		::free(m_vec);
+		m_vec = tmp;
+		SSVEC_elem_num(this) = size;
+	}
+
+	bool is_init() const { return s1.m_is_init; }
+};
 
 
 
@@ -2648,25 +2610,21 @@ protected:
 	UINT m_bucket_size;
 	SHASH_BUCKET * m_bucket;
 	SVECTOR<T> m_elem_vector;
+	HF m_hf;
 	UINT m_elem_count;
 
 	inline HC<T> * newhc() //Allocate hash container.
 	{
 		IS_TRUE(m_bucket != NULL, ("HASH not yet initialized."));
+		IS_TRUE0(m_free_list_pool);
 		HC<T> * c = m_free_list.get_free_elem();
 		if (c == NULL) {
-			c = (HC<T>*)_xmalloc(sizeof(HC<T>));
+			c = (HC<T>*)smpool_malloc_h_const_size(sizeof(HC<T>),
+												m_free_list_pool);
+			IS_TRUE0(c);
+			memset(c, 0, sizeof(HC<T>));
 		}
 		return c;
-	}
-
-	void * _xmalloc(ULONG size)
-	{
-		IS_TRUE(m_bucket != NULL, ("HASH not yet initialized."));
-		void * p = smpool_malloc_h(size, m_free_list_pool);
-		IS_TRUE0(p != NULL);
-		memset(p, 0, size);
-		return p;
 	}
 
 	virtual T create(ULONG v)
@@ -2688,31 +2646,72 @@ public:
 	T append(ULONG val, OUT HC<T> ** hct = NULL, bool * find = NULL);
 	T append(T t, OUT HC<T> ** hct = NULL, bool * find = NULL);
 
+	//Clean the data structure but not destroy.
 	inline void clean();
+
+	//Count up the memory which hash table used.
 	inline UINT count_mem() const;
 
 	bool insert_t(IN OUT HC<T> ** bucket_entry, OUT HC<T> ** hc, IN T t);
 	bool insert_v(IN OUT HC<T> ** bucket_entry, OUT HC<T> ** hc, ULONG val);
 	inline void init(UINT bsize = MAX_SHASH_BUCKET);
 
-	bool find(T t, T * ot);
+	//Find one element and return the element which record in hash table.
+	//Note t may be different with the return one.
+	bool find(T t, OUT T * ot);
+
+	//Find one element and return the container.
+	//Return true if t exist, otherwise return false.
 	bool find(T t, HC<T> ** ct = NULL);
+
+	//Find element accroding to specific 'val'.
 	T find(ULONG val);
 
+	//Get the hash bucket size.
 	inline UINT get_bucket_size() const { return m_bucket_size; }
+
+	//Get the hash bucket.
 	inline SHASH_BUCKET const* get_bucket() const { return m_bucket; }
+
+	//This function get the first element in hash, and initialize the iterator.
+	//cur: the iterator.
 	inline T get_first(INT & cur);
+
+	//This function get the next element in hash accroding to 'cur'.
+	//This function update the iterator.
+	//cur: the iterator.
 	inline T get_next(INT & cur);
+
+	//This function get the last element in hash, and initialize the iterator.
+	//cur: the iterator.
 	inline T get_last(INT & cur);
+
+	//This function get the previous element in hash accroding to 'cur'.
+	//This function update the iterator.
+	//cur: the iterator.
 	inline T get_prev(INT & cur);
+
+	//Grow hash table by given byte size.
+	//bsize: the byte size want to grow.
 	void grow(UINT bsize = 0);
+
+	//Get the memory pool handler of free_list.
+	//Note this pool is const size.
 	SMEM_POOL * get_free_list_pool() const
 	{ return m_free_list_pool; };
+
+	//Get the number of element in hash table.
 	UINT get_elem_count() const { return m_elem_count; }
 
+	//Free all memory objects.
 	inline void destroy();
+
+	//Dump the distribution of element in hash.
 	void dump_intersp(FILE * h);
 
+	//Remove one element, and return the removed one.
+	//Note the input t may be different with return one accroding to
+	//the behavior of user's defined HF class.
 	T removed(T t);
 };
 
@@ -2726,7 +2725,7 @@ void SHASH<T, HF>::init(UINT bsize)
 	memset(m_bucket, 0, sizeof(SHASH_BUCKET) * bsize);
 	m_bucket_size = bsize;
 	m_elem_count = 0;
-	m_free_list_pool = smpool_create_handle(sizeof(HC<T>), MEM_COMM);
+	m_free_list_pool = smpool_create_handle(sizeof(HC<T>) * 4, MEM_CONST_SIZE);
 	m_free_list.clean();
 	m_free_list.set_clean(true);
 	m_elem_vector.init();
@@ -2771,21 +2770,18 @@ void SHASH<T, HF>::clean()
 }
 
 
-/*
-Insert element into hash table.
-Return true if 't' already exist.
-*/
+//Insert element into hash table.
+//Return true if 't' already exist.
 template <class T, class HF>
 bool SHASH<T, HF>::insert_v(OUT HC<T> ** bucket_entry,
 							OUT HC<T> ** hc, ULONG val)
 {
 	HC<T> * elemhc = *bucket_entry;
 	HC<T> * prev = NULL;
-	HF hf;
 	while (elemhc != NULL) {
 		IS_TRUE(HC_val(elemhc) != T(0),
 				("Hash element has so far as to be overrided!"));
-		if (hf.compare(HC_val(elemhc), val)) {
+		if (m_hf.compare(HC_val(elemhc), val)) {
 			*hc = elemhc;
 			return true;
 		}
@@ -2807,20 +2803,17 @@ bool SHASH<T, HF>::insert_v(OUT HC<T> ** bucket_entry,
 }
 
 
-/*
-Insert element into hash table.
-Return true if 't' already exist.
-*/
+//Insert element into hash table.
+//Return true if 't' already exist.
 template <class T, class HF>
 bool SHASH<T, HF>::insert_t(IN OUT HC<T> ** bucket_entry,
 							OUT HC<T> ** hc, IN T t)
 {
 	HC<T> * prev = NULL;
 	HC<T> * elemhc = *bucket_entry;
-	HF hf;
 	while (elemhc != NULL) {
 		IS_TRUE(HC_val(elemhc) != T(0), ("Container is empty"));
-		if (hf.compare(HC_val(elemhc), t)) {
+		if (m_hf.compare(HC_val(elemhc), t)) {
 			t = HC_val(elemhc);
 			*hc = elemhc;
 			return true;
@@ -2843,24 +2836,21 @@ bool SHASH<T, HF>::insert_t(IN OUT HC<T> ** bucket_entry,
 }
 
 
-/*
-Append 't' into hash table and record its reference into
+/* Append 't' into hash table and record its reference into
 SVECTOR in order to walk through the table rapidly.
 If 't' already exists, return the element immediately.
 'find': set to true if 't' already exist.
 
 NOTE:
 	Do NOT append 0 to table.
-	Maximum size of T equals sizeof(void*).
-*/
+	Maximum size of T equals sizeof(void*). */
 template <class T, class HF>
 T SHASH<T, HF>::append(T t, OUT HC<T> ** hct, bool * find)
 {
 	IS_TRUE(m_bucket != NULL, ("SHASH not yet initialized."));
 	if (t == T(0)) return T(0);
 
-	HF hf;
-	UINT hashv = hf.get_hash_value(t, m_bucket_size);
+	UINT hashv = m_hf.get_hash_value(t, m_bucket_size);
 	IS_TRUE(hashv < m_bucket_size,
 			("hash value must less than bucket size"));
 
@@ -2878,26 +2868,24 @@ T SHASH<T, HF>::append(T t, OUT HC<T> ** hct, bool * find)
 	} else if (find != NULL) {
 		*find = true;
 	}
+
 	if (hct != NULL) {
 		*hct = elemhc;
 	}
-	return t;
+	return HC_val(elemhc);
 }
 
 
-/*
-Append 'val' into hash table.
+/* Append 'val' into hash table.
 More comment see above function.
 'find': set to true if 't' already exist.
 
-NOTE: Do NOT append T(0) to table.
-*/
+NOTE: Do NOT append T(0) to table. */
 template <class T, class HF>
 T SHASH<T, HF>::append(ULONG val, OUT HC<T> ** hct, bool * find)
 {
 	IS_TRUE(m_bucket != NULL, ("SHASH not yet initialized."));
-	HF hf;
-	UINT hashv = hf.get_hash_value(val, m_bucket_size);
+	UINT hashv = m_hf.get_hash_value(val, m_bucket_size);
 
 	IS_TRUE(hashv < m_bucket_size, ("hash value must less than bucket size"));
 	HC<T> * elemhc = NULL;
@@ -2914,6 +2902,7 @@ T SHASH<T, HF>::append(ULONG val, OUT HC<T> ** hct, bool * find)
 	} else if (find != NULL) {
 		*find = true;
 	}
+
 	if (hct != NULL) {
 		*hct = elemhc;
 	}
@@ -2921,26 +2910,23 @@ T SHASH<T, HF>::append(ULONG val, OUT HC<T> ** hct, bool * find)
 }
 
 
-/*
-Do NOT change the order that elements in m_elem_vector and the value of m_cur.
-Because it will impact the effect of get_first(), get_next(),
-get_last() and get_prev().
-*/
+/* Do NOT change the order that elements in m_elem_vector and the
+value of m_cur. Because it will impact the effect of get_first(),
+get_next(), get_last() and get_prev(). */
 template <class T, class HF>
 T SHASH<T, HF>::removed(T t)
 {
 	IS_TRUE(m_bucket != NULL, ("SHASH not yet initialized."));
 	if (t == 0) return T(0);
 
-	HF hf;
-	UINT hashv = hf.get_hash_value(t, m_bucket_size);
+	UINT hashv = m_hf.get_hash_value(t, m_bucket_size);
 	IS_TRUE(hashv < m_bucket_size, ("hash value must less than bucket size"));
 	HC<T> * elemhc = (HC<T>*)SHB_member(m_bucket[hashv]);
 	if (elemhc != NULL) {
  		while (elemhc != NULL) {
 			IS_TRUE(HC_val(elemhc) != T(0),
 					("Hash element has so far as to be overrided!"));
-			if (hf.compare(HC_val(elemhc), t)) {
+			if (m_hf.compare(HC_val(elemhc), t)) {
 				break;
 			}
 			elemhc = HC_next(elemhc);
@@ -2958,11 +2944,11 @@ T SHASH<T, HF>::removed(T t)
 }
 
 
-/*
-Grow hash to 'bsize'.
+/* Grow hash to 'bsize'.
 The default grow size is twice as the current bucket size.
-NOTE: Grow is costly function.
-*/
+'bsize': expected bucket size.
+
+NOTE: Grow is costly function. */
 template <class T, class HF>
 void SHASH<T, HF>::grow(UINT bsize)
 {
@@ -2995,66 +2981,60 @@ void SHASH<T, HF>::grow(UINT bsize)
 	m_bucket_size = bsize;
 
 	INT l = m_elem_vector.get_last_idx();
-	HF hf;
 	for (INT i = 0; i <= l; i++) {
 		T t = m_elem_vector.get(i);
 		if (t == T(0)) { continue; }
 
-		UINT hashv = hf.get_hash_value(t, m_bucket_size);
+		UINT hashv = m_hf.get_hash_value(t, m_bucket_size);
 		IS_TRUE(hashv < m_bucket_size,
 				("hash value must less than bucket size"));
 		HC<T> * elemhc = NULL;
 		bool doit = insert_t((HC<T>**)&SHB_member(m_bucket[hashv]),
 							 &elemhc, t);
 		IS_TRUE0(!doit);
+		doit = doit; //to avoid -Werror=unused-variable.
 		HC_vec_idx(elemhc) = i;
 		SHB_count(m_bucket[hashv])++;
 	}
 }
 
 
-/*
-You can implement your own find(), but do NOT
+/* You can implement your own find(), but do NOT
 change the order that elements in m_elem_vector and the value of m_cur.
 Because it will impact the effect of get_first(), get_next(),
-get_last() and get_prev().
-*/
+get_last() and get_prev(). */
 template <class T, class HF>
 T SHASH<T, HF>::find(ULONG val)
 {
 	IS_TRUE(m_bucket != NULL, ("SHASH not yet initialized."));
-	HF hf;
-	UINT hashv = hf.get_hash_value(val, m_bucket_size);
+ 	UINT hashv = m_hf.get_hash_value(val, m_bucket_size);
 	IS_TRUE(hashv < m_bucket_size, ("hash value must less than bucket size"));
 	HC<T> * elemhc = (HC<T>*)SHB_member(m_bucket[hashv]);
 	if (elemhc != NULL) {
 		while (elemhc != NULL) {
 			IS_TRUE(HC_val(elemhc) != T(0),
 					("Hash element has so far as to be overrided!"));
-			if (hf.compare(HC_val(elemhc), val)) {
+			if (m_hf.compare(HC_val(elemhc), val)) {
 				return HC_val(elemhc);
 			}
 			elemhc = HC_next(elemhc);
-		} //end while
+		}
 	}
 	return T(0);
 }
 
 
-/*
-You can implement your own find(), but do NOT
+/* You can implement your own find(), but do NOT
 change the order that elements in m_elem_vector and the value of m_cur.
 Because it will impact the effect of get_first(), get_next(),
-get_last() and get_prev().
-*/
+get_last() and get_prev(). */
 template <class T, class HF>
 bool SHASH<T, HF>::find(T t, HC<T> ** ct)
 {
 	IS_TRUE(m_bucket != NULL, ("SHASH not yet initialized."));
 	if (t == T(0)) { return false; }
 
-	HF hf;
-	UINT hashv = hf.get_hash_value(t, m_bucket_size);
+	UINT hashv = m_hf.get_hash_value(t, m_bucket_size);
 	IS_TRUE(hashv < m_bucket_size,
 			("hash value must less than bucket size"));
 	HC<T> * elemhc = (HC<T>*)SHB_member(m_bucket[hashv]);
@@ -3062,7 +3042,7 @@ bool SHASH<T, HF>::find(T t, HC<T> ** ct)
 		while (elemhc != NULL) {
 			IS_TRUE(HC_val(elemhc) != T(0),
 					("Hash element has so far as to be overrided!"));
-			if (hf.compare(HC_val(elemhc), t)) {
+			if (m_hf.compare(HC_val(elemhc), t)) {
 				if (ct != NULL) {
 					*ct = elemhc;
 				}
@@ -3075,16 +3055,14 @@ bool SHASH<T, HF>::find(T t, HC<T> ** ct)
 }
 
 
-/*
-You can implement your own find(), but do NOT
+/* You can implement your own find(), but do NOT
 change the order that elements in m_elem_vector and the value of m_cur.
 Because it will impact the effect of get_first(), get_next(),
 get_last() and get_prev().
 
-'ot': output the element if found it.
-*/
+'ot': output the element if found it. */
 template <class T, class HF>
-bool SHASH<T, HF>::find(T t, T * ot)
+bool SHASH<T, HF>::find(T t, OUT T * ot)
 {
 	HC<T> * hc;
 	if (find(t, &hc)) {
@@ -3096,7 +3074,14 @@ bool SHASH<T, HF>::find(T t, T * ot)
 }
 
 
-//When T is type of integer, return zero may be fuzzy and ambiguous.
+/* This function return the first element if it exists, otherwise
+return T(0), where T is the template parameter.
+When T is type of integer, return zero may be fuzzy and ambiguous.
+Invoke get_next() to get the next element.
+
+'cur': iterator, when the function return, cur will be updated.
+	If the first element exist, cur is a value that great and equal 0,
+	or is -1. */
 template <class T, class HF>
 T SHASH<T, HF>::get_first(INT & cur)
 {
@@ -3115,6 +3100,14 @@ T SHASH<T, HF>::get_first(INT & cur)
 }
 
 
+/* This function return the next element of element that indicated
+by parameter 'cur'. If it exists, record its index at 'cur' and
+return the element, otherwise set 'cur' to -1, and return T(0),
+where T is the template parameter.
+
+'cur': iterator, when the function return, cur will be updated.
+	If the first element exist, cur is a value that great and equal 0,
+	or is -1. */
 template <class T, class HF>
 T SHASH<T, HF>::get_next(INT & cur)
 {
@@ -3128,11 +3121,19 @@ T SHASH<T, HF>::get_next(INT & cur)
 			return t;
 		}
 	}
+	cur = -1;
 	return T(0);
 }
 
 
-//When T is type of integer, return zero may be fuzzy and ambiguous.
+/* This function return the last element if it exists, otherwise
+return T(0), where T is the template parameter.
+When T is type of integer, return zero may be fuzzy and ambiguous.
+Invoke get_prev() to get the prev element.
+
+'cur': iterator, when the function return, cur will be updated.
+	If the first element exist, cur is a value that great and equal 0,
+	or is -1. */
 template <class T, class HF>
 T SHASH<T, HF>::get_last(INT & cur)
 {
@@ -3151,7 +3152,14 @@ T SHASH<T, HF>::get_last(INT & cur)
 }
 
 
-//When T is type of integer, return zero may be fuzzy and ambiguous.
+/* This function return the prev element of element that indicated
+by parameter 'cur'. If it exists, record its index at 'cur' and
+return the element, otherwise set 'cur' to -1, and return T(0),
+where T is the template parameter.
+
+'cur': iterator, when the function return, cur will be updated.
+	If the first element exist, cur is a value that great and equal 0,
+	or is -1. */
 template <class T, class HF>
 T SHASH<T, HF>::get_prev(INT & cur)
 {
@@ -3164,6 +3172,7 @@ T SHASH<T, HF>::get_prev(INT & cur)
 			return t;
 		}
 	}
+	cur = -1;
 	return T(0);
 }
 
@@ -3219,7 +3228,9 @@ public:
 	Ttgt mapped;
 	RBCOL color;
 
-	RBTN()
+	RBTN() { clean(); }
+
+	void clean()
 	{
 		parent = NULL;
 		lchild = NULL;
@@ -3231,20 +3242,42 @@ public:
 };
 
 
-template <class T, class Ttgt> class RBT {
+template <class T> class COMPARE_KEY_BASE {
+public:
+	bool is_less(T t1, T t2) const { return t1 < t2; }
+	bool is_equ(T t1, T t2) const { return t1 == t2; }
+};
+
+template <class T, class Ttgt, class Compare_Key = COMPARE_KEY_BASE<T> >
+class RBT {
 protected:
 	typedef RBTN<T, Ttgt> TN;
 	UINT m_num_of_tn;
 	TN * m_root;
 	SMEM_POOL * m_pool;
 	TN * m_free_list;
+	Compare_Key m_ck;
 
-	void * _xmalloc(ULONG size)
+	TN * new_tn()
 	{
-		void * p = smpool_malloc_h(size, m_pool);
+		TN * p = (TN*)smpool_malloc_h_const_size(sizeof(TN), m_pool);
 		IS_TRUE0(p);
-		memset(p, 0, size);
+		memset(p, 0, sizeof(TN));
 		return p;
+	}
+
+	inline TN * new_tn(T t, RBCOL c)
+	{
+		TN * x = removehead(&m_free_list);
+		if (x == NULL) {
+			x = new_tn();
+		} else {
+			x->lchild = NULL;
+			x->rchild = NULL;
+		}
+		x->key = t;
+		x->color = c;
+		return x;
 	}
 
 	void free_rbt(TN * t)
@@ -3352,7 +3385,7 @@ protected:
 public:
 	RBT()
 	{
-		m_pool = smpool_create_handle(sizeof(TN), MEM_COMM);
+		m_pool = smpool_create_handle(sizeof(TN) * 4, MEM_CONST_SIZE);
 		m_root = NULL;
 		m_num_of_tn = 0;
 		m_free_list = NULL;
@@ -3394,14 +3427,14 @@ public:
 	TN const* get_root_c() const { return m_root; }
 	TN * get_root() { return m_root; }
 
-	TN * find_with_key(T keyt)
+	TN * find_with_key(T keyt) const
 	{
 		if (m_root == NULL) { return NULL; }
 		TN * x = m_root;
 		while (x != NULL) {
-			if (keyt == x->key) {
+			if (m_ck.is_equ(keyt, x->key)) {
 				return x;
-			} else if (keyt < x->key) {
+			} else if (m_ck.is_less(keyt, x->key)) {
 				x = x->lchild;
 			} else {
 				x = x->rchild;
@@ -3410,7 +3443,7 @@ public:
 		return NULL;
 	}
 
-	inline TN * find_rbtn(T t)
+	inline TN * find_rbtn(T t) const
 	{
 		if (m_root == NULL) { return NULL; }
 		return find_with_key(t);
@@ -3432,9 +3465,9 @@ public:
 		TN * x = m_root;
 		while (x != NULL) {
 			mark = x;
-			if (t == x->key) {
+			if (m_ck.is_equ(t, x->key)) {
 				break;
-			} else if (t < x->key) {
+			} else if (m_ck.is_less(t, x->key)) {
 				x = x->lchild;
 			} else {
 				x = x->rchild;
@@ -3442,7 +3475,7 @@ public:
 		}
 
 		if (x != NULL) {
-			IS_TRUE0(t == x->key);
+			IS_TRUE0(m_ck.is_equ(t, x->key));
 			if (find != NULL) {
 				*find = true;
 			}
@@ -3460,7 +3493,7 @@ public:
 			//The first node.
 			m_root = z;
 		} else {
-			if (t < mark->key) {
+			if (m_ck.is_less(t, mark->key)) {
 				mark->lchild = z;
 			} else {
 				mark->rchild = z;
@@ -3476,20 +3509,6 @@ public:
 	{
 		IS_TRUE0(x);
 		while (x->lchild != NULL) { x = x->lchild; }
-		return x;
-	}
-
-	inline TN * new_tn(T t, RBCOL c)
-	{
-		TN * x = removehead(&m_free_list);
-		if (x == NULL) {
-			x = (TN*)_xmalloc(sizeof(TN));
-		} else {
-			x->lchild = NULL;
-			x->rchild = NULL;
-		}
-		x->key = t;
-		x->color = c;
 		return x;
 	}
 
@@ -3655,15 +3674,18 @@ public:
 	}
 
 	//iter should be clean by caller.
-	T get_first(LIST<TN*> & iter, Ttgt * mapped = NULL)
+	T get_first(LIST<TN*> & iter, Ttgt * mapped = NULL) const
 	{
-		if (m_root == NULL) { return T(0); }
+		if (m_root == NULL) {
+			if (mapped != NULL) { *mapped = Ttgt(0); }
+			return T(0);
+		}
 		iter.append_tail(m_root);
 		if (mapped != NULL) { *mapped = m_root->mapped; }
 		return m_root->key;
 	}
 
-	T get_next(LIST<TN*> & iter, Ttgt * mapped = NULL)
+	T get_next(LIST<TN*> & iter, Ttgt * mapped = NULL) const
 	{
 		TN * x = iter.remove_head();
 		if (x == NULL) {
@@ -3710,15 +3732,30 @@ NOTICE:
 	   nor pointer type.
 */
 
-//Iterator of TMAP.
+/* TMAP Iterator based on Double Linked List.
+This class is used to iterate elements in TMAP.
+You should call clean() to initialize the iterator. */
 template <class Tsrc, class Ttgt>
-class TMAP_ITER : public LIST<RBTN<Tsrc, Ttgt>*> {};
-
-
-template <class Tsrc, class Ttgt>
-class TMAP : public RBT<Tsrc, Ttgt> {
+class TMAP_ITER : public LIST<RBTN<Tsrc, Ttgt>*> {
 public:
-	typedef RBT<Tsrc, Ttgt> BASE_TY;
+};
+
+
+/* TMAP Iterator based on Single Linked List.
+This class is used to iterate elements in TMAP.
+You should call clean() to initialize the iterator. */
+template <class Tsrc, class Ttgt>
+class TMAP_ITER2 : public SLIST<RBTN<Tsrc, Ttgt>*> {
+public:
+	TMAP_ITER2(SMEM_POOL * pool) : SLIST<RBTN<Tsrc, Ttgt>*>(pool)
+	{ IS_TRUE0(pool); }
+};
+
+
+template <class Tsrc, class Ttgt, class Compare_Key = COMPARE_KEY_BASE<Tsrc> >
+class TMAP : public RBT<Tsrc, Ttgt, Compare_Key> {
+public:
+	typedef RBT<Tsrc, Ttgt, Compare_Key> BASE_TY;
 	typedef RBTN<Tsrc, Ttgt> TN;
 	TMAP() {}
 	~TMAP() {}
@@ -3745,6 +3782,13 @@ public:
 	//Get mapped element of 't'. Set find to true if t is already be mapped.
 	Ttgt get(Tsrc t, bool * f = NULL)
 	{
+		return get_c(t, f);
+	}
+
+	//Get mapped element of 't'. Set find to true if t is already be mapped.
+	//Note this function is readonly.
+	Ttgt get_c(Tsrc t, bool * f = NULL) const
+	{
 		TN * z = BASE_TY::find_rbtn(t);
 		if (z == NULL) {
 			if (f != NULL) {
@@ -3759,10 +3803,18 @@ public:
 		return z->mapped;
 	}
 
-	bool find(Tsrc t)
+
+	//iter should be clean by caller.
+	Tsrc get_first(TMAP_ITER<Tsrc, Ttgt> & iter, Ttgt * mapped = NULL) const
+	{ return BASE_TY::get_first(iter, mapped); }
+
+	Tsrc get_next(TMAP_ITER<Tsrc, Ttgt> & iter, Ttgt * mapped = NULL) const
+	{ return BASE_TY::get_next(iter, mapped); }
+
+	bool find(Tsrc t) const
 	{
 		bool f;
-		get(t, &f);
+		get_c(t, &f);
 		return f;
 	}
 };
@@ -3783,13 +3835,25 @@ NOTICE:
 		public:
 		};
 */
-template <class T>
-class TAB_ITER : public LIST<RBTN<T, T>*> {};
 
+/*
+TTAB Iterator.
+This class is used to iterate elements in TTAB.
+You should call clean() to initialize the iterator.
+*/
 template <class T>
-class TTAB : public TMAP<T, T> {
+class TAB_ITER : public LIST<RBTN<T, T>*> {
 public:
-	typedef TMAP<T, T> BASE_TTY;
+};
+
+template <class T, class Compare_Key = COMPARE_KEY_BASE<T> >
+class TTAB : public TMAP<T, T, Compare_Key> {
+public:
+	typedef RBT<T, T, Compare_Key> BASE_TY;
+	typedef TMAP<T, T, Compare_Key> BASE_TTY;
+
+	//Add element into table.
+	//Note: the element in the table must be unqiue.
 	void append(T t)
 	{
 		IS_TRUE0(t != T(0));
@@ -3803,11 +3867,33 @@ public:
 		BASE_TTY::aset(t, t);
 	}
 
+	//Add element into table, if it is exist, return the exist one.
+	T append_and_retrieve(T t)
+	{
+		IS_TRUE0(t != T(0));
+
+		bool find = false;
+		T mapped = BASE_TTY::get(t, &find);
+		if (find) {
+			return mapped;
+		}
+
+		BASE_TTY::aset(t, t);
+		return t;
+	}
+
 	void remove(T t)
 	{
 		IS_TRUE0(t != T(0));
 		BASE_TTY::remove(t);
 	}
+
+	//iter should be clean by caller.
+	T get_first(TAB_ITER<T> & iter) const
+	{ return BASE_TY::get_first(iter, NULL); }
+
+	T get_next(TAB_ITER<T> & iter) const
+	{ return BASE_TY::get_next(iter, NULL); }
 };
 //END TTAB
 
@@ -3833,11 +3919,11 @@ protected:
 	SVECTOR<Ttgt> m_mapped_elem_table;
 
 	//Find hash container
-	HC<Tsrc> * findhc(Tsrc t)
+	HC<Tsrc> * findhc(Tsrc t) const
 	{
 		if (t == Tsrc(0)) { return NULL; }
-		HF hf;
-		UINT hashv = hf.get_hash_value(t, SHASH<Tsrc, HF>::m_bucket_size);
+		UINT hashv = SHASH<Tsrc, HF>::m_hf.get_hash_value(t,
+								SHASH<Tsrc, HF>::m_bucket_size);
 		IS_TRUE((hashv < SHASH<Tsrc, HF>::m_bucket_size),
 				("hash value must less than bucket size"));
 		HC<Tsrc> * elemhc =
@@ -3846,7 +3932,7 @@ protected:
 			while (elemhc != NULL) {
 				IS_TRUE(HC_val(elemhc) != Tsrc(0),
 						("Hash element has so far as to be overrided!"));
-				if (hf.compare(HC_val(elemhc), t)) {
+				if (SHASH<Tsrc, HF>::m_hf.compare(HC_val(elemhc), t)) {
 					return elemhc;
 				}
 				elemhc = HC_next(elemhc);
@@ -3875,6 +3961,19 @@ public:
 
 	//Get mapped pointer of 't'
 	Ttgt get(Tsrc t, bool * find = NULL)
+	{
+		IS_TRUE((SHASH<Tsrc, HF>::m_bucket != NULL), ("not yet initialize."));
+		HC<Tsrc> * elemhc = findhc(t);
+		if (elemhc != NULL) {
+			if (find != NULL) { *find = true; }
+			return m_mapped_elem_table.get(HC_vec_idx(elemhc));
+		}
+		if (find != NULL) { *find = false; }
+		return Ttgt(0);
+	}
+
+	//Get mapped object of 't', this function is readonly.
+	Ttgt get_c(Tsrc t, bool * find = NULL) const
 	{
 		IS_TRUE((SHASH<Tsrc, HF>::m_bucket != NULL), ("not yet initialize."));
 		HC<Tsrc> * elemhc = findhc(t);
@@ -4084,7 +4183,7 @@ public:
 		TAB_Ttgt * tgttab = HMAP<Tsrc, TAB_Ttgt*, HF>::get(t);
 		if (tgttab == NULL) {
 			/*
-			Do NOT use SHASH::_xmalloc(sizeof(TAB_Ttgt)) to allocate memory,
+			Do NOT use SHASH::xmalloc(sizeof(TAB_Ttgt)) to allocate memory,
 			because __vfptr is NULL. __vfptr points to TAB_Ttgt::vftable.
 			*/
 			tgttab = new TAB_Ttgt;

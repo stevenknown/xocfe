@@ -859,10 +859,8 @@ void BITSET::alloc(UINT size)
 }
 
 
-/*
-Returns a new set which is the union of set1 and set2,
-and modify set1 as result operand.
-*/
+//Returns a new set which is the union of set1 and set2,
+//and modify set1 as result operand.
 void BITSET::bunion(BITSET const& bs)
 {
 	if (bs.m_ptr == NULL) { return; }
@@ -904,11 +902,9 @@ void BITSET::bunion(INT elem)
 }
 
 
-/*
-The difference operation calculates the elements that
+/* The difference operation calculates the elements that
 distinguish one set from another.
-Remove a element which map with 'elem' bit, and clean this bit
-*/
+Remove a element which map with 'elem' bit, and clean this bit. */
 void BITSET::diff(UINT elem)
 {
 	UINT first_byte = DIVBPB(elem);
@@ -921,12 +917,11 @@ void BITSET::diff(UINT elem)
 }
 
 
-/*
-The difference operation calculates the elements that
+/* The difference operation calculates the elements that
 distinguish one set from another.
 Subtracting set2 from set1
-Returns a new set which is { x : member( x, 'set1' ) & ~ member( x, 'set2' ) }.
-*/
+Returns a new set which is
+	{ x : member( x, 'set1' ) & ~ member( x, 'set2' ) }. */
 void BITSET::diff(BITSET const& bs)
 {
 	if (m_size == 0 || bs.m_size == 0) { return; }
@@ -972,11 +967,9 @@ void BITSET::intersect(BITSET const& bs)
 }
 
 
-/*
-Reverse each bit.
+/* Reverse each bit.
 e.g: 1001 to 0110
-'last_bit_pos': start at 0, e.g:given '101', last bit pos is 2.
-*/
+'last_bit_pos': start at 0, e.g:given '101', last bit pos is 2. */
 void BITSET::rev(UINT last_bit_pos)
 {
 	IS_TRUE(m_ptr != NULL, ("can not reverse empty set"));
@@ -1010,13 +1003,10 @@ void BITSET::complement(IN BITSET const& univers)
 }
 
 
-/*
-Return the element count in 'set'
-
+/* Return the element count in 'set'
 Add up the population count of each byte in the set.  We get the
 population counts from the table above.  Great for a machine with
-effecient loadbyte instructions!
-*/
+effecient loadbyte instructions. */
 UINT BITSET::get_elem_count() const
 {
 	if (m_ptr == NULL) { return 0; }
@@ -1110,12 +1100,10 @@ bool BITSET::is_contain(UINT elem) const
 }
 
 
-/*
-Return true if 'this' contains 'bs'.
+/* Return true if 'this' contains 'bs'.
 'strict': If it is false, we say the bitset contains bs;
-	if it is true, the bitset must have at least one
-	element that does not belong to 'bs'.
-*/
+if it is true, the bitset must have at least one
+element that does not belong to 'bs'. */
 bool BITSET::is_contain(BITSET const& bs, bool strict) const
 {
 	bool scon = false; //Set to true if 'this' strictly contained 'bs'.
@@ -1211,10 +1199,8 @@ bool BITSET::is_intersect(BITSET const& bs) const
 }
 
 
-/*
-Return true if 'this' contained in range between 'low' and 'high'.
-'strict': 'this' strictly contained in range.
-*/
+//Return true if 'this' contained in range between 'low' and 'high'.
+//'strict': 'this' strictly contained in range.
 bool BITSET::is_contained_in_range(UINT low, UINT high, bool strict) const
 {
 	IS_TRUE(low <= high, ("Invalid bit set"));
@@ -1268,11 +1254,9 @@ bool BITSET::is_contain_range(UINT low, UINT high, bool strict) const
 }
 
 
-/*
-Return true if range between first_bit of 'this' and
+/* Return true if range between first_bit of 'this' and
 last_bit of 'this' overlapped with the range between
-'low' and 'high'.
-*/
+'low' and 'high'. */
 bool BITSET::is_overlapped(UINT low, UINT high) const
 {
 	IS_TRUE(low <= high, ("Invalid bit set"));
@@ -1321,10 +1305,8 @@ bool BITSET::is_overlapped(UINT low, UINT high) const
 }
 
 
-/*
-Return true if in the range between 'low' and 'high' has
-any elements.
-*/
+//Return true if in the range between 'low' and 'high' has
+//any elements.
 bool BITSET::has_elem_in_range(UINT low, UINT high) const
 {
 	IS_TRUE(low <= high, ("out of boundary"));
@@ -1351,10 +1333,8 @@ bool BITSET::has_elem_in_range(UINT low, UINT high) const
 }
 
 
-/*
-Return position of first element, start from '0'.
-Return -1 if the bitset is empty.
-*/
+//Return position of first element, start from '0'.
+//Return -1 if the bitset is empty.
 INT BITSET::get_first() const
 {
 	if (m_size == 0) return -1;
@@ -1547,10 +1527,8 @@ BITSET * BITSET::get_subset_in_range(IN UINT low, IN UINT high,
 }
 
 
-/*
-Return -1 if it has no other element.
-'elem': return next one to current element.
-*/
+//Return -1 if it has no other element.
+//'elem': return next one to current element.
 INT BITSET::get_next(UINT elem) const
 {
 	if (m_size == 0) return -1;
@@ -1592,6 +1570,11 @@ void BITSET::clean()
 void BITSET::copy(BITSET const& src)
 {
 	IS_TRUE(this != &src, ("copy self"));
+	if (src.m_size == 0) {
+		::memset(m_ptr, 0, m_size);
+		return;
+	}
+
 	UINT cp_sz = src.m_size; //size need to copy.
 	if (m_size < src.m_size) {
 		//src's last byte pos.
@@ -1600,6 +1583,7 @@ void BITSET::copy(BITSET const& src)
 			::memset(m_ptr, 0, m_size);
 			return;
 		}
+
 		cp_sz = l / BITS_PER_BYTE + 1;
 		if (m_size < cp_sz) {
 			::free(m_ptr);
@@ -1612,6 +1596,7 @@ void BITSET::copy(BITSET const& src)
 		cp_sz = src.m_size;
 		::memset(m_ptr + cp_sz, 0, m_size - cp_sz);
 	}
+
 	IS_TRUE(m_ptr != NULL, ("not yet init"));
 	::memcpy(m_ptr, src.m_ptr, cp_sz);
 }
@@ -1704,8 +1689,9 @@ void BITSET::dump(FILE * h, UINT flag, INT last_pos) const
 UINT BITSET_MGR::count_mem(FILE * h)
 {
 	UINT count = 0;
-	for (BITSET const* bs = m_bs_list.get_head();
-		 bs != NULL; bs = m_bs_list.get_next()) {
+	C<BITSET*> * ct;
+	for (BITSET const* bs = m_bs_list.get_head(&ct);
+		 bs != NULL; bs = m_bs_list.get_next(&ct)) {
 		count += bs->count_mem();
 	}
 	#ifdef _DEBUG_
@@ -1753,20 +1739,6 @@ UINT BITSET_MGR::count_mem(FILE * h)
 	#endif
 	return count;
 }
-
-
-BITSET * BITSET_MGR::create(UINT init_sz)
-{
-	IS_TRUE(m_is_init, ("not yet init"));
-	BITSET * p = m_free_list.remove_head();
-	if (p == NULL) {
-		p = (BITSET*)::malloc(sizeof(BITSET));
-		::memset(p, 0, sizeof(BITSET));
-		p->init(init_sz);
-		m_bs_list.append_tail(p);
-	}
-	return p;
-}
 //END BITSET_MGR
 
 
@@ -1774,16 +1746,8 @@ BITSET * BITSET_MGR::create(UINT init_sz)
 //
 //Binary Operations
 //
-BITSET * bs_create(BITSET_MGR & bs_mgr)
-{
-	return bs_mgr.create();
-}
-
-
-/*
-Returns a new set which is the union of set1 and set2,
-and modify 'res' as result.
-*/
+//Returns a new set which is the union of set1 and set2,
+//and modify 'res' as result.
 BITSET * bs_union(IN BITSET const& set1, IN BITSET const& set2,
 				  OUT BITSET & res)
 {
@@ -1804,10 +1768,8 @@ BITSET * bs_union(IN BITSET const& set1, IN BITSET const& set2,
 }
 
 
-/*
-Subtracting set2 from set1
-Returns a new set which is { x : member( x, 'set1' ) & ~ member( x, 'set2' ) }.
-*/
+//Subtracting set2 from set1
+//Returns a new set which is { x : member( x, 'set1' ) & ~ member( x, 'set2' ) }.
 BITSET * bs_diff(IN BITSET const& set1, IN BITSET const& set2, OUT BITSET & res)
 {
 	IS_TRUE(set1.m_ptr != NULL &&
@@ -1865,6 +1827,10 @@ UINT SDBITSET_MGR::count_mem(FILE * h)
 		 d != NULL; d = m_dbs_list.get_next(&dt)) {
 		count += d->count_mem();
 	}
+
+	count += smpool_get_pool_size_handle(comm_pool);
+	count += smpool_get_pool_size_handle(ptr_pool);
+
 	#ifdef _DEBUG_
 	if (h != NULL) {
 		//Dump mem usage into file.
@@ -1917,20 +1883,12 @@ UINT SDBITSET_MGR::count_mem(FILE * h)
 //
 //START SBITSETC
 //
-void SBITSETC::bunion(SBITSETC const& src, SDBITSET_MGR &m)
-{
-	bunion(src, &m.sm, &m.scflst, m.pool);
-}
-
-
-/*
-'free_list': free list for SC<SEG*>
-'pool': be used to alloc SC<SEG*>
-*/
+//'free_list': free list for SC<SEG*>
+//'pool': be used to alloc SC<SEG*>
 void SBITSETC::bunion(SBITSETC const& src, SEG_MGR * sm,
 					  SC<SEG*> ** free_list, SMEM_POOL * pool)
 {
-	IS_TRUE0(this != &src);
+	IS_TRUE(this != &src, ("operate on same set"));
 	SC<SEG*> * srcst;
 	SC<SEG*> * tgtst, * prev_st = NULL;
 	SEG * t = segs.get_head(&tgtst);
@@ -1974,16 +1932,8 @@ void SBITSETC::bunion(SBITSETC const& src, SEG_MGR * sm,
 }
 
 
-void SBITSETC::bunion(UINT elem, SDBITSET_MGR & m)
-{
-	bunion(elem, &m.sm, &m.scflst, m.pool);
-}
-
-
-/*
-'free_list': free list for SC<SEG*>
-'pool': be used to alloc SC<SEG*>
-*/
+//'free_list': free list for SC<SEG*>
+//'pool': be used to alloc SC<SEG*>
 void SBITSETC::bunion(UINT elem, SEG_MGR * sm,
 					  SC<SEG*> ** free_list, SMEM_POOL * pool)
 {
@@ -2000,6 +1950,7 @@ void SBITSETC::bunion(UINT elem, SEG_MGR * sm,
 			return;
 		}
 	}
+
 	SEG * x = sm->new_seg();
 	if (sct != NULL) {
 		if (prev_sct == NULL) {
@@ -2015,16 +1966,10 @@ void SBITSETC::bunion(UINT elem, SEG_MGR * sm,
 }
 
 
-void SBITSETC::copy(SBITSETC const& src, SDBITSET_MGR & m)
-{
-	copy(src, &m.sm, &m.scflst, m.pool);
-}
-
-
 void SBITSETC::copy(SBITSETC const& src, SEG_MGR * sm,
 					SC<SEG*> ** free_list, SMEM_POOL * pool)
 {
-	IS_TRUE0(this != &src);
+	IS_TRUE(this != &src, ("operate on same set"));
 	clean(sm, free_list);
 	SC<SEG*> * st;
 	for (SEG * s = src.segs.get_head(&st);
@@ -2033,12 +1978,6 @@ void SBITSETC::copy(SBITSETC const& src, SEG_MGR * sm,
 		t->copy(*s);
 		segs.append_tail(t, free_list, pool);
 	}
-}
-
-
-void SBITSETC::clean(SDBITSET_MGR & m)
-{
-	clean(&m.sm, &m.scflst);
 }
 
 
@@ -2052,6 +1991,24 @@ void SBITSETC::clean(SEG_MGR * sm, SC<SEG*> ** free_list)
 }
 
 
+void SBITSETC::destroy_seg_and_clean(SEG_MGR * sm, SC<SEG*> ** free_list)
+{
+	SC<SEG*> * iter;
+	for (SEG * s = segs.get_head(&iter);
+		 s != NULL; s = segs.get_next(&iter)) {
+		//We are not going to give it back to SEG_MGR.
+		#ifdef _DEBUG_
+		sm->dec_seg_count();
+		#endif
+		delete s;
+	}
+
+	//Because SC<SEG*> is always allocated from pool, recycle
+	//it to free_list, at last give it back to the pool.
+	segs.clean(free_list);
+}
+
+
 UINT SBITSETC::count_mem() const
 {
 	SC<SEG*> * st;
@@ -2061,12 +2018,6 @@ UINT SBITSETC::count_mem() const
 	}
 	c += segs.count_mem();
 	return c;
-}
-
-
-void SBITSETC::diff(UINT elem, SDBITSET_MGR & m)
-{
-	diff(elem, &m.sm, &m.scflst);
 }
 
 
@@ -2092,19 +2043,11 @@ void SBITSETC::diff(UINT elem, SEG_MGR * sm, SC<SEG*> ** free_list)
 }
 
 
-void SBITSETC::diff(SBITSETC const& src, SDBITSET_MGR & m)
-{
-	diff(src, &m.sm, &m.scflst);
-}
-
-
-/*
-Difference between current bitset and 'src', current bitset
-will be modified.
-*/
+//Difference between current bitset and 'src', current bitset
+//will be modified.
 void SBITSETC::diff(SBITSETC const& src, SEG_MGR * sm, SC<SEG*> ** free_list)
 {
-	IS_TRUE0(this != &src);
+	IS_TRUE(this != &src, ("operate on same set"));
 	SC<SEG*> * tgtst, * prev_st = NULL, * next_st;
 	segs.get_head(&tgtst);
 	next_st = tgtst;
@@ -2261,7 +2204,7 @@ INT SBITSETC::get_next(UINT elem, SC<SEG*> ** cur) const
 
 bool SBITSETC::is_equal(SBITSETC const& src) const
 {
-	IS_TRUE0(this != &src);
+	IS_TRUE(this != &src, ("operate on same set"));
 	SC<SEG*> * srcst;
 	SC<SEG*> * tgtst;
 	src.segs.get_head(&srcst);
@@ -2286,7 +2229,7 @@ bool SBITSETC::is_equal(SBITSETC const& src) const
 
 bool SBITSETC::is_intersect(SBITSETC const& src) const
 {
-	IS_TRUE0(this != &src);
+	IS_TRUE(this != &src, ("operate on same set"));
 	SC<SEG*> * srcst;
 	SC<SEG*> * tgtst;
 	src.segs.get_head(&srcst);
@@ -2343,20 +2286,12 @@ bool SBITSETC::is_empty() const
 }
 
 
-void SBITSETC::intersect(SBITSETC const& src, SDBITSET_MGR & m)
-{
-	intersect(src, &m.sm, &m.scflst);
-}
-
-
-/*
-Do intersection for current bitset and 'src', current bitset
-will be modified.
-*/
+//Do intersection for current bitset and 'src', current bitset
+//will be modified.
 void SBITSETC::intersect(SBITSETC const& src, SEG_MGR * sm,
 						 SC<SEG*> ** free_list)
 {
-	IS_TRUE0(this != &src);
+	IS_TRUE(this != &src, ("operate on same set"));
 	SC<SEG*> * tgtst, * prev_st = NULL, * next_st;
 	segs.get_head(&tgtst);
 	next_st = tgtst;
@@ -2422,42 +2357,6 @@ void SBITSETC::intersect(SBITSETC const& src, SEG_MGR * sm,
 //
 //START DBITSETC
 //
-void DBITSETC::bunion(DBITSETC const& src, SDBITSET_MGR & m)
-{
-	bunion(src, &m.sm, &m.scflst, m.pool);
-}
-
-
-void DBITSETC::bunion(UINT elem, SDBITSET_MGR & m)
-{
-	bunion(elem, &m.sm, &m.scflst, m.pool);
-}
-
-
-void DBITSETC::copy(DBITSETC const& src, SDBITSET_MGR & m)
-{
-	copy(src, &m.sm, &m.scflst, m.pool);
-}
-
-
-void DBITSETC::diff(UINT elem, SDBITSET_MGR & m)
-{
-	diff(elem, &m.sm, &m.scflst);
-}
-
-
-void DBITSETC::diff(DBITSETC const& src, SDBITSET_MGR & m)
-{
-	diff(src, &m.sm, &m.scflst);
-}
-
-
-void DBITSETC::intersect(DBITSETC const& src, SDBITSET_MGR & m)
-{
-	intersect(src, &m.sm, &m.scflst);
-}
-
-
 INT DBITSETC::get_first(SC<SEG*> ** cur) const
 {
 	IS_TRUE0(cur);

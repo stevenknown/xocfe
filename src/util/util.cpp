@@ -50,17 +50,18 @@ INT prt(CHAR const* format, ...)
 }
 
 
+//NOTE: message should not exceed MAX_BUF_LEN.
 void scr(CHAR const* format, ...)
 {
-	return;
-
+#ifdef _DEBUG_
 	//CHAR * arg = (CHAR*)((CHAR*)(&format) + sizeof(CHAR*));
 	va_list arg;
 	va_start(arg, format);
 	CHAR buf[MAX_BUF_LEN];
 	vsprintf(buf, format, arg);
-	fprintf(stdout, "%s", buf);
+	fprintf(stdout, "\n%s", buf);
 	va_end(arg);
+#endif
 }
 
 
