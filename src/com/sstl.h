@@ -457,6 +457,7 @@ private:
 	void operator = (LIST const&)
 	{ IS_TRUE(0, ("Do not invoke copy-constructor.")); }
 protected:
+	int nn;
 	UINT m_elem_count;
 	C<T> * m_head;
 	C<T> * m_tail;
@@ -471,23 +472,13 @@ protected:
 
 	//Hold the freed containers for next request.
 	FREE_LIST<C<T> > m_free_list;
-
-	bool in_list(C<T> const* p) const
-	{
-		if (p == NULL) { return true; }
-		C<T> const* t = m_head;
-		while (t != NULL) {
-			if (t == p) { return true; }
-			t = C_next(t);
-		}
-		return false;
-	}
 public:
 	LIST() { init(); }
 	~LIST() { destroy(); }
 
 	void init()
 	{
+		nn=0;
 		m_elem_count = 0;
 		m_head = m_tail = m_cur = m_start_pt = NULL;
 		m_free_list.clean();
@@ -500,14 +491,17 @@ public:
 		while (ct != NULL) {
 			C<T> * t = ct;
 			ct = ct->prev;
+			nn--;
 			delete t;
 		}
 		ct = m_head;
 		while (ct != NULL) {
 			C<T> * t = ct;
 			ct = ct->next;
+			nn--;
 			delete t;
 		}
+		IS_TRUE0(nn == 0);
 		m_free_list.clean();
 		m_elem_count = 0;
 		m_head = m_tail = m_cur = m_start_pt = NULL;
@@ -517,6 +511,7 @@ public:
 	{
 		C<T> * c = m_free_list.get_free_elem();
 		if (c == NULL) {
+			nn++;
 			return new C<T>();
 		} else {
 			C_val(c) = T(0);
@@ -738,6 +733,17 @@ public:
 		}
 		C_prev(m_head) = NULL;
 		m_elem_count += src.get_elem_count();
+	}
+
+	bool in_list(C<T> const* p) const
+	{
+		if (p == NULL) { return true; }
+		C<T> const* t = m_head;
+		while (t != NULL) {
+			if (t == p) { return true; }
+			t = C_next(t);
+		}
+		return false;
 	}
 
 	C<T> * insert_before(T t, T marker)
@@ -3385,12 +3391,29 @@ protected:
 public:
 	RBT()
 	{
+		m_pool = NULL;
+		init();
+	}
+	~RBT() { destroy(); }
+
+	void init()
+	{
+		IS_TRUE0(m_pool == NULL);
 		m_pool = smpool_create_handle(sizeof(TN) * 4, MEM_CONST_SIZE);
 		m_root = NULL;
 		m_num_of_tn = 0;
 		m_free_list = NULL;
 	}
-	~RBT() { smpool_free_handle(m_pool); m_pool = NULL; }
+
+	void destroy()
+	{
+		if (m_pool == NULL) { return; }
+		smpool_free_handle(m_pool);
+		m_pool = NULL;
+		m_num_of_tn = 0;
+		m_root = NULL;
+		m_free_list = NULL;
+	}
 
 	UINT count_mem() const
 	{
@@ -4020,7 +4043,7 @@ public:
 		IS_TRUE((SHASH<Tsrc, HF>::m_bucket != NULL), ("not yet initialize."));
 		if (t == Tsrc(0)) { return; }
 
-		HC<Tsrc> * elemhc;
+		HC<Tsrc> * elemhc = NULL;
 		SHASH<Tsrc, HF>::append(t, &elemhc, NULL);
 
 		IS_TRUE(elemhc != NULL,
@@ -4035,7 +4058,7 @@ public:
 		IS_TRUE((SHASH<Tsrc, HF>::m_bucket != NULL), ("not yet initialize."));
 		if (v == 0) { return; }
 
-		HC<Tsrc> * elemhc;
+		HC<Tsrc> * elemhc = NULL;
 		SHASH<Tsrc, HF>::append(v, &elemhc, NULL);
 		IS_TRUE(elemhc != NULL,
 				("Element does not append into hash table yet."));

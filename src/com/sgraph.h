@@ -197,8 +197,7 @@ public:
 };
 
 
-/*
-A graph G = (V, E), consists of a set of vertices, V, and a set of edges, E.
+/* A graph G = (V, E), consists of a set of vertices, V, and a set of edges, E.
 Each edge is a pair (v,w), where v,w belong to V. Edges are sometimes
 referred to as arcs. If the pair is ordered, then the graph is directed.
 Directed graphs are sometimes referred to as digraphs. Vertex w is adjacent
@@ -206,11 +205,9 @@ to v if and only if (v,w) belong to E. In an undirected graph with edge (v,w),
 and hence (w,v), w is adjacent to v and v is adjacent to w.
 Sometimes an edge has a third component, known as either a weight or a cost.
 
-NOTICE:
-1. For accelerating perform operation of each vertex, e.g
-   compute dominator, please try best to add vertex with
-   topological order.
-*/
+NOTICE: for accelerating perform operation of each vertex, e.g
+compute dominator, please try best to add vertex with
+topological order. */
 class GRAPH {
 	friend class EDGE_HASH;
 	friend class VERTEX_HASH;
@@ -320,7 +317,8 @@ public:
 		return m_vertices.append(new_vertex(vid));
 	}
 
-	void compute_rpo_norec(VERTEX * root, LIST<VERTEX*> & vlst);
+	void compute_rpo_norec(IN OUT VERTEX * root,
+						OUT LIST<VERTEX const*> & vlst);
 	bool clone(GRAPH & src);
 	UINT count_mem() const;
 
@@ -344,11 +342,11 @@ public:
 							   OUT EDGE ** e2 = NULL);
 	void insert_vertex_between(UINT v1, UINT v2, UINT newv,
 							   OUT EDGE ** e1 = NULL, OUT EDGE ** e2 = NULL);
-	bool is_graph_entry(VERTEX * v)
+	bool is_graph_entry(VERTEX const* v) const
 	{ return VERTEX_in_list(v) == NULL;	}
 
 	//Return true if vertex is exit node of graph.
-	bool is_graph_exit(VERTEX * v)
+	bool is_graph_exit(VERTEX const* v) const
 	{ return VERTEX_out_list(v) == NULL; }
 
 	void erasure();
@@ -492,13 +490,15 @@ public:
 		return GRAPH::clone(g);
 	}
 	bool clone_bs(DGRAPH & src);
-	bool compute_dom3(LIST<VERTEX*> * vlst, BITSET const* uni);
-	bool compute_dom2(LIST<VERTEX*> const& vlst);
-	bool compute_dom(LIST<VERTEX*> * vlst = NULL, BITSET const* uni = NULL);
-	bool compute_pdom_by_rpo(VERTEX * root, BITSET const* uni = NULL);
-	bool compute_pdom(LIST<VERTEX*> * vlst = NULL, BITSET const* uni = NULL);
+	bool compute_dom3(LIST<VERTEX const*> const* vlst, BITSET const* uni);
+	bool compute_dom2(LIST<VERTEX const*> const& vlst);
+	bool compute_dom(LIST<VERTEX const*> const* vlst = NULL,
+					 BITSET const* uni = NULL);
+	bool compute_pdom_by_rpo(VERTEX * root, BITSET const* uni);
+	bool compute_pdom(LIST<VERTEX const*> const* vlst);
+	bool compute_pdom(LIST<VERTEX const*> const* vlst, BITSET const* uni);
 	bool compute_idom();
-	bool compute_idom2(LIST<VERTEX*> const& vlst);
+	bool compute_idom2(LIST<VERTEX const*> const& vlst);
 	bool compute_ipdom();
 	UINT count_mem() const;
 

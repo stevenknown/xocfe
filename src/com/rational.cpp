@@ -110,7 +110,7 @@ FRAC_TYPE RATIONAL::_gcd(FRAC_TYPE x, FRAC_TYPE y)
 	if ( x > y ) {
 		t = x, x = y, y = t;
 	}
-	while (x) {
+	while (x != 0) {
 		t = x;
 		x = y % x;
 		y = t;
@@ -135,8 +135,10 @@ static inline LONGLONG gcdf(LONGLONG x, LONGLONG y)
 	LONGLONG t;
 	if (x < 0) { x = -x; }
 	if (y < 0) { y = -y; }
-	if ( x > y ) {
-		t = x, x = y, y = t;
+	if (x > y) {
+		t = x;
+		x = y;
+		y = t;
 	}
 	while (x) {
 		t = x;
@@ -292,8 +294,8 @@ RATIONAL operator * (RATIONAL const& a, RATIONAL const& b)
 
 	//Enforce conversion from 'int64' to 'int32',
 	//even if it possible loss of data.
-	rat.m_num = rnum < 0 ? -trnum : trnum;
-	rat.m_den = rden;
+	rat.m_num = (FRAC_TYPE)(rnum < 0 ? -trnum : trnum);
+	rat.m_den = (FRAC_TYPE)rden;
 	return rat;
 }
 
@@ -343,8 +345,8 @@ RATIONAL operator / (RATIONAL const& a, RATIONAL const& b)
 					(ratden < (LONGLONG)(INT_MAX)));
 		}
 	}
-	rat.m_num = ratnum < 0 ? -trnum : trnum;
-	rat.m_den = ratden;
+	rat.m_num = (FRAC_TYPE)(ratnum < 0 ? -trnum : trnum);
+	rat.m_den = (FRAC_TYPE)ratden;
 	return rat;
 }
 
@@ -380,7 +382,7 @@ RATIONAL operator + (RATIONAL const& a, RATIONAL const& b)
 					(rden < (LONGLONG)(INT_MAX)));
 		}
 	}
-	rat.m_num = rnum < 0 ? -trnum : trnum;
-	rat.m_den = rden;
+	rat.m_num = (FRAC_TYPE)(rnum < 0 ? -trnum : trnum);
+	rat.m_den = (FRAC_TYPE)rden;
 	return rat;
 }

@@ -923,14 +923,13 @@ AGAIN:
 }
 
 
-/*
-Process the first part of postfix expression:
+/* Process the first part of postfix expression:
 e.g:  a[10].u1.s++,  where a[10] is the first part,
 	.u1.s++ is the second part.
 */
 static TREE * postfix_exp()
 {
-	UINT st;
+	UINT st = 0;
 	TREE * t = primary_exp(&st);
 	if (st != ST_SUCC) {
 		return t;
@@ -939,14 +938,12 @@ static TREE * postfix_exp()
 }
 
 
-/*
-Whether input lexicalgraphic words can be descripted with
+/* Whether input lexicalgraphic words can be descripted with
 	unary-expression   or
     ( type-name )
 
 NOTE: C language only permit 'type-name' be enclosed by one pair of '()'.
-	e.g: ((char*)) is illegal syntax.
-*/
+e.g: ((char*)) is illegal syntax. */
 static TREE * unary_or_LP_typename_RP()
 {
 	TREE * t = NULL;

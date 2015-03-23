@@ -115,7 +115,7 @@ LONGLONG ceil_align(LONGLONG v, LONGLONG align);
 void dumpf_svec(void * vec, UINT ty, CHAR const* name, bool is_del);
 void dumps_svec(void * vec, UINT ty);
 
-INT exgcd(IN INT a, IN INT b, OUT INT & x, OUT INT & y);
+INT exgcd(INT a, INT b, OUT INT & x, OUT INT & y);
 
 UINT fact(UINT n);
 INT findstr(CHAR * src, CHAR * s);
@@ -166,12 +166,12 @@ CHAR * xstrcat(CHAR * buf, UINT bufl, CHAR const* info, ...);
 UINT xstrlen(CHAR const* p);
 bool xstrcmp(CHAR const* p1, CHAR const* p2, INT n);
 CHAR * xsprintf(IN OUT CHAR * buf,
-				IN UINT buflen,
+				UINT buflen,
 				IN CHAR const* format,
 				...);
 LONG xatol(CHAR const* nptr, bool is_oct);
 INT xctoi(CHAR const* cl);
-UCHAR * xltoa(IN LONG v, OUT UCHAR * buf);
+UCHAR * xltoa(LONG v, OUT UCHAR * buf);
 INT xceiling(INT a, INT b);
 INT xfloor(INT a, INT b);
 INT xstrstr(CHAR const* src, CHAR const* par, INT i);

@@ -297,10 +297,8 @@ static INT _exgcd(IN INT a, IN INT b, OUT INT & x, OUT INT & y)
 }
 
 
-/*
-Extended Euclid Method
-	ax + by = ay' + b(x' -floor(a/b)*y') = gcd(a,b) = gcd(b, a%b)
-*/
+//Extended Euclid Method
+//	ax + by = ay' + b(x' -floor(a/b)*y') = gcd(a,b) = gcd(b, a%b)
 INT exgcd(IN INT a, IN INT b, OUT INT & x, OUT INT & y)
 {
 	INT gcd = _exgcd(a, b, x, y);
@@ -313,9 +311,7 @@ INT exgcd(IN INT a, IN INT b, OUT INT & x, OUT INT & y)
 }
 
 
-/*
-Factorial of n, namely, requiring n!.
-*/
+//Factorial of n, namely, requiring n!.
 UINT fact(UINT n)
 {
 	if (n == 0) return 1;
@@ -328,10 +324,8 @@ UINT fact(UINT n)
 }
 
 
-/*
-Arrangement
-P(n,m)=n*(n-1)*...*(n-m+1)=n!/(n-m)!
-*/
+//Arrangement
+//P(n,m)=n*(n-1)*...*(n-m+1)=n!/(n-m)!
 UINT arra(UINT n, UINT m)
 {
 	IS_TRUE(n != 0 && m != 0 && n >= m, ("illegal param"));
@@ -344,11 +338,9 @@ UINT arra(UINT n, UINT m)
 }
 
 
-/*
-Combination
+/* Combination
 C(n,m)=(n*(n-1)*...*(n-m+1))/m! = n!/m!(n-m)!
-Simplify:C(n,m)=(n*(n-1)*(m+1))/(n-m)!
-*/
+Simplify:C(n,m)=(n*(n-1)*(m+1))/(n-m)! */
 UINT combin(UINT n, UINT m)
 {
 	IS_TRUE(n != 0 && m != 0 && n >= m, ("illegal param"));
@@ -365,8 +357,7 @@ UINT combin(UINT n, UINT m)
 }
 
 
-/*
-Convert char value into binary.
+/* Convert char value into binary.
 e.g:
 	char p = ' '; p is blank.
 */
@@ -396,12 +387,10 @@ INT xctoi(CHAR const* cl)
 }
 
 
-/*
-Convert a string into long integer.
+/* Convert a string into long integer.
 e.g: cl = '1','2','3','4','5'
 return 12345.
-'is_oct': if true, nptr is octal digits.
-*/
+'is_oct': if true, nptr is octal digits. */
 LONG xatol(CHAR const* nptr, bool is_oct)
 {
 	if (nptr == NULL) return 0;
@@ -455,15 +444,13 @@ LONGLONG xabs(LONGLONG a)
 }
 
 
-/*
-Find partial string, return the subscript-index if substring found,
+/* Find partial string, return the subscript-index if substring found,
 otherwise return -1.
 
 'src': input string.
 'par': partial string.
 'i': find the ith partial string. And 'i' get started with 0.
-	If one only want to find the first partial string, i equals to 0;
-*/
+	If one only want to find the first partial string, i equals to 0. */
 INT xstrstr(CHAR const* src, CHAR const* par, INT i)
 {
 	CHAR const* s = src;
@@ -497,6 +484,7 @@ void xstrcpy(CHAR * tgt, CHAR const* src, UINT size)
 }
 
 
+//Reverse the string.
 UCHAR * reverse_string(UCHAR * v)
 {
 	INT end = strlen((CHAR*)v) - 1;
@@ -512,7 +500,8 @@ UCHAR * reverse_string(UCHAR * v)
 }
 
 
-UCHAR * xltoa(IN LONG v, OUT UCHAR * buf)
+//Convert long to string.
+UCHAR * xltoa(LONG v, OUT UCHAR * buf)
 {
 	UCHAR const p [] = {'0','1','2','3','4','5','6','7','8','9'};
 	bool sign = false;
@@ -545,10 +534,8 @@ static void _prim(INT m, INT n, OUT INT * buf, UINT i)
 }
 
 
-/*
-Prime Factorization.
-	e.g:435234 = 251 * 17 * 17 * 3 * 2
-*/
+//Prime Factorization.
+//e.g:435234 = 251 * 17 * 17 * 3 * 2
 void prim(INT m, OUT INT * buf)
 {
 	IS_TRUE0(buf);

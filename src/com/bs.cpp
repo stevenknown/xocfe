@@ -863,6 +863,7 @@ void BITSET::alloc(UINT size)
 //and modify set1 as result operand.
 void BITSET::bunion(BITSET const& bs)
 {
+	IS_TRUE0(this != &bs);
 	if (bs.m_ptr == NULL) { return; }
 	UINT cp_sz = bs.m_size; //size need to union.
 	if (m_size < bs.m_size) {
@@ -924,6 +925,7 @@ Returns a new set which is
 	{ x : member( x, 'set1' ) & ~ member( x, 'set2' ) }. */
 void BITSET::diff(BITSET const& bs)
 {
+	IS_TRUE0(this != &bs);
 	if (m_size == 0 || bs.m_size == 0) { return; }
 	UINT minsize = MIN(m_size, bs.m_size);
 	//Common part: copy the inverse bits.
@@ -953,6 +955,7 @@ void BITSET::diff(BITSET const& bs)
 //Returns the a new set which is intersection of 'set1' and 'set2'.
 void BITSET::intersect(BITSET const& bs)
 {
+	IS_TRUE0(this != &bs);
 	if (m_ptr == NULL) { return; }
 	if (m_size > bs.m_size) {
 		for (UINT i = 0; i < bs.m_size; i++) {
@@ -1035,6 +1038,7 @@ UINT BITSET::get_elem_count() const
 
 bool BITSET::is_equal(BITSET const& bs) const
 {
+	IS_TRUE0(this != &bs);
 	UINT size1 = m_size , size2 = bs.m_size;
 	if (size1 == 0) {
 		if (size2 == 0) { return true; }
@@ -1106,6 +1110,7 @@ if it is true, the bitset must have at least one
 element that does not belong to 'bs'. */
 bool BITSET::is_contain(BITSET const& bs, bool strict) const
 {
+	IS_TRUE0(this != &bs);
 	bool scon = false; //Set to true if 'this' strictly contained 'bs'.
 	INT const first_bit = get_first();
 	if (first_bit == -1) {
@@ -1176,6 +1181,7 @@ bool BITSET::is_empty() const
 
 bool BITSET::is_intersect(BITSET const& bs) const
 {
+	IS_TRUE0(this != &bs);
 	INT const first_bit = get_first();
 	if (first_bit == -1) {
 		return false;

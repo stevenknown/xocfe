@@ -198,7 +198,7 @@ void GRAPH::erasure()
 /* Sort vertice by rporder, and update rpo of vertex.
 Record sorted vertex into vlst in incremental order of rpo.
 NOTE: rpo start at 1, and 0 means undefined. */
-void GRAPH::compute_rpo_norec(VERTEX * root, OUT LIST<VERTEX*> & vlst)
+void GRAPH::compute_rpo_norec(VERTEX * root, OUT LIST<VERTEX const*> & vlst)
 {
 	IS_TRUE0(root && is_graph_entry(root));
 	BITSET is_visited;
@@ -316,19 +316,18 @@ EDGE * GRAPH::new_edge(VERTEX * from, VERTEX * to)
 		EDGE_to(&teste) = &testto;
 		if (m_is_direction) {
 			return m_edges.append((ULONG)&teste, NULL);
-		} else {
-			EDGE * e = NULL;
-			if (m_edges.find(&teste, &e)) {
-				IS_TRUE0(e);
-				return e;
-			}
-
-			//Both check from->to and to->from
-			EDGE_from(&teste) = &testto;
-			EDGE_to(&teste) = &testfrom;
-			return m_edges.append((ULONG)&teste, NULL);
 		}
-		IS_TRUE0(0);
+
+		EDGE * e = NULL;
+		if (m_edges.find(&teste, &e)) {
+			IS_TRUE0(e);
+			return e;
+		}
+
+		//Both check from->to and to->from
+		EDGE_from(&teste) = &testto;
+		EDGE_to(&teste) = &testfrom;
+		return m_edges.append((ULONG)&teste, NULL);
 	}
 	return m_edges.append(new_edge_impl(from, to));
 }
@@ -1030,22 +1029,21 @@ UINT DGRAPH::count_mem() const
 }
 
 
-/*
-vertices should have been sorted in topological order.
+/* Vertices should have been sorted in topological order.
 And we access them by reverse-topological order.
 'vlst': compute dominator for vertices in vlst if it
 	is not empty or else compute all graph.
-'uni': universe.
-*/
-bool DGRAPH::compute_dom(IN LIST<VERTEX*> * vlst, BITSET const* uni)
+'uni': universe. */
+bool DGRAPH::compute_dom(LIST<VERTEX const*> const* vlst, BITSET const* uni)
 {
-	LIST<VERTEX*> tmpvlst;
-	LIST<VERTEX*> * pvlst = &tmpvlst;
+	LIST<VERTEX const*> tmpvlst;
+	LIST<VERTEX const*> * pvlst = &tmpvlst;
 	if (vlst != NULL) {
-		pvlst = vlst;
+		//Here one must guarantee pvlst would not be modified.
+		pvlst = const_cast<LIST<VERTEX const*>*>(vlst);
 	} else {
 		INT c;
-		for (VERTEX * u = get_first_vertex(c);
+		for (VERTEX const* u = get_first_vertex(c);
 			 u != NULL; u = get_next_vertex(c)) {
 			pvlst->append_tail(u);
 		}
@@ -1056,16 +1054,18 @@ bool DGRAPH::compute_dom(IN LIST<VERTEX*> * vlst, BITSET const* uni)
 		luni = uni;
 	} else {
 		BITSET * x = new BITSET();
-		for (VERTEX * u = pvlst->get_head();
-			 u != NULL; u = pvlst->get_next()) {
+		C<VERTEX const*> * ct;
+		for (VERTEX const* u = pvlst->get_head(&ct);
+			 u != NULL; u = pvlst->get_next(&ct)) {
 			x->bunion(VERTEX_id(u));
 		}
 		luni = x;
 	}
 
 	//Initialize dom-set for each BB.
-	for (VERTEX * v = pvlst->get_head();
-		 v != NULL; v = pvlst->get_next()) {
+	C<VERTEX const*> * ct;
+	for (VERTEX const* v = pvlst->get_head(&ct);
+		 v != NULL; v = pvlst->get_next(&ct)) {
 		if (is_graph_entry(v)) {
 			BITSET * dom = get_dom_set(v);
 			dom->clean();
@@ -1075,18 +1075,17 @@ bool DGRAPH::compute_dom(IN LIST<VERTEX*> * vlst, BITSET const* uni)
 		}
 	}
 
-	/*
-	DOM[entry] = {entry}
-	DOM[n] = {n} กศ { กษ(DOM[pred] of predecessor of 'n') }
-	*/
+	//DOM[entry] = {entry}
+	//DOM[n] = {n} กศ { กษ(DOM[pred] of predecessor of 'n') }
 	bool change = true;
 	BITSET tmp;
 	UINT count = 0;
 	while (change && count < 10) {
 		count++;
 		change = false;
-		for (VERTEX * v = pvlst->get_head();
-			 v != NULL; v = pvlst->get_next()) {
+		C<VERTEX const*> * ct;
+		for (VERTEX const* v = pvlst->get_head(&ct);
+			 v != NULL; v = pvlst->get_next(&ct)) {
 			UINT vid = VERTEX_id(v);
 			if (is_graph_entry(v)) {
 				continue;
@@ -1121,30 +1120,30 @@ bool DGRAPH::compute_dom(IN LIST<VERTEX*> * vlst, BITSET const* uni)
 }
 
 
-/*
-vertices should have been sorted in topological order.
+/* Vertices should have been sorted in topological order.
 And we access them by reverse-topological order.
 'vlst': compute dominator for vertices in vlst if it
 	is not empty or else compute all graph.
-'uni': universe.
-*/
-bool DGRAPH::compute_dom3(LIST<VERTEX*> * vlst, BITSET const* uni)
+'uni': universe. */
+bool DGRAPH::compute_dom3(LIST<VERTEX const*> const* vlst, BITSET const* uni)
 {
-	LIST<VERTEX*> tmpvlst;
-	LIST<VERTEX*> * pvlst = &tmpvlst;
+	LIST<VERTEX const*> tmpvlst;
+	LIST<VERTEX const*> * pvlst = &tmpvlst;
 	if (vlst != NULL) {
-		pvlst = vlst;
+		//Here one must guarantee pvlst would not be modified.
+		pvlst = const_cast<LIST<VERTEX const*>*>(vlst);
 	} else {
 		INT c;
-		for (VERTEX * u = get_first_vertex(c);
+		for (VERTEX const* u = get_first_vertex(c);
 			 u != NULL; u = get_next_vertex(c)) {
 			pvlst->append_tail(u);
 		}
 	}
 
 	//Initialize dom-set for each BB.
-	for (VERTEX * v = pvlst->get_head();
-		 v != NULL; v = pvlst->get_next()) {
+	C<VERTEX const*> * ct;
+	for (VERTEX const* v = pvlst->get_head(&ct);
+		 v != NULL; v = pvlst->get_next(&ct)) {
 		if (is_graph_entry(v)) {
 			BITSET * dom = get_dom_set(v);
 			dom->clean();
@@ -1154,18 +1153,17 @@ bool DGRAPH::compute_dom3(LIST<VERTEX*> * vlst, BITSET const* uni)
 		}
 	}
 
-	/*
-	DOM[entry] = {entry}
-	DOM[n] = {n} กศ { กษ(DOM[pred] of predecessor of 'n') }
-	*/
+	//DOM[entry] = {entry}
+	//DOM[n] = {n} กศ { กษ(DOM[pred] of predecessor of 'n') }
 	bool change = true;
 	BITSET tmp;
 	UINT count = 0;
 	while (change && count < 10) {
 		count++;
 		change = false;
-		for (VERTEX * v = pvlst->get_head();
-			 v != NULL; v = pvlst->get_next()) {
+		C<VERTEX const*> * ct;
+		for (VERTEX const* v = pvlst->get_head(&ct);
+			 v != NULL; v = pvlst->get_next(&ct)) {
 			UINT vid = VERTEX_id(v);
 			if (is_graph_entry(v)) {
 				continue;
@@ -1200,76 +1198,82 @@ bool DGRAPH::compute_dom3(LIST<VERTEX*> * vlst, BITSET const* uni)
 				}
 			} //end else
 		} //end for
-	}//end while
+	} //end while
 	IS_TRUE0(!change);
 	return true;
 }
 
 
+/* Compute post-dominator according to rpo.
+root: root node of graph.
+uni: universe.
+Note you should use this function carefully, it may be expensive, because that
+the function does not check if RPO is available, namely, it will always
+compute the RPO. */
 bool DGRAPH::compute_pdom_by_rpo(VERTEX * root, BITSET const* uni)
 {
-	LIST<VERTEX*> vlst;
+	LIST<VERTEX const*> vlst;
 	compute_rpo_norec(root, vlst);
 	vlst.reverse();
-	if (!compute_pdom(&vlst, uni)) {
-		IS_TRUE0(0);
+
+	bool res = false;
+	if (uni == NULL) {
+		res = compute_pdom(&vlst);
+	} else {
+		res = compute_pdom(&vlst, uni);
 	}
+	IS_TRUE0(res);
 	return true;
 }
 
 
-//vertices should have been sorted in topological order.
-//And we access them by reverse-topological order.
-bool DGRAPH::compute_pdom(IN LIST<VERTEX*> * vlst, BITSET const* uni)
+//Vertices should have been sorted in topological order.
+//We access them by reverse-topological order.
+bool DGRAPH::compute_pdom(LIST<VERTEX const*> const* vlst)
 {
-	LIST<VERTEX*> tmpvlst;
-	LIST<VERTEX*> * pvlst = &tmpvlst;
-	if (vlst != NULL) {
-		pvlst = vlst;
-	} else {
-		INT c;
-		for (VERTEX * v = get_first_vertex(c);
-			 v != NULL; v = get_next_vertex(c)) {
-			pvlst->append_tail(v);
-		}
+	IS_TRUE0(vlst);
+	BITSET uni;
+	C<VERTEX const*> * ct;
+	for (VERTEX const* u = vlst->get_head(&ct);
+		 u != NULL; u = vlst->get_next(&ct)) {
+		uni.bunion(VERTEX_id(u));
 	}
+	return compute_pdom(vlst, &uni);
+}
 
-	BITSET const* luni = NULL;
-	if (uni != NULL) {
-		luni = uni;
-	} else {
-		BITSET * x = new BITSET();
-		for (VERTEX * u = pvlst->get_head();
-			 u != NULL; u = pvlst->get_next()) {
-			x->bunion(VERTEX_id(u));
-		}
-		luni = x;
-	}
+
+/* Vertices should have been sorted in topological order.
+And we access them by reverse-topological order.
+vlst: vertex list.
+uni: universe. */
+bool DGRAPH::compute_pdom(LIST<VERTEX const*> const* vlst, BITSET const* uni)
+{
+	IS_TRUE0(vlst && uni);
 
 	//Initialize pdom for each bb
-	for (VERTEX * v = pvlst->get_head();
-		 v != NULL; v = pvlst->get_next()) {
+	C<VERTEX const*> * ct;
+	for (VERTEX const* v = vlst->get_head(&ct);
+		 v != NULL; v = vlst->get_next(&ct)) {
 		if (is_graph_exit(v)) {
 			BITSET * pdom = get_pdom_set(v);
 			pdom->clean();
 			pdom->bunion(VERTEX_id(v));
 		} else {
-			get_pdom_set(v)->copy(*luni);
+			get_pdom_set(v)->copy(*uni);
 		}
 	}
 
-	/*
-	PDOM[exit] = {exit}
-	PDOM[n] = {n} U {กษ(PDOM[succ] of each succ of n)}
-	*/
+	//PDOM[exit] = {exit}
+	//PDOM[n] = {n} U {กษ(PDOM[succ] of each succ of n)}
 	bool change = true;
 	BITSET tmp;
 	UINT count = 0;
 	while (change && count < 10) {
 		count++;
 		change = false;
-		for (VERTEX * v = pvlst->get_head();
-			 v != NULL; v = pvlst->get_next()) {
+		C<VERTEX const*> * ct;
+		for (VERTEX const* v = vlst->get_head(&ct);
+			 v != NULL; v = vlst->get_next(&ct)) {
 			UINT vid = VERTEX_id(v);
 			if (is_graph_exit(v)) {
 				continue;
@@ -1295,22 +1299,21 @@ bool DGRAPH::compute_pdom(IN LIST<VERTEX*> * vlst, BITSET const* uni)
 				}
 			}
 		} //end for
-	}// end while
+	} // end while
+
 	IS_TRUE0(!change);
-	if (uni == NULL && luni != NULL) {
-		delete luni;
-	}
 	return true;
 }
 
 
 //This function need idom to be avaiable.
 //NOTE: set does NOT include node itself.
-bool DGRAPH::compute_dom2(LIST<VERTEX*> const& vlst)
+bool DGRAPH::compute_dom2(LIST<VERTEX const*> const& vlst)
 {
-	C<VERTEX*> * ct;
+	C<VERTEX const*> * ct;
 	BITSET avail;
-	for (VERTEX * v = vlst.get_head(&ct); v != NULL; v = vlst.get_next(&ct)) {
+	for (VERTEX const* v = vlst.get_head(&ct);
+		 v != NULL; v = vlst.get_next(&ct)) {
 		BITSET * doms = get_dom_set(VERTEX_id(v));
 		doms->clean();
 		IS_TRUE0(doms);
@@ -1330,8 +1333,7 @@ bool DGRAPH::compute_dom2(LIST<VERTEX*> const& vlst)
 }
 
 
-/*
-vertices should have been sorted in rpo.
+/* Vertices should have been sorted in rpo.
 'vlst': a list of vertex which sort in rpo order.
 
 NOTE:
@@ -1339,7 +1341,7 @@ NOTE:
 	2. Do not use '0' as vertex id, it is used as Undefined.
 	3. Entry does not have idom.
 */
-bool DGRAPH::compute_idom2(LIST<VERTEX*> const& vlst)
+bool DGRAPH::compute_idom2(LIST<VERTEX const*> const& vlst)
 {
 	bool change = true;
 
@@ -1349,8 +1351,8 @@ bool DGRAPH::compute_idom2(LIST<VERTEX*> const& vlst)
 	while (change) {
 		change = false;
 		//Access with topological order.
-		C<VERTEX*> * ct;
-		for (VERTEX * v = vlst.get_head(&ct);
+		C<VERTEX const*> * ct;
+		for (VERTEX const* v = vlst.get_head(&ct);
 			 v != NULL; v = vlst.get_next(&ct)) {
 			INT cur_id = VERTEX_id(v);
 			if (is_graph_entry(v)) {
@@ -1360,11 +1362,11 @@ bool DGRAPH::compute_idom2(LIST<VERTEX*> const& vlst)
 			}
 
 			//Access each preds
-			EDGE_C * ec = VERTEX_in_list(v);
+			EDGE_C const* ec = VERTEX_in_list(v);
 			UINT meet = 0;
-			VERTEX * idom = NULL;
+			VERTEX const* idom = NULL;
 			while (ec != NULL) {
-				VERTEX * pred = EDGE_from(EC_edge(ec));
+				VERTEX const* pred = EDGE_from(EC_edge(ec));
 				UINT pid = VERTEX_id(pred);
 
 				if (m_idom_set.get(pid) == 0) {
@@ -1378,8 +1380,8 @@ bool DGRAPH::compute_idom2(LIST<VERTEX*> const& vlst)
 					continue;
 				}
 
-				VERTEX * j = pred;
-				VERTEX * k = idom;
+				VERTEX const* j = pred;
+				VERTEX const* k = idom;
 				while (j != k) {
 					while (VERTEX_rpo(j) > VERTEX_rpo(k)) {
 						j = get_vertex(m_idom_set.get(VERTEX_id(j)));
@@ -1423,8 +1425,9 @@ bool DGRAPH::compute_idom2(LIST<VERTEX*> const& vlst)
 		} //end for
 	}
 
-	C<VERTEX*> * ct;
-	for (VERTEX * v = vlst.get_head(&ct); v != NULL; v = vlst.get_next(&ct)) {
+	C<VERTEX const*> * ct;
+	for (VERTEX const* v = vlst.get_head(&ct);
+		 v != NULL; v = vlst.get_next(&ct)) {
 		if (is_graph_entry(v)) {
 			m_idom_set.set(VERTEX_id(v), 0);
 			nentry--;
@@ -1508,7 +1511,7 @@ bool DGRAPH::compute_ipdom()
 
 	//Processing in reverse-topological order.
 	INT c;
-	for (VERTEX * v = m_vertices.get_last(c);
+	for (VERTEX const* v = m_vertices.get_last(c);
 		 v != NULL; v = m_vertices.get_prev(c)) {
 		INT cur_id = VERTEX_id(v);
 		if (is_graph_exit(v)) {
