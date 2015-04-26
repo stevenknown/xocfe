@@ -51,7 +51,7 @@ protected:
 	UINT m_size;
 	BYTE * m_ptr;
 
-	void * realloc(IN void * src, ULONG orgsize, ULONG newsize);
+	void * realloc(IN void * src, size_t orgsize, size_t newsize);
 public:
 	BITSET(UINT init_pool_size = 1)
 	{
@@ -136,7 +136,7 @@ protected:
 	LIST<BITSET*> m_bs_list;
 	LIST<BITSET*> m_free_list;
 
-	inline void * xmalloc(ULONG size)
+	inline void * xmalloc(size_t size)
 	{
 		IS_TRUE(m_pool != NULL, ("LIST not yet initialized."));
 		void * p = smpool_malloc_h_const_size(size, m_pool);
@@ -157,6 +157,7 @@ public:
 		if (m_pool != NULL) { return; }
 		m_pool = smpool_create_handle(sizeof(BITSET) * 4, MEM_CONST_SIZE);
 		m_bs_list.init();
+		m_free_list.init();
 	}
 
 	void destroy()
@@ -167,6 +168,7 @@ public:
 			bs->destroy();
 		}
 		m_bs_list.destroy();
+		m_free_list.destroy();
 		smpool_free_handle(m_pool);
 		m_pool = NULL;
 	}
@@ -598,6 +600,8 @@ public:
 };
 
 
+//Segment Manager.
+//This class is responsible to allocate and destroy SEG object.
 class SEG_MGR {
 #ifdef _DEBUG_
 public:
@@ -640,7 +644,8 @@ public:
 	SEG * new_seg()
 	{
 		SEG * s = m_free_list.remove_head();
-		if (s != NULL) return s;
+		if (s != NULL) { return s; }
+
 		#ifdef _DEBUG_
 		seg_count++;
 		#endif
@@ -650,7 +655,21 @@ public:
 		#ifdef DEBUG_SEG
 		s->id = seg_count;
 		#endif
+
 		return s;
+	}
+
+	UINT count_mem() const
+	{
+		UINT count = 0;
+		SC<SEG*> * sc;
+		for (SEG * s = m_free_list.get_head(&sc);
+			 s != NULL; s = m_free_list.get_next(&sc)) {
+			count += s->count_mem();
+		}
+
+		count += m_free_list.count_mem();
+		return count;
 	}
 
 	#ifdef _DEBUG_
@@ -672,7 +691,7 @@ class SBITSETC {
 protected:
 	SLISTC<SEG*> segs;
 
-	void * realloc(IN void * src, ULONG orgsize, ULONG newsize);
+	void * realloc(IN void * src, size_t orgsize, size_t newsize);
 public:
 	SBITSETC() {}
 	SBITSETC(SBITSETC const& src); //Do not allow copy-constructor.
@@ -706,7 +725,6 @@ public:
 	INT get_last(SC<SEG*> ** cur) const;
 	INT get_next(UINT elem, SC<SEG*> ** cur) const;
 
-	void init() { segs.init(); }
 	void intersect(SBITSETC const& src, SEG_MGR * sm, SC<SEG*> ** free_list);
 	inline void intersect(SBITSETC const& src, SDBITSET_MGR & m);
 	bool is_equal(SBITSETC const& src) const;
@@ -726,15 +744,26 @@ protected:
 public:
 	SBITSET(SEG_MGR * sm, UINT sz = sizeof(SC<SEG*>))
 	{
+		m_pool = NULL;
+		init(sm, sz);
+	}
+
+	SBITSET(SBITSET const& bs); //Do not allow copy-constructor.
+	~SBITSET() { destroy(); }
+
+	void init(SEG_MGR * sm, UINT sz = sizeof(SC<SEG*>))
+	{
 		IS_TRUE(sm, ("need SEG_MGR"));
 		IS_TRUE(sz % sizeof(SC<SEG*>) == 0, ("pool size must be mulitple."));
+		IS_TRUE(m_pool == NULL, ("already initialized"));
 		m_pool = smpool_create_handle(sz, MEM_CONST_SIZE);
 		m_sm = sm;
 		m_flst = NULL;
 	}
-	SBITSET(SBITSET const& bs); //Do not allow copy-constructor.
-	~SBITSET()
+
+	void destroy()
 	{
+		IS_TRUE(m_pool != NULL, ("already destroy"));
 		SC<SEG*> * st;
 		for (SEG * s = segs.get_head(&st); s != NULL; s = segs.get_next(&st)) {
 			m_sm->free(s);
@@ -744,6 +773,7 @@ public:
 		//SC<SEG*> object.
 		//SBITSETC::clean(m_sm, &m_flst);
 		smpool_free_handle(m_pool);
+		m_pool = NULL;
 	}
 
 	void bunion(SBITSET const& src)
@@ -778,8 +808,6 @@ public:
 	void diff(UINT elem)
 	{ SBITSETC::diff(elem, m_sm, &m_flst); }
 
-
-
 	//Difference between current bitset and 'src', current bitset
 	//will be modified.
 	void diff(SBITSET const& src)
@@ -790,7 +818,6 @@ public:
 	void intersect(SBITSET const& src)
 	{ SBITSETC::intersect(src, m_sm, &m_flst); }
 };
-
 
 
 //
@@ -1045,152 +1072,203 @@ public:
 class SDBITSET_MGR
 {
 protected:
-	SLIST<SBITSET*> m_sbs_list;
-	SLIST<DBITSET*> m_dbs_list;
-	SLIST<DBITSETC*> m_dcbs_list;
-	SLIST<SBITSETC*> m_freesc_list;
-	SLIST<SBITSET*> m_frees_list;
-	SLIST<DBITSET*> m_freed_list;
-	SLIST<DBITSETC*> m_freedc_list;
-	SMEM_POOL * comm_pool; //any be used to allocate any type.
+	SLIST<SBITSET*> m_sbitset_list;
+	SLIST<DBITSET*> m_dbitset_list;
+	SLIST<DBITSETC*> m_dbitsetc_list;
+	SLIST<SBITSETC*> m_free_sbitsetc_list;
+	SLIST<SBITSET*> m_free_sbitset_list;
+	SLIST<DBITSET*> m_free_dbitset_list;
+	SLIST<DBITSETC*> m_free_dbitsetc_list;
 
-	void * xmalloc(ULONG size)
+	SMEM_POOL * m_sbitsetc_pool;
+	SMEM_POOL * m_dbitsetc_pool;
+
+protected:
+	SBITSETC * xmalloc_sbitsetc()
 	{
-		IS_TRUE(comm_pool != NULL, ("LIST not yet initialized."));
-		void * p = smpool_malloc_h(size, comm_pool);
+		IS_TRUE(m_sbitsetc_pool, ("not yet initialized."));
+		SBITSETC * p = (SBITSETC*)smpool_malloc_h_const_size(sizeof(SBITSETC),
+															m_sbitsetc_pool);
 		IS_TRUE(p != NULL, ("malloc failed"));
-		memset(p, 0, size);
+		memset(p, 0, sizeof(SBITSETC));
+		return p;
+	}
+
+	DBITSETC * xmalloc_dbitsetc()
+	{
+		IS_TRUE(m_dbitsetc_pool, ("not yet initialized."));
+		DBITSETC * p = (DBITSETC*)smpool_malloc_h_const_size(sizeof(DBITSETC),
+															m_dbitsetc_pool);
+		IS_TRUE(p != NULL, ("malloc failed"));
+		memset(p, 0, sizeof(DBITSETC));
 		return p;
 	}
 public:
+	//SEG manager.
 	SEG_MGR sm;
-	SC<SEG*> * scflst;
-	SMEM_POOL * ptr_pool; //only used to allocate SC<T*>.
 
-	SDBITSET_MGR()
+	//Free list of SC<SEG*> container. It will be allocated in ptr_pool.
+	SC<SEG*> * scflst;
+
+	SMEM_POOL * ptr_pool; //only used to allocate SC<SEG*>.
+
+public:
+	SDBITSET_MGR() { ptr_pool = NULL; init(); }
+	~SDBITSET_MGR() { destroy(); }
+
+	void init()
 	{
+		if (ptr_pool != NULL) { return; }
 		ptr_pool = smpool_create_handle(sizeof(SC<SEG*>) * 10,
+										MEM_CONST_SIZE);
+		m_sbitsetc_pool = smpool_create_handle(sizeof(SBITSETC) * 10,
 										 MEM_CONST_SIZE);
-		comm_pool = smpool_create_handle(sizeof(SBITSETC) * 10,
-										 MEM_COMM);
-		m_sbs_list.set_pool(ptr_pool);
-		m_dbs_list.set_pool(ptr_pool);
-		m_dcbs_list.set_pool(ptr_pool);
-		m_freesc_list.set_pool(ptr_pool);
-		m_frees_list.set_pool(ptr_pool);
-		m_freed_list.set_pool(ptr_pool);
-		m_freedc_list.set_pool(ptr_pool);
+		m_dbitsetc_pool = smpool_create_handle(sizeof(DBITSETC) * 10,
+										 MEM_CONST_SIZE);
+
+		m_sbitset_list.set_pool(ptr_pool);
+		m_dbitset_list.set_pool(ptr_pool);
+		m_dbitsetc_list.set_pool(ptr_pool);
+
+		m_free_sbitsetc_list.set_pool(ptr_pool);
+		m_free_sbitset_list.set_pool(ptr_pool);
+		m_free_dbitset_list.set_pool(ptr_pool);
+		m_free_dbitsetc_list.set_pool(ptr_pool);
+
 		scflst = NULL;
 	}
 
-	~SDBITSET_MGR()
+	void destroy()
 	{
+		if (ptr_pool == NULL) { return; }
 		SC<SBITSET*> * st;
-		for (SBITSET * s = m_sbs_list.get_head(&st);
-			 s != NULL; s = m_sbs_list.get_next(&st)) {
+		for (SBITSET * s = m_sbitset_list.get_head(&st);
+			 s != NULL; s = m_sbitset_list.get_next(&st)) {
 			delete s;
 		}
 
 		SC<DBITSET*> * dt;
-		for (DBITSET * d = m_dbs_list.get_head(&dt);
-			 d != NULL; d = m_dbs_list.get_next(&dt)) {
+		for (DBITSET * d = m_dbitset_list.get_head(&dt);
+			 d != NULL; d = m_dbitset_list.get_next(&dt)) {
 			delete d;
 		}
 
-		//All DBITSETC are in the pool.
+		//All DBITSETC and SBITSETC are allocated in the pool.
+		//It is not necessary to destroy it specially.
 		//SC<DBITSETC*> * dct;
-		//for (DBITSETC * d = m_dcbs_list.get_head(&dct);
-		//	 d != NULL; d = m_dcbs_list.get_next(&dct)) {
+		//for (DBITSETC * d = m_dbitsetc_list.get_head(&dct);
+		//	 d != NULL; d = m_dbitsetc_list.get_next(&dct)) {
 		//	delete d;
 		//}
-		smpool_free_handle(comm_pool);
+
+		m_sbitset_list.destroy();
+		m_dbitset_list.destroy();
+		m_dbitsetc_list.destroy();
+
+		m_free_sbitsetc_list.destroy();
+		m_free_sbitset_list.destroy();
+		m_free_dbitset_list.destroy();
+		m_free_dbitsetc_list.destroy();
+
+		smpool_free_handle(m_sbitsetc_pool);
+		smpool_free_handle(m_dbitsetc_pool);
 		smpool_free_handle(ptr_pool);
+
+		ptr_pool = NULL;
+		m_sbitsetc_pool = NULL;
+		m_dbitsetc_pool = NULL;
+		scflst = NULL;
 	}
 
-	inline SBITSET * creates()
+	inline SBITSET * create_sbitset()
 	{
-		SBITSET * p = m_frees_list.remove_head();
+		SBITSET * p = m_free_sbitset_list.remove_head();
 		if (p == NULL) {
 			p = new SBITSET(&sm);
-			m_sbs_list.append_tail(p);
+			m_sbitset_list.append_tail(p);
 		}
 		return p;
 	}
 
-	inline SBITSETC * createsc()
+	inline SBITSETC * create_sbitsetc()
 	{
-		SBITSETC * p = m_freesc_list.remove_head();
+		SBITSETC * p = m_free_sbitsetc_list.remove_head();
 		if (p == NULL) {
-			p = (SBITSETC*)xmalloc(sizeof(SBITSETC));
+			p = xmalloc_sbitsetc();
 		}
 		return p;
 	}
 
-	inline DBITSET * created()
+	inline DBITSET * create_dbitset()
 	{
-		DBITSET * p = m_freed_list.remove_head();
+		DBITSET * p = m_free_dbitset_list.remove_head();
 		if (p == NULL) {
 			p = new DBITSET(&sm);
-			m_dbs_list.append_tail(p);
+			m_dbitset_list.append_tail(p);
 		}
 		return p;
 	}
 
-	inline DBITSETC * createdc()
+	inline DBITSETC * create_dbitsetc()
 	{
-		DBITSETC * p = m_freedc_list.remove_head();
+		DBITSETC * p = m_free_dbitsetc_list.remove_head();
 		if (p == NULL) {
-			p = (DBITSETC*)xmalloc(sizeof(DBITSETC));
+			p = xmalloc_dbitsetc();
 			p->set_sparse(true);
-			m_dcbs_list.append_tail(p);
+			m_dbitsetc_list.append_tail(p);
 		}
 		return p;
 	}
 
-	UINT count_mem(FILE * h = NULL);
+	//Note that this function does not add up the memory allocated by
+	//create_sbitsetc() and create_dbitsetc(). You should count these
+	//objects additionally.
+	UINT count_mem(FILE * h = NULL) const;
 
 	//free bs for next use.
-	inline void frees(SBITSET * bs)
+	inline void free_sbitset(SBITSET * bs)
 	{
 		if (bs == NULL) return;
 		bs->clean();
-		m_frees_list.append_head(bs);
+		m_free_sbitset_list.append_head(bs);
 	}
 
 	//free bs for next use.
-	inline void freesc(SBITSETC * bs)
+	inline void free_sbitsetc(SBITSETC * bs)
 	{
 		if (bs == NULL) return;
 		bs->clean(*this);
-		m_freesc_list.append_head(bs);
+		m_free_sbitsetc_list.append_head(bs);
 	}
 
 	//free bs for next use.
-	inline void freed(DBITSET * bs)
+	inline void free_dbitset(DBITSET * bs)
 	{
 		if (bs == NULL) return;
 		bs->clean();
-		m_freed_list.append_head(bs);
+		m_free_dbitset_list.append_head(bs);
 	}
 
 	//free bs for next use.
-	inline void freedc(DBITSETC * bs)
+	inline void free_dbitsetc(DBITSETC * bs)
 	{
 		if (bs == NULL) return;
 		bs->clean(&sm, &scflst);
-		m_freedc_list.append_head(bs);
+		m_free_dbitsetc_list.append_head(bs);
 	}
 
-	//free bs for next use.
+	//This function destroy SEG objects and free containers back to
+	//SDBITSET_MGR for next use.
 	inline void destroy_seg_and_freedc(DBITSETC * bs)
 	{
 		if (bs == NULL) { return; }
 		bs->destroy_seg_and_clean(&sm, &scflst);
 
 		//Recycle bs.
-		m_freedc_list.append_head(bs);
+		m_free_dbitsetc_list.append_head(bs);
 	}
 
+	//Get SEG_MGR.
 	inline SEG_MGR * get_seg_mgr() { return &sm; }
 };
 //END SDBITSET_MGR

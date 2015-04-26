@@ -32,7 +32,7 @@ static UINT g_tree_count = 1;
 #endif
 
 
-static void * xmalloc(ULONG size)
+static void * xmalloc(size_t size)
 {
 	void * p = smpool_malloc_h(size, g_pool_tree_used);
 	if (p == NULL) return 0;

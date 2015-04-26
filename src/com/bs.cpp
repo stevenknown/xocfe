@@ -826,7 +826,7 @@ static BYTE const g_last_one[256] = {
 //
 //START BITSET
 //
-void * BITSET::realloc(IN void * src, ULONG orgsize, ULONG newsize)
+void * BITSET::realloc(IN void * src, size_t orgsize, size_t newsize)
 {
 	if (orgsize >= newsize) {
 		clean();
@@ -1819,31 +1819,34 @@ BITSET * bs_intersect(IN BITSET const& set1,
 //START SDBITSET_MGR
 //
 //'h': dump mem usage detail to file.
-UINT SDBITSET_MGR::count_mem(FILE * h)
+UINT SDBITSET_MGR::count_mem(FILE * h) const
 {
 	UINT count = 0;
 	SC<SBITSET*> * st;
-	for (SBITSET const* bs = m_sbs_list.get_head(&st);
-		 bs != NULL; bs = m_sbs_list.get_next(&st)) {
+	for (SBITSET const* bs = m_sbitset_list.get_head(&st);
+		 bs != NULL; bs = m_sbitset_list.get_next(&st)) {
 		count += bs->count_mem();
 	}
 
 	SC<DBITSET*> * dt;
-	for (DBITSET const* d = m_dbs_list.get_head(&dt);
-		 d != NULL; d = m_dbs_list.get_next(&dt)) {
+	for (DBITSET const* d = m_dbitset_list.get_head(&dt);
+		 d != NULL; d = m_dbitset_list.get_next(&dt)) {
 		count += d->count_mem();
 	}
 
-	count += smpool_get_pool_size_handle(comm_pool);
+	//DBITSETC and SBITSETC are allocated in the pool.
+	count += smpool_get_pool_size_handle(m_sbitsetc_pool);
+	count += smpool_get_pool_size_handle(m_dbitsetc_pool);
 	count += smpool_get_pool_size_handle(ptr_pool);
+	count += sm.count_mem();
 
 	#ifdef _DEBUG_
 	if (h != NULL) {
 		//Dump mem usage into file.
 		LIST<UINT> lst;
 		SC<SBITSET*> * st;
-		for (SBITSET const* bs = m_sbs_list.get_head(&st);
-			 bs != NULL; bs = m_sbs_list.get_next(&st)) {
+		for (SBITSET const* bs = m_sbitset_list.get_head(&st);
+			 bs != NULL; bs = m_sbitset_list.get_next(&st)) {
 			UINT c = bs->count_mem();
 			C<UINT> * ct;
 			UINT n = lst.get_elem_count();
@@ -1862,7 +1865,7 @@ UINT SDBITSET_MGR::count_mem(FILE * h)
 		UINT v = lst.get_head();
 		fprintf(h, "\n== DUMP BITSET_MGR: total %d "
 					"bitsets, mem usage are:\n",
-					m_sbs_list.get_elem_count());
+					m_sbitset_list.get_elem_count());
 		UINT b = 0;
 		UINT n = lst.get_elem_count();
 		for (UINT i = 0; i < n; i++, v = lst.get_next(), b++) {
@@ -1993,11 +1996,14 @@ void SBITSETC::clean(SEG_MGR * sm, SC<SEG*> ** free_list)
 	for (SEG * s = segs.get_head(&st); s != NULL; s = segs.get_next(&st)) {
 		sm->free(s);
 	}
+
+	//Free the list of container of SEG* back to SEG_MGR.
 	segs.clean(free_list);
 }
 
 
-void SBITSETC::destroy_seg_and_clean(SEG_MGR * sm, SC<SEG*> ** free_list)
+void SBITSETC::destroy_seg_and_clean(SEG_MGR * sm,
+												SC<SEG*> ** free_list)
 {
 	SC<SEG*> * iter;
 	for (SEG * s = segs.get_head(&iter);

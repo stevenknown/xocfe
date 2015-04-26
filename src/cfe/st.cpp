@@ -210,7 +210,7 @@ ST_INFO g_st_info[]={
 };
 
 
-static void * xmalloc(ULONG size)
+static void * xmalloc(size_t size)
 {
 	void * p = smpool_malloc_h(size, g_pool_st_used);
 	IS_TRUE0(p);
@@ -220,7 +220,7 @@ static void * xmalloc(ULONG size)
 
 
 //Utility for st.cpp
-SST pushst(SST st, ULONG v)
+SST pushst(SST st, size_t v)
 {
 	CELL * c = newcell(st);
 	CELL_val(c) = (LONGLONG)v;

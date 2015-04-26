@@ -30,7 +30,7 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 static LIST<CELL*> g_cell_free_list;
 
 
-static void * xmalloc(ULONG size)
+static void * xmalloc(size_t size)
 {
 	IS_TRUE0(g_pool_general_used != NULL);
 	void * p = smpool_malloc_h(size, g_pool_general_used);

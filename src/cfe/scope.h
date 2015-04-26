@@ -91,19 +91,22 @@ public:
 	LIST<LABEL_INFO*> li_list;	//label definition
 	LIST<LABEL_INFO*> lref_list;//reference label
 
-	STRUCT * struct_list;		//structure list of current scope
-	UNION * union_list;			//union list of current scope
+	LIST<STRUCT*> struct_list;	//structure list of current scope
+	LIST<UNION*> union_list;	//union list of current scope
 
 	DECL * decl_list;			//record identifier declaration info
 	SYM_LIST * sym_tab_list;	//record identifier name
 
 	TREE * stmt_list;			//record statement list to generate code
 
-	inline void init(UINT & scc)
+	inline void init(UINT & sc)
 	{
 		li_list.init();
 		lref_list.init();
-		SCOPE_id(this) = scc++;
+		struct_list.init();
+		union_list.init();
+
+		SCOPE_id(this) = sc++;
 		SCOPE_level(this) = -1;
 		SCOPE_parent(this) = NULL;
 		SCOPE_nsibling(this) = NULL;
@@ -114,6 +117,8 @@ public:
 	{
 		li_list.destroy();
 		lref_list.destroy();
+		struct_list.destroy();
+		union_list.destroy();
 	}
 };
 

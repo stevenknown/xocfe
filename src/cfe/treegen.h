@@ -29,11 +29,9 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define __TREE_GEN_H__
 
 //Exported Variables
-extern INT g_real_line_num;
 extern CHAR * g_real_token_string;
 extern TOKEN g_real_token;
 extern bool g_enable_C99_declaration;
-extern FILE * g_hsrc;
 extern SMEM_POOL * g_pool_general_used;
 extern SMEM_POOL * g_pool_tree_used; //front end
 extern SMEM_POOL * g_pool_st_used;

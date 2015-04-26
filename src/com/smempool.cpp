@@ -49,9 +49,9 @@ public:
 
 static MEMPOOL_HASH * g_mem_pool_hash_tab = NULL;
 static SMEM_POOL * g_mem_pool=NULL;
-static ULONG g_mem_pool_count = 0;
+static UINT g_mem_pool_count = 0;
 #ifdef _DEBUG_
-static ULONG g_mem_pool_chunk_count = 0;
+static UINT g_mem_pool_chunk_count = 0;
 #endif
 
 
@@ -60,7 +60,7 @@ static bool g_is_pool_init = false;
 
 //Build hash table of memory pool
 static bool g_is_pool_hashed = true;
-ULONG g_stat_mem_size = 0;
+ULONGLONG g_stat_mem_size = 0;
 
 
 void dump_pool(SMEM_POOL * handler, FILE * h)
@@ -82,7 +82,7 @@ void dump_pool(SMEM_POOL * handler, FILE * h)
 }
 
 
-static SMEM_POOL * new_mem_pool(ULONG size, MEMPOOLTYPE mpt)
+static SMEM_POOL * new_mem_pool(size_t size, MEMPOOLTYPE mpt)
 {
 	SMEM_POOL * mp = NULL;
 	INT size_mp = sizeof(SMEM_POOL);
@@ -164,7 +164,7 @@ void smpool_init_pool()
 			Mainly hash addr of 'mp' into hash
 			table corresponding to 'mpt_idx'.
 			*/
-			IS_TRUE(g_mem_pool_hash_tab->find(MEMPOOL_id(mp)) == NULL,
+			IS_TRUE(g_mem_pool_hash_tab->find((OBJTY)MEMPOOL_id(mp)) == NULL,
 					("Repetitive pool idx"));
 			g_mem_pool_hash_tab->append(mp);
 			mp = MEMPOOL_next(mp);
@@ -217,7 +217,7 @@ void smpool_fini_pool()
 NOTICE:
 Since this type of pool will NOT to be recorded
 in 'hash table of POOLs', pool index always be 0. */
-SMEM_POOL * smpool_create_handle(ULONG size, MEMPOOLTYPE mpt)
+SMEM_POOL * smpool_create_handle(size_t size, MEMPOOLTYPE mpt)
 {
 	SMEM_POOL * mp = NULL;
 	if (size == 0 || mpt == MEM_NONE) { return NULL; }
@@ -228,7 +228,7 @@ SMEM_POOL * smpool_create_handle(ULONG size, MEMPOOLTYPE mpt)
 
 //Create new mem pool, return the pool idx.
 #define MAX_TRY 1024
-MEMPOOLIDX smpool_create_idx(ULONG size, MEMPOOLTYPE mpt)
+MEMPOOLIDX smpool_create_idx(size_t size, MEMPOOLTYPE mpt)
 {
 	SMEM_POOL * mp = NULL;
 
@@ -239,7 +239,8 @@ MEMPOOLIDX smpool_create_idx(ULONG size, MEMPOOLTYPE mpt)
 		MEMPOOLIDX idx,i = 0;
 		idx = (MEMPOOLIDX)rand();
 		do {
-			if (idx != 0 && g_mem_pool_hash_tab->find(idx) == NULL) {
+			if (idx != 0 &&
+				g_mem_pool_hash_tab->find((OBJTY)(size_t)idx) == NULL) {
  				//Unique pool idx
 				break;
 			}
@@ -296,7 +297,7 @@ INT smpool_free_idx(MEMPOOLIDX mpt_idx)
 
 	//Searching the mempool which indicated with 'mpt_idx'
 	if (g_is_pool_hashed && g_is_pool_init) {
-		mp = g_mem_pool_hash_tab->find(mpt_idx);
+		mp = g_mem_pool_hash_tab->find((OBJTY)(size_t)mpt_idx);
 		if (mp == NULL) {
 			/*
 			Sometimes, mem pool is manipulated by user, but
@@ -344,7 +345,7 @@ INT smpool_free_idx(MEMPOOLIDX mpt_idx)
 /* Allocate one element from const size pool.
 User must ensure each elment in const size pool are same size.
 'elem_size': indicate the byte size of each element. */
-void * smpool_malloc_h_const_size(ULONG elem_size, IN SMEM_POOL * handler)
+void * smpool_malloc_h_const_size(size_t elem_size, IN SMEM_POOL * handler)
 {
 	IS_TRUE(elem_size > 0, ("elem size can not be 0"));
 	IS_TRUE(handler, ("need mempool handler"));
@@ -358,9 +359,9 @@ void * smpool_malloc_h_const_size(ULONG elem_size, IN SMEM_POOL * handler)
 			("exception occurs during mempool function"));
 	IS_TRUE(MEMPOOL_pool_size(handler) > 0,
 			("exception occurs during mempool function"));
-	ULONG s = MEMPOOL_pool_size(handler) - MEMPOOL_start_pos(handler);
+	size_t s = MEMPOOL_pool_size(handler) - MEMPOOL_start_pos(handler);
 	if (elem_size <= s) {
-		void * addr = (ULONG*)(((BYTE*)MEMPOOL_pool_ptr(handler)) +
+		void * addr = (size_t*)(((BYTE*)MEMPOOL_pool_ptr(handler)) +
 							 MEMPOOL_start_pos(handler));
 		MEMPOOL_start_pos(handler) += elem_size;
 		IS_TRUE(MEMPOOL_pool_size(handler) >= MEMPOOL_start_pos(handler),
@@ -375,9 +376,9 @@ void * smpool_malloc_h_const_size(ULONG elem_size, IN SMEM_POOL * handler)
 				("exception occurs during mempool function"));
 		IS_TRUE(MEMPOOL_pool_size(rest) > 0,
 				("exception occurs during mempool function"));
-		ULONG s = MEMPOOL_pool_size(rest) - MEMPOOL_start_pos(rest);
+		size_t s = MEMPOOL_pool_size(rest) - MEMPOOL_start_pos(rest);
 		if (elem_size <= s) {
-			void * addr = (ULONG*)(((BYTE*)MEMPOOL_pool_ptr(rest)) +
+			void * addr = (size_t*)(((BYTE*)MEMPOOL_pool_ptr(rest)) +
 								 MEMPOOL_start_pos(rest));
 			MEMPOOL_start_pos(rest) += elem_size;
 			IS_TRUE(MEMPOOL_pool_size(rest) >= MEMPOOL_start_pos(rest),
@@ -388,7 +389,7 @@ void * smpool_malloc_h_const_size(ULONG elem_size, IN SMEM_POOL * handler)
 
 	IS_TRUE(MEMPOOL_grow_size(handler) > 0, ("Mempool's growsize is 0"));
 
-	UINT grow_size = MAX(elem_size * 4, MEMPOOL_grow_size(handler) * 4);
+	size_t grow_size = MAX(elem_size * 4, MEMPOOL_grow_size(handler) * 4);
 	MEMPOOL_grow_size(handler) = grow_size;
 	SMEM_POOL * newpool = new_mem_pool(grow_size, MEM_CONST_SIZE);
 	MEMPOOL_prev(newpool) = handler;
@@ -397,7 +398,7 @@ void * smpool_malloc_h_const_size(ULONG elem_size, IN SMEM_POOL * handler)
 	if (rest != NULL) {
 		MEMPOOL_prev(rest) = newpool;
 	}
-	void * addr = (ULONG*)(((CHAR*)MEMPOOL_pool_ptr(newpool)) +
+	void * addr = (size_t*)(((CHAR*)MEMPOOL_pool_ptr(newpool)) +
 					MEMPOOL_start_pos(newpool));
 	MEMPOOL_start_pos(newpool) += elem_size;
 	IS_TRUE(MEMPOOL_pool_size(newpool) >= MEMPOOL_start_pos(newpool),
@@ -408,7 +409,7 @@ void * smpool_malloc_h_const_size(ULONG elem_size, IN SMEM_POOL * handler)
 
 //Query memory space from pool via handler.
 //This function will search pool list to find enough memory space to return.
-void * smpool_malloc_h(ULONG size, IN SMEM_POOL * handler, UINT grow_size)
+void * smpool_malloc_h(size_t size, IN SMEM_POOL * handler, size_t grow_size)
 {
 	IS_TRUE(size > 0, ("query size can not be 0"));
 	IS_TRUE(handler, ("need mempool handler"));
@@ -426,9 +427,9 @@ void * smpool_malloc_h(ULONG size, IN SMEM_POOL * handler, UINT grow_size)
 				("exception occurs during mempool function"));
 		IS_TRUE(MEMPOOL_pool_size(tmp_rest) > 0,
 				("exception occurs during mempool function"));
-		ULONG s = MEMPOOL_pool_size(tmp_rest) - MEMPOOL_start_pos(tmp_rest);
+		size_t s = MEMPOOL_pool_size(tmp_rest) - MEMPOOL_start_pos(tmp_rest);
 		if (size <= s) {
-			addr = (ULONG*)(((BYTE*)MEMPOOL_pool_ptr(tmp_rest)) +
+			addr = (size_t*)(((BYTE*)MEMPOOL_pool_ptr(tmp_rest)) +
 							 MEMPOOL_start_pos(tmp_rest));
 			goto FIN;
 		}
@@ -462,7 +463,7 @@ void * smpool_malloc_h(ULONG size, IN SMEM_POOL * handler, UINT grow_size)
 
 	MEMPOOL_prev(MEMPOOL_next(tmp_rest)) = tmp_rest;
 	tmp_rest = MEMPOOL_next(tmp_rest);
-	addr = (ULONG*)(((CHAR*)MEMPOOL_pool_ptr(tmp_rest)) +
+	addr = (size_t*)(((CHAR*)MEMPOOL_pool_ptr(tmp_rest)) +
 					MEMPOOL_start_pos(tmp_rest));
 FIN:
 	if (full_head != NULL) {
@@ -476,14 +477,14 @@ FIN:
 
 
 //Quering memory space from pool via pool index.
-void * smpool_malloc_i(ULONG size, MEMPOOLIDX mpt_idx, UINT grow_size)
+void * smpool_malloc_i(size_t size, MEMPOOLIDX mpt_idx, size_t grow_size)
 {
 	IS_TRUE(size > 0, ("Request size can not be 0"));
 	SMEM_POOL * mp = g_mem_pool;
 
 	//Searching the mempool which indicated with 'mpt_idx'
 	if (g_is_pool_hashed && g_is_pool_init) {
-		mp = g_mem_pool_hash_tab->find(mpt_idx);
+		mp = g_mem_pool_hash_tab->find((OBJTY)(size_t)mpt_idx);
 	} else {
 		while (mp != NULL) {
 			if (MEMPOOL_id(mp) == mpt_idx) {
@@ -503,11 +504,11 @@ void * smpool_malloc_i(ULONG size, MEMPOOLIDX mpt_idx, UINT grow_size)
 
 
 //Get total pool byte-size.
-ULONG smpool_get_pool_size_handle(SMEM_POOL const* handle)
+size_t smpool_get_pool_size_handle(SMEM_POOL const* handle)
 {
 	if (handle == NULL) return 0;
 	SMEM_POOL const* mp = handle;
-	ULONG size = 0;
+	size_t size = 0;
 	while (mp != NULL) {
 		size += mp->mem_pool_size;
 		mp = MEMPOOL_next(mp);
@@ -517,12 +518,12 @@ ULONG smpool_get_pool_size_handle(SMEM_POOL const* handle)
 
 
 //Get total pool byte-size.
-ULONG smpool_get_pool_size_idx(MEMPOOLIDX mpt_idx)
+size_t smpool_get_pool_size_idx(MEMPOOLIDX mpt_idx)
 {
 	SMEM_POOL * mp = g_mem_pool;
 
 	if (g_is_pool_hashed && g_is_pool_init) {
-		mp = g_mem_pool_hash_tab->find(mpt_idx);
+		mp = g_mem_pool_hash_tab->find((OBJTY)(size_t)mpt_idx);
 	} else {
 		//Searching the mempool which indicated with 'mpt_idx'
 		while (mp!=NULL) {

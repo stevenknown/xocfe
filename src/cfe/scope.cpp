@@ -36,7 +36,7 @@ LIST<SCOPE*> g_scope_list;
 UINT g_scope_count = 0;
 LAB2LINE_MAP g_lab2lineno;
 
-static void * xmalloc(ULONG size)
+static void * xmalloc(size_t size)
 {
 	void * p = smpool_malloc_h(size, g_pool_general_used);
 	IS_TRUE0(p);
@@ -241,32 +241,36 @@ void dump_scope(SCOPE * s, UINT flag)
 	}
 
 	//structs
-	STRUCT * st = SCOPE_struct_list(s);
-	if (st != NULL) {
+	if (SCOPE_struct_list(s).get_elem_count() != 0) {
 		note("\nSTRUCT:");
 		g_indent++;
 		note("\n");
-		while (st != NULL) {
+
+		C<STRUCT*> * ct;
+		for (STRUCT * st = SCOPE_struct_list(s).get_head(&ct);
+			 st != NULL; st = SCOPE_struct_list(s).get_next(&ct)) {
 			buf[0] = 0;
 			format_struct_complete(buf, st);
 			note("%s\n", buf);
-			st = USER_TYPE_LIST_next(st);
 		}
+
 		g_indent--;
 	}
 
 	//unions
-	UNION * un = SCOPE_union_list(s);
-	if (un != NULL) {
+	if (SCOPE_union_list(s).get_elem_count() != 0) {
 		note("\nUNION:");
 		g_indent++;
 		note("\n");
-		while (un != NULL) {
+
+		C<UNION*> * ct;
+		for (UNION * st = SCOPE_union_list(s).get_head(&ct);
+			 st != NULL; st = SCOPE_union_list(s).get_next(&ct)) {
 			buf[0] = 0;
-			format_union_complete(buf, un);
+			format_union_complete(buf, st);
 			note("%s\n", buf);
-			un = USER_TYPE_LIST_next(un);
 		}
+
 		g_indent--;
 	}
 

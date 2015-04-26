@@ -450,7 +450,7 @@ public:
 extern ST_INFO g_st_info[];
 
 //Exported Functions
-SST pushst(SST st, ULONG v);
+SST pushst(SST st, size_t v);
 SST popst();
 INT is_sst_exist(SST sst);
 SST get_top_st();

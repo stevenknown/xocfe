@@ -31,9 +31,9 @@ public:
 	}
 
 	//Note v must be const string pointer.
-	UINT get_hash_value(ULONG v, UINT bs) const
+	UINT get_hash_value(OBJTY v, UINT bs) const
 	{
-		IS_TRUE(sizeof(ULONG) == sizeof(CHAR const*),
+		IS_TRUE(sizeof(OBJTY) == sizeof(CHAR const*),
 				("exception will taken place in type-cast"));
 		IS_TRUE0(is_power_of_2(bs));
 		UINT n = compute_char_sum((CHAR const*)v);
@@ -43,9 +43,9 @@ public:
 	bool compare(SYM const* s1, SYM const* s2) const
 	{ return strcmp(SYM_name(s1),  SYM_name(s2)) == 0; }
 
-	bool compare(SYM const* s, ULONG val) const
+	bool compare(SYM const* s, OBJTY val) const
 	{
-		IS_TRUE(sizeof(ULONG) == sizeof(CHAR const*),
+		IS_TRUE(sizeof(OBJTY) == sizeof(CHAR const*),
 				("exception will taken place in type-cast"));
 		return (strcmp(SYM_name(s),  (CHAR const*)val) == 0);
 	}
@@ -71,9 +71,9 @@ public:
 	}
 
 	//Note v must be string pointer.
-	UINT get_hash_value(ULONG v, UINT bs) const
+	UINT get_hash_value(OBJTY v, UINT bs) const
 	{
-		IS_TRUE(sizeof(ULONG) == sizeof(CHAR*),
+		IS_TRUE(sizeof(OBJTY) == sizeof(CHAR*),
 				("exception will taken place in type-cast"));
 		IS_TRUE0(is_power_of_2(bs));
 		UINT n = compute_char_sum((CHAR*)v);
@@ -83,9 +83,9 @@ public:
 	bool compare(SYM * s1, SYM * s2) const
 	{ return strcmp(SYM_name(s1),  SYM_name(s2)) == 0; }
 
-	bool compare(SYM * s, ULONG val) const
+	bool compare(SYM * s, OBJTY val) const
 	{
-		IS_TRUE(sizeof(ULONG) == sizeof(CHAR*),
+		IS_TRUE(sizeof(OBJTY) == sizeof(CHAR*),
 				("exception will taken place in type-cast"));
 		return (strcmp(SYM_name(s),  (CHAR*)val) == 0);
 	}
@@ -112,7 +112,7 @@ public:
 		return ns;
 	}
 
-	SYM * create(ULONG v)
+	SYM * create(OBJTY v)
 	{
 		SYM * sym = (SYM*)smpool_malloc_h(sizeof(SYM), m_pool);
 		SYM_name(sym) = strdup((CHAR const*)v);
@@ -125,9 +125,10 @@ public:
 		if (sz < SHASH<SYM*, SYM_HASH_FUNC>::get_elem_count()) {
 			SHASH<SYM*, SYM_HASH_FUNC>::grow(sz);
 		}
-		return SHASH<SYM*, SYM_HASH_FUNC>::append((ULONG)s); }
+		return SHASH<SYM*, SYM_HASH_FUNC>::append((OBJTY)s);
+	}
 
 	inline SYM * get(CHAR const* s)
-	{ return SHASH<SYM*, SYM_HASH_FUNC>::find((ULONG)s); }
+	{ return SHASH<SYM*, SYM_HASH_FUNC>::find((OBJTY)s); }
 };
 #endif

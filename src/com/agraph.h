@@ -83,13 +83,13 @@ public:
 
 	//Erasing graph, include all nodes and edges,
 	//except for mempool, freelist.
-	void erasure()
+	void erase()
 	{
 		if (m_spath_mat != NULL) {
 			delete m_spath_mat; //Delete shortest path matrix
 			m_spath_mat = NULL;
 		}
-		GRAPH::erasure();
+		GRAPH::erase();
 	}
 };
 #endif

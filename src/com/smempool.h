@@ -40,14 +40,13 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define WORD_ALIGN 1
 #define MIN_MARGIN 0
 
-typedef ULONG MEMPOOLIDX;
+typedef size_t MEMPOOLIDX;
 typedef enum {
 	MEM_NONE = 0,
 	MEM_COMM,     //can be realloc, free
 	MEM_VOLATILE, //can be realloc , but free is forbidded
 	MEM_CONST_SIZE, //the element in the pool should be in same size.
 } MEMPOOLTYPE;
-
 
 
 #define MEMPOOL_type(p)					((p)->pool_type)
@@ -66,9 +65,9 @@ typedef struct _mem_pool {
 	struct _mem_pool * next;
 	struct _mem_pool * prev;
 	MEMPOOLIDX mpt_id; //identification of mem pool
-	ULONG start_pos; //represent the alloca postion of mem pool
-	ULONG mem_pool_size; //represent mem pool size
-	ULONG grow_size;
+	size_t start_pos; //represent the alloca postion of mem pool
+	size_t mem_pool_size; //represent mem pool size
+	size_t grow_size;
 	void * ppool; //start address of mem pool
 	#ifdef _DEBUG_
 	ULONG chunk_id;
@@ -80,21 +79,21 @@ typedef struct _mem_pool {
 extern "C" {
 #endif
 //create mem pool
-MEMPOOLIDX smpool_create_idx(ULONG size, MEMPOOLTYPE mpt = MEM_COMM);
-SMEM_POOL * smpool_create_handle(ULONG size, MEMPOOLTYPE mpt = MEM_COMM);
+MEMPOOLIDX smpool_create_idx(size_t size, MEMPOOLTYPE mpt = MEM_COMM);
+SMEM_POOL * smpool_create_handle(size_t size, MEMPOOLTYPE mpt = MEM_COMM);
 
 //delete mem pool
 INT smpool_free_idx(MEMPOOLIDX mpt_idx);
 INT smpool_free_handle(SMEM_POOL * handle);
 
 //alloc memory from corresponding mem pool
-void * smpool_malloc_i(ULONG size, MEMPOOLIDX mpt_idx, UINT grow_size = 0);
-void * smpool_malloc_h(ULONG size, SMEM_POOL * handle, UINT grow_size = 0);
-void * smpool_malloc_h_const_size(ULONG elem_size, IN SMEM_POOL * handler);
+void * smpool_malloc_i(size_t size, MEMPOOLIDX mpt_idx, size_t grow_size = 0);
+void * smpool_malloc_h(size_t size, SMEM_POOL * handle, size_t grow_size = 0);
+void * smpool_malloc_h_const_size(size_t elem_size, IN SMEM_POOL * handler);
 
 //Get whole pool size with byte
-ULONG smpool_get_pool_size_idx(MEMPOOLIDX mpt_idx);
-ULONG smpool_get_pool_size_handle(SMEM_POOL const* handle);
+size_t smpool_get_pool_size_idx(MEMPOOLIDX mpt_idx);
+size_t smpool_get_pool_size_handle(SMEM_POOL const* handle);
 void smpool_init_pool(); //Initializing pool utilities
 void smpool_fini_pool(); //Finializing pool
 
@@ -103,6 +102,6 @@ void dump_pool(SMEM_POOL * handler, FILE * h);
 }
 #endif
 
-extern ULONG g_stat_mem_size;
+extern ULONGLONG g_stat_mem_size;
 #endif
 

@@ -45,14 +45,12 @@ SMEM_POOL * g_pool_st_used = NULL;
 SMEM_POOL * g_pool_tree_used = NULL;
 SYM_TAB * g_fe_sym_tab = NULL;
 bool g_dump_token = false;
-INT g_real_line_num;
 CHAR * g_real_token_string = NULL;
 TOKEN g_real_token = T_NUL;
 static LIST<CELL*> g_cell_list;
 bool g_enable_C99_declaration = true;
-FILE * g_hsrc = NULL;
 
-static void * xmalloc(ULONG size)
+static void * xmalloc(size_t size)
 {
 	void * p = smpool_malloc_h(size, g_pool_tree_used);
 	IS_TRUE0(p);
@@ -119,7 +117,7 @@ static LABEL_INFO * add_ref_label(CHAR * name, INT lineno)
 
 //list operation
 //Append a token to tail of list
-static void append_c_tail(ULONG v)
+static void append_c_tail(size_t v)
 {
 	//static CELL * g_cell_list_head=NULL;
 	//static CELL * g_cell_list_tail=NULL;
@@ -131,7 +129,7 @@ static void append_c_tail(ULONG v)
 
 
 //Append a token to head of list
-static void append_c_head(ULONG v)
+static void append_c_head(size_t v)
 {
 	CELL * c = newcell(0);
 	CELL_val(c) = (LONGLONG)v;
@@ -149,7 +147,7 @@ static void append_tok_tail(TOKEN tok, CHAR * tokname, INT lineno)
 	TOKEN_INFO_name(tki) = SYM_name(s);
 	TOKEN_INFO_token(tki) = tok;
 	TOKEN_INFO_lineno(tki) = lineno;
-	append_c_tail((ULONG)tki);
+	append_c_tail((size_t)tki);
 }
 
 
@@ -162,16 +160,16 @@ static void append_tok_head(TOKEN tok, CHAR * tokname, INT lineno)
 	TOKEN_INFO_name(tki) = SYM_name(s);
 	TOKEN_INFO_token(tki) = tok;
 	TOKEN_INFO_lineno(tki) = lineno;
-	append_c_head((ULONG)tki);
+	append_c_head((size_t)tki);
 }
 
 
 //Remove a token from head of list
-static ULONG remove_head_tok()
+static size_t remove_head_tok()
 {
 	CELL * c = g_cell_list.remove_head();
 	if (c != NULL) {
-		ULONG v = (ULONG)CELL_val(c);
+		size_t v = (size_t)CELL_val(c);
 		free_cell(c);
 		return v;
 	}
@@ -179,21 +177,21 @@ static ULONG remove_head_tok()
 }
 
 
-static ULONG get_head_tok()
+static size_t get_head_tok()
 {
 	CELL * c = g_cell_list.get_head();
 	if (c) {
-		return (ULONG)CELL_val(c);
+		return (size_t)CELL_val(c);
 	}
 	return 0;
 }
 
 
-static ULONG get_tail_tok()
+static size_t get_tail_tok()
 {
 	CELL * c = g_cell_list.get_tail();
 	if (c) {
-		return (ULONG)CELL_val(c);
+		return (size_t)CELL_val(c);
 	}
 	return 0;
 }
@@ -717,7 +715,7 @@ static TREE * primary_exp(IN OUT UINT * st)
 	case T_IMM:
 		t = NEWT(TR_IMM);
 		//If the target integer hold in 'g_real_token_string' is longer than
-		//host ULONG type, it will be truncated now.
+		//host size_t type, it will be truncated now.
 		TREE_token(t) = g_real_token;
 		TREE_imm_val(t) = xatol(g_real_token_string, false);
 		match(T_IMM);
@@ -725,7 +723,7 @@ static TREE * primary_exp(IN OUT UINT * st)
 	case T_IMML:
 		t = NEWT(TR_IMML);
 		//If the target integer hold in 'g_real_token_string' is longer than
-		//host ULONG type, it will be truncated now.
+		//host size_t type, it will be truncated now.
 		TREE_token(t) = g_real_token;
 		TREE_imm_val(t) = xatol(g_real_token_string, false);
 		match(T_IMML);

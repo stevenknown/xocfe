@@ -33,7 +33,7 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 LIST<ERR_MSG*> g_err_msg_list;
 LIST<WARN_MSG*> g_warn_msg_list;
 
-static void * xmalloc(ULONG size)
+static void * xmalloc(size_t size)
 {
 	void * p = smpool_malloc_h(size, g_pool_general_used);
 	if (p == NULL) return NULL;

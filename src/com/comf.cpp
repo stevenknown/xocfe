@@ -163,10 +163,14 @@ CHAR * xstrcat(CHAR * buf, UINT bufl, CHAR const* info, ...)
 {
 	//CHAR * ptr = (CHAR*)&info;
 	//ptr += sizeof(CHAR*);
-	UINT l = strlen(buf);
+	UINT l = ::strlen(buf);
+	if (l >= bufl) { return buf; }
+
 	UINT x = bufl - l;
+
 	va_list ptr;
 	va_start(ptr, info);
+
 	CHAR * lbuf = buf + l;
 	vsnprintf(lbuf, x, info, ptr);
 	buf[bufl - 1] = 0;

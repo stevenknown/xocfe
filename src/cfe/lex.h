@@ -195,7 +195,8 @@ extern LONG * g_ofst_tab; //Record offset of each line in src file
 extern LONG g_ofst_tab_byte_size;//Record entry number of offset table
 extern TOKEN_INFO g_token_info[];
 extern bool g_enable_newline_token; //Set true to regard '\n' as token.
-
+extern FILE * g_hsrc;
+extern INT g_real_line_num;
 
 //Exported Functions
 void init_key_word_tab();

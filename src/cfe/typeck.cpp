@@ -27,7 +27,7 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 @*/
 #include "cfecom.h"
 
-class TY_CONTEXT {
+class TY_CTX {
 public:
 	//for lvalue expression , TR_ID should corresponding with IR_ID, but IR_LD.
 	bool is_lvalue;
@@ -63,7 +63,7 @@ static INT process_struct_init(TYPE * ty, TREE ** init);
 static INT process_union_init(TYPE * ty, TREE ** init);
 static INT process_base_init(TYPE * ty, TREE ** init);
 static TYPE * build_base_type_spec(INT des);
-static INT c_type_ck(TREE * t, TY_CONTEXT * cont);
+static INT c_type_ck(TREE * t, TY_CTX * cont);
 
 #define BUILD_TYNAME(T)  build_type_name(build_base_type_spec(T))
 
@@ -96,10 +96,9 @@ static INT process_array_init(DECL * dcl, TYPE * ty, TREE ** init)
 		}
 	} else {
 	    //single dimension array
-		/*
-		When we meet a TR_EXP_SCOPE, because now we are initializing a array,
-		so the initialization set up from subset of EXP_SCOPE
-		*/
+		/* When we meet a TR_EXP_SCOPE, because now we are
+		initializing a array, so the initialization set up
+		from subset of EXP_SCOPE */
 		if (TREE_type(*init) == TR_EXP_SCOPE) {
 			TREE * t = TREE_exp_scope(*init);
 			ty = get_pure_type_spec(ty);
@@ -517,7 +516,7 @@ static bool ck_assign(TREE * t, DECL * ld, DECL * rd)
 }
 
 
-static bool type_tran_id(TREE * t, TY_CONTEXT * cont, CHAR buf[])
+static bool type_tran_id(TREE * t, TY_CTX * cont, CHAR buf[])
 {
 	//Construct type-name and expand user type if it was declared.
 	DECL * tmp_decl = NULL;
@@ -662,12 +661,12 @@ static bool type_tran_id(TREE * t, TY_CONTEXT * cont, CHAR buf[])
 
 
 //Transfering type declaration for all AST nodes.
-static INT c_type_tran(TREE * t, TY_CONTEXT * cont)
+static INT c_type_tran(TREE * t, TY_CTX * cont)
 {
 	CHAR buf[MAX_BUF_LEN];
 	buf[0] = 0;
 	if (cont == NULL) {
-		TY_CONTEXT ct = {0};
+		TY_CTX ct = {0};
 		cont = &ct;
 	}
 	while (t != NULL) {
@@ -988,7 +987,7 @@ static INT c_type_tran(TREE * t, TY_CONTEXT * cont)
 
 				DECL * type_name = TREE_type_name(TREE_cvt_type(t));
 
-				if (IS_USER_TYPE(DECL_spec(type_name))) {
+				if (IS_USER_TYPE_REF(DECL_spec(type_name))) {
 					//Expand the combined type here.
 					type_name = expand_user_type(type_name);
 					IS_TRUE(is_valid_type_name(type_name),
@@ -1324,7 +1323,7 @@ static INT c_declaration_ck(DECL * d)
 }
 
 
-static bool type_ck_call(TREE * t, TY_CONTEXT * cont)
+static bool type_ck_call(TREE * t, TY_CTX * cont)
 {
 	if (ST_SUCC != c_type_ck(TREE_para_list(t), cont)) return false;
 	if (ST_SUCC != c_type_ck(TREE_fun_exp(t), cont)) return false;
@@ -1397,12 +1396,12 @@ static bool type_ck_call(TREE * t, TY_CONTEXT * cont)
 
 
 //Perform type checking.
-static INT c_type_ck(TREE * t, TY_CONTEXT * cont)
+static INT c_type_ck(TREE * t, TY_CTX * cont)
 {
 	CHAR buf[MAX_BUF_LEN];
 	buf[0] = 0;
 	if (cont == NULL) {
-		TY_CONTEXT ct = {0};
+		TY_CTX ct = {0};
 		cont = &ct;
 	}
 	while (t != NULL) {

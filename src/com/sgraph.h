@@ -110,7 +110,7 @@ public:
 									VERTEX_id(EDGE_to(e)))) & (bs - 1);
 	}
 
-	UINT get_hash_value(ULONG val, UINT bs) const
+	UINT get_hash_value(OBJTY val, UINT bs) const
 	{ return get_hash_value((EDGE*)val, bs); }
 
 	bool compare(EDGE * e1, EDGE * e2) const
@@ -119,7 +119,7 @@ public:
 			   (VERTEX_id(EDGE_to(e1)) == VERTEX_id(EDGE_to(e2)));
 	}
 
-	bool compare(EDGE * t1, ULONG val) const
+	bool compare(EDGE * t1, OBJTY val) const
 	{
 		EDGE * t2 = (EDGE*)val;
 		return VERTEX_id(EDGE_from(t1)) == VERTEX_id(EDGE_from(t2)) &&
@@ -147,16 +147,16 @@ public:
 		SHASH<EDGE*, EDGE_HF>::destroy();
 	}
 
-	virtual EDGE * create(ULONG v);
+	virtual EDGE * create(OBJTY v);
 };
 
 
 class VERTEX_HF {
 public:
-	UINT get_hash_value(ULONG val, UINT bs) const
+	UINT get_hash_value(OBJTY val, UINT bs) const
 	{
 		IS_TRUE0(is_power_of_2(bs));
-		return hash32bit((UINT)val) & (bs - 1);
+		return hash32bit((UINT)(size_t)val) & (bs - 1);
 	}
 
 	UINT get_hash_value(VERTEX const* vex, UINT bs) const
@@ -168,8 +168,8 @@ public:
 	bool compare(VERTEX * v1, VERTEX * v2) const
 	{ return (VERTEX_id(v1) == VERTEX_id(v2)); }
 
-	bool compare(VERTEX * v1, ULONG val) const
-	{ return (VERTEX_id(v1) == val); }
+	bool compare(VERTEX * v1, OBJTY val) const
+	{ return (VERTEX_id(v1) == (UINT)(size_t)val); }
 };
 
 
@@ -185,13 +185,13 @@ public:
 	virtual ~VERTEX_HASH()
 	{ smpool_free_handle(m_ec_pool); }
 
-	virtual VERTEX * create(ULONG v)
+	virtual VERTEX * create(OBJTY v)
 	{
 		VERTEX * vex = (VERTEX*)smpool_malloc_h_const_size(sizeof(VERTEX),
 														   m_ec_pool);
 		IS_TRUE0(vex);
 		memset(vex, 0, sizeof(VERTEX));
-		VERTEX_id(vex) = v;
+		VERTEX_id(vex) = (UINT)(size_t)v;
 		return vex;
 	}
 };
@@ -267,6 +267,25 @@ protected:
 	virtual void * clone_vertex_info(VERTEX * v)
 	{ IS_TRUE(0, ("should be overloaded")); return NULL; }
 
+	inline VERTEX * new_vertex()
+	{
+		VERTEX * vex = (VERTEX*)smpool_malloc_h_const_size(sizeof(VERTEX),
+													  m_vertex_pool);
+		IS_TRUE0(vex);
+		memset(vex, 0, sizeof(VERTEX));
+		return vex;
+	}
+
+	inline EDGE * new_edge(UINT from, UINT to)
+	{
+		IS_TRUE(m_ec_pool != NULL, ("not yet initialized."));
+		VERTEX * fp = add_vertex(from);
+		VERTEX * tp = add_vertex(to);
+		return new_edge(fp, tp);
+	}
+	EDGE * new_edge(VERTEX * from, VERTEX * to);
+	VERTEX * new_vertex(UINT vid);
+
 	inline EDGE * new_edge_impl(VERTEX * from, VERTEX * to)
 	{
 		EDGE * e = m_e_free_list.get_free_elem();
@@ -317,8 +336,7 @@ public:
 		return m_vertices.append(new_vertex(vid));
 	}
 
-	void compute_rpo_norec(IN OUT VERTEX * root,
-						OUT LIST<VERTEX const*> & vlst);
+	void compute_rpo_norec(IN OUT VERTEX * root, OUT LIST<VERTEX const*> & vlst);
 	bool clone(GRAPH & src);
 	UINT count_mem() const;
 
@@ -330,6 +348,7 @@ public:
 	bool is_equal(GRAPH & g);
 	bool is_unique() const { return m_is_unique; }
 	bool is_direction() const { return m_is_direction; }
+
 	//Is there exist a path connect 'from' and 'to'.
 	inline bool is_reachable(UINT from, UINT to)
 	{
@@ -349,10 +368,10 @@ public:
 	bool is_graph_exit(VERTEX const* v) const
 	{ return VERTEX_out_list(v) == NULL; }
 
-	void erasure();
+	void erase();
 
-	bool get_neighbor_list(IN OUT LIST<UINT> & ni_list, IN UINT vid) const;
-	bool get_neighbor_set(OUT SBITSET & niset, IN UINT vid) const;
+	bool get_neighbor_list(IN OUT LIST<UINT> & ni_list, UINT vid) const;
+	bool get_neighbor_set(OUT SBITSET & niset, UINT vid) const;
 	inline UINT get_degree(UINT vid)
 	{
 		IS_TRUE(m_ec_pool != NULL, ("not yet initialized."));
@@ -377,7 +396,7 @@ public:
 		if (m_dense_vertex != NULL) {
 			return m_dense_vertex->get(vid);
 		}
-		return (VERTEX*)m_vertices.find(vid);
+		return (VERTEX*)m_vertices.find((OBJTY)(size_t)vid);
 	}
 	EDGE * get_edge(UINT from, UINT to);
 	EDGE * get_edge(VERTEX const* from, VERTEX const* to);
@@ -401,15 +420,6 @@ public:
 		IS_TRUE(m_ec_pool != NULL, ("not yet initialized."));
 		return m_vertices.get_next(cur);
 	}
-	inline EDGE * new_edge(UINT from, UINT to)
-	{
-		IS_TRUE(m_ec_pool != NULL, ("not yet initialized."));
-		VERTEX * fp = add_vertex(from);
-		VERTEX * tp = add_vertex(to);
-		return new_edge(fp, tp);
-	}
-	EDGE * new_edge(VERTEX * from, VERTEX * to);
-	VERTEX * new_vertex(UINT vid);
 
 	void resize(UINT vertex_hash_sz, UINT edge_hash_sz);
 	EDGE * rev_edge(EDGE * e); //Reverse edge direction.(e.g: a->b => b->a)
@@ -466,6 +476,14 @@ public:
 	void clean() { is_visited.clean(); stk.clean(); }
 	void set_preorder() { is_preorder = 1; }
 	void set_postorder() { is_postorder = 1; }
+};
+
+
+//This class indicate a Dominator Tree.
+class DOM_TREE : public GRAPH {
+public:
+	DOM_TREE()
+	{ set_dense(true); }
 };
 
 

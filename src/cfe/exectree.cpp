@@ -72,20 +72,33 @@ static bool compute_enum_const(TREE * t)
 }
 
 
-//Return byte size of TYPE_NAME, or -1 if failed.
+/* Compute byte size of TYPE_NAME and record in the cell stack, or record
+-1 if failed. The function return true if the computation is success,
+otherwise return false. */
 static bool compute_sizeof(TREE * t)
 {
-	TREE *  p = TREE_sizeof_exp(t);
+	TREE * p = TREE_sizeof_exp(t);
 	if (TREE_type(p) == TR_TYPE_NAME) {
 		DECL * dcl = TREE_type_name(p);
+		IS_TRUE0(dcl && DECL_dt(dcl) == DCL_TYPE_NAME);
+
 		TYPE * type_spec = DECL_spec(dcl);
+		IS_TRUE0(type_spec);
+
 		DECL * abs_decl = DECL_decl_list(dcl);
-		ULONG sz;
-		if (is_complex_type(abs_decl)) {
-			sz = get_complex_type_size_in_byte(dcl);
-		} else {
-			sz = get_simply_type_size_in_byte(type_spec);
+
+		if (is_user_type_ref(dcl)) {
+			dcl = factor_user_type(dcl);
+			TREE_type_name(p) = dcl;
 		}
+
+		ULONG sz = get_decl_size(dcl);
+		//if (is_complex_type(abs_decl) || is_user_type_ref(dcl)) {
+		//	sz = get_complex_type_size_in_byte(dcl);
+		//} else {
+		//	sz = get_simply_type_size_in_byte(type_spec);
+		//}
+
 		if (sz != 0) {
 			pushv(sz);
 			return true;
@@ -93,7 +106,9 @@ static bool compute_sizeof(TREE * t)
 	} else {
 		return compute_conditional_exp(p);
 	}
+
 	err(TREE_lineno(p), "'sizeof' need type-name");
+
 	return false;
 }
 

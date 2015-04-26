@@ -30,10 +30,14 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define NO_BASIC_MAT_DUMP //Default option
 #define MAX_SHASH_BUCKET 97 //Default option
+//#define _SLOW_CHECK_
+
+typedef void* OBJTY;
 
 /*
 Structure chain operations.
-For easing implementation, there must be 2 fields declared by T
+
+For easing implementation, there must be 2 fields declared in T
 	1. T * next
 	2. T * prev
 */
@@ -223,12 +227,9 @@ inline void insertbefore_one(T ** head, T * marker, T * t)
 }
 
 
-/*
-Insert a list that leading by 't' before 'marker'.
-
+/* Insert a list that leading by 't' before 'marker'.
 'head': function might modify the header of list.
-'t': the head element of list, that to be inserted.
-*/
+'t': the head element of list, that to be inserted. */
 template <class T>
 inline void insertbefore(T ** head, T * marker, T * t)
 {
@@ -261,12 +262,10 @@ inline void insertbefore(T ** head, T * marker, T * t)
 }
 
 
-/*
-Insert t into list immediately that following 'marker'.
+/* Insert t into list immediately that following 'marker'.
 e.g: a->maker->b->c
 	output is: a->maker->t->b->c
-Return header in 'marker' if list is empty.
-*/
+Return header in 'marker' if list is empty. */
 template <class T>
 inline void insertafter_one(T ** marker, T * t)
 {
@@ -286,11 +285,9 @@ inline void insertafter_one(T ** marker, T * t)
 }
 
 
-/*
-Insert t into marker's list as the subsequent element.
+/* Insert t into marker's list as the subsequent element.
 e.g: a->maker->b->c,  and t->x->y
-	output is: a->maker->t->x->y->b->c
-*/
+	output is: a->maker->t->x->y->b->c. */
 template <class T>
 inline void insertafter(T ** marker, T * t)
 {
@@ -737,6 +734,10 @@ public:
 
 	bool in_list(C<T> const* p) const
 	{
+		#ifndef _SLOW_CHECK_
+		return true;
+		#endif
+
 		if (p == NULL) { return true; }
 		C<T> const* t = m_head;
 		while (t != NULL) {
@@ -1380,8 +1381,13 @@ protected:
 		return p;
 	}
 
+	//Check p is the element in list.
 	bool in_list(SC<T> const* p) const
 	{
+		#ifndef _SLOW_CHECK_
+		return true;
+		#endif
+
 		if (p == NULL) { return true; }
 		SC<T> const* t = m_head;
 		while (t != NULL) {
@@ -1392,7 +1398,14 @@ protected:
 	}
 public:
 	SLISTC() { init(); }
-	~SLISTC() {}
+	~SLISTC() { destroy(); }
+
+	void destroy()
+	{
+		m_elem_count = 0;
+		m_head = NULL;
+		m_tail = NULL;
+	}
 
 	SC<T> * get_one_sc(SC<T> ** free_list)
 	{
@@ -1713,12 +1726,20 @@ private:
 	SLIST(SLIST const&) { IS_TRUE(0, ("Do not invoke copy-constructor.")); }
 	void operator = (SLIST const&)
 	{ IS_TRUE(0, ("Do not invoke copy-constructor.")); }
+
 protected:
 	SMEM_POOL * m_free_list_pool;
 	SC<T> * m_free_list; //Hold for available containers
+
 public:
 	SLIST(SMEM_POOL * pool = NULL) { set_pool(pool); }
-	~SLIST() {}
+	~SLIST()
+	{
+		//It seem destroy() do the same things as the parent class's destructor.
+		//So it is not necessary to double call destroy().
+	}
+
+	void destroy() { SLISTC<T>::destroy(); }
 
 	void set_pool(SMEM_POOL * pool)
 	{
@@ -1727,6 +1748,7 @@ public:
 		m_free_list_pool = pool;
 		m_free_list = NULL;
 	}
+
 	SMEM_POOL * get_pool() { return m_free_list_pool; }
 
 	SC<T> * append_tail(T t)
@@ -1915,7 +1937,8 @@ public:
 		return t_holder;
 	}
 
-	//NOTICE: 'marker' should have been in the list.
+	//NOTICE: 'marker' should have been in the list,
+	//and marker will be modified.
 	C<T> * insert_before(T t, C<T> * marker)
 	{
 		IS_TRUE0(marker && m_t2holder_map.get(C_val(marker)) == marker);
@@ -2487,7 +2510,7 @@ NOTICE:
 	  following member functions you should supply according to your needs.
 
 		* Return hash-key deduced from 'val'.
-			UINT get_hash_value(ULONG val) const
+			UINT get_hash_value(OBJTY val) const
 
 		* Return hash-key deduced from 't'.
 			UINT get_hash_value(T * t) const
@@ -2496,7 +2519,7 @@ NOTICE:
 			bool compare(T * t1, T * t2) const
 
 		* Compare t1, val when inserting a new element.
-			bool compare(T * t1, ULONG val) const
+			bool compare(T * t1, OBJTY val) const
 
 	3.Use 'new'/'delete' operator to allocate/free the memory
 	  of dynamic object and the virtual function pointers.
@@ -2526,19 +2549,19 @@ public:
 	UINT get_hash_value(T t, UINT bucket_size) const
 	{
 		IS_TRUE0(bucket_size != 0);
-		return ((UINT)(ULONG)t) % bucket_size;
+		return ((UINT)(size_t)t) % bucket_size;
 	}
 
-	UINT get_hash_value(ULONG val, UINT bucket_size) const
+	UINT get_hash_value(OBJTY val, UINT bucket_size) const
 	{
 		IS_TRUE0(bucket_size != 0);
-		return ((UINT)val) % bucket_size;
+		return ((UINT)(size_t)val) % bucket_size;
 	}
 
 	bool compare(T t1, T t2) const
 	{ return t1 == t2; }
 
-	bool compare(T t1, ULONG val) const
+	bool compare(T t1, OBJTY val) const
 	{ return t1 == (T)val; }
 };
 
@@ -2549,10 +2572,10 @@ public:
 	{
 		IS_TRUE0(bucket_size != 0);
 		IS_TRUE0(is_power_of_2(bucket_size));
-		return hash32bit((UINT)(ULONG)t) & (bucket_size - 1);
+		return hash32bit((UINT)(size_t)t) & (bucket_size - 1);
 	}
 
-	UINT get_hash_value(ULONG val, UINT bucket_size) const
+	UINT get_hash_value(OBJTY val, UINT bucket_size) const
 	{
 		IS_TRUE0(bucket_size != 0);
 		IS_TRUE0(is_power_of_2(bucket_size));
@@ -2573,9 +2596,9 @@ public:
 		return hash32bit(v) % bucket_size;
 	}
 
-	UINT get_hash_value(ULONG v, UINT bucket_size) const
+	UINT get_hash_value(OBJTY v, UINT bucket_size) const
 	{
-		IS_TRUE(sizeof(ULONG) == sizeof(CHAR*),
+		IS_TRUE(sizeof(OBJTY) == sizeof(CHAR*),
 				("exception will taken place in type-cast"));
 		return get_hash_value((CHAR const*)v, bucket_size);
 	}
@@ -2583,9 +2606,9 @@ public:
 	bool compare(CHAR const* s1, CHAR const* s2) const
 	{ return strcmp(s1, s2) == 0; }
 
-	bool compare(CHAR const* s, ULONG val) const
+	bool compare(CHAR const* s, OBJTY val) const
 	{
-		IS_TRUE(sizeof(ULONG) == sizeof(CHAR const*),
+		IS_TRUE(sizeof(OBJTY) == sizeof(CHAR const*),
 				("exception will taken place in type-cast"));
 		return (strcmp(s,  (CHAR const*)val) == 0);
 	}
@@ -2633,7 +2656,67 @@ protected:
 		return c;
 	}
 
-	virtual T create(ULONG v)
+	//Insert element into hash table.
+	//Return true if 't' already exist.
+	bool insert_v(OUT HC<T> ** bucket_entry, OUT HC<T> ** hc, OBJTY val)
+	{
+		HC<T> * elemhc = *bucket_entry;
+		HC<T> * prev = NULL;
+		while (elemhc != NULL) {
+			IS_TRUE(HC_val(elemhc) != T(0),
+					("Hash element has so far as to be overrided!"));
+			if (m_hf.compare(HC_val(elemhc), val)) {
+				*hc = elemhc;
+				return true;
+			}
+			prev = elemhc;
+			elemhc = HC_next(elemhc);
+		} //end while
+		elemhc = newhc();
+		IS_TRUE(elemhc != NULL, ("newhc() return NULL"));
+		HC_val(elemhc) = create(val);
+		if (prev != NULL) {
+			//Append on element-list
+			HC_next(prev) = elemhc;
+			HC_prev(elemhc) = prev;
+		} else {
+			*bucket_entry = elemhc;
+		}
+		*hc = elemhc;
+		return false;
+	}
+
+	//Insert element into hash table.
+	//Return true if 't' already exist.
+	bool insert_t(IN OUT HC<T> ** bucket_entry, OUT HC<T> ** hc, IN T t)
+	{
+		HC<T> * prev = NULL;
+		HC<T> * elemhc = *bucket_entry;
+		while (elemhc != NULL) {
+			IS_TRUE(HC_val(elemhc) != T(0), ("Container is empty"));
+			if (m_hf.compare(HC_val(elemhc), t)) {
+				t = HC_val(elemhc);
+				*hc = elemhc;
+				return true;
+			}
+			prev = elemhc;
+			elemhc = HC_next(elemhc);
+		}
+		elemhc = newhc();
+		IS_TRUE(elemhc != NULL, ("newhc() return NULL"));
+		HC_val(elemhc) = t;
+		if (prev != NULL) {
+			//Append on elem-list in the bucket.
+			HC_next(prev) = elemhc;
+			HC_prev(elemhc) = prev;
+		} else {
+			*bucket_entry = elemhc;
+		}
+		*hc = elemhc;
+		return false;
+	}
+
+	virtual T create(OBJTY v)
 	{
 		IS_TRUE(0, ("Inherited class need to implement"));
 		return T(0);
@@ -2649,561 +2732,420 @@ public:
 	}
 	virtual ~SHASH() { destroy(); }
 
-	T append(ULONG val, OUT HC<T> ** hct = NULL, bool * find = NULL);
-	T append(T t, OUT HC<T> ** hct = NULL, bool * find = NULL);
+	/* Append 't' into hash table and record its reference into
+	SVECTOR in order to walk through the table rapidly.
+	If 't' already exists, return the element immediately.
+	'find': set to true if 't' already exist.
 
-	//Clean the data structure but not destroy.
-	inline void clean();
-
-	//Count up the memory which hash table used.
-	inline UINT count_mem() const;
-
-	bool insert_t(IN OUT HC<T> ** bucket_entry, OUT HC<T> ** hc, IN T t);
-	bool insert_v(IN OUT HC<T> ** bucket_entry, OUT HC<T> ** hc, ULONG val);
-	inline void init(UINT bsize = MAX_SHASH_BUCKET);
-
-	//Find one element and return the element which record in hash table.
-	//Note t may be different with the return one.
-	bool find(T t, OUT T * ot);
-
-	//Find one element and return the container.
-	//Return true if t exist, otherwise return false.
-	bool find(T t, HC<T> ** ct = NULL);
-
-	//Find element accroding to specific 'val'.
-	T find(ULONG val);
-
-	//Get the hash bucket size.
-	inline UINT get_bucket_size() const { return m_bucket_size; }
-
-	//Get the hash bucket.
-	inline SHASH_BUCKET const* get_bucket() const { return m_bucket; }
-
-	//This function get the first element in hash, and initialize the iterator.
-	//cur: the iterator.
-	inline T get_first(INT & cur);
-
-	//This function get the next element in hash accroding to 'cur'.
-	//This function update the iterator.
-	//cur: the iterator.
-	inline T get_next(INT & cur);
-
-	//This function get the last element in hash, and initialize the iterator.
-	//cur: the iterator.
-	inline T get_last(INT & cur);
-
-	//This function get the previous element in hash accroding to 'cur'.
-	//This function update the iterator.
-	//cur: the iterator.
-	inline T get_prev(INT & cur);
-
-	//Grow hash table by given byte size.
-	//bsize: the byte size want to grow.
-	void grow(UINT bsize = 0);
-
-	//Get the memory pool handler of free_list.
-	//Note this pool is const size.
-	SMEM_POOL * get_free_list_pool() const
-	{ return m_free_list_pool; };
-
-	//Get the number of element in hash table.
-	UINT get_elem_count() const { return m_elem_count; }
-
-	//Free all memory objects.
-	inline void destroy();
-
-	//Dump the distribution of element in hash.
-	void dump_intersp(FILE * h);
-
-	//Remove one element, and return the removed one.
-	//Note the input t may be different with return one accroding to
-	//the behavior of user's defined HF class.
-	T removed(T t);
-};
-
-
-template <class T, class HF>
-void SHASH<T, HF>::init(UINT bsize)
-{
-	if (m_bucket != NULL) return;
-	if (bsize == 0) { return; }
-	m_bucket = (SHASH_BUCKET*)::malloc(sizeof(SHASH_BUCKET) * bsize);
-	memset(m_bucket, 0, sizeof(SHASH_BUCKET) * bsize);
-	m_bucket_size = bsize;
-	m_elem_count = 0;
-	m_free_list_pool = smpool_create_handle(sizeof(HC<T>) * 4, MEM_CONST_SIZE);
-	m_free_list.clean();
-	m_free_list.set_clean(true);
-	m_elem_vector.init();
-}
-
-
-template <class T, class HF>
-void SHASH<T, HF>::destroy()
-{
-	if (m_bucket == NULL) return;
-	::free(m_bucket);
-	m_bucket = NULL;
-	m_bucket_size = 0;
-	m_elem_count = 0;
-	m_elem_vector.destroy();
-	smpool_free_handle(m_free_list_pool);
-	m_free_list_pool = NULL;
-}
-
-
-template <class T, class HF>
-UINT SHASH<T, HF>::count_mem() const
-{
-	UINT count = smpool_get_pool_size_handle(m_free_list_pool);
-	count += m_free_list.count_mem();
-	count += sizeof(m_bucket_size);
-	count += sizeof(m_bucket);
-	count += m_bucket_size;
-	count += m_elem_vector.count_mem();
-	count += sizeof(m_elem_count);
-	return count;
-}
-
-
-template <class T, class HF>
-void SHASH<T, HF>::clean()
-{
-	if (m_bucket == NULL) return;
-	memset(m_bucket, 0, sizeof(SHASH_BUCKET) * m_bucket_size);
-	m_elem_count = 0;
-	m_elem_vector.clean();
-}
-
-
-//Insert element into hash table.
-//Return true if 't' already exist.
-template <class T, class HF>
-bool SHASH<T, HF>::insert_v(OUT HC<T> ** bucket_entry,
-							OUT HC<T> ** hc, ULONG val)
-{
-	HC<T> * elemhc = *bucket_entry;
-	HC<T> * prev = NULL;
-	while (elemhc != NULL) {
-		IS_TRUE(HC_val(elemhc) != T(0),
-				("Hash element has so far as to be overrided!"));
-		if (m_hf.compare(HC_val(elemhc), val)) {
-			*hc = elemhc;
-			return true;
-		}
-		prev = elemhc;
-		elemhc = HC_next(elemhc);
-	} //end while
-	elemhc = newhc();
-	IS_TRUE(elemhc != NULL, ("newhc() return NULL"));
-	HC_val(elemhc) = create(val);
-	if (prev != NULL) {
-		//Append on element-list
-		HC_next(prev) = elemhc;
-		HC_prev(elemhc) = prev;
-	} else {
-		*bucket_entry = elemhc;
-	}
-	*hc = elemhc;
-	return false;
-}
-
-
-//Insert element into hash table.
-//Return true if 't' already exist.
-template <class T, class HF>
-bool SHASH<T, HF>::insert_t(IN OUT HC<T> ** bucket_entry,
-							OUT HC<T> ** hc, IN T t)
-{
-	HC<T> * prev = NULL;
-	HC<T> * elemhc = *bucket_entry;
-	while (elemhc != NULL) {
-		IS_TRUE(HC_val(elemhc) != T(0), ("Container is empty"));
-		if (m_hf.compare(HC_val(elemhc), t)) {
-			t = HC_val(elemhc);
-			*hc = elemhc;
-			return true;
-		}
-		prev = elemhc;
-		elemhc = HC_next(elemhc);
-	}
-	elemhc = newhc();
-	IS_TRUE(elemhc != NULL, ("newhc() return NULL"));
-	HC_val(elemhc) = t;
-	if (prev != NULL) {
-		//Append on elem-list in the bucket.
-		HC_next(prev) = elemhc;
-		HC_prev(elemhc) = prev;
-	} else {
-		*bucket_entry = elemhc;
-	}
-	*hc = elemhc;
-	return false;
-}
-
-
-/* Append 't' into hash table and record its reference into
-SVECTOR in order to walk through the table rapidly.
-If 't' already exists, return the element immediately.
-'find': set to true if 't' already exist.
-
-NOTE:
-	Do NOT append 0 to table.
-	Maximum size of T equals sizeof(void*). */
-template <class T, class HF>
-T SHASH<T, HF>::append(T t, OUT HC<T> ** hct, bool * find)
-{
-	IS_TRUE(m_bucket != NULL, ("SHASH not yet initialized."));
-	if (t == T(0)) return T(0);
-
-	UINT hashv = m_hf.get_hash_value(t, m_bucket_size);
-	IS_TRUE(hashv < m_bucket_size,
-			("hash value must less than bucket size"));
-
-	HC<T> * elemhc = NULL;
-	if (!insert_t((HC<T>**)&SHB_member(m_bucket[hashv]), &elemhc, t)) {
-		SHB_count(m_bucket[hashv])++;
-		m_elem_count++;
-
-		//Get a free slot in elem-vector
-		HC_vec_idx(elemhc) = m_elem_vector.get_free_idx();
-		m_elem_vector.set(HC_vec_idx(elemhc), t);
-		if (find != NULL) {
-			*find = false;
-		}
-	} else if (find != NULL) {
-		*find = true;
-	}
-
-	if (hct != NULL) {
-		*hct = elemhc;
-	}
-	return HC_val(elemhc);
-}
-
-
-/* Append 'val' into hash table.
-More comment see above function.
-'find': set to true if 't' already exist.
-
-NOTE: Do NOT append T(0) to table. */
-template <class T, class HF>
-T SHASH<T, HF>::append(ULONG val, OUT HC<T> ** hct, bool * find)
-{
-	IS_TRUE(m_bucket != NULL, ("SHASH not yet initialized."));
-	UINT hashv = m_hf.get_hash_value(val, m_bucket_size);
-
-	IS_TRUE(hashv < m_bucket_size, ("hash value must less than bucket size"));
-	HC<T> * elemhc = NULL;
-	if (!insert_v((HC<T>**)&SHB_member(m_bucket[hashv]), &elemhc, val)) {
-		SHB_count(m_bucket[hashv])++;
-		m_elem_count++;
-
-		//Get a free slot in elem-vector
-		HC_vec_idx(elemhc) = m_elem_vector.get_free_idx();
-		m_elem_vector.set(HC_vec_idx(elemhc), HC_val(elemhc));
-		if (find != NULL) {
-			*find = false;
-		}
-	} else if (find != NULL) {
-		*find = true;
-	}
-
-	if (hct != NULL) {
-		*hct = elemhc;
-	}
-	return HC_val(elemhc);
-}
-
-
-/* Do NOT change the order that elements in m_elem_vector and the
-value of m_cur. Because it will impact the effect of get_first(),
-get_next(), get_last() and get_prev(). */
-template <class T, class HF>
-T SHASH<T, HF>::removed(T t)
-{
-	IS_TRUE(m_bucket != NULL, ("SHASH not yet initialized."));
-	if (t == 0) return T(0);
-
-	UINT hashv = m_hf.get_hash_value(t, m_bucket_size);
-	IS_TRUE(hashv < m_bucket_size, ("hash value must less than bucket size"));
-	HC<T> * elemhc = (HC<T>*)SHB_member(m_bucket[hashv]);
-	if (elemhc != NULL) {
- 		while (elemhc != NULL) {
-			IS_TRUE(HC_val(elemhc) != T(0),
-					("Hash element has so far as to be overrided!"));
-			if (m_hf.compare(HC_val(elemhc), t)) {
-				break;
-			}
-			elemhc = HC_next(elemhc);
-		}
-		if (elemhc != NULL) {
-			m_elem_vector.set(HC_vec_idx(elemhc), T(0));
-			remove((HC<T>**)&SHB_member(m_bucket[hashv]), elemhc);
-			m_free_list.add_free_elem(elemhc);
-			SHB_count(m_bucket[hashv])--;
-			m_elem_count--;
-			return t;
-		}
-	}
-	return T(0);
-}
-
-
-/* Grow hash to 'bsize'.
-The default grow size is twice as the current bucket size.
-'bsize': expected bucket size.
-
-NOTE: Grow is costly function. */
-template <class T, class HF>
-void SHASH<T, HF>::grow(UINT bsize)
-{
-	IS_TRUE(m_bucket != NULL, ("SHASH not yet initialized."));
-	if (bsize != 0) {
-		IS_TRUE0(bsize > m_bucket_size);
-	} else {
-		bsize = m_bucket_size * 2;
-	}
-
-	SHASH_BUCKET * new_bucket =
-		(SHASH_BUCKET*)::malloc(sizeof(SHASH_BUCKET) * bsize);
-	memset(new_bucket, 0, sizeof(SHASH_BUCKET) * bsize);
-	if (m_elem_count == 0) {
-		::free(m_bucket);
-		m_bucket = new_bucket;
-		m_bucket_size = bsize;
-		return;
-	}
-
-	for (UINT i = 0; i < m_bucket_size; i++) {
-		HC<T> * hc = NULL;
-		while ((hc = removehead((HC<T>**)&SHB_member(m_bucket[i]))) != NULL) {
-			m_free_list.add_free_elem(hc);
-		}
-	}
-
-	::free(m_bucket);
-	m_bucket = new_bucket;
-	m_bucket_size = bsize;
-
-	INT l = m_elem_vector.get_last_idx();
-	for (INT i = 0; i <= l; i++) {
-		T t = m_elem_vector.get(i);
-		if (t == T(0)) { continue; }
+	NOTE:
+		Do NOT append 0 to table.
+		Maximum size of T equals sizeof(void*). */
+	T append(T t, OUT HC<T> ** hct = NULL, bool * find = NULL)
+	{
+		IS_TRUE(m_bucket != NULL, ("SHASH not yet initialized."));
+		if (t == T(0)) return T(0);
 
 		UINT hashv = m_hf.get_hash_value(t, m_bucket_size);
 		IS_TRUE(hashv < m_bucket_size,
 				("hash value must less than bucket size"));
+
 		HC<T> * elemhc = NULL;
-		bool doit = insert_t((HC<T>**)&SHB_member(m_bucket[hashv]),
-							 &elemhc, t);
-		IS_TRUE0(!doit);
-		doit = doit; //to avoid -Werror=unused-variable.
-		HC_vec_idx(elemhc) = i;
-		SHB_count(m_bucket[hashv])++;
-	}
-}
+		if (!insert_t((HC<T>**)&SHB_member(m_bucket[hashv]), &elemhc, t)) {
+			SHB_count(m_bucket[hashv])++;
+			m_elem_count++;
 
-
-/* You can implement your own find(), but do NOT
-change the order that elements in m_elem_vector and the value of m_cur.
-Because it will impact the effect of get_first(), get_next(),
-get_last() and get_prev(). */
-template <class T, class HF>
-T SHASH<T, HF>::find(ULONG val)
-{
-	IS_TRUE(m_bucket != NULL, ("SHASH not yet initialized."));
- 	UINT hashv = m_hf.get_hash_value(val, m_bucket_size);
-	IS_TRUE(hashv < m_bucket_size, ("hash value must less than bucket size"));
-	HC<T> * elemhc = (HC<T>*)SHB_member(m_bucket[hashv]);
-	if (elemhc != NULL) {
-		while (elemhc != NULL) {
-			IS_TRUE(HC_val(elemhc) != T(0),
-					("Hash element has so far as to be overrided!"));
-			if (m_hf.compare(HC_val(elemhc), val)) {
-				return HC_val(elemhc);
+			//Get a free slot in elem-vector
+			HC_vec_idx(elemhc) = m_elem_vector.get_free_idx();
+			m_elem_vector.set(HC_vec_idx(elemhc), t);
+			if (find != NULL) {
+				*find = false;
 			}
-			elemhc = HC_next(elemhc);
+		} else if (find != NULL) {
+			*find = true;
 		}
+
+		if (hct != NULL) {
+			*hct = elemhc;
+		}
+		return HC_val(elemhc);
 	}
-	return T(0);
-}
 
+	/* Append 'val' into hash table.
+	More comment see above function.
+	'find': set to true if 't' already exist.
 
-/* You can implement your own find(), but do NOT
-change the order that elements in m_elem_vector and the value of m_cur.
-Because it will impact the effect of get_first(), get_next(),
-get_last() and get_prev(). */
-template <class T, class HF>
-bool SHASH<T, HF>::find(T t, HC<T> ** ct)
-{
-	IS_TRUE(m_bucket != NULL, ("SHASH not yet initialized."));
-	if (t == T(0)) { return false; }
+	NOTE: Do NOT append T(0) to table. */
+	T append(OBJTY val, OUT HC<T> ** hct = NULL, bool * find = NULL)
+	{
+		IS_TRUE(m_bucket != NULL, ("SHASH not yet initialized."));
+		UINT hashv = m_hf.get_hash_value(val, m_bucket_size);
 
-	UINT hashv = m_hf.get_hash_value(t, m_bucket_size);
-	IS_TRUE(hashv < m_bucket_size,
-			("hash value must less than bucket size"));
-	HC<T> * elemhc = (HC<T>*)SHB_member(m_bucket[hashv]);
-	if (elemhc != NULL) {
-		while (elemhc != NULL) {
-			IS_TRUE(HC_val(elemhc) != T(0),
-					("Hash element has so far as to be overrided!"));
-			if (m_hf.compare(HC_val(elemhc), t)) {
-				if (ct != NULL) {
-					*ct = elemhc;
+		IS_TRUE(hashv < m_bucket_size, ("hash value must less than bucket size"));
+		HC<T> * elemhc = NULL;
+		if (!insert_v((HC<T>**)&SHB_member(m_bucket[hashv]), &elemhc, val)) {
+			SHB_count(m_bucket[hashv])++;
+			m_elem_count++;
+
+			//Get a free slot in elem-vector
+			HC_vec_idx(elemhc) = m_elem_vector.get_free_idx();
+			m_elem_vector.set(HC_vec_idx(elemhc), HC_val(elemhc));
+			if (find != NULL) {
+				*find = false;
+			}
+		} else if (find != NULL) {
+			*find = true;
+		}
+
+		if (hct != NULL) {
+			*hct = elemhc;
+		}
+		return HC_val(elemhc);
+	}
+
+	//Count up the memory which hash table used.
+	UINT count_mem() const
+	{
+		UINT count = smpool_get_pool_size_handle(m_free_list_pool);
+		count += m_free_list.count_mem();
+		count += sizeof(m_bucket_size);
+		count += sizeof(m_bucket);
+		count += m_bucket_size;
+		count += m_elem_vector.count_mem();
+		count += sizeof(m_elem_count);
+		return count;
+	}
+
+	//Clean the data structure but not destroy.
+	void clean()
+	{
+		if (m_bucket == NULL) return;
+		memset(m_bucket, 0, sizeof(SHASH_BUCKET) * m_bucket_size);
+		m_elem_count = 0;
+		m_elem_vector.clean();
+	}
+
+	//Get the hash bucket size.
+	UINT get_bucket_size() const { return m_bucket_size; }
+
+	//Get the hash bucket.
+	SHASH_BUCKET const* get_bucket() const { return m_bucket; }
+
+	//Get the memory pool handler of free_list.
+	//Note this pool is const size.
+	SMEM_POOL * get_free_list_pool() const { return m_free_list_pool; };
+
+	//Get the number of element in hash table.
+	UINT get_elem_count() const { return m_elem_count; }
+
+	/* This function return the first element if it exists, and initialize
+	the iterator, otherwise return T(0), where T is the template parameter.
+
+	When T is type of integer, return zero may be fuzzy and ambiguous.
+	Invoke get_next() to get the next element.
+
+	'iter': iterator, when the function return, cur will be updated.
+		If the first element exist, cur is a value that great and equal 0,
+		or is -1. */
+	T get_first(INT & iter) const
+	{
+		IS_TRUE(m_bucket != NULL, ("SHASH not yet initialized."));
+		T t = T(0);
+		iter = -1;
+		if (m_elem_count <= 0) return T(0);
+		INT l = m_elem_vector.get_last_idx();
+		for (INT i = 0; i <= l; i++) {
+			if ((t = m_elem_vector.get(i)) != T(0)) {
+				iter = i;
+				return t;
+			}
+		}
+		return T(0);
+	}
+
+	/* This function return the next element of given iterator.
+	If it exists, record its index at 'iter' and return the element,
+	otherwise set 'iter' to -1, and return T(0), where T is the
+	template parameter.
+
+	'iter': iterator, when the function return, cur will be updated.
+		If the first element exist, cur is a value that great and equal 0,
+		or is -1. */
+	T get_next(INT & iter) const
+	{
+		IS_TRUE(m_bucket != NULL && iter >= -1, ("SHASH not yet initialized."));
+		T t = T(0);
+		if (m_elem_count <= 0) return T(0);
+		INT l = m_elem_vector.get_last_idx();
+		for (INT i = iter + 1; i <= l; i++) {
+			if ((t = m_elem_vector.get(i)) != T(0)) {
+				iter = i;
+				return t;
+			}
+		}
+		iter = -1;
+		return T(0);
+	}
+
+	/* This function return the last element if it exists, and initialize
+	the iterator, otherwise return T(0), where T is the template parameter.
+	When T is type of integer, return zero may be fuzzy and ambiguous.
+	Invoke get_prev() to get the prev element.
+
+	'iter': iterator, when the function return, cur will be updated.
+		If the first element exist, cur is a value that great and equal 0,
+		or is -1. */
+	T get_last(INT & iter) const
+	{
+		IS_TRUE(m_bucket != NULL, ("SHASH not yet initialized."));
+		T t = T(0);
+		iter = -1;
+		if (m_elem_count <= 0) return T(0);
+		INT l = m_elem_vector.get_last_idx();
+		for (INT i = l; i >= 0; i--) {
+			if ((t = m_elem_vector.get(i)) != T(0)) {
+				iter = i;
+				return t;
+			}
+		}
+		return T(0);
+	}
+
+	/* This function return the previous element of given iterator.
+	If it exists, record its index at 'iter' and return the element,
+	otherwise set 'iter' to -1, and return T(0), where T is the
+	template parameter.
+
+	'iter': iterator, when the function return, cur will be updated.
+		If the first element exist, cur is a value that great and equal 0,
+		or is -1. */
+	T get_prev(INT & iter) const
+	{
+		IS_TRUE(m_bucket != NULL, ("SHASH not yet initialized."));
+		T t = T(0);
+		if (m_elem_count <= 0) return T(0);
+		for (INT i = iter - 1; i >= 0; i--) {
+			if ((t = m_elem_vector.get(i)) != T(0)) {
+				iter = i;
+				return t;
+			}
+		}
+		iter = -1;
+		return T(0);
+	}
+
+	void init(UINT bsize = MAX_SHASH_BUCKET)
+	{
+		if (m_bucket != NULL) return;
+		if (bsize == 0) { return; }
+		m_bucket = (SHASH_BUCKET*)::malloc(sizeof(SHASH_BUCKET) * bsize);
+		memset(m_bucket, 0, sizeof(SHASH_BUCKET) * bsize);
+		m_bucket_size = bsize;
+		m_elem_count = 0;
+		m_free_list_pool = smpool_create_handle(sizeof(HC<T>) * 4, MEM_CONST_SIZE);
+		m_free_list.clean();
+		m_free_list.set_clean(true);
+		m_elem_vector.init();
+	}
+
+	//Free all memory objects.
+	void destroy()
+	{
+		if (m_bucket == NULL) return;
+		::free(m_bucket);
+		m_bucket = NULL;
+		m_bucket_size = 0;
+		m_elem_count = 0;
+		m_elem_vector.destroy();
+		smpool_free_handle(m_free_list_pool);
+		m_free_list_pool = NULL;
+	}
+
+	//Dump the distribution of element in hash.
+	void dump_intersp(FILE * h) const
+	{
+		if (h == NULL) return;
+		UINT bsize = get_bucket_size();
+		SHASH_BUCKET const* bucket = get_bucket();
+		fprintf(h, "\n=== SHASH ===");
+		for (UINT i = 0; i < bsize; i++) {
+			HC<T> * elemhc = (HC<T>*)bucket[i].hash_member;
+			fprintf(h, "\nENTRY[%d]:", i);
+			while (elemhc != NULL) {
+				fprintf(h, "*");
+				elemhc = HC_next(elemhc);
+				if (elemhc != NULL) {
+					//fprintf(g_tfile, ",");
 				}
-				return true;
 			}
-			elemhc = HC_next(elemhc);
-		} //end while
-	}
-	return false;
-}
-
-
-/* You can implement your own find(), but do NOT
-change the order that elements in m_elem_vector and the value of m_cur.
-Because it will impact the effect of get_first(), get_next(),
-get_last() and get_prev().
-
-'ot': output the element if found it. */
-template <class T, class HF>
-bool SHASH<T, HF>::find(T t, OUT T * ot)
-{
-	HC<T> * hc;
-	if (find(t, &hc)) {
-		IS_TRUE0(ot != NULL);
-		*ot = HC_val(hc);
-		return true;
-	}
-	return false;
-}
-
-
-/* This function return the first element if it exists, otherwise
-return T(0), where T is the template parameter.
-When T is type of integer, return zero may be fuzzy and ambiguous.
-Invoke get_next() to get the next element.
-
-'cur': iterator, when the function return, cur will be updated.
-	If the first element exist, cur is a value that great and equal 0,
-	or is -1. */
-template <class T, class HF>
-T SHASH<T, HF>::get_first(INT & cur)
-{
-	IS_TRUE(m_bucket != NULL, ("SHASH not yet initialized."));
-	T t = T(0);
-	cur = -1;
-	if (m_elem_count <= 0) return T(0);
-	INT l = m_elem_vector.get_last_idx();
-	for (INT i = 0; i <= l; i++) {
-		if ((t = m_elem_vector.get(i)) != T(0)) {
-			cur = i;
-			return t;
 		}
+		fflush(h);
 	}
-	return T(0);
-}
 
+	/* This function remove one element, and return the removed one.
+	Note that 't' may be different with the return one accroding to
+	the behavior of user's defined HF class.
 
-/* This function return the next element of element that indicated
-by parameter 'cur'. If it exists, record its index at 'cur' and
-return the element, otherwise set 'cur' to -1, and return T(0),
-where T is the template parameter.
+	Do NOT change the order that elements in m_elem_vector and the
+	value of m_cur. Because it will impact the effect of get_first(),
+	get_next(), get_last() and get_prev(). */
+	T removed(T t)
+	{
+		IS_TRUE(m_bucket != NULL, ("SHASH not yet initialized."));
+		if (t == 0) return T(0);
 
-'cur': iterator, when the function return, cur will be updated.
-	If the first element exist, cur is a value that great and equal 0,
-	or is -1. */
-template <class T, class HF>
-T SHASH<T, HF>::get_next(INT & cur)
-{
-	IS_TRUE(m_bucket != NULL && cur >= -1, ("SHASH not yet initialized."));
-	T t = T(0);
-	if (m_elem_count <= 0) return T(0);
-	INT l = m_elem_vector.get_last_idx();
-	for (INT i = cur + 1; i <= l; i++) {
-		if ((t = m_elem_vector.get(i)) != T(0)) {
-			cur = i;
-			return t;
-		}
-	}
-	cur = -1;
-	return T(0);
-}
-
-
-/* This function return the last element if it exists, otherwise
-return T(0), where T is the template parameter.
-When T is type of integer, return zero may be fuzzy and ambiguous.
-Invoke get_prev() to get the prev element.
-
-'cur': iterator, when the function return, cur will be updated.
-	If the first element exist, cur is a value that great and equal 0,
-	or is -1. */
-template <class T, class HF>
-T SHASH<T, HF>::get_last(INT & cur)
-{
-	IS_TRUE(m_bucket != NULL, ("SHASH not yet initialized."));
-	T t = T(0);
-	cur = -1;
-	if (m_elem_count <= 0) return T(0);
-	INT l = m_elem_vector.get_last_idx();
-	for (INT i = l; i >= 0; i--) {
-		if ((t = m_elem_vector.get(i)) != T(0)) {
-			cur = i;
-			return t;
-		}
-	}
-	return T(0);
-}
-
-
-/* This function return the prev element of element that indicated
-by parameter 'cur'. If it exists, record its index at 'cur' and
-return the element, otherwise set 'cur' to -1, and return T(0),
-where T is the template parameter.
-
-'cur': iterator, when the function return, cur will be updated.
-	If the first element exist, cur is a value that great and equal 0,
-	or is -1. */
-template <class T, class HF>
-T SHASH<T, HF>::get_prev(INT & cur)
-{
-	IS_TRUE(m_bucket != NULL, ("SHASH not yet initialized."));
-	T t = T(0);
-	if (m_elem_count <= 0) return T(0);
-	for (INT i = cur - 1; i >= 0; i--) {
-		if ((t = m_elem_vector.get(i)) != T(0)) {
-			cur = i;
-			return t;
-		}
-	}
-	cur = -1;
-	return T(0);
-}
-
-
-//Dump to see hash element interspersion.
-template <class T, class HF>
-void SHASH<T, HF>::dump_intersp(FILE * h)
-{
-	if (h == NULL) return;
-	UINT bsize = get_bucket_size();
-	SHASH_BUCKET const* bucket = get_bucket();
-	fprintf(h, "\n=== SHASH ===");
-	for (UINT i = 0; i < bsize; i++) {
-		HC<T> * elemhc = (HC<T>*)bucket[i].hash_member;
-		fprintf(h, "\nENTRY[%d]:", i);
-		while (elemhc != NULL) {
-			fprintf(h, "*");
-			elemhc = HC_next(elemhc);
+		UINT hashv = m_hf.get_hash_value(t, m_bucket_size);
+		IS_TRUE(hashv < m_bucket_size,
+				("hash value must less than bucket size"));
+		HC<T> * elemhc = (HC<T>*)SHB_member(m_bucket[hashv]);
+		if (elemhc != NULL) {
+			while (elemhc != NULL) {
+				IS_TRUE(HC_val(elemhc) != T(0),
+						("Hash element has so far as to be overrided!"));
+				if (m_hf.compare(HC_val(elemhc), t)) {
+					break;
+				}
+				elemhc = HC_next(elemhc);
+			}
 			if (elemhc != NULL) {
-				//fprintf(g_tfile, ",");
+				m_elem_vector.set(HC_vec_idx(elemhc), T(0));
+				remove((HC<T>**)&SHB_member(m_bucket[hashv]), elemhc);
+				m_free_list.add_free_elem(elemhc);
+				SHB_count(m_bucket[hashv])--;
+				m_elem_count--;
+				return t;
 			}
 		}
+		return T(0);
 	}
-	fflush(h);
-}
+
+	/* Grow hash to 'bsize'.
+	The default grow size is twice as the current bucket size.
+	'bsize': expected bucket size, the size can not less than current size.
+
+	NOTE: Grow is costly function. */
+	void grow(UINT bsize = 0)
+	{
+		IS_TRUE(m_bucket != NULL, ("SHASH not yet initialized."));
+		if (bsize != 0) {
+			IS_TRUE0(bsize > m_bucket_size);
+		} else {
+			bsize = m_bucket_size * 2;
+		}
+
+		SHASH_BUCKET * new_bucket =
+			(SHASH_BUCKET*)::malloc(sizeof(SHASH_BUCKET) * bsize);
+		memset(new_bucket, 0, sizeof(SHASH_BUCKET) * bsize);
+		if (m_elem_count == 0) {
+			::free(m_bucket);
+			m_bucket = new_bucket;
+			m_bucket_size = bsize;
+			return;
+		}
+
+		for (UINT i = 0; i < m_bucket_size; i++) {
+			HC<T> * hc = NULL;
+			while ((hc = removehead((HC<T>**)&SHB_member(m_bucket[i]))) != NULL) {
+				m_free_list.add_free_elem(hc);
+			}
+		}
+
+		::free(m_bucket);
+		m_bucket = new_bucket;
+		m_bucket_size = bsize;
+
+		INT l = m_elem_vector.get_last_idx();
+		for (INT i = 0; i <= l; i++) {
+			T t = m_elem_vector.get(i);
+			if (t == T(0)) { continue; }
+
+			UINT hashv = m_hf.get_hash_value(t, m_bucket_size);
+			IS_TRUE(hashv < m_bucket_size,
+					("hash value must less than bucket size"));
+			HC<T> * elemhc = NULL;
+			bool doit = insert_t((HC<T>**)&SHB_member(m_bucket[hashv]),
+								 &elemhc, t);
+			IS_TRUE0(!doit);
+			doit = doit; //to avoid -Werror=unused-variable.
+			HC_vec_idx(elemhc) = i;
+			SHB_count(m_bucket[hashv])++;
+		}
+	}
+
+	/* Find element accroding to specific 'val'.
+	You can implement your own find(), but do NOT
+	change the order that elements in m_elem_vector and the value of m_cur.
+	Because it will impact the effect of get_first(), get_next(),
+	get_last() and get_prev(). */
+	T find(OBJTY val) const
+	{
+		IS_TRUE(m_bucket != NULL, ("SHASH not yet initialized."));
+		UINT hashv = m_hf.get_hash_value(val, m_bucket_size);
+		IS_TRUE(hashv < m_bucket_size, ("hash value must less than bucket size"));
+		HC<T> const* elemhc = (HC<T> const*)SHB_member(m_bucket[hashv]);
+		if (elemhc != NULL) {
+			while (elemhc != NULL) {
+				IS_TRUE(HC_val(elemhc) != T(0),
+						("Hash element has so far as to be overrided!"));
+				if (m_hf.compare(HC_val(elemhc), val)) {
+					return HC_val(elemhc);
+				}
+				elemhc = HC_next(elemhc);
+			}
+		}
+		return T(0);
+	}
+
+	/* Find one element and return the container.
+	Return true if t exist, otherwise return false.
+	You can implement your own find(), but do NOT
+	change the order that elements in m_elem_vector and the value of m_cur.
+	Because it will impact the effect of get_first(), get_next(),
+	get_last() and get_prev(). */
+	bool find(T t, HC<T> const** ct = NULL)
+	{
+		IS_TRUE(m_bucket != NULL, ("SHASH not yet initialized."));
+		if (t == T(0)) { return false; }
+
+		UINT hashv = m_hf.get_hash_value(t, m_bucket_size);
+		IS_TRUE(hashv < m_bucket_size,
+				("hash value must less than bucket size"));
+		HC<T> const* elemhc = (HC<T> const*)SHB_member(m_bucket[hashv]);
+		if (elemhc != NULL) {
+			while (elemhc != NULL) {
+				IS_TRUE(HC_val(elemhc) != T(0),
+						("Hash element has so far as to be overrided!"));
+				if (m_hf.compare(HC_val(elemhc), t)) {
+					if (ct != NULL) {
+						*ct = elemhc;
+					}
+					return true;
+				}
+				elemhc = HC_next(elemhc);
+			} //end while
+		}
+		return false;
+	}
+
+	/* Find one element and return the element which record in hash table.
+	Note t may be different with the return one.
+
+	You can implement your own find(), but do NOT
+	change the order that elements in m_elem_vector and the value of m_cur.
+	Because it will impact the effect of get_first(), get_next(),
+	get_last() and get_prev().
+
+	'ot': output the element if found it. */
+	bool find(T t, OUT T * ot)
+	{
+		HC<T> const* hc;
+		if (find(t, &hc)) {
+			IS_TRUE0(ot != NULL);
+			*ot = HC_val(hc);
+			return true;
+		}
+		return false;
+	}
+};
 //END SHASH
 
 
@@ -3783,6 +3725,12 @@ public:
 	TMAP() {}
 	~TMAP() {}
 
+	//This function should be invoked if TMAP is initialized manually.
+	void init() { RBT<Tsrc, Ttgt, Compare_Key>::init(); }
+
+	//This function should be invoked if TMAP is destroied manually.
+	void destroy() { RBT<Tsrc, Ttgt, Compare_Key>::destroy(); }
+
 	//Alway set new mapping even if it has done.
 	void aset(Tsrc t, Ttgt mapped)
 	{
@@ -3974,7 +3922,7 @@ public:
 	{
 		IS_TRUE((SHASH<Tsrc, HF>::m_bucket != NULL), ("not yet initialize."));
 		if (t == Tsrc(0)) { return; }
-		HC<Tsrc> * elemhc;
+		HC<Tsrc> * elemhc = NULL;
 		SHASH<Tsrc, HF>::append(t, &elemhc, NULL);
 		IS_TRUE(elemhc != NULL, ("Element does not append into hash table."));
 		m_mapped_elem_table.set(HC_vec_idx(elemhc), mapped);
@@ -4053,7 +4001,7 @@ public:
 		m_mapped_elem_table.set(HC_vec_idx(elemhc), mapped);
 	}
 
-	void setv(ULONG v, Ttgt mapped)
+	void setv(OBJTY v, Ttgt mapped)
 	{
 		IS_TRUE((SHASH<Tsrc, HF>::m_bucket != NULL), ("not yet initialize."));
 		if (v == 0) { return; }
@@ -4163,15 +4111,14 @@ NOTICE:
 
 	4. Do not use DMAP directly, please overload following functions optionally:
 		* create hash-element container.
-			T * create(ULONG v)
+			T * create(OBJTY v)
 
 		e.g: Mapping one OPND to a number of OPERs.
 			class OPND2OPER_MMAP : public MMAP<OPND*, OPER*, OP_TAB> {
 			public:
-				virtual T create(ULONG id)
+				virtual T create(OBJTY id)
 				{
-					//Allocate OPND from heap or pool, here we only do
-					//allocation from process heap and call constructor.
+					//Allocate OPND.
 					return new OPND(id);
 				}
 			};

@@ -38,7 +38,7 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 //START EDGE_HASH
 //
-EDGE * EDGE_HASH::create(ULONG v)
+EDGE * EDGE_HASH::create(OBJTY v)
 {
 	EDGE * t = (EDGE*)v;
 	VERTEX * from = m_g->get_vertex(VERTEX_id(EDGE_from(t)));
@@ -170,11 +170,9 @@ void GRAPH::destroy()
 }
 
 
-/*
-Erasing graph, include all nodes and edges,
-except for mempool, freelist.
-*/
-void GRAPH::erasure()
+//Erasing graph, include all nodes and edges,
+//except for mempool, freelist.
+void GRAPH::erase()
 {
 	IS_TRUE(m_ec_pool != NULL, ("Graph must be initialized before clone."));
 	//Collect edge, vertex data structure into free-list
@@ -231,7 +229,7 @@ void GRAPH::compute_rpo_norec(VERTEX * root, OUT LIST<VERTEX const*> & vlst)
 
 bool GRAPH::clone(GRAPH & src)
 {
-	erasure();
+	erase();
 	m_is_unique = src.m_is_unique;
 	m_is_direction = src.m_is_direction;
 
@@ -280,7 +278,7 @@ VERTEX * GRAPH::new_vertex(UINT vid)
 	if (m_is_unique)
 	#endif
 	{
-		VERTEX * v = m_vertices.find(vid);
+		VERTEX * v = m_vertices.find((OBJTY)(size_t)vid);
 		if (v != NULL) {
 			return v;
 		}
@@ -288,10 +286,7 @@ VERTEX * GRAPH::new_vertex(UINT vid)
 
 	vex = m_v_free_list.get_free_elem();
 	if (vex == NULL) {
-		vex = (VERTEX*)smpool_malloc_h_const_size(sizeof(VERTEX),
-												  m_vertex_pool);
-		IS_TRUE0(vex);
-		memset(vex, 0, sizeof(VERTEX));
+		vex = new_vertex();
 	}
 	VERTEX_id(vex) = vid;
 
@@ -315,7 +310,7 @@ EDGE * GRAPH::new_edge(VERTEX * from, VERTEX * to)
 		EDGE_from(&teste) = &testfrom;
 		EDGE_to(&teste) = &testto;
 		if (m_is_direction) {
-			return m_edges.append((ULONG)&teste, NULL);
+			return m_edges.append((OBJTY)&teste, NULL);
 		}
 
 		EDGE * e = NULL;
@@ -327,7 +322,7 @@ EDGE * GRAPH::new_edge(VERTEX * from, VERTEX * to)
 		//Both check from->to and to->from
 		EDGE_from(&teste) = &testto;
 		EDGE_to(&teste) = &testfrom;
-		return m_edges.append((ULONG)&teste, NULL);
+		return m_edges.append((OBJTY)&teste, NULL);
 	}
 	return m_edges.append(new_edge_impl(from, to));
 }
@@ -1572,11 +1567,9 @@ void DGRAPH::get_pdom_tree(OUT GRAPH & pdom)
 }
 
 
-/*
-Dump dom set, pdom set, idom, ipdom.
+/* Dump dom set, pdom set, idom, ipdom.
 'dump_dom_tree': set to be true to dump dominate
-	tree, and post dominate Tree.
-*/
+	tree, and post dominate Tree. */
 void DGRAPH::dump_dom(FILE * h, bool dump_dom_tree)
 {
 	if (h == NULL) return;
@@ -1622,7 +1615,7 @@ void DGRAPH::dump_dom(FILE * h, bool dump_dom_tree)
 		GRAPH dom;
 		get_dom_tree(dom);
 		dom.dump_vcg("graph_dom_tree.vcg");
-		dom.erasure();
+		dom.erase();
 		get_pdom_tree(dom);
 		dom.dump_vcg("graph_pdom_tree.vcg");
 	}

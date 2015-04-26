@@ -25,7 +25,23 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 @*/
-#include "cfecom.h"
+//Common included files
+#include "stdlib.h"
+#include "stdarg.h"
+#include "stdio.h"
+#include "string.h"
+
+//Most general utilies for common used
+#include "ltype.h"
+#include "comf.h"
+#include "smempool.h"
+#include "sstl.h"
+
+//ir_lex used.
+#include "util.h"
+#include "err.h"
+
+#include "lex.h"
 
 static INT g_cur_token_string_pos = 0;
 static CHAR g_cur_char = 0; //See details about the paper about LL1
@@ -38,7 +54,7 @@ static INT  g_last_read_num = 0;
 
 //Set true to return the newline charactors as normal character.
 static bool g_use_newline_char = true;
-static ULONG g_cur_src_ofst = 0;  //Record current file offset of src file
+static UINT g_cur_src_ofst = 0;  //Record current file offset of src file
 
 UINT g_src_line_num = 0; //line number of src file
 
@@ -53,14 +69,13 @@ bool g_enable_newline_token = false; //Set true to regard '\n' as token.
 
 //If true, recognize the true and false token.
 bool g_enable_true_false_token = true;
+FILE * g_hsrc = NULL;
+INT g_real_line_num;
 
-
-/*
-You should construct tokens or keywords as following list if
+/* You should construct tokens or keywords as following list if
 you have modified TOKEN enumeration declared in lex.h.
 NOTICE: Be careful the order of your new token and it must
-conform the declaration order in lex.h.
-*/
+conform the declaration order in lex.h. */
 TOKEN_INFO g_token_info[] =
 {
 	{ T_NUL,		"" },
