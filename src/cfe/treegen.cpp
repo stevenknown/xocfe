@@ -177,26 +177,6 @@ static size_t remove_head_tok()
 }
 
 
-static size_t get_head_tok()
-{
-	CELL * c = g_cell_list.get_head();
-	if (c) {
-		return (size_t)CELL_val(c);
-	}
-	return 0;
-}
-
-
-static size_t get_tail_tok()
-{
-	CELL * c = g_cell_list.get_tail();
-	if (c) {
-		return (size_t)CELL_val(c);
-	}
-	return 0;
-}
-
-
 void dump_tok_list()
 {
 	CELL * c = g_cell_list.get_head();
@@ -237,17 +217,11 @@ static INT is_compound_terminal()
 }
 
 
-static INT is_declarator_terminal()
-{
-	return (g_real_token == T_SEMI);
-}
-
-
 //Return true if 'tok' indicate terminal charactor, otherwise false.
 bool is_in_first_set_of_exp_list(TOKEN tok)
 {
 	DECL * ut = NULL;
-	switch (g_real_token) {
+	switch (tok) {
 	case T_ID:
 		if (is_user_type_exist_in_outer_scope(g_real_token_string, &ut)) {
 			//If there is a type-name, then it
@@ -336,16 +310,6 @@ static bool is_c_stor_spec(TOKEN tok)
 }
 
 
-static bool is_constant(TREE_TYPE tt)
-{
-	if (tt != TR_ENUM_CONST && tt != TR_IMM &&
-		tt != TR_IMML && tt != TR_FP) {
-		return false;
-	}
-	return true;
-}
-
-
 bool is_user_type_exist_in_outer_scope(CHAR * cl, OUT DECL ** ut)
 {
 	SCOPE * sc = g_cur_scope;
@@ -407,7 +371,7 @@ static inline INT is_first_set_of_unary_exp(TOKEN tok)
 
 static inline INT is_assign_op(TOKEN tok)
 {
-	switch (g_real_token) {
+	switch (tok) {
 	case T_ASSIGN:
 	case T_BITANDEQU:
 	case T_BITOREQU:
@@ -442,7 +406,7 @@ void suck_tok_to(INT placeholder, ...)
     va_list arg;
 	TOKEN tok;
 	IS_TRUE0(sizeof(TOKEN) == sizeof(INT));
-	while (1) {
+	for (;;) {
 		if (g_real_token == T_END || g_real_token == T_NUL) break;
 		va_start(arg, placeholder);
 		tok = (TOKEN)va_arg(arg, INT);
@@ -546,48 +510,50 @@ static TOKEN look_next_token(INT n, OUT CHAR ** tok_string,
 			CELL * c = g_cell_list.get_head_nth(n - 1);
 			IS_TRUE0(c);
 			return TOKEN_INFO_token((TOKEN_INFO*)CELL_val(c));
-		} else {
-			//New tokens need to be fetched into the buffer.
-			n -= count;
-			//Restore current token into token-buffer
-			append_tok_head(g_real_token, g_real_token_string, g_real_line_num);
-			while (n > 0) {
-				//get new token from file
-				gettok();
-				tok = g_real_token;
-				if (g_real_token == T_END || g_real_token == T_NUL) {
-					reset_tok();
-					return g_real_token;
-				}
-				append_tok_tail(g_real_token,
-								g_real_token_string, g_real_line_num);
-				n--;
-			}
-			reset_tok();
-			return tok;
-		} //end else
-	} else { //count == 0
-		//Fetch a number of n tokens into the buffer
-		append_tok_tail(g_real_token, g_real_token_string, g_real_line_num);
+		}
+		
+		//New tokens need to be fetched into the buffer.
+		n -= count;
+		//Restore current token into token-buffer
+		append_tok_head(g_real_token, g_real_token_string, g_real_line_num);
 		while (n > 0) {
+			//get new token from file
 			gettok();
 			tok = g_real_token;
-			if (tok_string != NULL) {
-				*tok_string = g_real_token_string;
-			}
-			if (tok_line_num != NULL) {
-				*tok_line_num = g_real_line_num;
-			}
 			if (g_real_token == T_END || g_real_token == T_NUL) {
 				reset_tok();
 				return g_real_token;
 			}
-			append_tok_tail(g_real_token, g_real_token_string, g_real_line_num);
+			append_tok_tail(g_real_token,
+							g_real_token_string, g_real_line_num);
 			n--;
 		}
+		
 		reset_tok();
 		return tok;
-	} //end else
+	}
+	
+	//For now, count == 0
+	//Fetch a number of n tokens into the buffer
+	append_tok_tail(g_real_token, g_real_token_string, g_real_line_num);
+	while (n > 0) {
+		gettok();
+		tok = g_real_token;
+		if (tok_string != NULL) {
+			*tok_string = g_real_token_string;
+		}
+		if (tok_line_num != NULL) {
+			*tok_line_num = g_real_line_num;
+		}
+		if (g_real_token == T_END || g_real_token == T_NUL) {
+			reset_tok();
+			return g_real_token;
+		}
+		append_tok_tail(g_real_token, g_real_token_string, g_real_line_num);
+		n--;
+	}
+
+	reset_tok();
 	return tok;
 }
 
@@ -601,7 +567,7 @@ bool look_forward_token(INT num, ...)
 	if (num <= 0) {
 		return 0;
 	}
-	BYTE is_first = 1;
+	
 	va_list arg;
 	va_start(arg, num);
 	TOKEN v = (TOKEN)va_arg(arg, INT);
@@ -659,9 +625,8 @@ UNMATCH:
 static TREE * param_list()
 {
 	TREE * t = exp();
-
 	TREE * last = get_last(t);
-	TREE * nt = NULL;
+	
 	while (g_real_token == T_COMMA) {
 		match(T_COMMA);
 		TREE * nt = exp();
@@ -2092,10 +2057,8 @@ SCOPE * compound_stmt(DECL * para_list)
 	//statement list
 	cerr = g_err_msg_list.get_elem_count();
 	last = NULL;
-	while (1) {
-		if (g_real_token == T_END) {
-			break;
-		} else if (g_real_token == T_NUL) {
+	for (;;) {
+		if (g_real_token == T_END || g_real_token == T_NUL) {
 			break;
 		} else if (g_err_msg_list.get_elem_count() >= TOO_MANY_ERR) {
 			goto FAILED;
@@ -2105,7 +2068,7 @@ SCOPE * compound_stmt(DECL * para_list)
 
 		t = statement();
 
-		verify(t);
+		IS_TRUE0(verify(t));
 
 		if (last == NULL) {
 			last = get_last(SCOPE_stmt_list(cur_scope));
@@ -2207,9 +2170,8 @@ static TREE * statement()
 			t = sharp_start_stmt();
 			break;
 		default:
-			if (is_c_type_quan(g_real_token) ||
-				is_c_type_spec(g_real_token) ||
-				is_c_stor_spec(g_real_token)) {
+			//It mMay be varirable or type declaration.
+			if (is_in_first_set_of_declarator()) {
 				/*
 				err(g_real_line_num,
 					"'%s' is out of definition after or before block",
@@ -2242,8 +2204,7 @@ static bool verify(TREE * t)
 	case TR_LABEL:
 		break;
 	default:
-		CHAR * name = get_token_name(TREE_token(t));
-		IS_TRUE0(TREE_token(t) != T_NUL && name != NULL);
+		IS_TRUE0(TREE_token(t) != T_NUL && get_token_name(TREE_token(t)));
 	}
 
 	switch (TREE_type(t)) {
@@ -2294,6 +2255,7 @@ static bool verify(TREE * t)
 	case TR_ARRAY:
 	case TR_CALL:
 	case TR_PRAGMA:
+	case TR_SIZEOF:
 		break;
 	default: IS_TRUE(0, ("unknown tree type:%d", TREE_type(t)));
 	} //end switch
@@ -2307,7 +2269,6 @@ static TREE * dispatch()
 	ENUM * e = NULL;
 	INT idx = -1;
 	DECL * ut = NULL;
-	SYM * sym = NULL;
 	TREE * t = NULL;
 	switch (g_real_token) {
 	case T_ID: // ID = (A-Z|a-z)( A-Z|a-z|0-9 )*
@@ -2519,7 +2480,7 @@ INT c_parser()
 	//Create outermost scope for top region.
 	g_cur_scope = new_scope();
 	SCOPE_level(g_cur_scope) = GLOBAL_SCOPE; //First global scope
-	while (1) {
+	for (;;) {
 		if (g_real_token == T_END) {
 			//dump_scope(g_cur_scope,
 			//			 DUMP_SCOPE_FUNC_BODY|DUMP_SCOPE_STMT_TREE);

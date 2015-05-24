@@ -36,11 +36,13 @@ typedef enum {
 class LABEL_INFO {
 public:
 	LABEL_TYPE ltype;
+	
 	union {
 		SYM * lab_name;
 		INT lab_num;
 		SYM * pragma_str;
 	} u1;
+
 	union {
 		struct {
 			BYTE is_used:1;
@@ -75,7 +77,7 @@ public:
 
 //Exported Functions
 //Simplest method to compute hash value.
-inline INT lab_hash_value(LABEL_INFO const* li)
+inline UINT lab_hash_value(LABEL_INFO const* li)
 {
 	INT v = 0;
 	if (LABEL_INFO_type(li) == L_CLABEL) {
@@ -87,9 +89,9 @@ inline INT lab_hash_value(LABEL_INFO const* li)
 	} else {
 		IS_TRUE0(LABEL_INFO_type(li) == L_ILABEL);
 		v = LABEL_INFO_num(li);
-		v = (((UINT)(-v)) >> 7) ^ 0xAC5AAC5A;
+		v = (INT)((((UINT)(-v)) >> 7) ^ 0xAC5AAC5A);
 	}
-	return v;
+	return (UINT)v;
 }
 
 

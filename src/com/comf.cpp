@@ -165,9 +165,9 @@ CHAR * xstrcat(CHAR * buf, UINT bufl, CHAR const* info, ...)
 	//ptr += sizeof(CHAR*);
 	UINT l = ::strlen(buf);
 	if (l >= bufl) { return buf; }
-
+	
 	UINT x = bufl - l;
-
+	
 	va_list ptr;
 	va_start(ptr, info);
 
@@ -656,6 +656,10 @@ LONG revlong(LONG d)
 //Convert floating point string into binary words.
 void af2i(IN CHAR * f, OUT BYTE * buf, UINT buflen, bool is_double)
 {
+	UNUSED(is_double);
+	UNUSED(buflen);
+	UNUSED(buf);
+	UNUSED(f);
 	IS_TRUE0(f && buf);
 	IS_TRUE(0, ("TODO"));
 }
@@ -683,35 +687,6 @@ UINT get_sparse_popcount(ULONGLONG v)
 		n++;
 	}
 	return n;
-}
-
-
-//Compute the nearest power of 2 that not less than v.
-UINT get_nearest_power_of_2(UINT v)
-{
-	v--;
-	v |= v >> 1;
-	v |= v >> 2;
-	v |= v >> 4;
-	v |= v >> 8;
-	v |= v >> 16;
-	v++;
-	return v;
-}
-
-
-//Compute the nearest power of 2 that not less than v.
-ULONGLONG get_nearest_power_of_2(ULONGLONG v)
-{
-	v--;
-	v |= v >> 1;
-	v |= v >> 2;
-	v |= v >> 4;
-	v |= v >> 8;
-	v |= v >> 16;
-	v |= v >> 32;
-	v++;
-	return v;
 }
 
 
@@ -789,6 +764,7 @@ CHAR * getfilepath(IN CHAR * n, OUT CHAR * buf, UINT bufl)
 	if (i < 0) {
 		return NULL;
 	} else {
+		UNUSED(bufl);
 		IS_TRUE0((UINT)i < bufl);
 		memcpy(buf, n, i);
 		buf[i] = 0;
@@ -835,6 +811,7 @@ void strshift(CHAR * src, INT ofst)
 //e.g: Given /xx/yy/name.foo, return name.
 CHAR * getfilename(CHAR * n, OUT CHAR * buf, UINT bufl)
 {
+	UNUSED(bufl);
 	INT l = strlen(n), i = 0;
 	CHAR * p;
 	if (n == NULL) { return NULL; }
@@ -1288,7 +1265,7 @@ LETTER:
 			So you should pass 'INT' not 'CHAR' to 'va_arg'.
 			If this code is reached, the program will abort.
 			*/
-            CHAR c = va_arg(stack_start, INT);
+			CHAR c = (CHAR)va_arg(stack_start, INT);
 			if (!prtchar(buf, buflen, bufpos, c)) goto OVER;
 		}
 		break;

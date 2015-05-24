@@ -210,15 +210,6 @@ ST_INFO g_st_info[]={
 };
 
 
-static void * xmalloc(size_t size)
-{
-	void * p = smpool_malloc_h(size, g_pool_st_used);
-	IS_TRUE0(p);
-	memset(p, 0, size);
-	return p;
-}
-
-
 //Utility for st.cpp
 SST pushst(SST st, size_t v)
 {

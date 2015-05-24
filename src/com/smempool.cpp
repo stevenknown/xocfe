@@ -239,7 +239,7 @@ MEMPOOLIDX smpool_create_idx(size_t size, MEMPOOLTYPE mpt)
 		MEMPOOLIDX idx,i = 0;
 		idx = (MEMPOOLIDX)rand();
 		do {
-			if (idx != 0 &&
+			if (idx != 0 && 
 				g_mem_pool_hash_tab->find((OBJTY)(size_t)idx) == NULL) {
  				//Unique pool idx
 				break;

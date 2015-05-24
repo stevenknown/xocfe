@@ -37,6 +37,7 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //Build matrix to describe edge-weight.
 void AGRAPH::build_adj_matrix(MATRIX<UINT> & adj_mat)
 {
+	UNUSED(adj_mat);
 	IS_TRUE(0, ("Target Dependent Code"));
 	//Like: adj_mat.set(i, j, EDGE-WEIGHT);
 }

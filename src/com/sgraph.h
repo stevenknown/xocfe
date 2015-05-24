@@ -231,6 +231,7 @@ protected:
 	//map vertex id to vertex.
 	SVECTOR<VERTEX*> * m_dense_vertex;
 
+protected:
 	//Add 'e' into out-edges of 'vex'
 	inline void add_out_list(VERTEX * vex, EDGE * e)
 	{
@@ -261,10 +262,10 @@ protected:
 		add_next(&VERTEX_in_list(vex), el);
 	}
 
-	virtual void * clone_edge_info(EDGE * e)
+	virtual void * clone_edge_info(EDGE*)
 	{ IS_TRUE(0, ("should be overloaded")); return NULL; }
 
-	virtual void * clone_vertex_info(VERTEX * v)
+	virtual void * clone_vertex_info(VERTEX*)
 	{ IS_TRUE(0, ("should be overloaded")); return NULL; }
 
 	inline VERTEX * new_vertex()
@@ -316,7 +317,9 @@ protected:
 	}
 public:
 	GRAPH(UINT edge_hash_size = 64, UINT vex_hash_size = 64);
-	GRAPH(GRAPH & g);
+	GRAPH(GRAPH const& g);
+	GRAPH const& operator = (GRAPH const&);
+
 	virtual ~GRAPH() { destroy(); }
 	void init();
 	void destroy();
@@ -337,25 +340,49 @@ public:
 	}
 
 	void compute_rpo_norec(IN OUT VERTEX * root, OUT LIST<VERTEX const*> & vlst);
-	bool clone(GRAPH & src);
+	bool clone(GRAPH const& src);
 	UINT count_mem() const;
 
 	void dump_dot(CHAR const* name = NULL);
 	void dump_vcg(CHAR const* name = NULL);
+	
+	//Return true if 'succ' is successor of 'v'.
+	bool is_succ(VERTEX * v, VERTEX * succ) const
+	{
+		EDGE_C * e = VERTEX_out_list(v);
+		while (e != NULL) {
+			if (EDGE_to(EC_edge(e)) == succ) {
+				return true;
+			}
+			e = EC_next(e);
+		}
+		return false;
+	}
+	
+	//Return true if 'pred' is predecessor of 'v'.
+	bool is_pred(VERTEX * v, VERTEX * pred) const
+	{
+		EDGE_C * e = VERTEX_in_list(v);
+		while (e != NULL) {
+			if (EDGE_from(EC_edge(e)) == pred) {
+				return true;
+			}
+			e = EC_next(e);
+		}
+		return false;
+	}	
 
-	bool is_succ(VERTEX * v, VERTEX * succ);
-	bool is_pred(VERTEX * v, VERTEX * pred);
-	bool is_equal(GRAPH & g);
+	bool is_equal(GRAPH & g) const;
 	bool is_unique() const { return m_is_unique; }
 	bool is_direction() const { return m_is_direction; }
 
 	//Is there exist a path connect 'from' and 'to'.
-	inline bool is_reachable(UINT from, UINT to)
+	inline bool is_reachable(UINT from, UINT to) const
 	{
 		IS_TRUE(m_ec_pool != NULL, ("not yet initialized."));
 		return is_reachable(get_vertex(from), get_vertex(to));
 	}
-	bool is_reachable(VERTEX * from, VERTEX * to);
+	bool is_reachable(VERTEX * from, VERTEX * to) const;
 	void insert_vertex_between(IN VERTEX * v1, IN VERTEX * v2,
 							   IN VERTEX * newv, OUT EDGE ** e1 = NULL,
 							   OUT EDGE ** e2 = NULL);
@@ -372,7 +399,7 @@ public:
 
 	bool get_neighbor_list(IN OUT LIST<UINT> & ni_list, UINT vid) const;
 	bool get_neighbor_set(OUT SBITSET & niset, UINT vid) const;
-	inline UINT get_degree(UINT vid)
+	inline UINT get_degree(UINT vid) const
 	{
 		IS_TRUE(m_ec_pool != NULL, ("not yet initialized."));
 		return get_degree(get_vertex(vid));
@@ -380,17 +407,17 @@ public:
 	UINT get_degree(VERTEX const* vex) const;
 	UINT get_in_degree(VERTEX const* vex) const;
 	UINT get_out_degree(VERTEX const* vex) const;
-	inline UINT get_vertex_num()
+	inline UINT get_vertex_num() const
 	{
 		IS_TRUE(m_ec_pool != NULL, ("not yet initialized."));
 		return m_vertices.get_elem_count();
 	}
-	inline UINT get_edge_num()
+	inline UINT get_edge_num() const
 	{
 		IS_TRUE(m_ec_pool != NULL, ("not yet initialized."));
 		return m_edges.get_elem_count();
 	}
-	inline VERTEX * get_vertex(UINT vid)
+	inline VERTEX * get_vertex(UINT vid) const
 	{
 		IS_TRUE(m_ec_pool != NULL, ("not yet initialized."));
 		if (m_dense_vertex != NULL) {
@@ -398,24 +425,24 @@ public:
 		}
 		return (VERTEX*)m_vertices.find((OBJTY)(size_t)vid);
 	}
-	EDGE * get_edge(UINT from, UINT to);
-	EDGE * get_edge(VERTEX const* from, VERTEX const* to);
-	inline EDGE * get_first_edge(INT & cur)
+	EDGE * get_edge(UINT from, UINT to) const;
+	EDGE * get_edge(VERTEX const* from, VERTEX const* to) const;
+	inline EDGE * get_first_edge(INT & cur) const
 	{
 		IS_TRUE(m_ec_pool != NULL, ("not yet initialized."));
 		return m_edges.get_first(cur);
 	}
-	inline EDGE * get_next_edge(INT & cur)
+	inline EDGE * get_next_edge(INT & cur) const
 	{
 		IS_TRUE(m_ec_pool != NULL, ("not yet initialized."));
 		return m_edges.get_next(cur);
 	}
-	inline VERTEX * get_first_vertex(INT & cur)
+	inline VERTEX * get_first_vertex(INT & cur) const
 	{
 		IS_TRUE(m_ec_pool != NULL, ("not yet initialized."));
 		return m_vertices.get_first(cur);
 	}
-	inline VERTEX * get_next_vertex(INT & cur)
+	inline VERTEX * get_next_vertex(INT & cur) const
 	{
 		IS_TRUE(m_ec_pool != NULL, ("not yet initialized."));
 		return m_vertices.get_next(cur);
@@ -438,12 +465,12 @@ public:
 	void set_unique(bool is_unique)
 	{
 		IS_TRUE(m_ec_pool != NULL, ("not yet initialized."));
-		m_is_unique = is_unique;
+		m_is_unique = (BYTE)is_unique;
 	}
 	void set_direction(bool has_direction)
 	{
 		IS_TRUE(m_ec_pool != NULL, ("not yet initialized."));
-		m_is_direction = has_direction;
+		m_is_direction = (BYTE)has_direction;
 	}
 	void set_dense(bool is_dense)
 	{
@@ -468,11 +495,14 @@ public:
 	UINT is_preorder:1;
 	UINT is_postorder:1;
 
+public:
 	ITER_DOM_TREE()
 	{
 		is_preorder = 0;
 		is_postorder = 0;
 	}
+	COPY_CONSTRUCTOR(ITER_DOM_TREE);
+
 	void clean() { is_visited.clean(); stk.clean(); }
 	void set_preorder() { is_preorder = 1; }
 	void set_postorder() { is_postorder = 1; }
@@ -500,14 +530,15 @@ protected:
 	void _remove_unreach_node(UINT id, BITSET & visited);
 public:
 	DGRAPH(UINT edge_hash_size = 64, UINT vex_hash_size = 64);
-	DGRAPH(DGRAPH & g);
+	DGRAPH(DGRAPH const& g);
+	DGRAPH const& operator = (DGRAPH const&);
 
-	inline bool clone(DGRAPH & g)
+	inline bool clone(DGRAPH const& g)
 	{
 		m_bs_mgr = g.m_bs_mgr;
 		return GRAPH::clone(g);
 	}
-	bool clone_bs(DGRAPH & src);
+	bool clone_bs(DGRAPH const& src);
 	bool compute_dom3(LIST<VERTEX const*> const* vlst, BITSET const* uni);
 	bool compute_dom2(LIST<VERTEX const*> const& vlst);
 	bool compute_dom(LIST<VERTEX const*> const* vlst = NULL,
@@ -525,15 +556,17 @@ public:
 	//idom must be positive
 	//NOTE: Entry does not have idom.
 	//'id': vertex id.
-	inline UINT get_idom(UINT id) { return m_idom_set.get(id); }
+	inline UINT get_idom(UINT id) { return (UINT)m_idom_set.get(id); }
 
 	//ipdom must be positive
 	//NOTE: Exit does not have idom.
 	//'id': vertex id.
-	inline UINT get_ipdom(UINT id) { return m_ipdom_set.get(id); }
+	inline UINT get_ipdom(UINT id) { return (UINT)m_ipdom_set.get(id); }
 
 	void get_dom_tree(OUT GRAPH & dom);
 	void get_pdom_tree(OUT GRAPH & pdom);
+
+	BITSET * get_dom_set_c(UINT id) const { return m_dom_set.get(id); }
 
 	//Get vertices who dominate vertex 'id'.
 	//NOTE: set does NOT include 'v' itself.
@@ -555,6 +588,8 @@ public:
 		IS_TRUE0(v != NULL);
 		return get_dom_set(VERTEX_id(v));
 	}
+
+	BITSET * get_pdom_set_c(UINT id) const { return m_pdom_set.get(id); }
 
 	//Get vertices who post dominated by vertex 'id'.
 	//NOTE: set does NOT include 'v' itself.
@@ -587,9 +622,9 @@ public:
 
 	void sort_in_bfs_order(SVECTOR<UINT> & order_buf, VERTEX * root,
 						   BITSET & visit);
-	void sort_dom_tree_in_preorder(IN GRAPH & dom_tree, IN VERTEX * root,
+	void sort_dom_tree_in_preorder(IN VERTEX * root,
 								   OUT LIST<VERTEX*> & lst);
-	void sort_dom_tree_in_postorder(IN GRAPH & dom_tree, IN VERTEX * root,
+	void sort_dom_tree_in_postorder(IN VERTEX * root,
 									OUT LIST<VERTEX*> & lst);
 	void set_bs_mgr(BITSET_MGR * bs_mgr) { m_bs_mgr = bs_mgr; }
 	bool remove_unreach_node(UINT entry_id);

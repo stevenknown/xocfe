@@ -77,7 +77,7 @@ void dump_rbt(RBT<T, Ttgt> & rbt, CHAR const* name = NULL,
 	UINT nilcc = 0;
 	while (lst.get_elem_count() != 0) {
 		TN * x = lst.remove_head();
-		T key;
+		T key = T(0);
 		bool is_nil = false;
 		for (INT i = 0; i <= nilvec.get_last_idx(); i++) {
 			TN * z = nilvec.get(i);

@@ -58,12 +58,12 @@ void free_cell(CELL * c)
 
 CELL * get_free_cell()
 {
-     CELL * c = g_cell_free_list.remove_tail();
-	 if (c) {
+	CELL * c = g_cell_free_list.remove_tail();
+	if (c) {
 		memset(c, 0 , sizeof(CELL));
 		return c;
-	 }
-	 return NULL;
+	}
+	return NULL;
 }
 
 

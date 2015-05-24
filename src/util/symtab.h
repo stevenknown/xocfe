@@ -17,8 +17,10 @@ public:
 	UINT compute_char_sum(CHAR const* s) const
 	{
 		UINT v = 0 ;
-		while (*s++) {
+		UINT cnt = 0;
+		while ((*s++ != 0) && (cnt < 6)) {
 			v += (UINT)(*s);
+			cnt++;
 		}
 		return v;
 	}
@@ -56,9 +58,11 @@ class SYM_HASH_FUNC {
 public:
 	UINT compute_char_sum(CHAR const* s) const
 	{
-		UINT v = 0 ;
-		while (*s++) {
+		UINT v = 0;
+		UINT cnt = 0;
+		while ((*s++ != 0) && (cnt < 6)) {
 			v += (UINT)(*s);
+			cnt++;
 		}
 		return v;
 	}
@@ -105,7 +109,7 @@ public:
 		if (s == NULL) {
 			return NULL;
 		}
-		INT l = strlen(s);
+		UINT l = strlen(s);
 		CHAR * ns = (CHAR*)smpool_malloc_h(l + 1, m_pool);
 		memcpy(ns, s, l);
 		ns[l] = 0;
@@ -125,7 +129,7 @@ public:
 		if (sz < SHASH<SYM*, SYM_HASH_FUNC>::get_elem_count()) {
 			SHASH<SYM*, SYM_HASH_FUNC>::grow(sz);
 		}
-		return SHASH<SYM*, SYM_HASH_FUNC>::append((OBJTY)s);
+		return SHASH<SYM*, SYM_HASH_FUNC>::append((OBJTY)s); 
 	}
 
 	inline SYM * get(CHAR const* s)

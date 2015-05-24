@@ -890,9 +890,8 @@ void BITSET::bunion(BITSET const& bs)
 
 
 //Add a element which corresponding to 'elem' bit, and set this bit.
-void BITSET::bunion(INT elem)
-{
-	IS_TRUE(elem >= 0,("bit set cannot be NULL"));
+void BITSET::bunion(UINT elem)
+{	
 	UINT const first_byte = DIVBPB(elem);
 	if (m_size < (first_byte+1)) {
 		m_ptr = (BYTE*)realloc(m_ptr, m_size, first_byte + 1);
@@ -988,12 +987,15 @@ void BITSET::rev(UINT last_bit_pos)
 		m_ptr[i] = ~m_ptr[i];
 	}
 
-	//Use uint type to avoid byte truncate operation.
+	//Here we use UINT type to avoid byte truncate operation.
 	UINT last_byte = m_ptr[last_byte_pos];
+
 	UINT const mask = (1 << (last_bit_pos % BITS_PER_BYTE + 1)) - 1;
 	UINT const rev_last_byte = (~last_byte) & mask;
 	last_byte = (last_byte & (~mask)) | rev_last_byte;
-	m_ptr[last_byte_pos] = last_byte;
+
+	//Truncate to BYTE.
+	m_ptr[last_byte_pos] = (BYTE)last_byte;
 }
 
 
@@ -1696,23 +1698,29 @@ UINT BITSET_MGR::count_mem(FILE * h)
 {
 	UINT count = 0;
 	C<BITSET*> * ct;
-	for (BITSET const* bs = m_bs_list.get_head(&ct);
-		 bs != NULL; bs = m_bs_list.get_next(&ct)) {
-		count += bs->count_mem();
+	for (m_bs_list.get_head(&ct);
+		 ct != m_bs_list.end(); ct = m_bs_list.get_next(ct)) {
+		IS_TRUE0(ct->val());
+		count += ct->val()->count_mem();
 	}
+	UNUSED(h);
+
 	#ifdef _DEBUG_
     if (h != NULL) {
         //Dump mem usage into file.
 		LIST<UINT> lst;
-		for (BITSET const* bs = m_bs_list.get_head();
-			 bs != NULL; bs = m_bs_list.get_next()) {
+		C<BITSET*> * ct2;
+		for (m_bs_list.get_head(&ct2); 
+			 ct2 != m_bs_list.end(); ct2 = m_bs_list.get_next(ct2)) {
+			BITSET const* bs = ct2->val(); 	
 			UINT c = bs->count_mem();
+			
 			C<UINT> * ct;
 			UINT n = lst.get_elem_count();
 			lst.get_head(&ct);
 			UINT i;
-			for (i = 0; i < n; i++, lst.get_next(&ct)) {
-				if (c >= C_val(ct)) {
+			for (i = 0; i < n; i++, ct = lst.get_next(ct)) {
+				if (c >= ct->val()) {
 					lst.insert_before(c, ct);
 					break;
 				}
@@ -1721,10 +1729,11 @@ UINT BITSET_MGR::count_mem(FILE * h)
 				lst.append_head(c);
 			}
 		}
+		
 		UINT v = lst.get_head();
-		fprintf(h, "\n== DUMP BITSET_MGR: total %d "
-				   "bitsets, mem usage are:\n",
+		fprintf(h, "\n== DUMP BITSET_MGR: total %d bitsets, mem usage are:\n",
 				   m_bs_list.get_elem_count());
+
 		UINT b = 0;
 		UINT n = lst.get_elem_count();
 		for (UINT i = 0; i < n; i++, v = lst.get_next(), b++) {
@@ -1822,16 +1831,16 @@ BITSET * bs_intersect(IN BITSET const& set1,
 UINT SDBITSET_MGR::count_mem(FILE * h) const
 {
 	UINT count = 0;
-	SC<SBITSET*> * st;
-	for (SBITSET const* bs = m_sbitset_list.get_head(&st);
-		 bs != NULL; bs = m_sbitset_list.get_next(&st)) {
-		count += bs->count_mem();
+	for (SC<SBITSET*> * st = m_sbitset_list.get_head(); 
+		 st != m_sbitset_list.end(); st = m_sbitset_list.get_next(st)) {
+		IS_TRUE0(st->val());
+		count += st->val()->count_mem();
 	}
 
-	SC<DBITSET*> * dt;
-	for (DBITSET const* d = m_dbitset_list.get_head(&dt);
-		 d != NULL; d = m_dbitset_list.get_next(&dt)) {
-		count += d->count_mem();
+	for (SC<DBITSET*> * dt = m_dbitset_list.get_head();
+		 dt != m_dbitset_list.end(); dt = m_dbitset_list.get_next(dt)) {
+		IS_TRUE0(dt->val());
+		count += dt->val()->count_mem();
 	}
 
 	//DBITSETC and SBITSETC are allocated in the pool.
@@ -1840,20 +1849,23 @@ UINT SDBITSET_MGR::count_mem(FILE * h) const
 	count += smpool_get_pool_size_handle(ptr_pool);
 	count += sm.count_mem();
 
+	UNUSED(h);
 	#ifdef _DEBUG_
 	if (h != NULL) {
 		//Dump mem usage into file.
 		LIST<UINT> lst;
-		SC<SBITSET*> * st;
-		for (SBITSET const* bs = m_sbitset_list.get_head(&st);
-			 bs != NULL; bs = m_sbitset_list.get_next(&st)) {
+		for (SC<SBITSET*> * st = m_sbitset_list.get_head();
+			 st != m_sbitset_list.end(); st = m_sbitset_list.get_next(st)) {
+			SBITSET const* bs = st->val(); 
+			IS_TRUE0(bs);
+
 			UINT c = bs->count_mem();
 			C<UINT> * ct;
 			UINT n = lst.get_elem_count();
 			lst.get_head(&ct);
 			UINT i;
-			for (i = 0; i < n; i++, lst.get_next(&ct)) {
-				if (c >= C_val(ct)) {
+			for (i = 0; i < n; i++, ct = lst.get_next(ct)) {
+				if (c >= ct->val()) {
 					lst.insert_before(c, ct);
 					break;
 				}
@@ -1862,10 +1874,12 @@ UINT SDBITSET_MGR::count_mem(FILE * h) const
 				lst.append_head(c);
 			}
 		}
+			 
 		UINT v = lst.get_head();
 		fprintf(h, "\n== DUMP BITSET_MGR: total %d "
 					"bitsets, mem usage are:\n",
 					m_sbitset_list.get_elem_count());
+		
 		UINT b = 0;
 		UINT n = lst.get_elem_count();
 		for (UINT i = 0; i < n; i++, v = lst.get_next(), b++) {
@@ -1898,15 +1912,19 @@ void SBITSETC::bunion(SBITSETC const& src, SEG_MGR * sm,
 					  SC<SEG*> ** free_list, SMEM_POOL * pool)
 {
 	IS_TRUE(this != &src, ("operate on same set"));
-	SC<SEG*> * srcst;
-	SC<SEG*> * tgtst, * prev_st = NULL;
-	SEG * t = segs.get_head(&tgtst);
-	for (SEG * s = src.segs.get_head(&srcst);
-		 s != NULL; s = src.segs.get_next(&srcst)) {
+	SC<SEG*> * tgtst = segs.get_head();
+	SC<SEG*> * prev_st = NULL;
+	for (SC<SEG*> * srcst = src.segs.get_head();
+		 srcst != src.segs.end(); srcst = src.segs.get_next(srcst)) {
+		SEG * s = srcst->val();
+		IS_TRUE0(s);
+		
 		UINT src_start = s->start;
 
 		bool handled = false;
-		for (; t != NULL; prev_st = tgtst, t = segs.get_next(&tgtst)) {
+		for (; tgtst != segs.end(); 
+			 prev_st = tgtst, tgtst = segs.get_next(tgtst)) {
+			SEG * t = tgtst->val();
 			UINT tgt_start = t->start;
 			if (src_start < tgt_start) {
 				/*
@@ -1925,7 +1943,9 @@ void SBITSETC::bunion(SBITSETC const& src, SEG_MGR * sm,
 			} else if (src_start == tgt_start) {
 				t->bs.bunion(s->bs);
 				prev_st = tgtst;
-				t = segs.get_next(&tgtst);
+
+				tgtst = segs.get_next(tgtst);
+
 				handled = true; //current tgt segment has been handled.
 				break;
 			}
@@ -1946,13 +1966,16 @@ void SBITSETC::bunion(SBITSETC const& src, SEG_MGR * sm,
 void SBITSETC::bunion(UINT elem, SEG_MGR * sm,
 					  SC<SEG*> ** free_list, SMEM_POOL * pool)
 {
-	SC<SEG*> * sct, * next_sct, * prev_sct = NULL;
-	for (segs.get_head(&sct), next_sct = sct;
-		 sct != NULL; prev_sct = sct, sct = next_sct) {
+	SC<SEG*> * prev_sct = NULL;
+	SC<SEG*> * sct = segs.get_head();
+	SC<SEG*> * next_sct = sct;
+	for (; sct != segs.end(); prev_sct = sct, sct = next_sct) {
 		SEG * s = SC_val(sct);
-		segs.get_next(&next_sct);
+		next_sct = segs.get_next(next_sct);
+
 		UINT start = s->get_start();
 		if (elem < start) { break; }
+		
 		UINT last = s->get_end();
 		if (elem <= last) {
 			s->bs.bunion(elem - start);
@@ -1980,9 +2003,11 @@ void SBITSETC::copy(SBITSETC const& src, SEG_MGR * sm,
 {
 	IS_TRUE(this != &src, ("operate on same set"));
 	clean(sm, free_list);
-	SC<SEG*> * st;
-	for (SEG * s = src.segs.get_head(&st);
-		 s != NULL; s = src.segs.get_next(&st)) {
+	for (SC<SEG*> * st = src.segs.get_head(); 
+		 st != src.segs.end(); st = src.segs.get_next(st)) {
+		SEG * s = st->val();
+		IS_TRUE0(s);
+		
 		SEG * t = sm->new_seg();
 		t->copy(*s);
 		segs.append_tail(t, free_list, pool);
@@ -1992,8 +2017,11 @@ void SBITSETC::copy(SBITSETC const& src, SEG_MGR * sm,
 
 void SBITSETC::clean(SEG_MGR * sm, SC<SEG*> ** free_list)
 {
-	SC<SEG*> * st;
-	for (SEG * s = segs.get_head(&st); s != NULL; s = segs.get_next(&st)) {
+	for (SC<SEG*> * st = segs.get_head(); 
+		 st != segs.end(); st = segs.get_next(st)) {
+		SEG * s = st->val();
+		IS_TRUE0(s);
+		
 		sm->free(s);
 	}
 
@@ -2002,16 +2030,19 @@ void SBITSETC::clean(SEG_MGR * sm, SC<SEG*> ** free_list)
 }
 
 
-void SBITSETC::destroy_seg_and_clean(SEG_MGR * sm,
-												SC<SEG*> ** free_list)
+void SBITSETC::destroy_seg_and_clean(SEG_MGR * sm, SC<SEG*> ** free_list)
 {
-	SC<SEG*> * iter;
-	for (SEG * s = segs.get_head(&iter);
-		 s != NULL; s = segs.get_next(&iter)) {
-		//We are not going to give it back to SEG_MGR.
+	for (SC<SEG*> * st = segs.get_head(); 
+		 st != segs.end(); st = segs.get_next(st)) {
+		//Delete it here, and we are not going to give it back to SEG_MGR.
+		SEG * s = st->val();
+		IS_TRUE0(s);
+		
+		UNUSED(sm);
 		#ifdef _DEBUG_
 		sm->dec_seg_count();
 		#endif
+		
 		delete s;
 	}
 
@@ -2023,9 +2054,12 @@ void SBITSETC::destroy_seg_and_clean(SEG_MGR * sm,
 
 UINT SBITSETC::count_mem() const
 {
-	SC<SEG*> * st;
 	UINT c = 0;
-	for (SEG * s = segs.get_head(&st); s != NULL; s = segs.get_next(&st)) {
+	for (SC<SEG*> * st = segs.get_head(); 
+		 st != segs.end(); st = segs.get_next(st)) {
+		SEG * s = st->val();
+		IS_TRUE0(s);
+		
 		c += s->count_mem();
 	}
 	c += segs.count_mem();
@@ -2035,13 +2069,16 @@ UINT SBITSETC::count_mem() const
 
 void SBITSETC::diff(UINT elem, SEG_MGR * sm, SC<SEG*> ** free_list)
 {
-	SC<SEG*> * sct, * next_sct, * prev_sct = NULL;
-	for (segs.get_head(&sct), next_sct = sct;
-		 sct != NULL; prev_sct = sct, sct = next_sct) {
+	SC<SEG*> * sct = segs.get_head();
+	SC<SEG*> * next_sct = sct;
+	SC<SEG*> * prev_sct = NULL;
+	for (; sct != segs.end(); prev_sct = sct, sct = next_sct) {
 		SEG * s = SC_val(sct);
-		segs.get_next(&next_sct);
+		next_sct = segs.get_next(next_sct);
+		
 		UINT start = s->get_start();
 		if (elem < start) { break; }
+		
 		UINT last = s->get_end();
 		if (elem <= last) {
 			s->bs.diff(elem - start);
@@ -2060,30 +2097,35 @@ void SBITSETC::diff(UINT elem, SEG_MGR * sm, SC<SEG*> ** free_list)
 void SBITSETC::diff(SBITSETC const& src, SEG_MGR * sm, SC<SEG*> ** free_list)
 {
 	IS_TRUE(this != &src, ("operate on same set"));
-	SC<SEG*> * tgtst, * prev_st = NULL, * next_st;
-	segs.get_head(&tgtst);
-	next_st = tgtst;
-	SC<SEG*> * next_srcst = NULL;
-	SC<SEG*> * srcst = NULL;
-	for (src.segs.get_head(&next_srcst), srcst = next_srcst;
-		 srcst != NULL; srcst = next_srcst) {
-		src.segs.get_next(&next_srcst);
+	SC<SEG*> * tgtst = segs.get_head();
+	SC<SEG*> * prev_st = NULL;
+	SC<SEG*> * next_st = tgtst;
+	SC<SEG*> * next_srcst = src.segs.get_head();
+	SC<SEG*> * srcst = next_srcst;
+	for (; srcst != src.segs.end(); srcst = next_srcst) {
+		next_srcst = src.segs.get_next(next_srcst);
+		
 		SEG * s = SC_val(srcst);
 		UINT src_start = s->start;
-		for (; tgtst != NULL;) {
+		
+		for (; tgtst != segs.end();) {
 			SEG * t = SC_val(tgtst);
 			UINT tgt_start = t->start;
+
 			if (src_start < tgt_start) {
 				break;
 			}
+
 			if (src_start > tgt_start) {
-				segs.get_next(&next_st);
+				next_st = segs.get_next(next_st);
 				prev_st = tgtst;
 				tgtst = next_st;
 				continue;
 			}
-			segs.get_next(&next_st);
+			
+			next_st = segs.get_next(next_st);
 			t->bs.diff(s->bs);
+			
 			if (t->bs.is_empty()) {
 				segs.remove(prev_st, tgtst, free_list);
 				//prev_st keep unchanged.
@@ -2114,9 +2156,11 @@ void SBITSETC::dump2(FILE * h) const
 void SBITSETC::dump(FILE * h) const
 {
 	IS_TRUE0(h);
-	SC<SEG*> * sct;
-	for (SEG * s = segs.get_head(&sct);
-		 s != NULL; s = segs.get_next(&sct)) {
+	for (SC<SEG*> * st = segs.get_head(); 
+		 st != segs.end(); st = segs.get_next(st)) {
+		SEG * s = st->val();
+		IS_TRUE0(s);
+		
 		fprintf(h, " [");
 		INT n;
 		for (INT i = s->bs.get_first(); i >= 0; i = n) {
@@ -2135,46 +2179,62 @@ void SBITSETC::dump(FILE * h) const
 UINT SBITSETC::get_elem_count() const
 {
 	UINT c = 0;
-	SC<SEG*> * st;
-	for (SEG * s = segs.get_head(&st); s != NULL; s = segs.get_next(&st)) {
+	for (SC<SEG*> * st = segs.get_head(); 
+		 st != segs.end(); st = segs.get_next(st)) {
+		SEG * s = st->val();
 		c += s->bs.get_elem_count();
 	}
 	return c;
 }
 
 
+//*cur will be set to NULL if set is empty.
 INT SBITSETC::get_first(SC<SEG*> ** cur) const
 {
 	IS_TRUE0(cur);
-	SEG * s = segs.get_head(cur);
-	if (s == NULL) {
+	SC<SEG*> * sc = segs.get_head();
+	if (sc == segs.end()) {
 		IS_TRUE0(segs.get_elem_count() == 0);
+		*cur = NULL;
 		return -1;
 	}
-	IS_TRUE0(!s->bs.is_empty());
+	*cur = sc;
+	IS_TRUE0(sc->val());
+
+	SEG * s = sc->val();
+	IS_TRUE(!s->bs.is_empty(), ("empty SEG should not exist."));
 	return s->get_start() + s->bs.get_first();
 }
 
 
+//*cur will be set to NULL if set is empty.
 INT SBITSETC::get_last(SC<SEG*> ** cur) const
 {
 	IS_TRUE0(cur);
-	SEG * s = segs.get_tail(cur);
-	if (s == NULL) {
+	SC<SEG*> * sc = segs.get_tail();
+	if (sc == segs.end()) {
 		IS_TRUE0(segs.get_elem_count() == 0);
+		*cur = NULL;
 		return -1;
 	}
+	*cur = sc;
+	IS_TRUE0(sc->val());
+
+	SEG * s = sc->val();
 	IS_TRUE0(!s->bs.is_empty());
 	return s->get_start() + s->bs.get_last();
 }
 
 
+//Note *cur must be initialized.
 INT SBITSETC::get_next(UINT elem, SC<SEG*> ** cur) const
 {
 	if (cur == NULL) {
-		SC<SEG*> * st;
-		for (SEG * s = segs.get_head(&st);
-			 s != NULL; s = segs.get_next(&st)) {
+		for (SC<SEG*> * st = segs.get_head(); 
+			 st != segs.end(); st = segs.get_next(st)) {
+			SEG * s = st->val();
+			IS_TRUE0(s);
+				
 			UINT start = s->get_start();
 			if (elem < start) { continue; }
 			UINT last = s->get_end();
@@ -2182,10 +2242,11 @@ INT SBITSETC::get_next(UINT elem, SC<SEG*> ** cur) const
 				INT n = s->bs.get_next(elem - start);
 				if (n >= 0) { return start + (UINT)n; }
 
-				segs.get_next(&st);
+				st = segs.get_next(st);
 				if (st == NULL) {
 					return -1;
 				}
+				
 				start = SC_val(st)->get_start();
 				n = SC_val(st)->bs.get_first();
 				IS_TRUE0(n >= 0);
@@ -2194,21 +2255,26 @@ INT SBITSETC::get_next(UINT elem, SC<SEG*> ** cur) const
 		}
 		return -1;
 	}
-	SC<SEG*> * cp = *cur;
-	if (cp == NULL) { return -1; }
-	UINT start = SC_val(cp)->get_start();
-	INT n = SC_val(cp)->bs.get_next(elem - start);
+	
+	SC<SEG*> * st = *cur;
+	if (st == NULL) { return -1; }
+	
+	UINT start = SC_val(st)->get_start();
+	INT n = SC_val(st)->bs.get_next(elem - start);
 	if (n >= 0) {
 		return start + (UINT)n;
 	}
-	segs.get_next(&cp);
-	if (cp == NULL) {
+	
+	st = segs.get_next(st);
+	if (st == segs.end()) {
 		*cur = NULL;
 		return -1;
 	}
-	*cur = cp;
-	start = SC_val(cp)->get_start();
-	n = SC_val(cp)->bs.get_first();
+
+	//Update container.
+	*cur = st;
+	start = SC_val(st)->get_start();
+	n = SC_val(st)->bs.get_first();
 	IS_TRUE0(n >= 0);
 	return start + (UINT)n;
 }
@@ -2217,23 +2283,25 @@ INT SBITSETC::get_next(UINT elem, SC<SEG*> ** cur) const
 bool SBITSETC::is_equal(SBITSETC const& src) const
 {
 	IS_TRUE(this != &src, ("operate on same set"));
-	SC<SEG*> * srcst;
-	SC<SEG*> * tgtst;
-	src.segs.get_head(&srcst);
-	segs.get_head(&tgtst);
-	while (srcst != NULL || tgtst != NULL)  {
+	SC<SEG*> * srcst = src.segs.get_head();
+	SC<SEG*> * tgtst = segs.get_head();
+	for (; srcst != src.segs.end() || tgtst != segs.end(); )  {
 		if ((srcst == NULL) ^ (tgtst == NULL)) {
 			return false;
 		}
+		
 		IS_TRUE0(srcst);
+		
 		if (SC_val(srcst)->start != SC_val(tgtst)->start) {
 			return false;
 		}
+		
 		if (!SC_val(srcst)->bs.is_equal(SC_val(tgtst)->bs)) {
 			return false;
 		}
-		src.segs.get_next(&srcst);
-		segs.get_next(&tgtst);
+		
+		srcst = src.segs.get_next(srcst);
+		tgtst = segs.get_next(tgtst);
 	}
 	return true;
 }
@@ -2242,24 +2310,23 @@ bool SBITSETC::is_equal(SBITSETC const& src) const
 bool SBITSETC::is_intersect(SBITSETC const& src) const
 {
 	IS_TRUE(this != &src, ("operate on same set"));
-	SC<SEG*> * srcst;
-	SC<SEG*> * tgtst;
-	src.segs.get_head(&srcst);
-	segs.get_head(&tgtst);
-	while (srcst != NULL && tgtst != NULL) {
+	SC<SEG*> * srcst = src.segs.get_head();
+	SC<SEG*> * tgtst = segs.get_head();
+	for (; srcst != src.segs.end() && tgtst != segs.end(); ) {
 		if (SC_val(srcst)->start < SC_val(tgtst)->start) {
-			src.segs.get_next(&srcst);
+			srcst = src.segs.get_next(srcst);
 			continue;
 		} else if (SC_val(srcst)->start == SC_val(tgtst)->start) {
 			if (SC_val(srcst)->bs.is_intersect(SC_val(tgtst)->bs)) {
 				return true;
 			}
-			src.segs.get_next(&srcst);
-			segs.get_next(&tgtst);
+			
+			srcst = src.segs.get_next(srcst);
+			tgtst = segs.get_next(tgtst);
 			continue;
 		} else {
 			//srcst's start > tgtst's start
-			segs.get_next(&tgtst);
+			tgtst = segs.get_next(tgtst);
 			continue;
 		}
 	}
@@ -2269,16 +2336,15 @@ bool SBITSETC::is_intersect(SBITSETC const& src) const
 
 bool SBITSETC::is_contain(UINT elem) const
 {
-	SC<SEG*> * st;
-	segs.get_head(&st);
-	while (st != NULL) {
+	for (SC<SEG*> * st = segs.get_head(); 
+		 st != segs.end(); st = segs.get_next(st)) {
 		SEG * seg = SC_val(st);
         UINT start = seg->get_start();
         if (elem < start) { return false; }
+		
         if (elem >= start && elem <= seg->get_end()) {
             return seg->bs.is_contain(elem - start);
         }
-		segs.get_next(&st);
 	}
 	return false;
 }
@@ -2286,15 +2352,13 @@ bool SBITSETC::is_contain(UINT elem) const
 
 bool SBITSETC::is_empty() const
 {
-	SC<SEG*> * st;
-	segs.get_head(&st);
-	while (st != NULL) {
-		if (!SC_val(st)->bs.is_empty()) {
-			return false;
-		}
-		segs.get_next(&st);
+	SC<SEG*> * st = segs.get_head();
+	#ifdef _DEBUG_	
+	if (st != segs.end()) {
+		IS_TRUE0(st->val() && !st->val()->bs.is_empty());
 	}
-	return true;
+	#endif
+	return st == segs.end();
 }
 
 
@@ -2304,23 +2368,25 @@ void SBITSETC::intersect(SBITSETC const& src, SEG_MGR * sm,
 						 SC<SEG*> ** free_list)
 {
 	IS_TRUE(this != &src, ("operate on same set"));
-	SC<SEG*> * tgtst, * prev_st = NULL, * next_st;
-	segs.get_head(&tgtst);
-	next_st = tgtst;
-	SC<SEG*> * next_srcst = NULL;
-	SC<SEG*> * srcst = NULL;
-	for (src.segs.get_head(&next_srcst), srcst = next_srcst;
-		 srcst != NULL; srcst = next_srcst) {
-		src.segs.get_next(&next_srcst);
+	SC<SEG*> * tgtst = segs.get_head();
+	SC<SEG*> * prev_st = NULL;
+	SC<SEG*> * next_st = tgtst;
+	SC<SEG*> * next_srcst = src.segs.get_head();
+	SC<SEG*> * srcst = next_srcst;
+	for (; srcst != src.segs.end(); srcst = next_srcst) {
+		next_srcst = src.segs.get_next(next_srcst);
+		
 		SEG * s = SC_val(srcst);
 		UINT src_start = s->start;
-		for (; tgtst != NULL;) {
+		
+		for (; tgtst != segs.end();) {
 			SEG * t = SC_val(tgtst);
 			UINT tgt_start = t->start;
+
 			if (src_start < tgt_start) {
 				if (next_srcst == NULL) {
 					//the last segment of src.
-					segs.get_next(&next_st);
+					next_st = segs.get_next(next_st);
 					segs.remove(prev_st, tgtst, free_list);
 					//prev_st keep unchanged.
 					tgtst = next_st;
@@ -2329,15 +2395,17 @@ void SBITSETC::intersect(SBITSETC const& src, SEG_MGR * sm,
 				}
 				break;
 			}
+			
 			if (src_start > tgt_start) {
-				segs.get_next(&next_st);
+				next_st = segs.get_next(next_st);
 				segs.remove(prev_st, tgtst, free_list);
 				//prev_st keep unchanged.
 				tgtst = next_st;
 				sm->free(t);
 				continue;
 			}
-			segs.get_next(&next_st);
+
+			next_st = segs.get_next(next_st);
 			t->bs.intersect(s->bs);
 			if (t->bs.is_empty()) {
 				segs.remove(prev_st, tgtst, free_list);
@@ -2350,13 +2418,15 @@ void SBITSETC::intersect(SBITSETC const& src, SEG_MGR * sm,
 			}
 		}
 	}
-	if (next_srcst == NULL) {
+	
+	if (next_srcst == src.segs.end()) {
 		//tgt list is longer than src. So tgt list still have
 		//element to cope with.
-		for (; tgtst != NULL; tgtst = next_st) {
+		for (; tgtst != segs.end(); tgtst = next_st) {
 			SEG * t = SC_val(tgtst);
-			segs.get_next(&next_st);
+			next_st = segs.get_next(next_st);
 			segs.remove(prev_st, tgtst, free_list);
+			
 			//prev_st keep unchanged.
 			tgtst = next_st;
 			sm->free(t);
@@ -2369,28 +2439,44 @@ void SBITSETC::intersect(SBITSETC const& src, SEG_MGR * sm,
 //
 //START DBITSETC
 //
+//*cur will be set to NULL if set is empty.
 INT DBITSETC::get_first(SC<SEG*> ** cur) const
 {
 	IS_TRUE0(cur);
-	SEG * s = segs.get_head(cur);
-	if (s == NULL) {
+
+	SC<SEG*> * sc = segs.get_head();
+	if (sc == segs.end()) {		
 		IS_TRUE0(segs.get_elem_count() == 0);
+		*cur = NULL;
 		return -1;
 	}
+
+	*cur = sc;
+	IS_TRUE0(sc->val());
+	SEG * s = sc->val();
+	
 	//DBITSETC allow bs is empty if it is not sparse.
 	//IS_TRUE0(!s->bs.is_empty());
 	return s->get_start() + s->bs.get_first();
 }
 
 
+//*cur will be set to NULL if set is empty.
 INT DBITSETC::get_last(SC<SEG*> ** cur) const
 {
-	IS_TRUE0(cur);
-	SEG * s = segs.get_tail(cur);
-	if (s == NULL) {
+	SC<SEG*> * sc = segs.get_tail();
+	if (sc == segs.end()) {
 		IS_TRUE0(segs.get_elem_count() == 0);
+		*cur = NULL;
 		return -1;
 	}
+
+	IS_TRUE0(cur);
+	*cur = sc;
+	IS_TRUE0(sc->val());
+
+	SEG * s = sc->val();
+
 	//DBITSETC allow bs is empty if it is not sparse.
 	//IS_TRUE0(!s->bs.is_empty());
 	return s->get_start() + s->bs.get_last();
@@ -2413,7 +2499,7 @@ void bs_test()
 	a.bunion(515);
 	b.bunion(21);
 	a.dump(g_tfile);
-	int u = a.count_mem();
+	//int u = a.count_mem();
 	b.dump(g_tfile);
 	a.bunion(b);
 	a.dump(g_tfile);
@@ -2440,7 +2526,7 @@ void bs_test()
 	x.bunion(13555);
 	x.dump(g_tfile);
 	int n = x.get_elem_count();
-	SC<SEG*> * ct;
+	SC<SEG*> * ct = NULL;
 	n = x.get_first(&ct);
 	n = x.get_next(n, &ct);
 	n = x.get_next(n, &ct);
@@ -2504,7 +2590,7 @@ void bs_test2()
 
 	BITSET e,f;
 	e.bunion(64);
-	int i = e.get_first();
+	//int i = e.get_first();
 
 
 	SBITSET g(&sm),h(&sm);
@@ -2526,13 +2612,15 @@ extern FILE * g_tfile;
 void dump_seg(SEG_MGR & m)
 {
 	if (g_tfile == NULL) { return; }
-	SC<SEG*> * sc;
+	SC<SEG*> * st = NULL;
 	fprintf(g_tfile, "\n====start %d:%d===\n",
 			m.get_free_list()->get_elem_count(),
 			m.get_seg_count());
+	
 	BITSET x;
 	SLIST<SEG*> const* flst = m.get_free_list();
-	for (SEG const* s = flst->get_head(&sc); s != NULL; s = flst->get_next(&sc)) {
+	for (flst->get_head(&st); st != flst.end(); st = flst->get_next(st)) {
+		SEG const* s = st->val();
 		fprintf(g_tfile, "%d,", s->id);
 		x.bunion(s->id);
 	}

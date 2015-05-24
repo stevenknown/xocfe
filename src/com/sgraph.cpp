@@ -61,7 +61,7 @@ GRAPH::GRAPH(UINT edge_hash_size, UINT vex_hash_size) :
 }
 
 
-GRAPH::GRAPH(GRAPH & g) :
+GRAPH::GRAPH(GRAPH const& g) :
 	m_edges(g.m_edge_hash_size), m_vertices(g.m_vex_hash_size)
 {
 	m_edge_hash_size = g.m_edge_hash_size;
@@ -186,7 +186,7 @@ void GRAPH::erase()
 	if (m_dense_vertex != NULL) {
 		for (INT i = 0; i <= m_dense_vertex->get_last_idx(); i++) {
 			//Should be removed in remove_vertex().
-			IS_TRUE0(m_dense_vertex->get(i) == NULL);
+			IS_TRUE0(m_dense_vertex->get((UINT)i) == NULL);
 		}
 	}
 	#endif
@@ -227,7 +227,7 @@ void GRAPH::compute_rpo_norec(VERTEX * root, OUT LIST<VERTEX const*> & vlst)
 }
 
 
-bool GRAPH::clone(GRAPH & src)
+bool GRAPH::clone(GRAPH const& src)
 {
 	erase();
 	m_is_unique = src.m_is_unique;
@@ -468,8 +468,7 @@ Return false if 'vid' is not on graph.
 bool GRAPH::get_neighbor_list(OUT LIST<UINT> & ni_list, UINT vid) const
 {
 	IS_TRUE(m_ec_pool != NULL, ("not yet initialized."));
-	UINT degree = 0;
-
+	
 	//Ensure VERTEX_HASH::find is readonly.
 	GRAPH * pthis = const_cast<GRAPH*>(this);
 	VERTEX * vex  = pthis->get_vertex(vid);
@@ -477,7 +476,7 @@ bool GRAPH::get_neighbor_list(OUT LIST<UINT> & ni_list, UINT vid) const
 
 	EDGE_C * el = VERTEX_in_list(vex);
 	while (el != NULL) {
-		INT v = VERTEX_id(EDGE_from(EC_edge(el)));
+		UINT v = VERTEX_id(EDGE_from(EC_edge(el)));
 		if (!ni_list.find(v)) {
 			ni_list.append_tail(v);
 		}
@@ -486,7 +485,7 @@ bool GRAPH::get_neighbor_list(OUT LIST<UINT> & ni_list, UINT vid) const
 
 	el = VERTEX_out_list(vex);
 	while (el != NULL) {
-		INT v = VERTEX_id(EDGE_to(EC_edge(el)));
+		UINT v = VERTEX_id(EDGE_to(EC_edge(el)));
 		if (!ni_list.find(v)) {
 			ni_list.append_tail(v);
 		}
@@ -507,8 +506,6 @@ Return false if 'vid' is not on graph.
 bool GRAPH::get_neighbor_set(OUT SBITSET & niset, UINT vid) const
 {
 	IS_TRUE(m_ec_pool != NULL, ("not yet initialized."));
-	UINT degree = 0;
-
 	//Ensure VERTEX_HASH::find is readonly.
 	GRAPH * pthis = const_cast<GRAPH*>(this);
 	VERTEX * vex  = pthis->get_vertex(vid);
@@ -516,14 +513,14 @@ bool GRAPH::get_neighbor_set(OUT SBITSET & niset, UINT vid) const
 
 	EDGE_C * el = VERTEX_in_list(vex);
 	while (el != NULL) {
-		INT v = VERTEX_id(EDGE_from(EC_edge(el)));
+		UINT v = VERTEX_id(EDGE_from(EC_edge(el)));
 		niset.bunion(v);
 		el = EC_next(el);
 	}
 
 	el = VERTEX_out_list(vex);
 	while (el != NULL) {
-		INT v = VERTEX_id(EDGE_to(EC_edge(el)));
+		UINT v = VERTEX_id(EDGE_to(EC_edge(el)));
 		niset.bunion(v);
 		el = EC_next(el);
 	}
@@ -568,7 +565,7 @@ UINT GRAPH::get_out_degree(VERTEX const* vex) const
 }
 
 
-EDGE * GRAPH::get_edge(VERTEX const* from, VERTEX const* to)
+EDGE * GRAPH::get_edge(VERTEX const* from, VERTEX const* to) const
 {
 	IS_TRUE(m_ec_pool != NULL, ("not yet initialized."));
 	if (from == NULL || to == NULL) { return NULL; }
@@ -600,7 +597,7 @@ EDGE * GRAPH::get_edge(VERTEX const* from, VERTEX const* to)
 }
 
 
-EDGE * GRAPH::get_edge(UINT from, UINT to)
+EDGE * GRAPH::get_edge(UINT from, UINT to) const
 {
 	IS_TRUE(m_ec_pool != NULL, ("not yet initialized."));
 	VERTEX * fp = get_vertex(from);
@@ -609,7 +606,7 @@ EDGE * GRAPH::get_edge(UINT from, UINT to)
 }
 
 
-bool GRAPH::is_equal(GRAPH & g)
+bool GRAPH::is_equal(GRAPH & g) const
 {
 	if (get_vertex_num() != g.get_vertex_num() ||
 		get_edge_num() != g.get_edge_num()) {
@@ -661,7 +658,7 @@ bool GRAPH::is_equal(GRAPH & g)
 
 
 //Is there exist a path connect 'from' and 'to'.
-bool GRAPH::is_reachable(VERTEX * from, VERTEX * to)
+bool GRAPH::is_reachable(VERTEX * from, VERTEX * to) const
 {
 	IS_TRUE(m_ec_pool != NULL, ("not yet initialized."));
 	IS_TRUE(from != NULL && to != NULL, ("parameters cannot be NULL"));
@@ -790,15 +787,13 @@ void GRAPH::remove_transitive_edge()
 	SVECTOR<UINT> vex_vec;
 	sort_in_toplog_order(vex_vec, true);
 	SVECTOR<UINT> vid2pos_in_bitset_map; //Map from VERTEX-ID to BITSET.
-	INT i;
 
 	//Mapping vertex id to its position in 'vex_vec'.
-	for (i = 0; i <= vex_vec.get_last_idx(); i++) {
-		vid2pos_in_bitset_map.set(vex_vec.get(i), i);
+	for (INT i = 0; i <= vex_vec.get_last_idx(); i++) {
+		vid2pos_in_bitset_map.set(vex_vec.get((UINT)i), (UINT)i);
 	}
 
 	//Associate each edges with indicator respective.
-	UINT vex_num = get_vertex_num();
 	SVECTOR<BITSET*> edge_indicator; //container of bitset.
 	INT c;
 	for (EDGE * e = m_edges.get_first(c); e != NULL; e = m_edges.get_next(c)) {
@@ -818,62 +813,34 @@ void GRAPH::remove_transitive_edge()
 	} //end for each of edge
 
 	//Scanning vertices in topological order.
-	for (i = 0; i < vex_vec.get_last_idx(); i++) {
+	for (INT i = 0; i < vex_vec.get_last_idx(); i++) {
 		//Get the successor vector.
-		BITSET * bs = edge_indicator.get(i);
+		BITSET * bs = edge_indicator.get((UINT)i);
 		if (bs != NULL && bs->get_elem_count() >= 2) {
 			//Do NOT remove the first edge. Position in bitset
 			//has been sorted in topological order.
 			for (INT pos_i = bs->get_first(); pos_i >= 0;
-				 pos_i = bs->get_next(pos_i)) {
-				INT kid_from_vid = vex_vec.get(pos_i);
-				INT kid_from_pos = vid2pos_in_bitset_map.get(kid_from_vid);
+				 pos_i = bs->get_next((UINT)pos_i)) {
+				UINT kid_from_vid = vex_vec.get((UINT)pos_i);
+				UINT kid_from_pos = vid2pos_in_bitset_map.get(kid_from_vid);
 
 				//Get bitset that 'pos_i' associated.
 				BITSET * kid_from_bs = edge_indicator.get(kid_from_pos);
 				if (kid_from_bs != NULL) {
-					for (INT pos_j = bs->get_next(pos_i); pos_j >= 0;
-						 pos_j = bs->get_next(pos_j)) {
-						if (kid_from_bs->is_contain(pos_j)) {
+					for (INT pos_j = bs->get_next((UINT)pos_i); pos_j >= 0;
+						 pos_j = bs->get_next((UINT)pos_j)) {
+						if (kid_from_bs->is_contain((UINT)pos_j)) {
 							//The edge 'i->pos_j' is redundant.
-							INT to_vid = vex_vec.get(pos_j);
-							UINT src_vid = vex_vec.get(i);
+							UINT to_vid = vex_vec.get((UINT)pos_j);
+							UINT src_vid = vex_vec.get((UINT)i);
 							remove_edge(get_edge(src_vid, to_vid));
-							bs->diff(pos_j);
+							bs->diff((UINT)pos_j);
 						}
 					}
 				} //end if
 			} //end for
 		} //end if
 	} //end for each vertex
-}
-
-
-//Return true if 'succ' is successor of 'v'.
-bool GRAPH::is_succ(VERTEX * v, VERTEX * succ)
-{
-	EDGE_C * e = VERTEX_out_list(v);
-	while (e != NULL) {
-		if (EDGE_to(EC_edge(e)) == succ) {
-			return true;
-		}
-		e = EC_next(e);
-	}
-	return false;
-}
-
-
-//Return true if 'pred' is predecessor of 'v'.
-bool GRAPH::is_pred(VERTEX * v, VERTEX * pred)
-{
-	EDGE_C * e = VERTEX_in_list(v);
-	while (e != NULL) {
-		if (EDGE_from(EC_edge(e)) == pred) {
-			return true;
-		}
-		e = EC_next(e);
-	}
-	return false;
 }
 
 
@@ -984,7 +951,7 @@ DGRAPH::DGRAPH(UINT edge_hash_size, UINT vex_hash_size) :
 }
 
 
-DGRAPH::DGRAPH(DGRAPH & g) : GRAPH(g)
+DGRAPH::DGRAPH(DGRAPH const& g) : GRAPH(g)
 {
 	m_bs_mgr = g.m_bs_mgr;
 	if (m_bs_mgr != NULL) {
@@ -993,18 +960,25 @@ DGRAPH::DGRAPH(DGRAPH & g) : GRAPH(g)
 }
 
 
-bool DGRAPH::clone_bs(DGRAPH & src)
+bool DGRAPH::clone_bs(DGRAPH const& src)
 {
 	IS_TRUE0(m_bs_mgr != NULL);
 	INT c;
 	for (VERTEX * srcv = src.m_vertices.get_first(c);
 		 srcv != NULL; srcv = src.m_vertices.get_next(c)) {
-		INT src_vid = VERTEX_id(srcv);
+		UINT src_vid = VERTEX_id(srcv);
 		VERTEX * tgtv = get_vertex(src_vid);
 		IS_TRUE0(tgtv != NULL);
 
-		get_dom_set(tgtv)->copy(*src.get_dom_set(srcv));
-		get_pdom_set(tgtv)->copy(*src.get_pdom_set(srcv));
+		BITSET * set = src.get_dom_set_c(VERTEX_id(srcv));
+		if (set != NULL) {
+			get_dom_set(tgtv)->copy(*set);
+		}
+
+		set = src.get_pdom_set_c(VERTEX_id(srcv));
+		if (set != NULL) {
+			get_pdom_set(tgtv)->copy(*set);
+		}
 	} //end for each vertices
 	m_idom_set.copy(src.m_idom_set);
 	m_ipdom_set.copy(src.m_ipdom_set);
@@ -1049,9 +1023,11 @@ bool DGRAPH::compute_dom(LIST<VERTEX const*> const* vlst, BITSET const* uni)
 		luni = uni;
 	} else {
 		BITSET * x = new BITSET();
-		C<VERTEX const*> * ct;
-		for (VERTEX const* u = pvlst->get_head(&ct);
-			 u != NULL; u = pvlst->get_next(&ct)) {
+		C<VERTEX const*> * ct = NULL;
+		for (pvlst->get_head(&ct); 
+			 ct != pvlst->end(); ct = pvlst->get_next(ct)) {
+			VERTEX const* u = ct->val();
+			IS_TRUE0(u);
 			x->bunion(VERTEX_id(u));
 		}
 		luni = x;
@@ -1059,8 +1035,9 @@ bool DGRAPH::compute_dom(LIST<VERTEX const*> const* vlst, BITSET const* uni)
 
 	//Initialize dom-set for each BB.
 	C<VERTEX const*> * ct;
-	for (VERTEX const* v = pvlst->get_head(&ct);
-		 v != NULL; v = pvlst->get_next(&ct)) {
+	for (pvlst->get_head(&ct); ct != pvlst->end(); ct = pvlst->get_next(ct)) {
+		VERTEX const* v = ct->val();
+		IS_TRUE0(v);
 		if (is_graph_entry(v)) {
 			BITSET * dom = get_dom_set(v);
 			dom->clean();
@@ -1079,8 +1056,10 @@ bool DGRAPH::compute_dom(LIST<VERTEX const*> const* vlst, BITSET const* uni)
 		count++;
 		change = false;
 		C<VERTEX const*> * ct;
-		for (VERTEX const* v = pvlst->get_head(&ct);
-			 v != NULL; v = pvlst->get_next(&ct)) {
+		for (pvlst->get_head(&ct); 
+			 ct != pvlst->end(); ct = pvlst->get_next(ct)) {
+			VERTEX const* v = ct->val();
+			IS_TRUE0(v);
 			UINT vid = VERTEX_id(v);
 			if (is_graph_entry(v)) {
 				continue;
@@ -1122,6 +1101,7 @@ And we access them by reverse-topological order.
 'uni': universe. */
 bool DGRAPH::compute_dom3(LIST<VERTEX const*> const* vlst, BITSET const* uni)
 {
+	UNUSED(uni);
 	LIST<VERTEX const*> tmpvlst;
 	LIST<VERTEX const*> * pvlst = &tmpvlst;
 	if (vlst != NULL) {
@@ -1137,8 +1117,9 @@ bool DGRAPH::compute_dom3(LIST<VERTEX const*> const* vlst, BITSET const* uni)
 
 	//Initialize dom-set for each BB.
 	C<VERTEX const*> * ct;
-	for (VERTEX const* v = pvlst->get_head(&ct);
-		 v != NULL; v = pvlst->get_next(&ct)) {
+	for (pvlst->get_head(&ct); ct != pvlst->end(); ct = pvlst->get_next(ct)) {
+		VERTEX const* v = ct->val();
+		IS_TRUE0(v);
 		if (is_graph_entry(v)) {
 			BITSET * dom = get_dom_set(v);
 			dom->clean();
@@ -1157,8 +1138,10 @@ bool DGRAPH::compute_dom3(LIST<VERTEX const*> const* vlst, BITSET const* uni)
 		count++;
 		change = false;
 		C<VERTEX const*> * ct;
-		for (VERTEX const* v = pvlst->get_head(&ct);
-			 v != NULL; v = pvlst->get_next(&ct)) {
+		for (pvlst->get_head(&ct); 
+			 ct != pvlst->end(); ct = pvlst->get_next(ct)) {
+			VERTEX const* v = ct->val();
+			IS_TRUE0(v);
 			UINT vid = VERTEX_id(v);
 			if (is_graph_entry(v)) {
 				continue;
@@ -1217,7 +1200,7 @@ bool DGRAPH::compute_pdom_by_rpo(VERTEX * root, BITSET const* uni)
 	} else {
 		res = compute_pdom(&vlst, uni);
 	}
-	IS_TRUE0(res);
+	CK_USE(res);
 	return true;
 }
 
@@ -1229,8 +1212,9 @@ bool DGRAPH::compute_pdom(LIST<VERTEX const*> const* vlst)
 	IS_TRUE0(vlst);
 	BITSET uni;
 	C<VERTEX const*> * ct;
-	for (VERTEX const* u = vlst->get_head(&ct);
-		 u != NULL; u = vlst->get_next(&ct)) {
+	for (vlst->get_head(&ct); ct != vlst->end(); ct = vlst->get_next(ct)) {
+		VERTEX const* u = ct->val();
+		IS_TRUE0(u);
 		uni.bunion(VERTEX_id(u));
 	}
 	return compute_pdom(vlst, &uni);
@@ -1247,8 +1231,9 @@ bool DGRAPH::compute_pdom(LIST<VERTEX const*> const* vlst, BITSET const* uni)
 
 	//Initialize pdom for each bb
 	C<VERTEX const*> * ct;
-	for (VERTEX const* v = vlst->get_head(&ct);
-		 v != NULL; v = vlst->get_next(&ct)) {
+	for (vlst->get_head(&ct); ct != vlst->end(); ct = vlst->get_next(ct)) {
+		VERTEX const* v = ct->val();
+		IS_TRUE0(v);
 		if (is_graph_exit(v)) {
 			BITSET * pdom = get_pdom_set(v);
 			pdom->clean();
@@ -1267,8 +1252,9 @@ bool DGRAPH::compute_pdom(LIST<VERTEX const*> const* vlst, BITSET const* uni)
 		count++;
 		change = false;
 		C<VERTEX const*> * ct;
-		for (VERTEX const* v = vlst->get_head(&ct);
-			 v != NULL; v = vlst->get_next(&ct)) {
+		for (vlst->get_head(&ct); ct != vlst->end(); ct = vlst->get_next(ct)) {
+			VERTEX const* v = ct->val();
+			IS_TRUE0(v);
 			UINT vid = VERTEX_id(v);
 			if (is_graph_exit(v)) {
 				continue;
@@ -1307,8 +1293,9 @@ bool DGRAPH::compute_dom2(LIST<VERTEX const*> const& vlst)
 {
 	C<VERTEX const*> * ct;
 	BITSET avail;
-	for (VERTEX const* v = vlst.get_head(&ct);
-		 v != NULL; v = vlst.get_next(&ct)) {
+	for (vlst.get_head(&ct); ct != vlst.end(); ct = vlst.get_next(ct)) {
+		VERTEX const* v = ct->val();
+		IS_TRUE0(v);
 		BITSET * doms = get_dom_set(VERTEX_id(v));
 		doms->clean();
 		IS_TRUE0(doms);
@@ -1347,18 +1334,17 @@ bool DGRAPH::compute_idom2(LIST<VERTEX const*> const& vlst)
 		change = false;
 		//Access with topological order.
 		C<VERTEX const*> * ct;
-		for (VERTEX const* v = vlst.get_head(&ct);
-			 v != NULL; v = vlst.get_next(&ct)) {
-			INT cur_id = VERTEX_id(v);
+		for (vlst.get_head(&ct); ct != vlst.end(); ct = vlst.get_next(ct)) {
+			VERTEX const* v = ct->val();
+			IS_TRUE0(v);
 			if (is_graph_entry(v)) {
-				m_idom_set.set(VERTEX_id(v), VERTEX_id(v));
+				m_idom_set.set(VERTEX_id(v), (INT)VERTEX_id(v));
 				nentry++;
 				continue;
 			}
 
 			//Access each preds
 			EDGE_C const* ec = VERTEX_in_list(v);
-			UINT meet = 0;
 			VERTEX const* idom = NULL;
 			while (ec != NULL) {
 				VERTEX const* pred = EDGE_from(EC_edge(ec));
@@ -1379,14 +1365,14 @@ bool DGRAPH::compute_idom2(LIST<VERTEX const*> const& vlst)
 				VERTEX const* k = idom;
 				while (j != k) {
 					while (VERTEX_rpo(j) > VERTEX_rpo(k)) {
-						j = get_vertex(m_idom_set.get(VERTEX_id(j)));
+						j = get_vertex((UINT)m_idom_set.get(VERTEX_id(j)));
 						IS_TRUE0(j);
 						if (is_graph_entry(j)) {
 							break;
 						}
 					}
 					while (VERTEX_rpo(j) < VERTEX_rpo(k)) {
-						k = get_vertex(m_idom_set.get(VERTEX_id(k)));
+						k = get_vertex((UINT)m_idom_set.get(VERTEX_id(k)));
 						IS_TRUE0(k);
 						if (is_graph_entry(k)) {
 							break;
@@ -1414,15 +1400,16 @@ bool DGRAPH::compute_idom2(LIST<VERTEX const*> const& vlst)
 					change = true;
 				}
 			} else if ((UINT)m_idom_set.get(VERTEX_id(v)) != VERTEX_id(idom)) {
-				m_idom_set.set(VERTEX_id(v), VERTEX_id(idom));
+				m_idom_set.set(VERTEX_id(v), (INT)VERTEX_id(idom));
 				change = true;
 			}
 		} //end for
 	}
 
 	C<VERTEX const*> * ct;
-	for (VERTEX const* v = vlst.get_head(&ct);
-		 v != NULL; v = vlst.get_next(&ct)) {
+	for (vlst.get_head(&ct); ct != vlst.end(); ct = vlst.get_next(ct)) {
+		VERTEX const* v = ct->val();
+		IS_TRUE0(v);
 		if (is_graph_entry(v)) {
 			m_idom_set.set(VERTEX_id(v), 0);
 			nentry--;
@@ -1436,8 +1423,6 @@ bool DGRAPH::compute_idom2(LIST<VERTEX const*> const& vlst)
 //NOTE: Entry does not have idom.
 bool DGRAPH::compute_idom()
 {
-	bool change = true;
-
 	//Initialize idom-set for each BB.
 	m_idom_set.clean();
 
@@ -1445,7 +1430,7 @@ bool DGRAPH::compute_idom()
 	INT c;
 	for (VERTEX * v = m_vertices.get_first(c);
 		 v != NULL; v = m_vertices.get_next(c)) {
-		INT cur_id = VERTEX_id(v);
+		UINT cur_id = VERTEX_id(v);
 		if (is_graph_entry(v)) {
 			continue;
 		} else if (m_dom_set.get(cur_id)->get_elem_count() >= 2) {
@@ -1460,9 +1445,8 @@ bool DGRAPH::compute_idom()
 
 			#ifdef MAGIC_METHOD
 			INT i;
-			INT idom = -1;
-			for (i = p->get_first(); i != -1; i = p->get_next(i)) {
-				if (m_dom_set.get(i)->is_equal(*p)) {
+			for (i = p->get_first(); i != -1; i = p->get_next((UINT)i)) {
+				if (m_dom_set.get((UINT)i)->is_equal(*p)) {
 					IS_TRUE0(m_idom_set.get(cur_id) == 0);
 					m_idom_set.set(cur_id, i);
 					break;
@@ -1499,8 +1483,6 @@ bool DGRAPH::compute_idom()
 //NOTE: Exit does not have idom.
 bool DGRAPH::compute_ipdom()
 {
-	bool change = true;
-
 	//Initialize ipdom-set for each BB.
 	m_ipdom_set.clean();
 
@@ -1508,7 +1490,7 @@ bool DGRAPH::compute_ipdom()
 	INT c;
 	for (VERTEX const* v = m_vertices.get_last(c);
 		 v != NULL; v = m_vertices.get_prev(c)) {
-		INT cur_id = VERTEX_id(v);
+		UINT cur_id = VERTEX_id(v);
 		if (is_graph_exit(v)) {
 			continue;
 		} else if (m_pdom_set.get(cur_id)->get_elem_count() > 1) {
@@ -1522,8 +1504,8 @@ bool DGRAPH::compute_ipdom()
 
 			p->diff(cur_id);
 			INT i;
-			for (i = p->get_first(); i != -1; i = p->get_next(i)) {
-				if (m_pdom_set.get(i)->is_equal(*p)) {
+			for (i = p->get_first(); i != -1; i = p->get_next((UINT)i)) {
+				if (m_pdom_set.get((UINT)i)->is_equal(*p)) {
 					IS_TRUE0(m_ipdom_set.get(cur_id) == 0);
 					m_ipdom_set.set(cur_id, i);
 					break;
@@ -1546,7 +1528,7 @@ void DGRAPH::get_dom_tree(OUT GRAPH & dom)
 		UINT vid = VERTEX_id(v);
 		dom.add_vertex(vid);
 		if (m_idom_set.get(vid) != 0) {
-			dom.add_edge(m_idom_set.get(vid), vid);
+			dom.add_edge((UINT)m_idom_set.get(vid), vid);
 		}
 	}
 }
@@ -1561,7 +1543,7 @@ void DGRAPH::get_pdom_tree(OUT GRAPH & pdom)
 		UINT vid = VERTEX_id(v);
 		pdom.add_vertex(vid);
 		if (m_ipdom_set.get(vid) != 0) { //id of bb starting at 1.
-			pdom.add_edge(m_ipdom_set.get(vid), vid);
+			pdom.add_edge((UINT)m_ipdom_set.get(vid), vid);
 		}
 	}
 }
@@ -1577,24 +1559,30 @@ void DGRAPH::dump_dom(FILE * h, bool dump_dom_tree)
 	INT c;
 	for (VERTEX * v = m_vertices.get_first(c);
 		 v != NULL; v = m_vertices.get_next(c)) {
-		INT vid = VERTEX_id(v);
+		UINT vid = VERTEX_id(v);
 		fprintf(h, "\nVERTEX(%d) dom: ", vid);
+		
 		BITSET * bs;
 		if ((bs = m_dom_set.get(vid)) != NULL) {
-			for (INT id = bs->get_first(); id != -1 ; id = bs->get_next(id)) {
-				if (id != vid) {
+			for (INT id = bs->get_first(); 
+				 id != -1 ; id = bs->get_next((UINT)id)) {
+				if ((UINT)id != vid) {
 					fprintf(h, "%d ", id);
 				}
 			}
 		}
+
 		fprintf(h, "\n     pdom: ");
+
 		if ((bs = m_pdom_set.get(vid)) != NULL) {
-			for (INT id = bs->get_first(); id != -1; id = bs->get_next(id)) {
-				if (id != vid) {
+			for (INT id = bs->get_first(); 
+				 id != -1; id = bs->get_next((UINT)id)) {
+				if ((UINT)id != vid) {
 					fprintf(h, "%d ", id);
 				}
 			}
 		}
+
 		if (m_idom_set.get(vid) != 0) {
 			fprintf(h, "\n     idom: %d", m_idom_set.get(vid));
 		} else {
@@ -1622,8 +1610,8 @@ void DGRAPH::dump_dom(FILE * h, bool dump_dom_tree)
 }
 
 
-void DGRAPH::sort_dom_tree_in_preorder(IN GRAPH & dom_tree, IN VERTEX * root,
-									   OUT LIST<VERTEX*> & lst)
+void DGRAPH::sort_dom_tree_in_preorder(IN VERTEX * root,
+									OUT LIST<VERTEX*> & lst)
 {
 	IS_TRUE0(root);
 	BITSET is_visited;
@@ -1688,7 +1676,7 @@ void DGRAPH::sort_in_bfs_order(SVECTOR<UINT> & order_buf, VERTEX * root,
 }
 
 
-void DGRAPH::sort_dom_tree_in_postorder(IN GRAPH & dom_tree, IN VERTEX * root,
+void DGRAPH::sort_dom_tree_in_postorder(IN VERTEX * root,
 										OUT LIST<VERTEX*> & lst)
 {
 	IS_TRUE0(root);

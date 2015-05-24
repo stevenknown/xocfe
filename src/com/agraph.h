@@ -57,7 +57,7 @@ public:
 		}
 	}
 
-	bool clone(AGRAPH & src)
+	void clone(AGRAPH & src)
 	{
 		if (src.m_spath_mat != NULL) {
 			if (m_spath_mat == NULL) {
@@ -68,7 +68,7 @@ public:
 		} else {
 			delete m_spath_mat;
 			m_spath_mat = NULL;
-		}
+		}		
 	}
 
 	UINT count_mem() const
@@ -77,6 +77,7 @@ public:
 		if (m_spath_mat != NULL) {
 			count += m_spath_mat->count_mem();
 		}
+		return count;
 	}
 
 	void shortest_path(UINT infinite);

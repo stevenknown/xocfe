@@ -49,6 +49,7 @@ typedef enum {
 } MEMPOOLTYPE;
 
 
+
 #define MEMPOOL_type(p)					((p)->pool_type)
 #define MEMPOOL_next(p)					((p)->next)
 #define MEMPOOL_prev(p)					((p)->prev)

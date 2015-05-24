@@ -69,8 +69,7 @@ SYM * add_to_symtab_list(SYM_LIST ** sym_list , SYM * sym)
 		SYM_LIST_sym(*sym_list) = sym;
 		return NULL;
 	} else {
-		SYM_LIST * p , * q;
-		p = *sym_list;
+		SYM_LIST * p = *sym_list, * q = NULL;
 		while (p != NULL) {
 			q = p;
 			if (SYM_LIST_sym(p) == sym) {

@@ -96,8 +96,8 @@ static INT process_array_init(DECL * dcl, TYPE * ty, TREE ** init)
 		}
 	} else {
 	    //single dimension array
-		/* When we meet a TR_EXP_SCOPE, because now we are
-		initializing a array, so the initialization set up
+		/* When we meet a TR_EXP_SCOPE, because now we are 
+		initializing a array, so the initialization set up 
 		from subset of EXP_SCOPE */
 		if (TREE_type(*init) == TR_EXP_SCOPE) {
 			TREE * t = TREE_exp_scope(*init);
@@ -325,6 +325,7 @@ INT process_init(DECL * decl, TREE ** init)
 }
 
 
+#ifdef _DEBUG_
 //Check 'dcl' is DCL_TYPE_NAME.
 //type name often be used in type-cast expression, such as
 static bool is_valid_type_name(DECL * dcl)
@@ -344,6 +345,7 @@ static bool is_valid_type_name(DECL * dcl)
 	}
 	return false;
 }
+#endif
 
 
 //Constructing TYPE-NAME declaration
@@ -495,8 +497,8 @@ static DECL * build_binary_op_type(DECL * l, DECL * r)
 
 
 //Checking type-convert of modifier
-static bool ck_assign(TREE * t, DECL * ld, DECL * rd)
-{
+static bool ck_assign(TREE * t, DECL * ld, DECL *)
+{	
 	CHAR buf[MAX_BUF_LEN];
 	buf[0] = 0;
 	if (is_array(ld)) {
@@ -505,7 +507,7 @@ static bool ck_assign(TREE * t, DECL * ld, DECL * rd)
 		return false;
 	}
 	if (IS_CONST(DECL_spec(ld))) {
-		format_declaration(buf,ld);
+		format_declaration(buf, ld);
 		err(TREE_lineno(t),
 			 "illegal '%s', l-value specifies const object", buf);
 		return false;
@@ -862,7 +864,7 @@ static INT c_type_tran(TREE * t, TY_CTX * cont)
 					if (is_pointer(ld) && is_pointer(rd)) {
 						//pointer - pointer
 						TREE_result_type(t) =
-							BUILD_TYNAME(get_pointer_type_spec());
+							BUILD_TYNAME(T_SPEC_UNSIGNED | T_SPEC_LONG);
 					} else if (is_pointer(ld) && is_integer(rd)) {
 						//pointer - integer
 						TREE_result_type(t) = ld;
@@ -1027,8 +1029,7 @@ static INT c_type_tran(TREE * t, TY_CTX * cont)
 				IS_TRUE(ld, ("lchild must be pointer type"));
 				if (DECL_dt(ld) == DCL_POINTER ||
 					DECL_dt(ld) == DCL_ARRAY) {
-					TREE * parent = TREE_parent(t);
-					IS_TRUE0(parent);
+					IS_TRUE0(TREE_parent(t));
 					//if (TREE_type(parent) != TR_ARRAY)
 					{
 						/*
@@ -1288,6 +1289,8 @@ Checking compatible between formal parameter and real parameter.
 */
 static bool ck_para_type_compatible(DECL * formalp, DECL * realp)
 {
+	UNUSED(realp);
+	UNUSED(formalp);
 	//TODO
 	return true;
 }
@@ -1331,7 +1334,7 @@ static bool type_ck_call(TREE * t, TY_CTX * cont)
 
 	//Return type is the call type.
 	//And here constructing return value type.
-	TYPE * ty = DECL_spec(fun_decl);
+	//TYPE * ty = DECL_spec(fun_decl);
 	DECL * pure_decl = PURE_DECL(fun_decl);
 	if (DECL_dt(pure_decl) == DCL_FUN) {
 		pure_decl = DECL_next(pure_decl);
@@ -1398,8 +1401,6 @@ static bool type_ck_call(TREE * t, TY_CTX * cont)
 //Perform type checking.
 static INT c_type_ck(TREE * t, TY_CTX * cont)
 {
-	CHAR buf[MAX_BUF_LEN];
-	buf[0] = 0;
 	if (cont == NULL) {
 		TY_CTX ct = {0};
 		cont = &ct;
@@ -1517,18 +1518,6 @@ public:
 	{ return is_decl_equal(d1, d2); }
 
 };
-
-
-/*
-Merge type attributes.
-
-'decl': declaration
-'def': definition
-*/
-static void merge_type_attribute(DECL * decl, DECL * def)
-{
-	//TODO
-}
 
 
 //Infer type to TREE nodes.

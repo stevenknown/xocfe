@@ -280,7 +280,7 @@ static INT get_line()
 
 	UINT pos = 0;
 	bool is_some_chars_in_cur_line = false;
-	while (1) {
+	for (;;) {
         if (g_cur_line == NULL) {
 			g_cur_line = (CHAR*)::malloc(MAX_BUF_LINE);
 			g_cur_line_len = MAX_BUF_LINE;
@@ -778,8 +778,8 @@ the function return.
 */
 static TOKEN t_solidus()
 {
-	TOKEN t;
-	INT st;
+	TOKEN t = T_NUL;
+	INT st = 0;
 	CHAR c = get_next_char();
 	if (c == '=') { // /=
 		t = T_DIVEQU;
@@ -806,7 +806,7 @@ static TOKEN t_solidus()
 		UINT cur_line_num = g_src_line_num;
 		c = get_next_char();
 		CHAR c1 = 0;
-		while (1) {
+		for (;;) {
 			cur_line_num = g_src_line_num;
 			c1 = get_next_char();
 			if (c == '*' && c1 == '/') {

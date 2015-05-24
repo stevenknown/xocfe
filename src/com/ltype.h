@@ -29,18 +29,16 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define _L_TYPE_
 
 #ifdef _LINUX_
-#include "unistd.h" //for unlink declaration
-#define ALLOCA	alloca //linux version
+	#include "unistd.h" //for unlink declaration
+	#define ALLOCA	alloca //linux version
 #else
+	#ifdef _VC6_
+	#include "windows.h"
+	#include "errors.h"
+	#endif
 
-#ifdef _VC6_
-#include "windows.h"
-#include "errors.h"
-#endif
-
-#include "malloc.h"
-#define ALLOCA	_alloca //windows version
-
+	#include "malloc.h"
+	#define ALLOCA	_alloca //windows version
 #endif
 
 #include "stdlib.h"
@@ -62,6 +60,7 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #undef ULONG
 #undef LONGLONG
 #undef ULONGLONG
+#undef BOOL
 
 #define STATUS int
 #define BYTE unsigned char
@@ -71,14 +70,16 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define USHORT unsigned short
 #define INT int
 #define UINT unsigned int
+#define BOOL unsigned int
 #define LONG long
 #define ULONG unsigned long
+
 #ifdef _VC6_
-#define LONGLONG __int64
-#define ULONGLONG unsigned __int64
+	#define LONGLONG __int64
+	#define ULONGLONG unsigned __int64
 #else
-#define LONGLONG long long
-#define ULONGLONG unsigned long long
+	#define LONGLONG long long
+	#define ULONGLONG unsigned long long
 #endif
 
 #ifdef _DEBUG_

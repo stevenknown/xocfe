@@ -101,6 +101,24 @@ e.g:
 		printf("%fsec", getclockend(_timer_timer_)); \
 	}
 
+//This macro declare copy constructor for class.
+#define COPY_CONSTRUCTOR(class_name)  \
+	class_name(class_name const&);  \
+	class_name const& operator = (class_name const&)
+
+//Used to avoid warning: unreferenced variable if set 
+//-Werror=unused-variable.
+//#define UNUSED(v) (v)
+template <typename T> void dummy_use(T const&) {}
+#define UNUSED(v) dummy_use(v)
+
+
+#ifdef _DEBUG_
+#define CK_USE(a)	IS_TRUE0(a)
+#else
+#define CK_USE(a)	UNUSED(a)
+#endif
+
 
 template <class T, UINT GROW_SIZE> class SVECTOR;
 
@@ -122,8 +140,35 @@ INT findstr(CHAR * src, CHAR * s);
 
 INT gcdm(UINT num, ...);
 INT gcdm(UINT num, SVECTOR<INT, 8> const& a);
-UINT get_nearest_power_of_2(UINT v);
-ULONGLONG get_nearest_power_of_2(ULONGLONG v);
+
+//Compute the nearest power of 2 that not less than v.
+inline UINT get_nearest_power_of_2(UINT v)
+{
+	v--;
+	v |= v >> 1;
+	v |= v >> 2;
+	v |= v >> 4;
+	v |= v >> 8;
+	v |= v >> 16;
+	v++;
+	return v;
+}
+
+//Compute the nearest power of 2 that not less than v.
+inline ULONGLONG get_nearest_power_of_2(ULONGLONG v)
+{
+	v--;
+	v |= v >> 1;
+	v |= v >> 2;
+	v |= v >> 4;
+	v |= v >> 8;
+	v |= v >> 16;
+	v |= v >> 32;
+	v++;
+	return v;
+}
+
+//Compute the number of 1.
 UINT get_lookup_popcount(ULONGLONG v);
 UINT get_sparse_popcount(ULONGLONG v);
 UINT get_power_of_2(ULONGLONG v);
@@ -196,4 +241,6 @@ public:
 	CHAR ch;
 };
 extern ASCII g_asc1[];
+
+
 #endif

@@ -62,7 +62,7 @@ INT is_indirect_tree_node(TREE *t)
 	case TR_INDMEM:
 	case TR_DEREF:
 		return 1;
-	default: return 0;
+	default: break;
 	}
 	return 0;
 }
@@ -80,6 +80,7 @@ void dump_trees(TREE * t)
 
 void dump_tree(TREE * t)
 {
+	UNUSED(t);
 #ifdef _DEBUG_
 	if (t == NULL || g_tfile == NULL) { return; }
 	UINT dn = 2;

@@ -90,7 +90,7 @@ public:
 #define STRUCT_is_complete(s)		((s)->is_complete)
 #define STRUCT_align(s)				((s)->align)
 class STRUCT {
-public:
+public:	
 	DECL * m_decl_list;
 	SYM * tag;
 	bool is_complete;
@@ -174,12 +174,12 @@ public:
 //The declaration defined a user type via 'typedef' operator.
 #define IS_TYPEDEF(t)			HAVE_FLAG(TYPE_des(t), T_STOR_TYPEDEF)
 
-/* This class represent memory location modifier, basic and user defined type,
-such as: const, volatile, void, char, short, int, long, longlong, float,
-	double, bool, signed, unsigned, struct, union, enum-specifier,
+/* This class represent memory location modifier, basic and user defined type, 
+such as: const, volatile, void, char, short, int, long, longlong, float, 
+	double, bool, signed, unsigned, struct, union, enum-specifier, 
 	typedef-name, auto, register, static, extern, typedef. */
 class TYPE {
-public:
+public:	
 	ULONG m_descriptor;
 
 	union {
@@ -191,7 +191,7 @@ public:
 	} u1;
 
 	TYPE * m_sub_field[MAX_TYPE_FLD];
-
+	
 public:
 	TYPE() { clean(); }
 
@@ -499,7 +499,7 @@ bool is_enum_const_exist_in_outer_scope(CHAR * name, OUT ENUM ** e,
 bool is_enum_const_exist_in_cur_scope(IN CHAR * cl, OUT ENUM ** e,
 									  OUT INT * idx);
 bool is_user_type_exist(USER_TYPE_LIST * ut_list, CHAR * ut_name, DECL ** ut);
-bool is_struct_type_exist(LIST<STRUCT*> & struct_list, IN CHAR * tag,
+bool is_struct_type_exist(LIST<STRUCT*> & struct_list, IN CHAR * tag, 
 							OUT STRUCT ** s);
 bool is_union_type_exist(LIST<UNION*> & u_list, IN CHAR * tag, OUT UNION ** s);
 bool is_union(TYPE * type);
@@ -526,7 +526,6 @@ ULONG get_array_elemnum_to_dim(DECL * arr, UINT dim);
 DECL * get_pointer_base_decl(DECL * decl, TYPE ** ty);
 TYPE * get_pure_type_spec(TYPE * type);
 INT get_declarator_size_in_byte(DECL * d);
-INT get_pointer_type_spec();
 CHAR * get_enum_const_name(ENUM * e, INT idx);
 UINT get_struct_field_ofst(STRUCT * st, CHAR * name);
 
