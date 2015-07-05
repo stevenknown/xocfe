@@ -33,7 +33,7 @@ typedef enum {
 #define LABEL_INFO_is_unreachable(l)	((l)->u2.s1.is_unreachable)
 #define LABEL_INFO_is_pragma(l)			(LABEL_INFO_type(l) == L_PRAGMA)
 #define LABEL_INFO_b1(l)				((l)->u2.b1)
-class LABEL_INFO {
+class LabelInfo {
 public:
 	LABEL_TYPE ltype;
 	
@@ -66,7 +66,8 @@ public:
 		BYTE b1;
 	} u2;
 
-	void copy(LABEL_INFO const& li)
+public:
+	void copy(LabelInfo const& li)
 	{
 		ltype = li.ltype;
 		u1.lab_name = li.u1.lab_name;
@@ -77,7 +78,7 @@ public:
 
 //Exported Functions
 //Simplest method to compute hash value.
-inline UINT lab_hash_value(LABEL_INFO const* li)
+inline UINT computeLabelHashValue(LabelInfo const* li)
 {
 	INT v = 0;
 	if (LABEL_INFO_type(li) == L_CLABEL) {
@@ -95,10 +96,10 @@ inline UINT lab_hash_value(LABEL_INFO const* li)
 }
 
 
-LABEL_INFO * new_label(SMEM_POOL * pool);
-LABEL_INFO * new_ilabel(SMEM_POOL * pool);
-LABEL_INFO * new_clabel(SYM * st, SMEM_POOL * pool);
-inline bool is_same_label(LABEL_INFO const* li1, LABEL_INFO const* li2)
+LabelInfo * newLabel(SMemPool * pool);
+LabelInfo * newInternalLabel(SMemPool * pool);
+LabelInfo * newCustomerLabel(SYM * st, SMemPool * pool);
+inline bool isSameLabel(LabelInfo const* li1, LabelInfo const* li2)
 {
 	IS_TRUE0(li1 && li2);
 	if (li1 == li2) { return true; }
@@ -108,25 +109,25 @@ inline bool is_same_label(LABEL_INFO const* li1, LABEL_INFO const* li2)
 	}
 	return false;
 }
-void dump_lab(LABEL_INFO const* li);
+void dumpLabel(LabelInfo const* li);
 
 
-class LAB_HF : public HASH_FUNC_BASE<LABEL_INFO*> {
+class LabelHashFunc : public HashFuncBase<LabelInfo*> {
 public:
-	UINT get_hash_value(LABEL_INFO * li, UINT bucket_size) const
-	{ return ((UINT)lab_hash_value(li)) % bucket_size; }
+	UINT get_hash_value(LabelInfo * li, UINT bucket_size) const
+	{ return ((UINT)computeLabelHashValue(li)) % bucket_size; }
 
-	bool compare(LABEL_INFO * li1, LABEL_INFO * li2) const
-	{ return is_same_label(li1, li2); }
+	bool compare(LabelInfo * li1, LabelInfo * li2) const
+	{ return isSameLabel(li1, li2); }
 };
 
 
-class CLAB_HF : public HASH_FUNC_BASE<LABEL_INFO const*> {
+class CustomerLabelHashFunc : public HashFuncBase<LabelInfo const*> {
 public:
-	UINT get_hash_value(LABEL_INFO const* li, UINT bucket_size) const
-	{ return ((UINT)lab_hash_value(li)) % bucket_size; }
+	UINT get_hash_value(LabelInfo const* li, UINT bucket_size) const
+	{ return ((UINT)computeLabelHashValue(li)) % bucket_size; }
 
-	bool compare(LABEL_INFO const* li1, LABEL_INFO const* li2) const
-	{ return is_same_label(li1, li2); }
+	bool compare(LabelInfo const* li1, LabelInfo const* li2) const
+	{ return isSameLabel(li1, li2); }
 };
 #endif

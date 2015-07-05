@@ -32,14 +32,14 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define REDUCE
 #define abs(x) ((x) >= 0 ? (x) : -(x))
 
-RATIONAL::RATIONAL()
+Rational::Rational()
 {
 	m_num = 0;
 	m_den = 1;
 }
 
 
-RATIONAL::RATIONAL(RATIONAL const& r)
+Rational::Rational(Rational const& r)
 {
 	//Sometimes, r need not to initialize always.
 	//IS_TRUE(r.m_den != 0, ("denominator is 0!"));
@@ -48,14 +48,14 @@ RATIONAL::RATIONAL(RATIONAL const& r)
 }
 
 
-RATIONAL::RATIONAL(INT num, INT den)
+Rational::Rational(INT num, INT den)
 {
 	IS_TRUE(den != 0, ("denominator is 0!"));
 	m_num = num,  m_den = den;
 }
 
 
-RATIONAL & RATIONAL::operator = (RATIONAL const& a)
+Rational & Rational::operator = (Rational const& a)
 {
 	IS_TRUE(a.m_den != 0, ("denominator is 0!"));
 	m_num = a.m_num;
@@ -64,7 +64,7 @@ RATIONAL & RATIONAL::operator = (RATIONAL const& a)
 }
 
 
-void RATIONAL::reduce()
+void Rational::reduce()
 {
 	if (m_num == 0) {
 		m_den = 1;
@@ -88,10 +88,10 @@ void RATIONAL::reduce()
 }
 
 
-RATIONAL RATIONAL::rabs()
+Rational Rational::rabs()
 {
 	IS_TRUE(m_den != 0, ("denominator is 0!"));
-	RATIONAL b(*this);
+	Rational b(*this);
 	if (b.m_num < 0) {
 		b.m_num = -b.m_num;
 	}
@@ -102,7 +102,7 @@ RATIONAL RATIONAL::rabs()
 }
 
 
-FRAC_TYPE RATIONAL::_gcd(FRAC_TYPE x, FRAC_TYPE y)
+FRAC_TYPE Rational::_gcd(FRAC_TYPE x, FRAC_TYPE y)
 {
 	FRAC_TYPE t;
 	if (x < 0) { x = -x; }
@@ -119,7 +119,7 @@ FRAC_TYPE RATIONAL::_gcd(FRAC_TYPE x, FRAC_TYPE y)
 }
 
 
-CHAR * RATIONAL::format(CHAR * buf)
+CHAR * Rational::format(CHAR * buf)
 {
 	if (m_den == 1) {
 		sprintf(buf, "%d", m_num);
@@ -217,7 +217,7 @@ static inline void appro(LONGLONG & num, LONGLONG & den)
 }
 
 
-bool operator < (RATIONAL const& a, RATIONAL const& b)
+bool operator < (Rational const& a, Rational const& b)
 {
 	IS_TRUE(a.m_den != 0 && b.m_den != 0, ("denominator is 0!"));
 	if ((LONGLONG)a.m_num * (LONGLONG)b.m_den <
@@ -228,7 +228,7 @@ bool operator < (RATIONAL const& a, RATIONAL const& b)
 }
 
 
-bool operator <= (RATIONAL const& a, RATIONAL const& b)
+bool operator <= (Rational const& a, Rational const& b)
 {
 	IS_TRUE(a.m_den != 0 && b.m_den != 0, ("denominator is 0!"));
 	if (((LONGLONG)(a.m_num) * (LONGLONG)(b.m_den)) <=
@@ -239,7 +239,7 @@ bool operator <= (RATIONAL const& a, RATIONAL const& b)
 }
 
 
-bool operator > (RATIONAL const& a, RATIONAL const& b)
+bool operator > (Rational const& a, Rational const& b)
 {
 	IS_TRUE(a.m_den != 0 && b.m_den != 0, ("denominator is 0!"));
 	if (((LONGLONG)(a.m_num) * (LONGLONG)(b.m_den)) >
@@ -250,7 +250,7 @@ bool operator > (RATIONAL const& a, RATIONAL const& b)
 }
 
 
-bool operator >= (RATIONAL const& a, RATIONAL const& b)
+bool operator >= (Rational const& a, Rational const& b)
 {
 	IS_TRUE(a.m_den != 0 && b.m_den != 0, ("denominator is 0!"));
 	if (((LONGLONG)(a.m_num) * (LONGLONG)(b.m_den)) >=
@@ -261,11 +261,11 @@ bool operator >= (RATIONAL const& a, RATIONAL const& b)
 }
 
 
-RATIONAL operator * (RATIONAL const& a, RATIONAL const& b)
+Rational operator * (Rational const& a, Rational const& b)
 {
 	IS_TRUE(a.m_den != 0 && b.m_den != 0, ("denominator is 0!"));
 	LONGLONG rnum = (LONGLONG)(a.m_num) * (LONGLONG)(b.m_num);
-	RATIONAL rat;
+	Rational rat;
 	if (rnum == 0) {
 		rat.m_num = 0;
 		rat.m_den = 1;
@@ -300,7 +300,7 @@ RATIONAL operator * (RATIONAL const& a, RATIONAL const& b)
 }
 
 
-RATIONAL operator / (RATIONAL const& a, RATIONAL const& b)
+Rational operator / (Rational const& a, Rational const& b)
 {
 	FRAC_TYPE anum = a.m_num;
 	FRAC_TYPE aden = a.m_den;
@@ -310,7 +310,7 @@ RATIONAL operator / (RATIONAL const& a, RATIONAL const& b)
 	IS_TRUE(aden != 0 && bden != 0, ("denominator is 0"));
 	IS_TRUE(bnum != 0, ("'a' divided by 0"));
 
-	RATIONAL rat;
+	Rational rat;
 	if (anum == 0) { rat.m_num = 0; rat.m_den = 1; return rat; }
 	if (anum == aden) {
 		if (bnum < 0) {
@@ -351,10 +351,10 @@ RATIONAL operator / (RATIONAL const& a, RATIONAL const& b)
 }
 
 
-RATIONAL operator + (RATIONAL const& a, RATIONAL const& b)
+Rational operator + (Rational const& a, Rational const& b)
 {
 	IS_TRUE(a.m_den != 0 && b.m_den != 0, ("denominator is 0!"));
-	RATIONAL rat;
+	Rational rat;
 	LONGLONG rnum = (LONGLONG)(a.m_num) * (LONGLONG)(b.m_den) +
 					(LONGLONG)(a.m_den) * (LONGLONG)(b.m_num);
 	if (rnum == 0) {

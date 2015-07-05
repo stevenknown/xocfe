@@ -9,7 +9,7 @@
 
 INT g_indent = 0;
 CHAR * g_indent_chars = (CHAR*)" ";
-SMEM_POOL * g_pool_tmp_used = NULL;
+SMemPool * g_pool_tmp_used = NULL;
 FILE * g_tfile = NULL;
 
 void interwarn(CHAR const* format, ...)
@@ -147,9 +147,9 @@ void * tlloc(LONG size)
 {
 	if (size < 0 || size == 0) return NULL;
 	if (g_pool_tmp_used == NULL) {
-		g_pool_tmp_used = smpool_create_handle(8, MEM_COMM);
+		g_pool_tmp_used = smpoolCreate(8, MEM_COMM);
 	}
-	void * p = smpool_malloc_h(size, g_pool_tmp_used);
+	void * p = smpoolMalloc(size, g_pool_tmp_used);
 	if (p == NULL) return NULL;
 	memset(p, 0, size);
 	return p;
@@ -159,13 +159,13 @@ void * tlloc(LONG size)
 void tfree()
 {
 	if (g_pool_tmp_used != NULL) {
-		smpool_free_handle(g_pool_tmp_used);
+		smpoolDelete(g_pool_tmp_used);
 		g_pool_tmp_used = NULL;
 	}
 }
 
 
-void dump_vec(SVECTOR<UINT> & v)
+void dump_vec(Vector<UINT> & v)
 {
 	if (g_tfile == NULL) return;
 	fprintf(g_tfile, "\n");
@@ -196,7 +196,7 @@ public:
 			return;
 		}
 
-		LIST<TN*> lst;
+		List<TN*> lst;
 		lst.append_tail(x);
 		while (lst.get_elem_count() != 0) {
 			x = lst.remove_head();
@@ -231,7 +231,7 @@ public:
 			return;
 		}
 
-		LIST<TN*> lst;
+		List<TN*> lst;
 		lst.append_tail(x);
 		while (lst.get_elem_count() != 0) {
 			x = lst.remove_head();

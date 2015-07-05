@@ -27,13 +27,13 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 @*/
 #include "cfecom.h"
 
-static LIST<CELL*> g_cell_free_list;
+static List<CELL*> g_cell_free_list;
 
 
 static void * xmalloc(size_t size)
 {
 	IS_TRUE0(g_pool_general_used != NULL);
-	void * p = smpool_malloc_h(size, g_pool_general_used);
+	void * p = smpoolMalloc(size, g_pool_general_used);
 	if (p == NULL) return NULL;
 	memset(p, 0, size);
 	return p;

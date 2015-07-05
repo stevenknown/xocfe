@@ -32,10 +32,10 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 extern CHAR * g_real_token_string;
 extern TOKEN g_real_token;
 extern bool g_enable_C99_declaration;
-extern SMEM_POOL * g_pool_general_used;
-extern SMEM_POOL * g_pool_tree_used; //front end
-extern SMEM_POOL * g_pool_st_used;
-extern SYM_TAB * g_fe_sym_tab;
+extern SMemPool * g_pool_general_used;
+extern SMemPool * g_pool_tree_used; //front end
+extern SMemPool * g_pool_st_used;
+extern SymTab * g_fe_sym_tab;
 extern bool g_dump_token;
 
 
@@ -61,7 +61,7 @@ bool look_forward_token(INT num, ...);
 
 INT match(TOKEN tok);
 
-void set_parent(TREE * parent, TREE * child);
+void setParent(TREE * parent, TREE * child);
 INT suck_tok();
 void suck_tok_to(INT placeholder, ...);
 #endif

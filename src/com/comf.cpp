@@ -245,7 +245,7 @@ INT slcm(INT x, INT y)
 }
 
 
-INT gcdm(UINT num, SVECTOR<INT, 8> const& a)
+INT gcdm(UINT num, Vector<INT, 8> const& a)
 {
 	if (num == 0) {
 		return 0;
@@ -529,8 +529,8 @@ UCHAR * xltoa(LONG v, OUT UCHAR * buf)
 
 static void _prim(INT m, INT n, OUT INT * buf, UINT i)
 {
-	if(m > n){
-		while(m % n != 0) n++;
+	if (m > n) {
+		while (m % n != 0) { n++; }
 		m = m / n; //Factorize 'm' to two composite-number.
 		buf[i++] = n;
 		_prim(m, n, buf, i);
@@ -549,22 +549,26 @@ void prim(INT m, OUT INT * buf)
 		sign = true;
 		m = -m;
 	}
+	
 	_prim(m, 2, buf, 0);
+	
 	if (sign) {
 		buf[0] = -buf[0];
 	}
 }
 
 
-//Dumpf() for SVECTOR<TY>.
+//Dumpf() for Vector<TY>.
 void dumpf_svec(void * vec, UINT ty, CHAR const* name, bool is_del)
 {
-	if (!name) {
+	if (name == NULL) {
 		name = "matrix.tmp";
 	}
+	
 	if (is_del) {
 		unlink(name);
 	}
+	
 	static INT g_count = 0;
 	FILE * h = fopen(name, "a+");
 	IS_TRUE(h, ("%s create failed!!!", name));
@@ -574,7 +578,7 @@ void dumpf_svec(void * vec, UINT ty, CHAR const* name, bool is_del)
 	switch (ty) {
 	case D_BOOL:
 		{
-			SVECTOR<bool> *p = (SVECTOR<bool> *)vec;
+			Vector<bool> *p = (Vector<bool> *)vec;
 			for (INT i = 0; i <= p->get_last_idx(); i++) {
 				fprintf(h, "%d", (INT)p->get(i));
 				if (i != p->get_last_idx()) {
@@ -585,7 +589,7 @@ void dumpf_svec(void * vec, UINT ty, CHAR const* name, bool is_del)
 		}
 	case D_INT:
 		{
-			SVECTOR<INT> *p = (SVECTOR<INT> *)vec;
+			Vector<INT> *p = (Vector<INT> *)vec;
 			for (INT i = 0; i <= p->get_last_idx(); i++) {
 				fprintf(h, "%d", (INT)p->get(i));
 				if (i != p->get_last_idx()) {
@@ -605,14 +609,14 @@ void dumpf_svec(void * vec, UINT ty, CHAR const* name, bool is_del)
 }
 
 
-//Dumps() for SVECTOR<TY>.
+//Dumps() for Vector<TY>.
 void dumps_svec(void * vec, UINT ty)
 {
 	printf("\n");
 	switch (ty) {
 	case D_BOOL:
 		{
-			SVECTOR<bool> *p = (SVECTOR<bool> *)vec;
+			Vector<bool> *p = (Vector<bool> *)vec;
 			for (INT i = 0; i <= p->get_last_idx(); i++) {
 				printf("%d", (INT)p->get(i));
 				if (i != p->get_last_idx()) {
@@ -623,7 +627,7 @@ void dumps_svec(void * vec, UINT ty)
 		}
 	case D_INT:
 		{
-			SVECTOR<INT> *p = (SVECTOR<INT> *)vec;
+			Vector<INT> *p = (Vector<INT> *)vec;
 			for (INT i = 0; i <= p->get_last_idx(); i++) {
 				printf("%d", (INT)p->get(i));
 				if (i != p->get_last_idx()) {
@@ -693,7 +697,6 @@ UINT get_sparse_popcount(ULONGLONG v)
 //Compute the number of 1.
 UINT get_lookup_popcount(ULONGLONG v)
 {
-	IS_TRUE0((BYTE)-1 == 255);
 	BYTE * p = (BYTE*)&v;
 	return g_bit_count[p[0]] + g_bit_count[p[1]] +
 		   g_bit_count[p[2]] + g_bit_count[p[3]] +
@@ -888,7 +891,7 @@ UINT xstrlen(CHAR const* p)
 //Return true if equal.
 bool xstrcmp(CHAR const* p1, CHAR const* p2, INT n)
 {
-	while (n-- > 0 && *p1++ == *p2++);
+	while (n-- > 0 && *p1++ == *p2++) { }
 	if (n >= 0) return true;
 	return false;
 }

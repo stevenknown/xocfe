@@ -108,6 +108,8 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 	#define IS_TRUEL0(a, filename, line)
 #endif
 
+#define UNREACH()  IS_TRUE(0, ("Unreachable."))
+
 #undef MAX
 #define MAX(a,b) ((a)>(b)?(a):(b))
 
@@ -153,7 +155,7 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define MAX_BUF_LEN 1024
 #define MAX_LOC_BUF_LEN 512
 
-//Misc Dumps/Dumpf of SVECTOR<T>
+//Misc Dumps/Dumpf of Vector<T>
 #define D_BOOL			1
 #define D_INT			2
 

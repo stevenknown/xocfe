@@ -25,7 +25,7 @@ void dump_rbt(RBT<T, Ttgt> & rbt, CHAR const* name = NULL,
 			  UINT nil_count = NIL_START)
 {
 	typedef RBTN<T, Ttgt> TN;
-	SVECTOR<TN*> nilvec;
+	Vector<TN*> nilvec;
 	if (name == NULL) {
 		name = "graph_rbt.vcg";
 	}
@@ -68,7 +68,7 @@ void dump_rbt(RBT<T, Ttgt> & rbt, CHAR const* name = NULL,
 			  "edge.color: darkgreen\n");
 
 	//Print node
-	LIST<TN*> lst;
+	List<TN*> lst;
 	TN const* root = rbt.get_root();
 	if (root != NULL) {
 		lst.append_tail(const_cast<TN*>(root));
@@ -160,7 +160,7 @@ void dump_rbt(RBT<T, Ttgt> & rbt, CHAR const* name = NULL,
 	fclose(hvcg);
 }
 
-void dump_vec(SVECTOR<UINT> & v);
+void dump_vec(Vector<UINT> & v);
 void initdump(CHAR const* f, bool is_del);
 void interwarn(CHAR const* format, ...);
 void finidump();

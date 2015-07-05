@@ -6,33 +6,33 @@
 #include "symtab.h"
 #include "label.h"
 
-LABEL_INFO * new_clabel(SYM * st, SMEM_POOL * pool)
+LabelInfo * newCustomerLabel(SYM * st, SMemPool * pool)
 {
-	LABEL_INFO * li = new_label(pool);
+	LabelInfo * li = newLabel(pool);
 	LABEL_INFO_name(li) = st;
 	LABEL_INFO_type(li) = L_CLABEL;
 	return li;
 }
 
 
-LABEL_INFO * new_ilabel(SMEM_POOL * pool)
+LabelInfo * newInternalLabel(SMemPool * pool)
 {
-	LABEL_INFO * n = new_label(pool);
+	LabelInfo * n = newLabel(pool);
 	LABEL_INFO_type(n) = L_ILABEL;
 	return n;
 }
 
 
-LABEL_INFO * new_label(SMEM_POOL * pool)
+LabelInfo * newLabel(SMemPool * pool)
 {
-	LABEL_INFO * p = (LABEL_INFO*)smpool_malloc_h(sizeof(LABEL_INFO), pool);
+	LabelInfo * p = (LabelInfo*)smpoolMalloc(sizeof(LabelInfo), pool);
 	IS_TRUE0(p);
-	memset(p, 0, sizeof(LABEL_INFO));
+	memset(p, 0, sizeof(LabelInfo));
 	return p;
 }
 
 
-void dump_lab(LABEL_INFO const* li)
+void dumpLabel(LabelInfo const* li)
 {
 	if (g_tfile == NULL) return;
 	if (LABEL_INFO_type(li) == L_ILABEL) {

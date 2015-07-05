@@ -54,8 +54,8 @@ public:
 
 
 //Exported Variables
-extern LIST<ERR_MSG*> g_err_msg_list;
-extern LIST<WARN_MSG*> g_warn_msg_list;
+extern List<ERR_MSG*> g_err_msg_list;
+extern List<WARN_MSG*> g_warn_msg_list;
 
 //Exported Functions
 void warn1(CHAR * msg, ...);

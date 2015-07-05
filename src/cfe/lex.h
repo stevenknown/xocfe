@@ -138,7 +138,7 @@ typedef enum _TOKEN {
 	T_STATIC,
 	T_TYPEDEF,
 
-	//qualifiers-opt
+	//qualifiers-pass
 	T_CONST,
 	T_VOLATILE,
 	T_RESTRICT,

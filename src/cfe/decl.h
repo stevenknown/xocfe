@@ -499,9 +499,9 @@ bool is_enum_const_exist_in_outer_scope(CHAR * name, OUT ENUM ** e,
 bool is_enum_const_exist_in_cur_scope(IN CHAR * cl, OUT ENUM ** e,
 									  OUT INT * idx);
 bool is_user_type_exist(USER_TYPE_LIST * ut_list, CHAR * ut_name, DECL ** ut);
-bool is_struct_type_exist(LIST<STRUCT*> & struct_list, IN CHAR * tag, 
+bool is_struct_type_exist(List<STRUCT*> & struct_list, IN CHAR * tag, 
 							OUT STRUCT ** s);
-bool is_union_type_exist(LIST<UNION*> & u_list, IN CHAR * tag, OUT UNION ** s);
+bool is_union_type_exist(List<UNION*> & u_list, IN CHAR * tag, OUT UNION ** s);
 bool is_union(TYPE * type);
 bool is_union(DECL * decl);
 bool is_struct(TYPE * type);

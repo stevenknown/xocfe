@@ -29,20 +29,20 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define __A_GRAPH_H_
 
 //Alogrithmic Graph.
-class AGRAPH : public GRAPH {
+class AGRAPH : public Graph {
 protected:
-	MATRIX<UINT> * m_spath_mat; //record shortest-path.
-	void build_adj_matrix(MATRIX<UINT> & adj_mat);
+	Matrix<UINT> * m_spath_mat; //record shortest-path.
+	void build_adj_matrix(Matrix<UINT> & adj_mat);
 public:
 	AGRAPH(UINT edge_hash_size = 64, UINT vex_hash_size = 64) :
-		GRAPH(edge_hash_size, vex_hash_size)
+		Graph(edge_hash_size, vex_hash_size)
 	{
 		m_edge_hash_size = edge_hash_size;
 		m_vex_hash_size = vex_hash_size;
 		m_spath_mat = NULL;
 	}
 
-	AGRAPH(AGRAPH & g) : GRAPH(g)
+	AGRAPH(AGRAPH & g) : Graph(g)
 	{
 		m_edge_hash_size = g.m_edge_hash_size;
 		m_vex_hash_size = g.m_vex_hash_size;
@@ -61,7 +61,7 @@ public:
 	{
 		if (src.m_spath_mat != NULL) {
 			if (m_spath_mat == NULL) {
-				m_spath_mat = new MATRIX<UINT>(*src.m_spath_mat);
+				m_spath_mat = new Matrix<UINT>(*src.m_spath_mat);
 			} else {
 				m_spath_mat->copy(*src.m_spath_mat);
 			}
@@ -73,7 +73,7 @@ public:
 
 	UINT count_mem() const
 	{
-		UINT count = GRAPH::count_mem();
+		UINT count = Graph::count_mem();
 		if (m_spath_mat != NULL) {
 			count += m_spath_mat->count_mem();
 		}
@@ -90,7 +90,7 @@ public:
 			delete m_spath_mat; //Delete shortest path matrix
 			m_spath_mat = NULL;
 		}
-		GRAPH::erase();
+		Graph::erase();
 	}
 };
 #endif

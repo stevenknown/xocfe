@@ -32,13 +32,13 @@ The outermost scope is global region which id is 0, and the inner
 scope scope is function body-stmt which id is 1, etc.
 */
 SCOPE * g_cur_scope = NULL;
-LIST<SCOPE*> g_scope_list;
+List<SCOPE*> g_scope_list;
 UINT g_scope_count = 0;
 LAB2LINE_MAP g_lab2lineno;
 
 static void * xmalloc(size_t size)
 {
-	void * p = smpool_malloc_h(size, g_pool_general_used);
+	void * p = smpoolMalloc(size, g_pool_general_used);
 	IS_TRUE0(p);
 	memset(p, 0, size);
 	return p;
@@ -150,7 +150,7 @@ void dump_scope_tree(SCOPE * s, INT indent)
 	if (s == NULL) return;
 	fprintf(g_tfile, "\n");
 	INT i = indent;
-	while (i-- > 0) fprintf(g_tfile, "    ");
+	while (i-- > 0) { fprintf(g_tfile, "    "); }
 	fprintf(g_tfile, "SCOPE(%d),level(%d)", SCOPE_id(s), SCOPE_level(s));
 	fflush(g_tfile);
 	dump_scope_tree(SCOPE_sub(s), indent+1);
@@ -181,7 +181,7 @@ void dump_scope(SCOPE * s, UINT flag)
 	}
 
 	//all of defined customer label in code
-	LABEL_INFO * li = SCOPE_label_list(s).get_head();
+	LabelInfo * li = SCOPE_label_list(s).get_head();
 	if (li != NULL) {
 		note("\nDEFINED LABEL:");
 		g_indent++;
@@ -212,7 +212,7 @@ void dump_scope(SCOPE * s, UINT flag)
 	//enums
 	ENUM_LIST * el = SCOPE_enum_list(s);
 	if (el != NULL) {
-		note("\nENUM LIST:");
+		note("\nENUM List:");
 		g_indent++;
 		note("\n");
 		while (el != NULL) {
@@ -330,13 +330,13 @@ void destroy_scope_list()
 }
 
 
-UINT map_lab2lineno(LABEL_INFO * li)
+UINT map_lab2lineno(LabelInfo * li)
 {
 	return g_lab2lineno.get(li);
 }
 
 
-void set_map_lab2lineno(LABEL_INFO * li, UINT lineno)
+void set_map_lab2lineno(LabelInfo * li, UINT lineno)
 {
 	g_lab2lineno.set(li, lineno);
 }

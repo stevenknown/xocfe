@@ -88,11 +88,11 @@ public:
 	ENUM_LIST * enum_list;		//enum-type list
 	USER_TYPE_LIST * utl_list;	//record type defined with 'typedef'
 
-	LIST<LABEL_INFO*> li_list;	//label definition
-	LIST<LABEL_INFO*> lref_list;//reference label
+	List<LabelInfo*> li_list;	//label definition
+	List<LabelInfo*> lref_list;//reference label
 
-	LIST<STRUCT*> struct_list;	//structure list of current scope
-	LIST<UNION*> union_list;	//union list of current scope
+	List<STRUCT*> struct_list;	//structure list of current scope
+	List<UNION*> union_list;	//union list of current scope
 
 	DECL * decl_list;			//record identifier declaration info
 	SYM_LIST * sym_tab_list;	//record identifier name
@@ -123,18 +123,18 @@ public:
 };
 
 
-typedef TMAP<LABEL_INFO*, UINT> LAB2LINE_MAP;
+typedef TMap<LabelInfo*, UINT> LAB2LINE_MAP;
 
 
 class Compare_Lab {
 public:
-	bool is_less(LABEL_INFO * t1, LABEL_INFO * t2) const
-	{ return lab_hash_value(t1) < lab_hash_value(t2); }
+	bool is_less(LabelInfo * t1, LabelInfo * t2) const
+	{ return computeLabelHashValue(t1) < computeLabelHashValue(t2); }
 
-	bool is_equ(LABEL_INFO * t1, LABEL_INFO * t2) const
-	{ return is_same_label(t1, t2); }
+	bool is_equ(LabelInfo * t1, LabelInfo * t2) const
+	{ return isSameLabel(t1, t2); }
 };
-typedef TTAB<LABEL_INFO*, Compare_Lab> LABTAB;
+typedef TTab<LabelInfo*, Compare_Lab> LABTAB;
 
 
 //Exported functions
@@ -149,8 +149,8 @@ SCOPE * get_global_scope();
 void dump_scope(SCOPE * s, UINT flag);
 void dump_scope_tree(SCOPE * s, INT indent);
 void destroy_scope_list();
-UINT map_lab2lineno(LABEL_INFO * li);
-void set_map_lab2lineno(LABEL_INFO * li, UINT lineno);
+UINT map_lab2lineno(LabelInfo * li);
+void set_map_lab2lineno(LabelInfo * li, UINT lineno);
 
 
 //Export Variables

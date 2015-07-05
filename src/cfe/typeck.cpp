@@ -457,7 +457,9 @@ static INT get_cvt_rank(INT des)
 		return 20;
 	} else if (IS_TYPED(des, T_SPEC_SHORT)) {
 		return 30;
-	} else if (IS_TYPED(des, T_SPEC_INT) || IS_TYPED(des, T_SPEC_ENUM)) {
+	} else if (IS_TYPED(des, T_SPEC_INT) || 
+			   IS_TYPED(des, T_SPEC_UNSIGNED) ||
+			   IS_TYPED(des, T_SPEC_ENUM)) {
 		return 40;
 	} else if (IS_TYPED(des, T_SPEC_LONG)) {
 		return 50;
@@ -490,9 +492,8 @@ static DECL * build_binary_op_type(DECL * l, DECL * r)
 	TYPE * rty = DECL_spec(r);
 	if (get_cvt_rank(TYPE_des(lty)) > get_cvt_rank(TYPE_des(rty))) {
 		return l;
-	} else {
-		return r;
 	}
+	return r;	
 }
 
 
@@ -1496,7 +1497,7 @@ static void type_trans_init()
 
 
 //DECL hash table
-class DECL_HASH : public SHASH<DECL*> {
+class DECL_HASH : public SHash<DECL*> {
 public:
    	UINT compute_hash_value(CHAR const* s) const
 	{

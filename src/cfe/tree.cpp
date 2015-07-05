@@ -34,7 +34,7 @@ static UINT g_tree_count = 1;
 
 static void * xmalloc(size_t size)
 {
-	void * p = smpool_malloc_h(size, g_pool_tree_used);
+	void * p = smpoolMalloc(size, g_pool_tree_used);
 	if (p == NULL) return 0;
 	memset(p,0,size);
 	return p;

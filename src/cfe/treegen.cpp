@@ -38,34 +38,110 @@ static TREE * cast_exp();
 static TREE * unary_exp();
 static TREE * exp_stmt();
 static TREE * postfix_exp();
-static bool verify(TREE * t);
 
-SMEM_POOL * g_pool_general_used = NULL;
-SMEM_POOL * g_pool_st_used = NULL;
-SMEM_POOL * g_pool_tree_used = NULL;
-SYM_TAB * g_fe_sym_tab = NULL;
+SMemPool * g_pool_general_used = NULL;
+SMemPool * g_pool_st_used = NULL;
+SMemPool * g_pool_tree_used = NULL;
+SymTab * g_fe_sym_tab = NULL;
 bool g_dump_token = false;
 CHAR * g_real_token_string = NULL;
 TOKEN g_real_token = T_NUL;
-static LIST<CELL*> g_cell_list;
+static List<CELL*> g_cell_list;
 bool g_enable_C99_declaration = true;
 
 static void * xmalloc(size_t size)
 {
-	void * p = smpool_malloc_h(size, g_pool_tree_used);
+	void * p = smpoolMalloc(size, g_pool_tree_used);
 	IS_TRUE0(p);
 	memset(p, 0, size);
 	return p;
 }
 
 
+#ifdef _DEBUG_
+//Verify the TREE node legality.
+static bool verify(TREE * t)
+{
+	if (t == NULL)
+		return true;
+
+	switch (TREE_type(t)) {
+	case TR_SCOPE:
+	case TR_CALL:
+	case TR_ARRAY:
+	case TR_TYPE_NAME:
+	case TR_CVT:
+	case TR_COND:
+	case TR_LABEL:
+		break;
+	default:
+		IS_TRUE0(TREE_token(t) != T_NUL && get_token_name(TREE_token(t)));
+	}
+
+	switch (TREE_type(t)) {
+	case TR_ASSIGN:
+	case TR_ID:
+	case TR_IMM:
+	case TR_IMML:
+	case TR_FP:  //3.1415926
+	case TR_ENUM_CONST:
+	case TR_STRING:
+	case TR_LOGIC_OR: //logical or        ||
+	case TR_LOGIC_AND: //logical and      &&
+	case TR_INCLUSIVE_OR: //inclusive or  |
+	case TR_INCLUSIVE_AND: //inclusive and &
+	case TR_XOR: //exclusive or
+	case TR_EQUALITY: // == !=
+	case TR_RELATION: // < > >= <=
+	case TR_SHIFT:   // >> <<
+	case TR_ADDITIVE: // '+' '-'
+	case TR_MULTI:    // '*' '/' '%'
+	case TR_SCOPE:
+	case TR_IF:
+	case TR_DO:
+	case TR_WHILE:
+	case TR_FOR:
+	case TR_SWITCH:
+	case TR_BREAK:
+	case TR_CONTINUE:
+	case TR_RETURN:
+	case TR_GOTO:
+	case TR_LABEL:
+	case TR_CASE:
+	case TR_DEFAULT:
+	case TR_COND: //formulized log_OR_exp?exp:cond_exp
+	case TR_CVT: //type convertion
+	case TR_LDA:   // &a get address of 'a'
+	case TR_DEREF: //*p  dereferencing the pointer 'p'
+	case TR_PLUS: // +123
+	case TR_MINUS:  // -123
+	case TR_REV:  // Reverse
+	case TR_NOT:  // get non-value
+	case TR_INC:   //++a
+	case TR_DEC:   //--a
+	case TR_POST_INC: //a++  / (*a)++
+	case TR_POST_DEC: //a--
+	case TR_DMEM:   //
+	case TR_INDMEM:
+	case TR_ARRAY:
+	case TR_CALL:
+	case TR_PRAGMA:
+	case TR_SIZEOF:
+		break;
+	default: IS_TRUE(0, ("unknown tree type:%d", TREE_type(t)));
+	} //end switch
+	return true;
+}
+#endif
+
+
 /* Return NULL indicate we haven't found it in 'l_list', and
 append 'label' to tail of the list as correct,
 otherwise return 'l'.
 Add a label into outmost scope of current function */
-static LABEL_INFO * add_label(CHAR * name, INT lineno)
+static LabelInfo * add_label(CHAR * name, INT lineno)
 {
-	LABEL_INFO * li;
+	LabelInfo * li;
 	SCOPE * sc = g_cur_scope;
 	while (sc && SCOPE_level(sc) != FUNCTION_SCOPE) {
 		sc = SCOPE_parent(sc);
@@ -82,8 +158,8 @@ static LABEL_INFO * add_label(CHAR * name, INT lineno)
 		}
 	}
 
-	//Allocate different LABEL_INFO for different lines.
-	li = new_clabel(g_fe_sym_tab->add(name), g_pool_general_used);
+	//Allocate different LabelInfo for different lines.
+	li = newCustomerLabel(g_fe_sym_tab->add(name), g_pool_general_used);
 	//li = g_labtab.append_and_retrieve(li);
 	set_map_lab2lineno(li, lineno);
 	SCOPE_label_list(sc).append_tail(li);
@@ -92,9 +168,9 @@ static LABEL_INFO * add_label(CHAR * name, INT lineno)
 
 
 //Record a label reference into outmost scope of current function.
-static LABEL_INFO * add_ref_label(CHAR * name, INT lineno)
+static LabelInfo * add_ref_label(CHAR * name, INT lineno)
 {
-	LABEL_INFO * li;
+	LabelInfo * li;
 	SCOPE * sc = g_cur_scope;
 	while (sc != NULL && SCOPE_level(sc) != FUNCTION_SCOPE) {
 		sc = SCOPE_parent(sc);
@@ -105,8 +181,8 @@ static LABEL_INFO * add_ref_label(CHAR * name, INT lineno)
 		return NULL;
 	}
 
-	//Allocate different LABEL_INFO for different lines.
-	li = new_clabel(g_fe_sym_tab->add(name), g_pool_general_used);
+	//Allocate different LabelInfo for different lines.
+	li = newCustomerLabel(g_fe_sym_tab->add(name), g_pool_general_used);
 	//li = g_labtab.append_and_retrieve(li);
 	LABEL_INFO_is_used(li) = true;
 	set_map_lab2lineno(li, lineno); //ONLY for debug-info or dumping
@@ -390,7 +466,7 @@ static inline INT is_assign_op(TOKEN tok)
 }
 
 
-void set_parent(TREE * parent, TREE * child)
+void setParent(TREE * parent, TREE * child)
 {
 	if (child == NULL) { return; }
 	while (child != NULL) {
@@ -759,8 +835,8 @@ AGAIN:
 				array_root = NEWT(TR_ARRAY);
 				TREE_array_base(array_root) = t;
 				TREE_array_indx(array_root) = exp();
-				set_parent(array_root, t);
-				set_parent(array_root, TREE_array_indx(array_root));
+				setParent(array_root, t);
+				setParent(array_root, TREE_array_indx(array_root));
 				if (TREE_array_indx(array_root) == NULL) {
 					err(g_real_line_num, "array index cannot be NULL");
 					return NULL;
@@ -790,8 +866,8 @@ AGAIN:
 				err(g_real_line_num, "miss ')'");
 				return t;
 			}
-			set_parent(tp, t);
-			set_parent(tp, TREE_para_list(tp));
+			setParent(tp, t);
+			setParent(tp, TREE_para_list(tp));
 			t = tp;
 		}
 		break;
@@ -813,8 +889,8 @@ AGAIN:
 			}
 			TREE_field(mem_ref) = id();
 			match(T_ID);
-			set_parent(mem_ref, t);
-			set_parent(mem_ref, TREE_field(mem_ref));
+			setParent(mem_ref, t);
+			setParent(mem_ref, TREE_field(mem_ref));
 			t = mem_ref;
 			if (g_real_token == T_LSPAREN ||
 				g_real_token == T_LPAREN ||
@@ -832,7 +908,7 @@ AGAIN:
 			TREE * tp = NEWT(TR_POST_INC);
 			TREE_token(tp) = g_real_token;
 			TREE_inc_exp(tp) = t;
-			set_parent(tp, t);
+			setParent(tp, t);
 			t = tp;
 			if (t == NULL) {
 				err(g_real_line_num, "unary expression is needed");
@@ -859,7 +935,7 @@ AGAIN:
 			TREE * tp = NEWT(TR_POST_DEC);
 			TREE_token(tp) = g_real_token;
 			TREE_dec_exp(tp) = t;
-			set_parent(tp, t);
+			setParent(tp, t);
 			t = tp;
 			if (t == NULL) {
 				err(g_real_line_num, "unary expression is needed");
@@ -1003,21 +1079,21 @@ static TREE * unary_exp()
 		TREE_token(t) = g_real_token;
 		match(T_ASTERISK);
 		TREE_lchild(t) = cast_exp();
-		set_parent(t, TREE_lchild(t));
+		setParent(t, TREE_lchild(t));
 		break;
 	case T_BITAND:
 		t = NEWT(TR_LDA);
 		TREE_token(t) = g_real_token;
 		match(T_BITAND);
 		TREE_lchild(t) = cast_exp();
-		set_parent(t, TREE_lchild(t));
+		setParent(t, TREE_lchild(t));
 		break;
 	case T_ADDADD:
 		t = NEWT(TR_INC);
 		TREE_token(t) = g_real_token;
 		match(T_ADDADD);
 		TREE_inc_exp(t) = unary_exp();
-		set_parent(t, TREE_inc_exp(t));
+		setParent(t, TREE_inc_exp(t));
 		if (TREE_inc_exp(t) == NULL) {
 			err(g_real_line_num, "unary expression is needed");
 			goto FAILED;
@@ -1028,7 +1104,7 @@ static TREE * unary_exp()
 		TREE_token(t) = g_real_token;
 		match(T_SUBSUB);
 		TREE_dec_exp(t) = unary_exp();
-		set_parent(t,TREE_dec_exp(t));
+		setParent(t,TREE_dec_exp(t));
 		if (TREE_inc_exp(t) == NULL) {
 			err(g_real_line_num, "unary expression is needed");
 			goto FAILED;
@@ -1039,7 +1115,7 @@ static TREE * unary_exp()
 		TREE_token(t) = g_real_token;
 		match(T_ADD);
 		TREE_lchild(t) = cast_exp();
-		set_parent(t,TREE_lchild(t));
+		setParent(t,TREE_lchild(t));
 		if (TREE_lchild(t) == NULL) {
 			err(g_real_line_num, "cast expression is needed");
 			goto FAILED;
@@ -1050,7 +1126,7 @@ static TREE * unary_exp()
 		TREE_token(t) = g_real_token;
 		match(T_SUB);
 		TREE_lchild(t) = cast_exp();
-		set_parent(t,TREE_lchild(t));
+		setParent(t,TREE_lchild(t));
 		if (TREE_lchild(t) == NULL) {
 			err(g_real_line_num, "cast expression is needed");
 			goto FAILED;
@@ -1061,14 +1137,14 @@ static TREE * unary_exp()
 		TREE_token(t) = g_real_token;
 		match(T_SIZEOF);
 		TREE_sizeof_exp(t) = unary_or_LP_typename_RP();
-		set_parent(t, TREE_sizeof_exp(t));
+		setParent(t, TREE_sizeof_exp(t));
 		break;
 	case T_REV:
 		t = NEWT(TR_REV);
 		TREE_token(t) = g_real_token;
 		match(T_REV);
 		TREE_lchild(t) = cast_exp();
-		set_parent(t, TREE_lchild(t));
+		setParent(t, TREE_lchild(t));
 		if (TREE_lchild(t) == NULL) {
 			err(g_real_line_num, "cast expression is needed");
 			goto FAILED;
@@ -1079,7 +1155,7 @@ static TREE * unary_exp()
 		TREE_token(t) = g_real_token;
 		match(T_NOT);
 		TREE_lchild(t) = cast_exp();
-		set_parent(t,TREE_lchild(t));
+		setParent(t,TREE_lchild(t));
 		if (TREE_lchild(t) == NULL) {
 			err(g_real_line_num, "cast expression is needed");
 			goto FAILED;
@@ -1125,8 +1201,8 @@ static TREE * cast_exp()
 		t = NEWT(TR_CVT);
 		TREE_cvt_type(t) = p;
 		TREE_cast_exp(t) = cast_exp();
-		set_parent(t, TREE_cvt_type(t));
-		set_parent(t, TREE_cast_exp(t));
+		setParent(t, TREE_cvt_type(t));
+		setParent(t, TREE_cast_exp(t));
 		if (TREE_cast_exp(t) == NULL) {
 			err(g_real_line_num, "cast expression cannot be NULL");
 			goto FAILED;
@@ -1151,7 +1227,7 @@ static TREE * multiplicative_exp()
 		p = NEWT(TR_MULTI);
 		TREE_token(p) = g_real_token;
 		TREE_lchild(p) = t;
-		set_parent(p,TREE_lchild(p));
+		setParent(p,TREE_lchild(p));
 			/*
 		     a*b*c  =>
 			             *
@@ -1162,7 +1238,7 @@ static TREE * multiplicative_exp()
 			*/
 		match(g_real_token);
 		TREE_rchild(p) = cast_exp();
-		set_parent(p,TREE_rchild(p));
+		setParent(p,TREE_rchild(p));
 		if (TREE_rchild(p) == NULL) {
 			err(g_real_line_num, "'%s': right operand cannot be NULL",
 				TOKEN_INFO_name(&g_token_info[TREE_token(p)]));
@@ -1185,7 +1261,7 @@ static TREE * additive_exp()
 		p = NEWT(TR_ADDITIVE);
 		TREE_token(p) = g_real_token;
 		TREE_lchild(p) = t;
-		set_parent(p, TREE_lchild(p));
+		setParent(p, TREE_lchild(p));
 		   /*
 		     a+b-c  =>
 			             -
@@ -1196,7 +1272,7 @@ static TREE * additive_exp()
 		   */
 		match(g_real_token);
 		TREE_rchild(p) = multiplicative_exp();
-		set_parent(p, TREE_rchild(p));
+		setParent(p, TREE_rchild(p));
         if (TREE_rchild(p) == NULL) {
 			err(g_real_line_num, "'%s': right operand cannot be NULL",
 				TOKEN_INFO_name(&g_token_info[TREE_token(p)]));
@@ -1219,7 +1295,7 @@ static TREE * shift_exp()
 		p = NEWT(TR_SHIFT);
 		TREE_token(p) = g_real_token;
 		TREE_lchild(p) = t;
-		set_parent(p,TREE_lchild(p));
+		setParent(p,TREE_lchild(p));
 		   /*
 		     a<<b<<c  =>
 			             <<
@@ -1230,7 +1306,7 @@ static TREE * shift_exp()
 		   */
 		match(g_real_token);
 		TREE_rchild(p) = additive_exp();
-		set_parent(p,TREE_rchild(p));
+		setParent(p,TREE_rchild(p));
         if (TREE_rchild(p) == NULL) {
 			err(g_real_line_num, "'%s': right operand cannot be NULL",
 				TOKEN_INFO_name(&g_token_info[TREE_token(p)]));
@@ -1254,7 +1330,7 @@ static TREE * relational_exp()
 		p = NEWT(TR_RELATION);
 		TREE_token(p) = g_real_token;
 		TREE_lchild(p) = t;
-		set_parent(p,TREE_lchild(p));
+		setParent(p,TREE_lchild(p));
 		   /*
 		     a<b<c   =>
 			             <
@@ -1265,7 +1341,7 @@ static TREE * relational_exp()
 		   */
 		match(g_real_token);
 		TREE_rchild(p) = shift_exp();
-		set_parent(p,TREE_rchild(p));
+		setParent(p,TREE_rchild(p));
         if (TREE_rchild(p) == NULL) {
 			err(g_real_line_num, "'%s': right operand cannot be NULL",
 				TOKEN_INFO_name(&g_token_info[TREE_token(p)]));
@@ -1288,7 +1364,7 @@ static TREE * equality_exp()
 		p = NEWT(TR_EQUALITY);
 		TREE_token(p) = g_real_token;
 		TREE_lchild(p) = t;
-		set_parent(p, TREE_lchild(p));
+		setParent(p, TREE_lchild(p));
 		   /*
 		     a==b!=c   =>
 			             !=
@@ -1299,7 +1375,7 @@ static TREE * equality_exp()
 		   */
 		match(g_real_token);
 		TREE_rchild(p) = relational_exp();
-		set_parent(p, TREE_rchild(p));
+		setParent(p, TREE_rchild(p));
 		if (TREE_rchild(p) == NULL) {
 			err(g_real_line_num, "'%s': right operand cannot be NULL",
 				TOKEN_INFO_name(&g_token_info[TREE_token(p)]));
@@ -1322,7 +1398,7 @@ static TREE * AND_exp()
 		p = NEWT(TR_INCLUSIVE_AND);
 		TREE_token(p) = g_real_token;
 		TREE_lchild(p) = t;
-		set_parent(p, TREE_lchild(p));
+		setParent(p, TREE_lchild(p));
 		   /*
 		     a&b&c   =>  &
 			            / \
@@ -1332,7 +1408,7 @@ static TREE * AND_exp()
 		   */
 		match(T_BITAND);
 		TREE_rchild(p) = equality_exp();
-		set_parent(p,TREE_rchild(p));
+		setParent(p,TREE_rchild(p));
 		if (TREE_rchild(p) == NULL) {
 			err(g_real_line_num, "'%s': right operand cannot be NULL",
 				TOKEN_INFO_name(&g_token_info[TREE_token(p)]));
@@ -1355,7 +1431,7 @@ static TREE * exclusive_OR_exp()
 		p = NEWT(TR_XOR);
 		TREE_token(p) = g_real_token;
 		TREE_lchild(p) = t;
-		set_parent(p,TREE_lchild(p));
+		setParent(p,TREE_lchild(p));
 		   /*
 		     a^b^c   =>  ^
 			            / \
@@ -1365,7 +1441,7 @@ static TREE * exclusive_OR_exp()
 		   */
 		match(T_XOR);
 		TREE_rchild(p) = AND_exp();
-		set_parent(p,TREE_rchild(p));
+		setParent(p,TREE_rchild(p));
 		if (TREE_rchild(p) == NULL) {
 			err(g_real_line_num, "'%s': right operand cannot be NULL",
 				TOKEN_INFO_name(&g_token_info[TREE_token(p)]));
@@ -1388,7 +1464,7 @@ static TREE * inclusive_OR_exp()
 		p = NEWT(TR_INCLUSIVE_OR);
 		TREE_token(p) = g_real_token;
 		TREE_lchild(p) = t;
-		set_parent(p,TREE_lchild(p));
+		setParent(p,TREE_lchild(p));
 		   /*
 		     a|b|c   =>  |
 			            / \
@@ -1398,7 +1474,7 @@ static TREE * inclusive_OR_exp()
 		   */
 		match(T_BITOR);
 		TREE_rchild(p) = exclusive_OR_exp();
-		set_parent(p,TREE_rchild(p));
+		setParent(p,TREE_rchild(p));
 		if (TREE_rchild(p) == NULL) {
 			err(g_real_line_num, "'%s': right operand cannot be NULL",
 				TOKEN_INFO_name(&g_token_info[TREE_token(p)]));
@@ -1421,7 +1497,7 @@ static TREE * logical_AND_exp()
 		p = NEWT(TR_LOGIC_AND);
 		TREE_token(p) = g_real_token;
 		TREE_lchild(p) = t;
-		set_parent(p,TREE_lchild(p));
+		setParent(p,TREE_lchild(p));
 		   /*
 		     a && b && c =>
 			               &&
@@ -1432,7 +1508,7 @@ static TREE * logical_AND_exp()
 		   */
 		match(T_AND);
 		TREE_rchild(p) = inclusive_OR_exp();
-		set_parent(p,TREE_rchild(p));
+		setParent(p,TREE_rchild(p));
 		if (TREE_rchild(p) == NULL) {
 			err(g_real_line_num, "'%s': right operand cannot be NULL",
 				TOKEN_INFO_name(&g_token_info[TREE_token(p)]));
@@ -1455,7 +1531,7 @@ static TREE * logical_OR_exp()
 		p = NEWT(TR_LOGIC_OR);
 		TREE_token(p) = g_real_token;
 		TREE_lchild(p) = t;
-		set_parent(p,TREE_lchild(p));
+		setParent(p,TREE_lchild(p));
 		/*
 		  a||b||c  =>  ||
 		              /  \
@@ -1465,7 +1541,7 @@ static TREE * logical_OR_exp()
 		*/
 		match(T_OR);
 		TREE_rchild(p) = logical_AND_exp();
-		set_parent(p,TREE_rchild(p));
+		setParent(p,TREE_rchild(p));
     	if (TREE_rchild(p) == NULL) {
 			err(g_real_line_num, "'%s': right operand cannot be NULL",
 				TOKEN_INFO_name(&g_token_info[TREE_token(p)]));
@@ -1488,17 +1564,17 @@ TREE * conditional_exp()
 		match(T_QUES_MARK);
 		TREE * p = NEWT(TR_COND);
 		TREE_det(p) = t;
-		set_parent(p,t);
+		setParent(p,t);
 		t = p;
 
 		TREE_true_part(t) = exp_list();
-		set_parent(t,TREE_true_part(t));
+		setParent(t,TREE_true_part(t));
 		if (match(T_COLON) != ST_SUCC) {
 			err(g_real_line_num, "condition expression is incomplete");
 			goto FAILED;
 		}
 		TREE_false_part(t) = exp_list();
-		set_parent(t,TREE_false_part(t));
+		setParent(t,TREE_false_part(t));
 	}
 	return t ;
 FAILED:
@@ -1515,14 +1591,14 @@ TREE * exp()
 		p = NEWT(TR_ASSIGN);
 		TREE_token(p) = g_real_token;
 		TREE_lchild(p) = t;
-		set_parent(p, TREE_lchild(p));
+		setParent(p, TREE_lchild(p));
         match(g_real_token);
 		TREE_rchild(p) = exp();
 		if (TREE_rchild(p) == NULL) {
 			err(g_real_line_num, "expression miss r-value");
 			goto FAILED;
 		}
-		set_parent(p, TREE_rchild(p));
+		setParent(p, TREE_rchild(p));
   		t = p ;
 	}
 	return t;
@@ -1595,7 +1671,7 @@ static TREE * jump_stmt()
 		match(T_RETURN);
 		if (g_real_token != T_SEMI) {
 			TREE_ret_exp(t) = exp_list();
-			set_parent(t,TREE_ret_exp(t));
+			setParent(t,TREE_ret_exp(t));
 		}
 		if (match(T_SEMI) != ST_SUCC) {
 			err(g_real_line_num, "miss ';'");
@@ -1758,7 +1834,7 @@ static TREE * do_while_stmt()
 	//do-body
 	pushst(st_DO, 0); //push down inherit properties
 	TREE_dowhile_body(t) = statement();
-	set_parent(t, TREE_dowhile_body(t));
+	setParent(t, TREE_dowhile_body(t));
 	popst();
 
 	if (match(T_WHILE) != ST_SUCC) { //while
@@ -1773,7 +1849,7 @@ static TREE * do_while_stmt()
 	}
 
 	TREE_dowhile_det(t) = exp_list();
-	set_parent(t, TREE_dowhile_det(t));
+	setParent(t, TREE_dowhile_det(t));
 	if (TREE_dowhile_det(t) == NULL) {
 		err(g_real_line_num, "while determination cannot be NULL");
 		goto FAILED;
@@ -1806,7 +1882,7 @@ static TREE * while_do_stmt()
 		goto FAILED;
 	}
 	TREE_whiledo_det(t) =  exp_list();
-	set_parent(t, TREE_whiledo_det(t));
+	setParent(t, TREE_whiledo_det(t));
 	if (TREE_whiledo_det(t) == NULL) {
 		err(g_real_line_num, "while determination cannot be NULL");
 		goto FAILED;
@@ -1819,7 +1895,7 @@ static TREE * while_do_stmt()
 	//while-body
 	pushst(st_WHILE,0); //push down inherit properties
     TREE_whiledo_body(t) = statement();
-	set_parent(t,TREE_whiledo_body(t));
+	setParent(t,TREE_whiledo_body(t));
 	popst();
 	return t;
 FAILED:
@@ -1847,7 +1923,7 @@ TREE * for_stmt()
 	if (!declaration_list()) {
 		//initializing expression
 		TREE_for_init(t) = exp_list();
-		set_parent(t, TREE_for_init(t));
+		setParent(t, TREE_for_init(t));
 
 		//EXPRESSION does not swallow the token ';'.
 		if (match(T_SEMI) != ST_SUCC) {
@@ -1857,7 +1933,7 @@ TREE * for_stmt()
 	}
 
 	TREE_for_det(t) = exp_list();
-	set_parent(t,TREE_for_det(t));
+	setParent(t,TREE_for_det(t));
 	//EXPRESSION does not swallow the token ';'.
 	if (match(T_SEMI) != ST_SUCC) {
 		err(g_real_line_num, "miss ';' before step expression");
@@ -1865,7 +1941,7 @@ TREE * for_stmt()
 	}
 
 	TREE_for_step(t) = exp_list();
-	set_parent(t, TREE_for_step(t));
+	setParent(t, TREE_for_step(t));
 	//EXPRESSION does not swallow the token ')'.
 	if (match(T_RPAREN) != ST_SUCC) {
 		err(g_real_line_num, "miss ')' after step expression");
@@ -1874,7 +1950,7 @@ TREE * for_stmt()
 
 	pushst(st_DO, 0); //push down inherit properties
 	TREE_for_body(t) = statement();
-	set_parent(t, TREE_for_body(t));
+	setParent(t, TREE_for_body(t));
 	popst();
 	if (g_enable_C99_declaration) {
 		return_to_parent_scope();
@@ -1925,7 +2001,7 @@ static TREE * if_stmt()
 	match(T_LPAREN);
 
 	TREE_if_det(t) = exp_list();
-	set_parent(t, TREE_if_det(t));
+	setParent(t, TREE_if_det(t));
 	if (TREE_if_det(t) == NULL) {
 		err(g_real_line_num, "'if' determination cannot be NULL");
 		goto FAILED;
@@ -1938,12 +2014,12 @@ static TREE * if_stmt()
 
     //true part
 	TREE_if_true_stmt(t) = statement();
-	set_parent(t,TREE_if_true_stmt(t));
+	setParent(t,TREE_if_true_stmt(t));
 
 	if (g_real_token == T_ELSE) {
 		match(T_ELSE);
 		TREE_if_false_stmt(t) = statement();
-		set_parent(t,TREE_if_false_stmt(t));
+		setParent(t,TREE_if_false_stmt(t));
 	}
 	return t;
 FAILED:
@@ -1965,7 +2041,7 @@ static TREE * switch_stmt()
 		goto FAILED;
 	}
 	TREE_switch_det(t) = exp_list();
-	set_parent(t, TREE_switch_det(t));
+	setParent(t, TREE_switch_det(t));
 	if (TREE_switch_det(t) == NULL) {
 		err(g_real_line_num, "switch determination cannot be NULL");
 		goto FAILED;
@@ -1977,7 +2053,7 @@ static TREE * switch_stmt()
 
 	pushst(st_DO,0); //push down inherit properties
 	TREE_switch_body(t) = statement();
-	set_parent(t,TREE_switch_body(t));
+	setParent(t,TREE_switch_body(t));
 	popst();
 	return t;
 FAILED:
@@ -2188,81 +2264,6 @@ static TREE * statement()
 }
 
 
-//Verify the TREE node legality.
-static bool verify(TREE * t)
-{
-	if (t == NULL)
-		return true;
-
-	switch (TREE_type(t)) {
-	case TR_SCOPE:
-	case TR_CALL:
-	case TR_ARRAY:
-	case TR_TYPE_NAME:
-	case TR_CVT:
-	case TR_COND:
-	case TR_LABEL:
-		break;
-	default:
-		IS_TRUE0(TREE_token(t) != T_NUL && get_token_name(TREE_token(t)));
-	}
-
-	switch (TREE_type(t)) {
-	case TR_ASSIGN:
-	case TR_ID:
-	case TR_IMM:
-	case TR_IMML:
-	case TR_FP:  //3.1415926
-	case TR_ENUM_CONST:
-	case TR_STRING:
-	case TR_LOGIC_OR: //logical or        ||
-	case TR_LOGIC_AND: //logical and      &&
-	case TR_INCLUSIVE_OR: //inclusive or  |
-	case TR_INCLUSIVE_AND: //inclusive and &
-	case TR_XOR: //exclusive or
-	case TR_EQUALITY: // == !=
-	case TR_RELATION: // < > >= <=
-	case TR_SHIFT:   // >> <<
-	case TR_ADDITIVE: // '+' '-'
-	case TR_MULTI:    // '*' '/' '%'
-	case TR_SCOPE:
-	case TR_IF:
-	case TR_DO:
-	case TR_WHILE:
-	case TR_FOR:
-	case TR_SWITCH:
-	case TR_BREAK:
-	case TR_CONTINUE:
-	case TR_RETURN:
-	case TR_GOTO:
-	case TR_LABEL:
-	case TR_CASE:
-	case TR_DEFAULT:
-	case TR_COND: //formulized log_OR_exp?exp:cond_exp
-	case TR_CVT: //type convertion
-	case TR_LDA:   // &a get address of 'a'
-	case TR_DEREF: //*p  dereferencing the pointer 'p'
-	case TR_PLUS: // +123
-	case TR_MINUS:  // -123
-	case TR_REV:  // Reverse
-	case TR_NOT:  // get non-value
-	case TR_INC:   //++a
-	case TR_DEC:   //--a
-	case TR_POST_INC: //a++  / (*a)++
-	case TR_POST_DEC: //a--
-	case TR_DMEM:   //
-	case TR_INDMEM:
-	case TR_ARRAY:
-	case TR_CALL:
-	case TR_PRAGMA:
-	case TR_SIZEOF:
-		break;
-	default: IS_TRUE(0, ("unknown tree type:%d", TREE_type(t)));
-	} //end switch
-	return true;
-}
-
-
 //Top level dispatch to parse DECLARATION or PLAUSE.
 static TREE * dispatch()
 {
@@ -2402,17 +2403,17 @@ static TREE * dispatch()
 void init_parser()
 {
 	init_key_word_tab();
-	g_pool_general_used = smpool_create_handle(256, MEM_COMM);
-	g_pool_tree_used = smpool_create_handle(128, MEM_COMM);
-	g_pool_st_used = smpool_create_handle(64, MEM_COMM);
+	g_pool_general_used = smpoolCreate(256, MEM_COMM);
+	g_pool_tree_used = smpoolCreate(128, MEM_COMM);
+	g_pool_st_used = smpoolCreate(64, MEM_COMM);
 }
 
 
 void fini_parser()
 {
-	smpool_free_handle(g_pool_general_used);
-	smpool_free_handle(g_pool_tree_used);
-	smpool_free_handle(g_pool_st_used);
+	smpoolDelete(g_pool_general_used);
+	smpoolDelete(g_pool_tree_used);
+	smpoolDelete(g_pool_st_used);
 	g_pool_general_used = NULL;
 	g_pool_tree_used = NULL;
 	g_pool_st_used = NULL;

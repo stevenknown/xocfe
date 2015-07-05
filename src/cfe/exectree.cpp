@@ -34,7 +34,7 @@ Computing expected value in compiling period, such as constant expression.
 */
 
 static bool g_is_allow_float = false;
-static SSTACK<CELL*> g_cell_stack;
+static Stack<CELL*> g_cell_stack;
 static bool compute_conditional_exp(IN TREE * t);
 
 static CELL * pushv(LONGLONG v)

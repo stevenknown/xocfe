@@ -34,4 +34,4 @@ class TREE;
 //Frontend Exported Variable.
 extern CHAR * g_target_file_name;
 extern CHAR * g_source_file_name;
-extern SMEM_POOL * g_pool_tmp_used; //local temporary usage
+extern SMemPool * g_pool_tmp_used; //local temporary usage

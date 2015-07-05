@@ -121,7 +121,7 @@ CHAR * g_dcl_name [] = {
 
 static void * xmalloc(unsigned long size)
 {
-	void * p = smpool_malloc_h(size, g_pool_tree_used);
+	void * p = smpoolMalloc(size, g_pool_tree_used);
 	IS_TRUE0(p != NULL);
 	memset(p, 0, size);
 	return p;
@@ -2219,8 +2219,8 @@ TYPE * cp_spec(TYPE * ty)
 
 /*
 pointer:
-	'*' type-qualifier-list(opt)
-	'*' type-qualifier-list(opt) pointer
+	'*' type-qualifier-list(pass)
+	'*' type-qualifier-list(pass) pointer
 */
 static DECL * pointer(TYPE ** qua)
 {
@@ -2270,12 +2270,12 @@ static DECL * declarator(TYPE * qua)
 static INT label_ck(SCOPE *s)
 {
 	if (s == NULL) return ST_ERR;
-	LABEL_INFO * lref = SCOPE_ref_label_list(s).get_head();
-	LABEL_INFO * lj = NULL;
+	LabelInfo * lref = SCOPE_ref_label_list(s).get_head();
+	LabelInfo * lj = NULL;
 	while (lref != NULL) {
 		CHAR * name = SYM_name(LABEL_INFO_name(lref));
 		IS_TRUE0(name);
-		LABEL_INFO * li = SCOPE_label_list(s).get_head();
+		LabelInfo * li = SCOPE_label_list(s).get_head();
 		for (; li != NULL; li = SCOPE_label_list(s).get_next()) {
 			if (strcmp(SYM_name(LABEL_INFO_name(li)), name) == 0) {
 				LABEL_INFO_is_used(li) = true;
@@ -2357,7 +2357,7 @@ static void fix_para_array_index(DECL * decl)
 
 //Change array to pointer if it is formal parameter.
 //Fulfill the first dimension to at least 1 if it is a parameter.
-static TREE * refine_array(TREE * t)
+static TREE * refineArray(TREE * t)
 {
 	IS_TRUE0(TREE_type(t) == TR_ARRAY);
 
@@ -2398,9 +2398,9 @@ static TREE * refine_array(TREE * t)
 				//The base of pointer is an array. Convert a[] to (*a)[].
 				TREE * deref = new_tree_node(TR_DEREF, TREE_lineno(base));
 				TREE_lchild(deref) = base;
-				set_parent(deref, TREE_lchild(deref));
+				setParent(deref, TREE_lchild(deref));
 				TREE_array_base(t) = deref;
-				set_parent(t, TREE_array_base(t));
+				setParent(t, TREE_array_base(t));
 				fix_para_array_index(decl);
 			}
 		}
@@ -2418,7 +2418,7 @@ static TREE * refine_tree(TREE * t)
 {
 	if (t == NULL) return NULL;
 	if (TREE_type(t) == TR_ARRAY) {
-		t = refine_array(t);
+		t = refineArray(t);
 	} else if (TREE_type(t) == TR_SCOPE) {
 		SCOPE * s = TREE_scope(t);
 		SCOPE_stmt_list(s) = refine_tree_list(SCOPE_stmt_list(s));
@@ -2743,7 +2743,7 @@ bool is_user_type_exist(IN USER_TYPE_LIST * ut_list, IN CHAR * ut_name,
 }
 
 
-bool is_struct_type_exist(LIST<STRUCT*> & struct_list, 
+bool is_struct_type_exist(List<STRUCT*> & struct_list, 
 						  IN CHAR * tag, OUT STRUCT ** s)
 {
 	if (tag == NULL) { return false; }
@@ -2764,7 +2764,7 @@ bool is_struct_type_exist(LIST<STRUCT*> & struct_list,
 
 
 //Seach UNION list accroding to the 'tag' of union-type.
-bool is_union_type_exist(LIST<UNION*> & u_list, IN CHAR * tag, OUT UNION ** u)
+bool is_union_type_exist(List<UNION*> & u_list, IN CHAR * tag, OUT UNION ** u)
 {
 	if (tag == NULL) { return false; }
 
@@ -3588,7 +3588,7 @@ INT format_declaration(IN OUT CHAR buf[], IN DECL * decl)
 //Print indent blank.
 static void pd(INT indent)
 {
-	while (indent-- > 0) fprintf(g_tfile, " ");
+	while (indent-- > 0) { fprintf(g_tfile, " "); }
 }
 
 

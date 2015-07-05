@@ -137,7 +137,7 @@ typedef enum {
 	st_STATIC,
 	st_TYPEDEF,
 
-	//qualifiers-opt
+	//qualifiers-pass
 	st_CONST,
 	st_VOLATILE,
 
@@ -157,20 +157,20 @@ typedef enum {
 		//declaration
 
 	st_function_definition,
-		//declaration_specifiers(opt) declarator declaration_list(opt)
-		//{ declaration-list(opt) statement-list(opt) }
+		//declaration_specifiers(pass) declarator declaration_list(pass)
+		//{ declaration-list(pass) statement-list(pass) }
 
 	st_declaration,
-		//declaration_specifiers init_declarator_list(opt);
+		//declaration_specifiers init_declarator_list(pass);
 
 	st_declaration_list,
 		//declaration
 		//declaration_list declaration
 
 	st_declaration_specifiers,
-		//storage_class_specifier declaration_specifiers(opt)
-		//type_specifier declaration_specifiers(opt)
-		//type_qualifier declaration_specifiers(opt)
+		//storage_class_specifier declaration_specifiers(pass)
+		//type_specifier declaration_specifiers(pass)
+		//type_qualifier declaration_specifiers(pass)
 
 	st_storage_class_specifier,
 		//one of auto  register  static  extern  typedef
@@ -185,7 +185,7 @@ typedef enum {
 		//const  volatile
 
 	st_struct_or_union_specifier,
-		//struct_or_union identifier(opt)  {struct_declaration_list}
+		//struct_or_union identifier(pass)  {struct_declaration_list}
 		//struct_or_union identifier
 
 	st_struct_or_union,
@@ -208,8 +208,8 @@ typedef enum {
 		//specifier_qualifier_list struct_declarator_list;
 
 	st_specifier_qualifier_list,
-		//type_specifier specifier_qualifier_list(opt)
-		//type_qualifier specifier_qualifier_list(opt)
+		//type_specifier specifier_qualifier_list(pass)
+		//type_qualifier specifier_qualifier_list(pass)
 
 	st_struct_declarator_list,
 		//struct_declarator
@@ -217,10 +217,10 @@ typedef enum {
 
 	st_struct_declarator,
 		//declarator
-		//declarator(opt) , constant_expression
+		//declarator(pass) , constant_expression
 
 	st_enum_specifier,
-		//enum identifier(opt) { enumerator_list }
+		//enum identifier(pass) { enumerator_list }
 		//enum identifier
 
 	st_enumerator_list,
@@ -232,18 +232,18 @@ typedef enum {
 		//identifier = constant_expression
 
 	st_declarator,
-		//pointer(opt) direct_declarator
+		//pointer(pass) direct_declarator
 
 	st_direct_declarator,
 		//identifier
 		//(declarator)
-		//direct_declarator [ constant_expression(opt) ]
+		//direct_declarator [ constant_expression(pass) ]
 		//direct_declarator ( parameter_type_list )
-		//direct_declarator ( identifier_list(opt) )
+		//direct_declarator ( identifier_list(pass) )
 
 	st_pointer,
-		//* type_qualifier_list(opt)
-		//* type_qualifier_list(opt) pointer
+		//* type_qualifier_list(pass)
+		//* type_qualifier_list(pass) pointer
 
 	st_type_qualifier_list,
 		//type_qualifier
@@ -259,7 +259,7 @@ typedef enum {
 
 	st_parameter_declaration,
 		//declaration_specifiers declarator
-		//declaration_specifiers abstract_declarator(opt)
+		//declaration_specifiers abstract_declarator(pass)
 
 	st_identifier_list,
 		//identifier
@@ -275,16 +275,16 @@ typedef enum {
 		//initializer_list , initializer
 
 	st_type_name,
-		//specifier_qualifier_list abstract_declarator(opt)
+		//specifier_qualifier_list abstract_declarator(pass)
 
 	st_abstract_declarator,
 		//pointer
-		//pointer(opt) direct_abstract_declarator
+		//pointer(pass) direct_abstract_declarator
 
 	st_direct_abstract_declarator,
 		//( abstract_declarator )
-		//direct_abstract_declarator(opt) [ constant_expression(opt) ]
-		//direct_abstract_declarator(opt) ( parameter_type_list(opt) )
+		//direct_abstract_declarator(pass) [ constant_expression(pass) ]
+		//direct_abstract_declarator(pass) ( parameter_type_list(pass) )
 
 	st_typedef_name,
 		//identifier
@@ -303,10 +303,10 @@ typedef enum {
 		//default , statement
 
 	st_expression_statement,
-		//expression(opt);
+		//expression(pass);
 
 	st_compound_statement,
-		//{ declaration_list(opt) statement_list(opt) }
+		//{ declaration_list(pass) statement_list(pass) }
 
 	st_statement_list,
 		//statement
@@ -320,13 +320,13 @@ typedef enum {
 	st_iteration_statement,
 		//while ( expression ) statement
 		//do statement while ( expression ) ;
-		//for ( expression(opt) ; expression(opt) ; expression(opt) ) statement
+		//for ( expression(pass) ; expression(pass) ; expression(pass) ) statement
 
 	st_jump_statement,
 		//goto identifier;
 		//continue;
 		//break;
-		//return expression(opt);
+		//return expression(pass);
 
 	st_expression,
 		//assignment_expression
@@ -413,7 +413,7 @@ typedef enum {
 
 	st_postfix_expression,
 		//postfix_expression [ expression ]
-		//postfix_expression ( argument_expression_list(opt) )
+		//postfix_expression ( argument_expression_list(pass) )
 		//postfix_expression . identifier
 		//postfix_expression -> identifier
 		//postfix_expression ++

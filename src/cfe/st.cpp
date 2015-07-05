@@ -27,7 +27,7 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 @*/
 #include "cfecom.h"
 
-static SSTACK<CELL*> g_cell_stack;
+static Stack<CELL*> g_cell_stack;
 ST_INFO g_st_info[]={
 	st_NULL,				"NULL" ,
 
@@ -132,7 +132,7 @@ ST_INFO g_st_info[]={
 	st_STATIC,              "static",
 	st_TYPEDEF,             "typedef",
 
-	//qualifiers-opt
+	//qualifiers-pass
 	st_CONST,               "const",
 	st_VOLATILE,            "volatile",
 

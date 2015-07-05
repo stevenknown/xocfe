@@ -185,7 +185,7 @@ TOKEN_INFO g_token_info[] =
 	{ T_STATIC,		"static" },
 	{ T_TYPEDEF,	"typedef" },
 
-	//qualifiers-opt
+	//qualifiers-pass
 	{ T_CONST,		"const" },
 	{ T_VOLATILE,	"volatile" },
 	{ T_RESTRICT,	"restrict" },
@@ -242,7 +242,7 @@ static KEYWORD_INFO g_keyword_info[] = {
 	{ T_STATIC,		"static" },
 	{ T_TYPEDEF,	"typedef" },
 
-	//qualifiers-opt
+	//qualifiers-pass
 	{ T_CONST,		"const" },
 	{ T_VOLATILE,	"volatile" },
 	{ T_RESTRICT,	"restrict" },
@@ -409,9 +409,9 @@ FEOF:
 }
 
 
-class STR2TOKEN : public HMAP<CHAR const*, TOKEN, HASH_FUNC_STR2> {
+class STR2TOKEN : public HMap<CHAR const*, TOKEN, HashFuncString2> {
 public:
-	STR2TOKEN(UINT bsize) : HMAP<CHAR const*, TOKEN, HASH_FUNC_STR2>(bsize) {}
+	STR2TOKEN(UINT bsize) : HMap<CHAR const*, TOKEN, HashFuncString2>(bsize) {}
 	virtual ~STR2TOKEN() {}
 };
 
@@ -419,7 +419,7 @@ STR2TOKEN g_str2token(0);
 
 void init_key_word_tab()
 {
-	g_str2token.init(64); //Must be power of 2 since we use HASH_FUNC_STR2.
+	g_str2token.init(64); //Must be power of 2 since we use HashFuncString2.
 	for (UINT i = 0; i < g_keyword_num; i++) {
 		g_str2token.set(KEYWORD_INFO_name(&g_keyword_info[i]),
 						KEYWORD_INFO_token(&g_keyword_info[i]));
@@ -908,11 +908,11 @@ TOKEN get_token()
 		}
 		break;
 	case '\t':
-		while ((g_cur_char = get_next_char()) == '\t');
+		while ((g_cur_char = get_next_char()) == '\t') { }
 		token = get_token();
 		break;
 	case ' ':
-		while((g_cur_char = get_next_char())==' ');
+		while((g_cur_char = get_next_char())==' ') { }
 		token = get_token();
 		break;
 	case '@':

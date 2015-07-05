@@ -248,13 +248,13 @@ public:
 			INT indx;
 		} u11; //record a enum constant
 		struct {
-			SYM * id; //record a id in SYM_TAB
+			SYM * id; //record a id in SymTab
 			DECL * id_decl; //record a legal declaration
 		} u12;
-		SYM * sval; //record a string in SYM_TAB
-		SYM * lab_name; //record a label name in SYM_TAB
+		SYM * sval; //record a string in SymTab
+		SYM * lab_name; //record a label name in SymTab
 		HOST_INT ival; //record a integer value
-		LABEL_INFO * lab_info; //record a label info defined in function level
+		LabelInfo * lab_info; //record a label info defined in function level
 		INT  case_value; //record a constant value of jump-case table
 		//TYPE * ty; //C standard type description
 		//USER_TYPE * uty; //user type description
