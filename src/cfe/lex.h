@@ -153,7 +153,7 @@ typedef enum _TOKEN {
 
 	T_NEWLINE,		// \n
 	////////////////////////////////////
-	//DO NOT ADD ENUM AFTER THIS LINE.//
+	//DO NOT ADD Enum AFTER THIS LINE.//
 	////////////////////////////////////
 	T_END,			// end of file
 } TOKEN;

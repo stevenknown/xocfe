@@ -39,7 +39,7 @@ public:
 	
 	union {
 		SYM * lab_name;
-		INT lab_num;
+		UINT lab_num;
 		SYM * pragma_str;
 	} u1;
 
@@ -88,8 +88,8 @@ inline UINT computeLabelHashValue(LabelInfo const* li)
 			p++;
 		}
 	} else {
-		IS_TRUE0(LABEL_INFO_type(li) == L_ILABEL);
-		v = LABEL_INFO_num(li);
+		ASSERT0(LABEL_INFO_type(li) == L_ILABEL);
+		v = (INT)LABEL_INFO_num(li);
 		v = (INT)((((UINT)(-v)) >> 7) ^ 0xAC5AAC5A);
 	}
 	return (UINT)v;
@@ -101,7 +101,7 @@ LabelInfo * newInternalLabel(SMemPool * pool);
 LabelInfo * newCustomerLabel(SYM * st, SMemPool * pool);
 inline bool isSameLabel(LabelInfo const* li1, LabelInfo const* li2)
 {
-	IS_TRUE0(li1 && li2);
+	ASSERT0(li1 && li2);
 	if (li1 == li2) { return true; }
 	if (LABEL_INFO_type(li1) == LABEL_INFO_type(li2) &&
 		LABEL_INFO_num(li1) == LABEL_INFO_num(li2)) {

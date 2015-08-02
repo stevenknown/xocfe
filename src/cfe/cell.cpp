@@ -32,7 +32,7 @@ static List<CELL*> g_cell_free_list;
 
 static void * xmalloc(size_t size)
 {
-	IS_TRUE0(g_pool_general_used != NULL);
+	ASSERT0(g_pool_general_used != NULL);
 	void * p = smpoolMalloc(size, g_pool_general_used);
 	if (p == NULL) return NULL;
 	memset(p, 0, size);

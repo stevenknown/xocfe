@@ -28,12 +28,12 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef __SCOPE_H__
 #define __SCOPE_H__
 
-class ENUM_LIST;
-class USER_TYPE_LIST;
-class STRUCT;
-class UNION;
-class DECL;
-class ENUM;
+class EnumList;
+class UserTypeList;
+class Struct;
+class Union;
+class Decl;
+class Enum;
 
 class SYM_LIST {
 public:
@@ -49,11 +49,11 @@ public:
 /*
 SCOPE
 	|
-	|--ENUM_LIST
+	|--EnumList
 	|--SYM_TAB_LIST
 	|--TYPE_LIST
 	|--SUB_SCOPE
-	|--USER_TYPE_LIST
+	|--UserTypeList
 */
 #define MAX_SCOPE_FILED 4
 #define GLOBAL_SCOPE    0  //Global memory space
@@ -85,19 +85,19 @@ public:
 	SCOPE * prev;
 	SCOPE * sub;
 
-	ENUM_LIST * enum_list;		//enum-type list
-	USER_TYPE_LIST * utl_list;	//record type defined with 'typedef'
+	EnumList * enum_list;		//enum-type list
+	UserTypeList * utl_list;	//record type defined with 'typedef'
 
 	List<LabelInfo*> li_list;	//label definition
 	List<LabelInfo*> lref_list;//reference label
 
-	List<STRUCT*> struct_list;	//structure list of current scope
-	List<UNION*> union_list;	//union list of current scope
+	List<Struct*> struct_list;	//structure list of current scope
+	List<Union*> union_list;	//union list of current scope
 
-	DECL * decl_list;			//record identifier declaration info
+	Decl * decl_list;			//record identifier declaration info
 	SYM_LIST * sym_tab_list;	//record identifier name
 
-	TREE * stmt_list;			//record statement list to generate code
+	Tree * stmt_list;			//record statement list to generate code
 
 	inline void init(UINT & sc)
 	{

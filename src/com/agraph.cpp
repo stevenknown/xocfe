@@ -38,7 +38,7 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 void AGRAPH::build_adj_matrix(Matrix<UINT> & adj_mat)
 {
 	UNUSED(adj_mat);
-	IS_TRUE(0, ("Target Dependent Code"));
+	ASSERT(0, ("Target Dependent Code"));
 	//Like: adj_mat.set(i, j, Edge-WEIGHT);
 }
 
@@ -48,7 +48,7 @@ See <Shortest_Path-Dijkstra.txt>
 'infinite': the value indiates infinity. */
 void AGRAPH::shortest_path(UINT infinite)
 {
-	IS_TRUE(m_ec_pool != NULL, ("not yet initialized."));
+	ASSERT(m_ec_pool != NULL, ("not yet initialized."));
 	Matrix<UINT> adj_mat;
 	build_adj_matrix(adj_mat);
 	UINT row = adj_mat.get_row_size();
@@ -80,7 +80,7 @@ void AGRAPH::shortest_path(UINT infinite)
 					}
 				}
 			}
-			IS_TRUE(min <= infinite, ("exception occur in shortest_path"));
+			ASSERT(min <= infinite, ("exception occur in shortest_path"));
 			if (min != infinite) {
 				adj_mat.set(i, j, min);
 			}

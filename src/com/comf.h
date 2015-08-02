@@ -114,7 +114,7 @@ template <typename T> void dummy_use(T const&) {}
 
 
 #ifdef _DEBUG_
-#define CK_USE(a)	IS_TRUE0(a)
+#define CK_USE(a)	ASSERT0(a)
 #else
 #define CK_USE(a)	UNUSED(a)
 #endif

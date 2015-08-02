@@ -44,24 +44,24 @@ void init_parser();
 void fini_parser();
 
 INT c_parser();
-SCOPE * compound_stmt(DECL * para_list);
-TREE * conditional_exp();
+SCOPE * compound_stmt(Decl * para_list);
+Tree * conditional_exp();
 
 void dump_tok_list();
 
-TREE * id();
+Tree * id();
 bool is_in_first_set_of_exp_list(TOKEN tok);
-bool is_user_type_exist_in_outer_scope(CHAR * cl, OUT DECL ** ut);
+bool is_user_type_exist_in_outer_scope(CHAR * cl, OUT Decl ** ut);
 bool is_in_first_set_of_declarator();
 
-TREE * exp();
-TREE * exp_list();
+Tree * exp();
+Tree * exp_list();
 
 bool look_forward_token(INT num, ...);
 
 INT match(TOKEN tok);
 
-void setParent(TREE * parent, TREE * child);
+void setParent(Tree * parent, Tree * child);
 INT suck_tok();
 void suck_tok_to(INT placeholder, ...);
 #endif

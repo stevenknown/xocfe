@@ -27,9 +27,9 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 @*/
 //Frontend Exported Type.
 class SCOPE;
-class TYPE;
-class DECL;
-class TREE;
+class Type;
+class Decl;
+class Tree;
 
 //Frontend Exported Variable.
 extern CHAR * g_target_file_name;

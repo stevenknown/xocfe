@@ -182,7 +182,7 @@ CHAR * xstrcat(CHAR * buf, UINT bufl, CHAR const* info, ...)
 //Round off to minus infinity
 INT xfloor(INT a, INT b)
 {
-	IS_TRUE(b != 0, ("div zero"));
+	ASSERT(b != 0, ("div zero"));
 	if (a % b == 0) {
 		//This part could not be combined with third one.
 		return (a / b);
@@ -197,7 +197,7 @@ INT xfloor(INT a, INT b)
 //Round up to plus infinity
 INT xceiling(INT a, INT b)
 {
-	IS_TRUE(b != 0, ("div zero"));
+	ASSERT(b != 0, ("div zero"));
 	if (a % b == 0) {
 		/*
 		(a+b-1)/b will be errorneous
@@ -332,7 +332,7 @@ UINT fact(UINT n)
 //P(n,m)=n*(n-1)*...*(n-m+1)=n!/(n-m)!
 UINT arra(UINT n, UINT m)
 {
-	IS_TRUE(n != 0 && m != 0 && n >= m, ("illegal param"));
+	ASSERT(n != 0 && m != 0 && n >= m, ("illegal param"));
 	UINT l = n - m + 1, i = n, res = 1;
 	while (i >= l) {
 		res = res * i;
@@ -347,7 +347,7 @@ C(n,m)=(n*(n-1)*...*(n-m+1))/m! = n!/m!(n-m)!
 Simplify:C(n,m)=(n*(n-1)*(m+1))/(n-m)! */
 UINT combin(UINT n, UINT m)
 {
-	IS_TRUE(n != 0 && m != 0 && n >= m, ("illegal param"));
+	ASSERT(n != 0 && m != 0 && n >= m, ("illegal param"));
 	if (n == m) {
 		return 1;
 	}
@@ -378,7 +378,7 @@ INT xctoi(CHAR const* cl)
 	if (cl == NULL || strcmp(cl, "") == 0) return 0;
 	INT l = strlen(cl);
 	if (l > BYTE_PER_INT) {
-		IS_TRUE(0, ("too many characters in integer"));
+		ASSERT(0, ("too many characters in integer"));
 		return 0;
 	}
 	INT i = 0;
@@ -542,7 +542,7 @@ static void _prim(INT m, INT n, OUT INT * buf, UINT i)
 //e.g:435234 = 251 * 17 * 17 * 3 * 2
 void prim(INT m, OUT INT * buf)
 {
-	IS_TRUE0(buf);
+	ASSERT0(buf);
 	bool sign = false;
 	buf[0] = 0;
 	if (m < 0) {
@@ -571,7 +571,7 @@ void dumpf_svec(void * vec, UINT ty, CHAR const* name, bool is_del)
 	
 	static INT g_count = 0;
 	FILE * h = fopen(name, "a+");
-	IS_TRUE(h, ("%s create failed!!!", name));
+	ASSERT(h, ("%s create failed!!!", name));
 	fprintf(h, "\nSVECOTR dump id:%d\n", g_count++);
 
 	///
@@ -599,7 +599,7 @@ void dumpf_svec(void * vec, UINT ty, CHAR const* name, bool is_del)
 			break;
 		}
 	default:
-		IS_TRUE(0, ("illegal ty"));
+		ASSERT(0, ("illegal ty"));
 	}
 
 	///
@@ -637,7 +637,7 @@ void dumps_svec(void * vec, UINT ty)
 			break;
 		}
 	default:
-		IS_TRUE(0, ("illegal ty"));
+		ASSERT(0, ("illegal ty"));
 	}//end switch
 	printf("\n");
 }
@@ -664,8 +664,8 @@ void af2i(IN CHAR * f, OUT BYTE * buf, UINT buflen, bool is_double)
 	UNUSED(buflen);
 	UNUSED(buf);
 	UNUSED(f);
-	IS_TRUE0(f && buf);
-	IS_TRUE(0, ("TODO"));
+	ASSERT0(f && buf);
+	ASSERT(0, ("TODO"));
 }
 
 
@@ -768,7 +768,7 @@ CHAR * getfilepath(IN CHAR * n, OUT CHAR * buf, UINT bufl)
 		return NULL;
 	} else {
 		UNUSED(bufl);
-		IS_TRUE0((UINT)i < bufl);
+		ASSERT0((UINT)i < bufl);
 		memcpy(buf, n, i);
 		buf[i] = 0;
 	}
@@ -844,7 +844,7 @@ CHAR * getfilename(CHAR * n, OUT CHAR * buf, UINT bufl)
 		}
 	}
 
-	IS_TRUE0((UINT)i < bufl);
+	ASSERT0((UINT)i < bufl);
 	memcpy(buf, p, i);
 	buf[i] = 0;
 	return buf;
@@ -973,7 +973,7 @@ bool is_integerd(double d)
 
 bool is_power_of_5(double f)
 {
-	IS_TRUE0(f >= 0.0);
+	ASSERT0(f >= 0.0);
 	if (f == 0.0) { return false; }
 	while (f >= 5.0) {
 		f = f / 5.0;

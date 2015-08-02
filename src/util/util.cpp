@@ -16,7 +16,7 @@ void interwarn(CHAR const* format, ...)
 {
 	CHAR sbuf[ERR_BUF_LEN];
 	if (strlen(format) > ERR_BUF_LEN) {
-		IS_TRUE(0, ("internwarn message is too long to print"));
+		ASSERT(0, ("internwarn message is too long to print"));
 	}
 	//CHAR * arg = (CHAR*)((CHAR*)(&format) + sizeof(CHAR*));
 	va_list arg;
@@ -33,7 +33,7 @@ INT prt(CHAR const* format, ...)
 	if (format == NULL) return 0;
 	CHAR buf[MAX_BUF_LEN];
 	if (strlen(format) > MAX_BUF_LEN) {
-		IS_TRUE(0, ("prt message is too long to print"));
+		ASSERT(0, ("prt message is too long to print"));
 	}
 	//CHAR * arg = (CHAR*)((CHAR*)(&format) + sizeof(CHAR*));
 	va_list arg;
@@ -86,7 +86,7 @@ void initdump(CHAR const* f, bool is_del)
 		}
 		g_tfile = fopen(f, "a+");
 		if (g_tfile == NULL) {
-			IS_TRUE(0, ("can not open %s, errno:%d, errstring is %s",
+			ASSERT(0, ("can not open %s, errno:%d, errstring is %s",
 						f, errno, strerror(errno)));
 			return;
 		}
@@ -103,15 +103,17 @@ void note(CHAR const* format, ...)
 		return;
 	}
 	if (format == NULL) return;
-	CHAR buf[MAX_BUF_LEN];
+	//CHAR buf[MAX_BUF_LEN];
+	UINT buflen = 4096;
+	CHAR * buf = (CHAR*)malloc(buflen);
 	CHAR * real_buf = buf;
 	//CHAR * arg = (CHAR*)((CHAR*)(&format) + sizeof(CHAR*));
 	va_list arg;
 	va_start(arg, format);
-	vsnprintf(buf, MAX_BUF_LEN, format, arg);
-	buf[MAX_BUF_LEN - 1] = 0;
+	vsnprintf(buf, buflen, format, arg);
+	buf[buflen-1] = 0;
 	UINT len = strlen(buf);
-	IS_TRUE0(len < MAX_BUF_LEN);
+	ASSERT0(len < buflen);
 	UINT i = 0;
 	while (i < len) {
 		if (real_buf[i] == '\n') {
@@ -137,6 +139,7 @@ void note(CHAR const* format, ...)
 	fprintf(g_tfile, "%s", real_buf + i);
 	fflush(g_tfile);
 FIN:
+	free(buf);
 	va_end(arg);
 	return;
 }
@@ -210,11 +213,11 @@ public:
 				lst.append_tail(x->lchild);
 			}
 		}
-		IS_TRUE0(x);
-		IS_TRUE0(x->color == f);
+		ASSERT0(x);
+		ASSERT0(x->color == f);
 		TN * y = new_tn(to, t);
 
-		IS_TRUE0(x->lchild == NULL);
+		ASSERT0(x->lchild == NULL);
 		x->lchild = y;
 		y->parent = x;
 	}
@@ -245,11 +248,11 @@ public:
 				lst.append_tail(x->lchild);
 			}
 		}
-		IS_TRUE0(x);
-		IS_TRUE0(x->color == f);
+		ASSERT0(x);
+		ASSERT0(x->color == f);
 		TN * y = new_tn(to, t);
 
-		IS_TRUE0(x->rchild == NULL);
+		ASSERT0(x->rchild == NULL);
 		x->rchild = y;
 		y->parent = x;
 	}

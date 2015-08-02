@@ -29,13 +29,13 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define __TREE_H__
 
 /*
-ENUM_LIST
+EnumList
  |
  |--ENUM1
-	  |--ENUM-VAL1
+	  |--Enum-VAL1
 			|--name
 			|--integer value
-	  |--ENUM-VAL2
+	  |--Enum-VAL2
    |--ENUM2
 */
 typedef enum _TREE_TYPE {
@@ -106,10 +106,10 @@ typedef enum _TREE_TYPE {
 #define TL_id_name(tl)		(tl)->u1.id_name
 #define TL_chars(tl)		(tl)->u1.chars
 #define TL_str(tl)			(tl)->u1.string
-class TOKEN_LIST {
+class TokenList {
 public:
-	TOKEN_LIST * prev;
-	TOKEN_LIST * next;
+	TokenList * prev;
+	TokenList * next;
 	TOKEN token;
 	union {
 		SYM * id_name;
@@ -124,9 +124,7 @@ public:
 2. Binary operator: '=' '*=' '/=' '%=' '+=' '-=' '<<=' '>>=' '&=' '^='
    indicated via TREE_lchild and TREE_rchild. */
 #define MAX_TREE_FLDS	4
-#ifdef _DEBUG_
 #define TREE_uid(tn)				((tn)->id)
-#endif
 #define TREE_token(tn)				((tn)->tok)
 #define TREE_lineno(tn)				((tn)->lineno)
 #define TREE_type(tn)				((tn)->tree_node_type)
@@ -230,51 +228,49 @@ public:
 //record a exp-list
 #define TREE_exp_scope(t)			(t)->u1.exp_scope
 
-class TREE {
+class Tree {
 public:
-	#ifdef _DEBUG_
 	UINT id;
-	#endif
 	TREE_TYPE tree_node_type;
-	TREE * parent;
-	TREE * next;
-	TREE * prev;
+	Tree * parent;
+	Tree * next;
+	Tree * prev;
 	INT lineno; ///line number in src file
 	TOKEN tok; //record the token that tree-node related.
 	BYTE is_imm_unsigned:1; //if true, immediate is unsigned.
 	union {
 		struct {
-			ENUM * e;
+			Enum * e;
 			INT indx;
 		} u11; //record a enum constant
 		struct {
 			SYM * id; //record a id in SymTab
-			DECL * id_decl; //record a legal declaration
+			Decl * id_decl; //record a legal declaration
 		} u12;
 		SYM * sval; //record a string in SymTab
 		SYM * lab_name; //record a label name in SymTab
 		HOST_INT ival; //record a integer value
 		LabelInfo * lab_info; //record a label info defined in function level
 		INT  case_value; //record a constant value of jump-case table
-		//TYPE * ty; //C standard type description
+		//Type * ty; //C standard type description
 		//USER_TYPE * uty; //user type description
-		DECL * type_name;
+		Decl * type_name;
 		SCOPE * scope; //tree record a scope node
-		TREE * exp_scope; //record a exp-list
-		TOKEN_LIST * token_list; //record a token-list.
+		Tree * exp_scope; //record a exp-list
+		TokenList * token_list; //record a token-list.
 	} u1;
 
 	/* Record DCL_TYPE_NAME that is an abstract type
 	specifier to describing the result-data-type while current
-	TREE operator is acted. */
-	DECL * result_type_name;
-    TREE * pfld[MAX_TREE_FLDS]; //for any other use
+	Tree operator is acted. */
+	Decl * result_type_name;
+    Tree * pfld[MAX_TREE_FLDS]; //for any other use
 };
 
 
 //Exported Functions
-extern TREE * new_tree_node(TREE_TYPE tnt, INT lineno);
-extern void dump_tree(TREE * t);
-extern void dump_trees(TREE * t);
-extern INT is_indirect_tree_node(TREE * t);
+extern Tree * new_tree_node(TREE_TYPE tnt, INT lineno);
+extern void dump_tree(Tree * t);
+extern void dump_trees(Tree * t);
+extern INT is_indirect_tree_node(Tree * t);
 #endif

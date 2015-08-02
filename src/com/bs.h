@@ -81,7 +81,7 @@ public:
 	void destroy()
 	{
 		if (m_ptr == NULL) return;
-		IS_TRUE(m_size > 0, ("bitset is invalid"));
+		ASSERT(m_size > 0, ("bitset is invalid"));
 		::free(m_ptr);
 		m_ptr = NULL;
 		m_size = 0;
@@ -136,9 +136,9 @@ protected:
 
 	inline void * xmalloc(size_t size)
 	{
-		IS_TRUE(m_pool, ("List not yet initialized."));
+		ASSERT(m_pool, ("List not yet initialized."));
 		void * p = smpoolMallocConstSize(size, m_pool);
-		IS_TRUE(p, ("malloc failed"));
+		ASSERT(p, ("malloc failed"));
 		memset(p, 0, size);
 		return p;
 	}
@@ -168,7 +168,7 @@ public:
 		for (m_bs_list.get_head(&ct); 
 			 ct != m_bs_list.end(); ct = m_bs_list.get_next(ct)) {
 			BitSet * bs = ct->val();
-			IS_TRUE0(bs);
+			ASSERT0(bs);
 			bs->destroy();
 		}
 		
@@ -180,7 +180,7 @@ public:
 
 	BitSet * create(UINT init_sz = 0)
 	{
-		IS_TRUE(m_pool, ("not yet init"));
+		ASSERT(m_pool, ("not yet init"));
 		BitSet * p = m_free_list.remove_head();
 		if (p == NULL) {
 			p = (BitSet*)xmalloc(sizeof(BitSet));
@@ -192,7 +192,7 @@ public:
 
 	inline BitSet * copy(BitSet const& bs)
 	{
-		IS_TRUE(m_pool, ("not yet init"));
+		ASSERT(m_pool, ("not yet init"));
 		BitSet * p = create();
 		p->copy(bs);
 		return p;
@@ -200,7 +200,7 @@ public:
 
 	inline void clean()
 	{
-		IS_TRUE(m_pool, ("not yet init"));
+		ASSERT(m_pool, ("not yet init"));
 		destroy();
 		init();
 	}
@@ -215,7 +215,7 @@ public:
 		for (m_free_list.get_head(&ct); 
 			 ct != m_free_list.end(); ct = m_free_list.get_next(ct)) {
 			BitSet * x = ct->val(); 	
-			IS_TRUE(x && x != bs, ("Already have been freed."));
+			ASSERT(x && x != bs, ("Already have been freed."));
 		}
 		#endif
 		bs->clean();
@@ -259,7 +259,7 @@ public:
 	//Copy element from list.
 	inline void copy(List<T> & list)
 	{
-		IS_TRUE(Vector<T>::m_is_init, ("VECTOR not yet initialized."));
+		ASSERT(Vector<T>::m_is_init, ("VECTOR not yet initialized."));
 		INT count = 0;
 		
 		set(list.get_elem_count()-1, 0); //Alloc memory right away.
@@ -274,7 +274,7 @@ public:
 	
 	inline void copy(BSVec<T> & vec)
 	{
-		IS_TRUE(Vector<T>::m_is_init, ("VECTOR not yet initialized."));
+		ASSERT(Vector<T>::m_is_init, ("VECTOR not yet initialized."));
 		Vector<T>::copy(vec);
 		m_bs.copy(vec.m_bs);
 	}
@@ -282,7 +282,7 @@ public:
 	UINT count_mem() const { return m_bs.count_mem() + Vector<T>::count_mem(); }
 	inline void clean()
 	{
-		IS_TRUE(Vector<T>::m_is_init, ("VECTOR not yet initialized."));
+		ASSERT(Vector<T>::m_is_init, ("VECTOR not yet initialized."));
 		Vector<T>::clean();
 		m_bs.clean();
 	}
@@ -291,7 +291,7 @@ public:
 	//Create an lvalue, equal to 'set()'
 	inline T & operator[](INT i)
 	{
-		IS_TRUE(Vector<T>::m_is_init, ("VECTOR not yet initialized."));
+		ASSERT(Vector<T>::m_is_init, ("VECTOR not yet initialized."));
 		if (i >= Vector<T>::m_size) {
 			set(i, (T)0);
 		}
@@ -301,7 +301,7 @@ public:
 	//Get the first index number and return the element.
 	inline T get_first(OUT INT * idx)
 	{
-		IS_TRUE(Vector<T>::m_is_init, ("VECTOR not yet initialized."));
+		ASSERT(Vector<T>::m_is_init, ("VECTOR not yet initialized."));
 		INT i = m_bs.get_first();
 		if (idx) { *idx = i; }
 		return Vector<T>::get(i);
@@ -310,7 +310,7 @@ public:
 	//Get first number of index of element.
 	inline INT get_first() const	
 	{
-		IS_TRUE(Vector<T>::m_is_init, ("VECTOR not yet initialized."));
+		ASSERT(Vector<T>::m_is_init, ("VECTOR not yet initialized."));
 		return m_bs.get_first();
 	}
 
@@ -318,7 +318,7 @@ public:
 	//Return next element related to current 'idx'.
 	inline T get_next(INT * curidx)	
 	{
-		IS_TRUE(Vector<T>::m_is_init, ("VECTOR not yet initialized."));
+		ASSERT(Vector<T>::m_is_init, ("VECTOR not yet initialized."));
 		*curidx = m_bs.get_next(*curidx);
 		return Vector<T>::get(*curidx);
 	}
@@ -326,14 +326,14 @@ public:
 	//Get next index number.
 	inline INT get_next(UINT curidx) const
 	{
-		IS_TRUE(Vector<T>::m_is_init, ("VECTOR not yet initialized."));
+		ASSERT(Vector<T>::m_is_init, ("VECTOR not yet initialized."));
 		return m_bs.get_next(curidx);
 	}
 
 	//Get number of elements in vector.	
 	inline UINT get_elem_count() const
 	{
-		IS_TRUE(Vector<T>::m_is_init, ("VECTOR not yet initialized."));
+		ASSERT(Vector<T>::m_is_init, ("VECTOR not yet initialized."));
 		return m_bs.get_elem_count();
 	}
 	
@@ -341,7 +341,7 @@ public:
 
 	inline void set(UINT i, T elem) 	
 	{
-		IS_TRUE(Vector<T>::m_is_init, ("VECTOR not yet initialized."));
+		ASSERT(Vector<T>::m_is_init, ("VECTOR not yet initialized."));
 		Vector<T>::set(i, elem);
 		m_bs.bunion(i);
 	}
@@ -396,7 +396,7 @@ public:
 		for (SC<BSVec<T>*> * ct = m_bs_list.get_head(); 
 			 ct != m_bs_list.end(); ct = m_bs_list.get_next(ct)) {
 			BSVec<T> * bs = ct->val();
-			IS_TRUE0(bs);
+			ASSERT0(bs);
 			
 			bs->destroy();
 		}
@@ -452,7 +452,7 @@ public:
 	
 	BSVec<T> * create()
 	{
-		IS_TRUE(m_pool, ("not yet init"));
+		ASSERT(m_pool, ("not yet init"));
 		
 		BSVec<T> * p = m_free_list.remove_head();
 		if (p == NULL) {
@@ -466,7 +466,7 @@ public:
 	
 	inline void clean()
 	{
-		IS_TRUE(m_pool, ("not yet init"));
+		ASSERT(m_pool, ("not yet init"));
 		destroy();
 		init();
 	}
@@ -477,7 +477,7 @@ public:
 		for (SC<BSVec<T>*> * ct = m_bs_list.get_head(); 
 			 ct != m_bs_list.end(); ct = m_bs_list.get_next(ct)) {
 			BSVec<T> * bs = ct->val();
-			IS_TRUE0(bs);
+			ASSERT0(bs);
 
 			count += bs->count_mem();
 		}
@@ -576,18 +576,18 @@ public:
 	{
 		#ifdef _DEBUG_
 		UINT n = m_free_list.get_elem_count();
-		IS_TRUE(seg_count == n, ("MemLeak! There still are SEGs not freed"));
+		ASSERT(seg_count == n, ("MemLeak! There still are SEGs not freed"));
 		#endif
 
 		for (SC<SEG*> * sc = m_free_list.get_head(); 
 			 sc != m_free_list.end(); sc = m_free_list.get_next(sc)) {
 			SEG * s = sc->val();
-			IS_TRUE0(s);
+			ASSERT0(s);
 			
 			delete s;
 		}
 			 
-		IS_TRUE(m_free_list.get_pool(), ("miss pool"));
+		ASSERT(m_free_list.get_pool(), ("miss pool"));
 		
 		smpoolDelete(m_free_list.get_pool());
 	}
@@ -622,7 +622,7 @@ public:
 		for (SC<SEG*> * sc = m_free_list.get_head();
 			 sc != m_free_list.end(); sc = m_free_list.get_next(sc)) {
 			SEG * s = sc->val();
-			IS_TRUE0(s);
+			ASSERT0(s);
 			
 			count += s->count_mem();
 		}
@@ -711,9 +711,9 @@ public:
 	
 	void init(SegMgr * sm, UINT sz = sizeof(SC<SEG*>))
 	{
-		IS_TRUE(sm, ("need SegMgr"));
-		IS_TRUE(sz % sizeof(SC<SEG*>) == 0, ("pool size must be mulitple."));
-		IS_TRUE(m_pool == NULL, ("already initialized"));
+		ASSERT(sm, ("need SegMgr"));
+		ASSERT(sz % sizeof(SC<SEG*>) == 0, ("pool size must be mulitple."));
+		ASSERT(m_pool == NULL, ("already initialized"));
 		m_pool = smpoolCreate(sz, MEM_CONST_SIZE);
 		m_sm = sm;
 		m_flst = NULL;
@@ -721,11 +721,11 @@ public:
 	
 	void destroy()
 	{
-		IS_TRUE(m_pool, ("already destroy"));
+		ASSERT(m_pool, ("already destroy"));
 		for (SC<SEG*> * st = segs.get_head(); 
 			 st != segs.end(); st = segs.get_next(st)) {
 			SEG * s = st->val();
-			IS_TRUE0(s);
+			ASSERT0(s);
 			
 			m_sm->free(s);
 		}
@@ -794,38 +794,38 @@ protected:
 	//Only read BitSet.
 	BitSet const* read_bs() const
 	{
-		IS_TRUE(!m_is_sparse, ("only used by dense bitset"));
+		ASSERT(!m_is_sparse, ("only used by dense bitset"));
 		SC<SEG*> * sc = segs.get_head();
 		if (sc == segs.end()) {
 			return NULL;
 		}
-		IS_TRUE0(sc->val());
+		ASSERT0(sc->val());
 		return &sc->val()->bs;
 	}
 
 	//Get BitSet, alloc BitSet if it not exist.
 	BitSet * alloc_bs(SegMgr * sm, SC<SEG*> ** flst, SMemPool * pool)
 	{
-		IS_TRUE(!m_is_sparse, ("only used by dense bitset"));
+		ASSERT(!m_is_sparse, ("only used by dense bitset"));
 		SC<SEG*> * sc = segs.get_head();
 		if (sc == segs.end()) {
 			SEG * t = sm->new_seg();
 			segs.append_head(t, flst, pool);
 			return &t->bs;
 		}
-		IS_TRUE0(sc->val());
+		ASSERT0(sc->val());
 		return &sc->val()->bs;
 	}
 
 	//Get BitSet and modify BitSet, do not alloc.
 	BitSet * get_bs()
 	{
-		IS_TRUE(!m_is_sparse, ("only used by dense bitset"));
+		ASSERT(!m_is_sparse, ("only used by dense bitset"));
 		SC<SEG*> * sc = segs.get_head();
 		if (sc == segs.end()) {
 			return NULL;
 		}
-		IS_TRUE0(sc->val());
+		ASSERT0(sc->val());
 		return &sc->val()->bs;
 	}
 public:
@@ -836,8 +836,8 @@ public:
 	void bunion(DBitSetCore const& src, SegMgr * sm, SC<SEG*> ** free_list,
 				SMemPool * pool)
 	{
-		IS_TRUE(this != &src, ("operate on same set"));
-		IS_TRUE(m_is_sparse == src.m_is_sparse, ("diff set type"));
+		ASSERT(this != &src, ("operate on same set"));
+		ASSERT(m_is_sparse == src.m_is_sparse, ("diff set type"));
 		if (m_is_sparse) {
 			SBitSetCore::bunion(src, sm, free_list, pool);
 		} else {
@@ -864,8 +864,8 @@ public:
 	void copy(DBitSetCore const& src, SegMgr * sm, SC<SEG*> ** free_list,
 			  SMemPool * pool)
 	{
-		IS_TRUE(this != &src, ("operate on same set"));
-		IS_TRUE(m_is_sparse == src.m_is_sparse, ("diff set type"));
+		ASSERT(this != &src, ("operate on same set"));
+		ASSERT(m_is_sparse == src.m_is_sparse, ("diff set type"));
 		if (m_is_sparse) {
 			SBitSetCore::copy(src, sm, free_list, pool);
 		} else {
@@ -896,8 +896,8 @@ public:
 
 	void diff(DBitSetCore const& src, SegMgr * sm, SC<SEG*> ** free_list)
 	{
-		IS_TRUE(this != &src, ("operate on same set"));
-		IS_TRUE(m_is_sparse == src.m_is_sparse, ("diff set type"));
+		ASSERT(this != &src, ("operate on same set"));
+		ASSERT(m_is_sparse == src.m_is_sparse, ("diff set type"));
 		if (m_is_sparse) {
 			SBitSetCore::diff(src, sm, free_list);
 		} else {
@@ -912,8 +912,8 @@ public:
 
 	void intersect(DBitSetCore const& src, SegMgr * sm, SC<SEG*> ** free_list)
 	{
-		IS_TRUE(this != &src, ("operate on same set"));
-		IS_TRUE(m_is_sparse == src.m_is_sparse, ("diff set type"));
+		ASSERT(this != &src, ("operate on same set"));
+		ASSERT(m_is_sparse == src.m_is_sparse, ("diff set type"));
 		if (m_is_sparse) {
 			SBitSetCore::intersect(src, sm, free_list);
 		} else {
@@ -941,8 +941,8 @@ public:
 
 	bool is_equal(DBitSetCore const& src) const
 	{
-		IS_TRUE(this != &src, ("operate on same set"));
-		IS_TRUE(m_is_sparse == src.m_is_sparse, ("diff set type"));
+		ASSERT(this != &src, ("operate on same set"));
+		ASSERT(m_is_sparse == src.m_is_sparse, ("diff set type"));
 		if (m_is_sparse) {
 			return SBitSetCore::is_equal(src);
 		}
@@ -981,8 +981,8 @@ protected:
 public:
 	DBitSet(SegMgr * sm, UINT sz = sizeof(SC<SEG*>))
 	{
-		IS_TRUE(sm, ("need SegMgr"));
-		IS_TRUE(sz % sizeof(SC<SEG*>) == 0, ("pool size must be mulitple."));
+		ASSERT(sm, ("need SegMgr"));
+		ASSERT(sz % sizeof(SC<SEG*>) == 0, ("pool size must be mulitple."));
 		m_is_sparse = true;
 		m_pool = smpoolCreate(sz, MEM_CONST_SIZE);
 		m_sm = sm;
@@ -994,7 +994,7 @@ public:
 		for (SC<SEG*> * st = segs.get_head(); 
 			 st != segs.end(); st = segs.get_next(st)) {
 			SEG * s = st->val();
-			IS_TRUE0(s);
+			ASSERT0(s);
 			
 			m_sm->free(s);
 		}
@@ -1058,20 +1058,20 @@ protected:
 protected:
 	SBitSetCore * xmalloc_sbitsetc()
 	{
-		IS_TRUE(m_sbitsetc_pool, ("not yet initialized."));
+		ASSERT(m_sbitsetc_pool, ("not yet initialized."));
 		SBitSetCore * p = (SBitSetCore*)smpoolMallocConstSize(sizeof(SBitSetCore), 
 															m_sbitsetc_pool);
-		IS_TRUE(p, ("malloc failed"));
+		ASSERT(p, ("malloc failed"));
 		memset(p, 0, sizeof(SBitSetCore));
 		return p;
 	}
 
 	DBitSetCore * xmalloc_dbitsetc()
 	{
-		IS_TRUE(m_dbitsetc_pool, ("not yet initialized."));
+		ASSERT(m_dbitsetc_pool, ("not yet initialized."));
 		DBitSetCore * p = (DBitSetCore*)smpoolMallocConstSize(sizeof(DBitSetCore), 
 															m_dbitsetc_pool);
-		IS_TRUE(p, ("malloc failed"));
+		ASSERT(p, ("malloc failed"));
 		memset(p, 0, sizeof(DBitSetCore));
 		return p;
 	}
@@ -1119,14 +1119,14 @@ public:
 		for (SC<SBitSet*> * st = m_sbitset_list.get_head();
 			 st != m_sbitset_list.end(); st = m_sbitset_list.get_next(st)) {
 			SBitSet * s = st->val();
-			IS_TRUE0(s);
+			ASSERT0(s);
 			delete s;
 		}
 		
 		for (SC<DBitSet*> * dt = m_dbitset_list.get_head();
 			 dt != m_dbitset_list.end(); dt = m_dbitset_list.get_next(dt)) {
 			DBitSet * d = dt->val(); 
-			IS_TRUE0(d);
+			ASSERT0(d);
 			delete d;
 		}
 		

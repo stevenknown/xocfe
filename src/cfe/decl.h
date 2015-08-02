@@ -36,76 +36,76 @@ class SCOPE;
 #define EVAL_LIST_name(el)			((el)->str)
 #define EVAL_LIST_next(el)			((el)->next)
 #define EVAL_LIST_prev(el)			((el)->prev)
-class EVAL_LIST {
+class EnumValueList {
 public:
 	INT val;
 	SYM	* str;
-	EVAL_LIST * next;
-	EVAL_LIST * prev;
+	EnumValueList * next;
+	EnumValueList * prev;
 };
 
 
 /*
-ENUM
+Enum
 
-Record ENUM info, and field 'name' reserved its character description.
+Record Enum info, and field 'name' reserved its character description.
 */
 #define ENUM_name(e)				((e)->name)
 #define ENUM_vallist(e)				((e)->pevlist)
-class ENUM {
+class Enum {
 public:
 	INT val;
 	SYM * name;
-	EVAL_LIST * pevlist;
+	EnumValueList * pevlist;
 };
 
 
-//ENUM_LIST
+//EnumList
 #define ENUM_LIST_enum(el)			((el)->e)
 #define ENUM_LIST_next(el)			((el)->next)
 #define ENUM_LIST_prev(el)			((el)->prev)
-class ENUM_LIST {
+class EnumList {
 public:
-	ENUM_LIST * next;
-	ENUM_LIST * prev;
-	ENUM * e;
+	EnumList * next;
+	EnumList * prev;
+	Enum * e;
 };
 
 
-//USER_TYPE_LIST record user defined type with 'typedef'
+//UserTypeList record user defined type with 'typedef'
 #define USER_TYPE_LIST_utype(utl)	((utl)->ut)
 #define USER_TYPE_LIST_next(utl)	((utl)->next)
 #define USER_TYPE_LIST_prev(utl)	((utl)->prev)
-class USER_TYPE_LIST {
+class UserTypeList {
 public:
-	USER_TYPE_LIST * next;
-	USER_TYPE_LIST * prev;
-	DECL * ut;
+	UserTypeList * next;
+	UserTypeList * prev;
+	Decl * ut;
 };
 
 
-//STRUCT
+//Struct
 #define STRUCT_decl_list(s)			((s)->m_decl_list)
 #define STRUCT_tag(s)				((s)->tag)
 #define STRUCT_is_complete(s)		((s)->is_complete)
 #define STRUCT_align(s)				((s)->align)
-class STRUCT {
+class Struct {
 public:	
-	DECL * m_decl_list;
+	Decl * m_decl_list;
 	SYM * tag;
 	bool is_complete;
 	UINT align;
 };
 
 
-//UNION
+//Union
 #define UNION_decl_list(s)			((s)->m_decl_list)
 #define UNION_tag(s)				((s)->tag)
 #define UNION_is_complete(s)		((s)->is_complete)
 #define UNION_align(s)				((s)->align)
-class UNION {
+class Union {
 public:
-	DECL * m_decl_list;
+	Decl * m_decl_list;
 	SYM * tag;
 	bool is_complete;
 	UINT align;
@@ -178,22 +178,22 @@ public:
 such as: const, volatile, void, char, short, int, long, longlong, float, 
 	double, bool, signed, unsigned, struct, union, enum-specifier, 
 	typedef-name, auto, register, static, extern, typedef. */
-class TYPE {
+class TypeSpec {
 public:	
 	ULONG m_descriptor;
 
 	union {
-		TYPE * m_decl_list; //record struct or union body
-		DECL * m_user_type; //record user defined type
-		ENUM * m_enum_type; //enumerator type
-		STRUCT * m_struct_type; //structure type
-		UNION * m_union_type; //union type
+		TypeSpec * m_decl_list; //record struct or union body
+		Decl * m_user_type; //record user defined type
+		Enum * m_enum_type; //enumerator type
+		Struct * m_struct_type; //structure type
+		Union * m_union_type; //union type
 	} u1;
 
-	TYPE * m_sub_field[MAX_TYPE_FLD];
+	TypeSpec * m_sub_field[MAX_TYPE_FLD];
 	
 public:
-	TYPE() { clean(); }
+	TypeSpec() { clean(); }
 
 	void clean()
 	{
@@ -204,7 +204,7 @@ public:
 		}
 	}
 
-	void copy(TYPE const& ty)
+	void copy(TypeSpec const& ty)
 	{
 		m_descriptor = ty.m_descriptor;
 		u1.m_decl_list = ty.u1.m_decl_list;
@@ -216,10 +216,10 @@ public:
 
 
 //
-//START DECL
+//START Decl
 //
 
-//Define type of DECL.
+//Define type of Decl.
 typedef enum {
 	DCL_NULL = 0,
 	DCL_ARRAY,          //array    declarator
@@ -234,57 +234,57 @@ typedef enum {
 	DCL_ABS_DECLARATOR, //abstract declarator
 } DCL;
 
-class DECL {
+class Decl {
 public:
 	#ifdef _DEBUG_
 	UINT id;
 	#endif
 	DCL decl_type;
-	DECL * prev;
-	DECL * next;
-	DECL * child;
+	Decl * prev;
+	Decl * next;
+	Decl * child;
 	UINT lineno; //record line number of declaration.
 
-	//record the num of fields while the base of DECL is STRUCT/UNION.
+	//record the num of fields while the base of Decl is Struct/Union.
 	UINT fieldno;
 
 	//memory alignment of declaration in the current context.
 	UINT align;
-	TYPE * base_type_spec; //Record base type-spec of field.
+	TypeSpec * base_type_spec; //Record base type-spec of field.
 
-	//1 indicates that the DECL enclosed with a pair of '(' ')'.
+	//1 indicates that the Decl enclosed with a pair of '(' ')'.
 	BYTE is_paren:1;
 	BYTE is_bit_field:1; //descripte a bit field.
 
 	//descripte a function's property: 1: definition, 0:declaration.
 	BYTE is_fun_def:1;
 	BYTE is_init:1; //has a initializing expression.
-	BYTE is_sub_field:1; //DECL is a sub field of struct/union.
-	BYTE is_formal_para:1; //DECL is a formal parameter.
+	BYTE is_sub_field:1; //Decl is a sub field of struct/union.
+	BYTE is_formal_para:1; //Decl is a formal parameter.
 
 	struct {
 		//declaration specifier
 		//only locate on top of decl link list
-		TYPE * specifier;
+		TypeSpec * specifier;
 
-		DECL * declarator_list; //declarator list
+		Decl * declarator_list; //declarator list
 		SCOPE * scope; //declaration reside in
 	} u0; //only for DCL_DECLARATION used
 
-	TYPE * qualifier; //quanlifier for POINTER/ID
+	TypeSpec * qualifier; //quanlifier for POINTER/ID
 
 	union {
 		struct {
 			union {
 				ULONGLONG dimval;
-				TREE * dimexp;
+				Tree * dimexp;
 			} u121;
-			DECL * abase;
+			Decl * abase;
 		} u12; //only for DCL_ARRAY used
 
 		struct {
-			DECL * para_list;
-			DECL * fbase;
+			Decl * para_list;
+			Decl * fbase;
 		} u13; //only for DCL_FUN used
 
 		union {
@@ -299,9 +299,9 @@ public:
 			INT  bit_len;
 		} u16;
 
-		//Record a identifier, only used by DCL_ID.
-		//TREE type should be defined relatively with specific language.
-		TREE * id;
+		//Record an identifier, only used by DCL_ID.
+		//Tree type is closely related to specific language.
+		Tree * id;
 	} u1;
 
 	union {
@@ -311,7 +311,7 @@ public:
 
 		//Record an initializing tree
 		//ONLY record as a child of DCL_DECLARATOR
-		TREE * init;
+		Tree * init;
 	} u2;
 };
 
@@ -369,7 +369,7 @@ record it initializing tree
 If current 'decl' is DCL_ARRAY, the followed members record its
 base and index value/expression, which may be NULL.
 
-NOTE: During the DECL generation processing, DECL_array_dim_exp() is avaiable,
+NOTE: During the Decl generation processing, DECL_array_dim_exp() is avaiable,
 it records the expressions of dimension,
 and the actually dimension value will be calculated after parsing array type
 finished, and compute_array_dim() will be invoked to compute the integer value.
@@ -397,147 +397,147 @@ It will not be zero if current decl record a bit field
 //#define DECL_bit_exp(d)			(d)->u1.u16.bit_exp
 
 /*
-'d' must be TYPE-NAME ,get pure declarator list
+'d' must be TypeSpec-NAME ,get pure declarator list
 The macro without validation check, plz call
 get_pure_declarator if you want to check.
 */
 #define PURE_DECL(d)				DECL_child(DECL_decl_list(d))
 #define MAX_ARRAY_INDX				0xfffffff
-//END DECL
+//END Decl
 
 
-//Format DECL to dump
+//Format Decl to dump
 #define DECL_FMT_INDENT_INTERVAL 4
 
 
 //Exported Functions
-DECL * add_to_user_type_list(USER_TYPE_LIST ** ut_list , DECL * decl);
+Decl * add_to_user_type_list(UserTypeList ** ut_list , Decl * decl);
 
-ULONGLONG compute_size_of_array(DECL * decl);
-DECL * cp_type_name(DECL * src);
-DECL * cp_decl_complete(DECL * src);
-TYPE * cp_spec(TYPE * ty);
-DECL * cp_decl(DECL * src);
-DECL * cp_decl_begin_at(DECL * header);
-INT compute_union_type_size(TYPE * ty);
-INT compute_struct_type_size(TYPE * ty);
+ULONGLONG compute_size_of_array(Decl * decl);
+Decl * cp_type_name(Decl * src);
+Decl * cp_decl_complete(Decl * src);
+TypeSpec * cp_spec(TypeSpec * ty);
+Decl * cp_decl(Decl * src);
+Decl * cp_decl_begin_at(Decl * header);
+INT compute_union_type_size(TypeSpec * ty);
+INT compute_struct_type_size(TypeSpec * ty);
 
 bool declaration();
 bool declaration_list();
-void dump_decl(DECL * dcl);
-CHAR * dump_decl(DECL * dcl, CHAR * buf);
-void dump_struct(STRUCT * s);
-void dump_union(UNION * s);
-void dump_type(TYPE * ty, bool is_ptr);
+void dump_decl(Decl * dcl);
+CHAR * dump_decl(Decl * dcl, CHAR * buf);
+void dump_struct(Struct * s);
+void dump_union(Union * s);
+void dump_type(TypeSpec * ty, bool is_ptr);
 
-DECL * expand_user_type(DECL * ut);
+Decl * expand_user_type(Decl * ut);
 
 //Dump C style type-info
-INT format_dcrl_reverse(IN OUT CHAR buf[], IN DECL * decl);
-INT format_struct_union(IN OUT CHAR buf[], IN TYPE * ty);
-INT format_enum(IN OUT CHAR buf[], IN TYPE * ty);
-INT format_enum_complete(IN OUT CHAR buf[], IN TYPE * ty);
-INT format_enum_complete(IN OUT CHAR buf[], IN ENUM * e);
-INT format_struct_union_complete(IN OUT CHAR buf[], IN TYPE * ty);
-INT format_struct_complete(IN OUT CHAR buf[], IN STRUCT * s);
-INT format_union_complete(IN OUT CHAR buf[], IN UNION * u);
-INT format_decl_spec(IN OUT CHAR buf[], IN TYPE * ty, bool is_ptr);
-INT format_parameter_list(IN OUT CHAR buf[], IN DECL * decl);
-INT format_user_type_spec(IN OUT CHAR buf[], IN TYPE * ty);
-INT format_user_type_spec(IN OUT CHAR buf[], IN DECL * ut);
-INT format_base_type_spec(IN OUT CHAR buf[], IN TYPE * ty);
-INT format_stor_spec(IN OUT CHAR buf[], IN TYPE * ty);
-INT format_declarator(IN OUT CHAR buf[], IN DECL * decl);
-INT format_declaration(IN OUT CHAR buf[], IN DECL * decl);
+INT format_dcrl_reverse(IN OUT CHAR buf[], IN Decl * decl);
+INT format_struct_union(IN OUT CHAR buf[], IN TypeSpec * ty);
+INT format_enum(IN OUT CHAR buf[], IN TypeSpec * ty);
+INT format_enum_complete(IN OUT CHAR buf[], IN TypeSpec * ty);
+INT format_enum_complete(IN OUT CHAR buf[], IN Enum * e);
+INT format_struct_union_complete(IN OUT CHAR buf[], IN TypeSpec * ty);
+INT format_struct_complete(IN OUT CHAR buf[], IN Struct * s);
+INT format_union_complete(IN OUT CHAR buf[], IN Union * u);
+INT format_decl_spec(IN OUT CHAR buf[], IN TypeSpec * ty, bool is_ptr);
+INT format_parameter_list(IN OUT CHAR buf[], IN Decl * decl);
+INT format_user_type_spec(IN OUT CHAR buf[], IN TypeSpec * ty);
+INT format_user_type_spec(IN OUT CHAR buf[], IN Decl * ut);
+INT format_base_type_spec(IN OUT CHAR buf[], IN TypeSpec * ty);
+INT format_stor_spec(IN OUT CHAR buf[], IN TypeSpec * ty);
+INT format_declarator(IN OUT CHAR buf[], IN Decl * decl);
+INT format_declaration(IN OUT CHAR buf[], IN Decl * decl);
 
-//Dump DECL-TREE style type-info
-INT format_dcrl(IN DECL * decl, INT indent);
-INT format_parameter_list(IN DECL * decl, INT indent);
-INT format_user_type_spec(IN TYPE * ty, INT indent);
-INT format_user_type_spec(IN DECL * ut, INT indent);
-INT format_declarator(IN DECL * decl, INT indent);
-INT format_declaration(IN DECL * decl, INT indent);
-DECL * factor_user_type(DECL * decl);
-ENUM * find_enum(ENUM_LIST * elst , ENUM * e);
+//Dump Decl-Tree style type-info
+INT format_dcrl(IN Decl * decl, INT indent);
+INT format_parameter_list(IN Decl * decl, INT indent);
+INT format_user_type_spec(IN TypeSpec * ty, INT indent);
+INT format_user_type_spec(IN Decl * ut, INT indent);
+INT format_declarator(IN Decl * decl, INT indent);
+INT format_declaration(IN Decl * decl, INT indent);
+Decl * factor_user_type(Decl * decl);
+Enum * find_enum(EnumList * elst , Enum * e);
 
-bool is_decl_exist_in_outer_scope(IN CHAR * name, OUT DECL ** dcl);
-bool is_decl_equal(IN DECL * d1, IN DECL * d2);
-bool is_abs_declaraotr(DECL * declarator);
-bool is_user_type_decl(DECL * dcl);
-bool is_user_type_ref(DECL * dcl);
-bool is_struct_complete(TYPE const* type_spec);
-bool is_union_complete(TYPE const* type_spec);
-bool is_local_variable(DECL * dcl);
-bool is_global_variable(DECL * dcl);
-bool is_static(DECL * dcl);
-bool is_constant(DECL * dcl);
-bool is_volatile(DECL * dcl);
-bool is_restrict(DECL * dcl);
-bool is_initialized(DECL * dcl);
-bool is_inline(DECL * dcl);
-bool is_unique_decl(DECL * m_decl_list, DECL * decl);
-bool is_declaration(DECL * decl);
-bool is_simple_base_type(TYPE * ty);
+bool is_decl_exist_in_outer_scope(IN CHAR * name, OUT Decl ** dcl);
+bool is_decl_equal(IN Decl * d1, IN Decl * d2);
+bool is_abs_declaraotr(Decl * declarator);
+bool is_user_type_decl(Decl * dcl);
+bool is_user_type_ref(Decl * dcl);
+bool is_struct_complete(TypeSpec const* type_spec);
+bool is_union_complete(TypeSpec const* type_spec);
+bool is_local_variable(Decl * dcl);
+bool is_global_variable(Decl * dcl);
+bool is_static(Decl * dcl);
+bool is_constant(Decl * dcl);
+bool is_volatile(Decl * dcl);
+bool is_restrict(Decl * dcl);
+bool is_initialized(Decl * dcl);
+bool is_inline(Decl * dcl);
+bool is_unique_decl(Decl * m_decl_list, Decl * decl);
+bool is_declaration(Decl * decl);
+bool is_simple_base_type(TypeSpec * ty);
 bool is_simple_base_type(INT des);
-bool is_complex_type(DECL * dcl);
-bool is_array(DECL * dcl);
-bool is_pointer(DECL * dcl);
-bool is_fun_decl(DECL * dcl);
-bool is_fun_void_return(DECL * dcl);
-bool is_fun_pointer(DECL * dcl);
-bool is_arith(DECL * dcl);
-bool is_integer(DECL * dcl);
-bool is_integer(TYPE * ty);
-bool is_fp(DECL * dcl);
-bool is_fp(TYPE * ty);
-bool is_union_exist_in_outer_scope(IN CHAR * tag, OUT UNION ** s);
-bool is_struct_type_exist_in_cur_scope(CHAR * tag, OUT STRUCT ** s);
-bool is_struct_exist_in_outer_scope(IN CHAR * tag, OUT STRUCT ** s);
-bool is_enum_id_exist_in_outer_scope(IN CHAR * cl, OUT ENUM ** e);
-bool is_enum_const_exist_in_outer_scope(CHAR * name, OUT ENUM ** e,
+bool is_complex_type(Decl * dcl);
+bool is_array(Decl * dcl);
+bool is_pointer(Decl * dcl);
+bool is_fun_decl(Decl * dcl);
+bool is_fun_void_return(Decl * dcl);
+bool is_fun_pointer(Decl * dcl);
+bool is_arith(Decl * dcl);
+bool is_integer(Decl * dcl);
+bool is_integer(TypeSpec * ty);
+bool is_fp(Decl * dcl);
+bool is_fp(TypeSpec * ty);
+bool is_union_exist_in_outer_scope(IN CHAR * tag, OUT Union ** s);
+bool is_struct_type_exist_in_cur_scope(CHAR * tag, OUT Struct ** s);
+bool is_struct_exist_in_outer_scope(IN CHAR * tag, OUT Struct ** s);
+bool is_enum_id_exist_in_outer_scope(IN CHAR * cl, OUT Enum ** e);
+bool is_enum_const_exist_in_outer_scope(CHAR * name, OUT Enum ** e,
 										OUT INT * idx);
-bool is_enum_const_exist_in_cur_scope(IN CHAR * cl, OUT ENUM ** e,
+bool is_enum_const_exist_in_cur_scope(IN CHAR * cl, OUT Enum ** e,
 									  OUT INT * idx);
-bool is_user_type_exist(USER_TYPE_LIST * ut_list, CHAR * ut_name, DECL ** ut);
-bool is_struct_type_exist(List<STRUCT*> & struct_list, IN CHAR * tag, 
-							OUT STRUCT ** s);
-bool is_union_type_exist(List<UNION*> & u_list, IN CHAR * tag, OUT UNION ** s);
-bool is_union(TYPE * type);
-bool is_union(DECL * decl);
-bool is_struct(TYPE * type);
-bool is_struct(DECL * decl);
-bool is_bitfield(DECL * decl);
+bool is_user_type_exist(UserTypeList * ut_list, CHAR * ut_name, Decl ** ut);
+bool is_struct_type_exist(List<Struct*> & struct_list, IN CHAR * tag, 
+							OUT Struct ** s);
+bool is_union_type_exist(List<Union*> & u_list, IN CHAR * tag, OUT Union ** s);
+bool is_union(TypeSpec * type);
+bool is_union(Decl * decl);
+bool is_struct(TypeSpec * type);
+bool is_struct(Decl * decl);
+bool is_bitfield(Decl * decl);
 
-DECL * get_pure_declarator(DECL * decl);
-DECL * get_parameter_list(DECL * dcl, OUT DECL ** fun_dclor = NULL);
-DECL * get_decl_id(DECL * dcl);
-SYM * get_decl_sym(DECL * dcl);
-DECL * get_decl_in_scope(IN CHAR * name, SCOPE * scope);
-TREE * get_decl_id_tree(DECL * dcl);
-INT get_enum_val_idx(ENUM * e, CHAR * ev_name);
-INT get_enum_const_val(ENUM * e, INT idx);
-INT get_simply_type_size_in_byte(TYPE * ty);
-ULONG get_complex_type_size_in_byte(DECL * decl);
-INT get_decl_size(DECL * decl);
-INT get_pointer_base_size(DECL * decl);
-DECL * get_pointer_decl(DECL * decl);
-DECL * get_array_decl(DECL * decl);
-ULONG get_array_elemnum_to_dim(DECL * arr, UINT dim);
-DECL * get_pointer_base_decl(DECL * decl, TYPE ** ty);
-TYPE * get_pure_type_spec(TYPE * type);
-INT get_declarator_size_in_byte(DECL * d);
-CHAR * get_enum_const_name(ENUM * e, INT idx);
-UINT get_struct_field_ofst(STRUCT * st, CHAR * name);
+Decl * get_pure_declarator(Decl * decl);
+Decl * get_parameter_list(Decl * dcl, OUT Decl ** fun_dclor = NULL);
+Decl * get_decl_id(Decl * dcl);
+SYM * get_decl_sym(Decl * dcl);
+Decl * get_decl_in_scope(IN CHAR * name, SCOPE * scope);
+Tree * get_decl_id_tree(Decl * dcl);
+INT get_enum_val_idx(Enum * e, CHAR * ev_name);
+INT get_enum_const_val(Enum * e, INT idx);
+INT get_simply_type_size_in_byte(TypeSpec * ty);
+ULONG get_complex_type_size_in_byte(Decl * decl);
+INT get_decl_size(Decl * decl);
+UINT get_pointer_base_size(Decl * decl);
+Decl * get_pointer_decl(Decl * decl);
+Decl * get_array_decl(Decl * decl);
+ULONG get_array_elemnum_to_dim(Decl * arr, UINT dim);
+Decl * get_pointer_base_decl(Decl * decl, TypeSpec ** ty);
+TypeSpec * get_pure_type_spec(TypeSpec * type);
+INT get_declarator_size_in_byte(Decl * d);
+CHAR * get_enum_const_name(Enum * e, INT idx);
+UINT get_struct_field_ofst(Struct * st, CHAR * name);
 
-DECL * new_declaration(TYPE * spec, DECL * declor, SCOPE * sc);
-DECL * new_decl(DCL dcl_type);
-DECL * new_var_decl(IN SCOPE * scope, IN CHAR * name);
-TYPE * new_type();
-TYPE * new_type(INT cate);
-ENUM * new_enum();
+Decl * new_declaration(TypeSpec * spec, Decl * declor, SCOPE * sc);
+Decl * new_decl(DCL dcl_type);
+Decl * new_var_decl(IN SCOPE * scope, IN CHAR * name);
+TypeSpec * new_type();
+TypeSpec * new_type(INT cate);
+Enum * new_enum();
 
-DECL * type_name();
-DECL * trans_to_pointer(DECL * decl, bool is_append);
+Decl * type_name();
+Decl * trans_to_pointer(Decl * decl, bool is_append);
 
 
 //Exported Variables

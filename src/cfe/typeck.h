@@ -28,8 +28,8 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef __TYPECK_H__
 #define __TYPECK_H__
 
-INT process_init(DECL * decl, TREE ** init);
-INT process_init(DECL * decl);
+INT process_init(Decl * decl, Tree ** init);
+INT process_init(Decl * decl);
 INT type_ck();
 INT type_trans();
 

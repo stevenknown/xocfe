@@ -37,6 +37,18 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 	#include "errors.h"
 	#endif
 
+	//The enumerate has no associated handler in a switch statement.
+	#pragma warning(disable: 4061) 
+
+	//Conditional expression is constant.
+	#pragma warning(disable: 4127)
+
+	//unreferenced inline function has been removed.
+	#pragma warning(disable: 4514)
+
+	//A number of bytes padding added after data member.
+	#pragma warning(disable: 4820)
+
 	#include "malloc.h"
 	#define ALLOCA	_alloca //windows version
 #endif
@@ -46,6 +58,7 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "stdio.h"
 #include "string.h"
 #include "memory.h"
+#include <new>
 
 //These types may be defined, but we need to override them.
 #undef STATUS
@@ -83,32 +96,32 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #endif
 
 #ifdef _DEBUG_
-	#ifndef IS_TRUE
+	#ifndef ASSERT
 		#include "stdio.h"
 		INT m518087(CHAR const* info, ...);
 		INT m022138(CHAR const* filename, INT line);
-		#define IS_TRUE(a, b)  \
+		#define ASSERT(a, b)  \
 					((a) ? 0 : (m022138(__FILE__, __LINE__), m518087 b))
 		#define IS_TRUEL(a, filename, line, b)  \
 					((a) ? 0 : (m022138(filename, line), m518087 b))
 	#endif
 
-	#ifndef IS_TRUE0
+	#ifndef ASSERT0
 		#include "stdio.h"
 		INT m518087(CHAR const* info, ...);
 		INT m022138(CHAR const* filename, INT line);
-		#define IS_TRUE0(a)  ((a) ? 0 : (m022138(__FILE__, __LINE__), m518087 ("")))
+		#define ASSERT0(a)  ((a) ? 0 : (m022138(__FILE__, __LINE__), m518087 ("")))
 		#define IS_TRUEL0(a, filename, line)  \
 					((a) ? 0 : (m022138(filename, line), m518087 ("")))
 	#endif
 #else
-	#define IS_TRUE(a, b)
+	#define ASSERT(a, b)
 	#define IS_TRUEL(a, filename, line, b)
-	#define IS_TRUE0(a)
+	#define ASSERT0(a)
 	#define IS_TRUEL0(a, filename, line)
 #endif
 
-#define UNREACH()  IS_TRUE(0, ("Unreachable."))
+#define UNREACH()  ASSERT(0, ("Unreachable."))
 
 #undef MAX
 #define MAX(a,b) ((a)>(b)?(a):(b))

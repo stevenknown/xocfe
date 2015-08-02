@@ -834,7 +834,7 @@ void * BitSet::realloc(IN void * src, size_t orgsize, size_t newsize)
 	}
 	void * p = ::malloc(newsize);
 	if (src != NULL) {
-		IS_TRUE0(orgsize > 0);
+		ASSERT0(orgsize > 0);
 		::memcpy(p, src, orgsize);
 		::free(src);
 		::memset(((BYTE*)p) + orgsize, 0, newsize - orgsize);
@@ -863,7 +863,7 @@ void BitSet::alloc(UINT size)
 //and modify set1 as result operand.
 void BitSet::bunion(BitSet const& bs)
 {
-	IS_TRUE0(this != &bs);
+	ASSERT0(this != &bs);
 	if (bs.m_ptr == NULL) { return; }
 	UINT cp_sz = bs.m_size; //size need to union.
 	if (m_size < bs.m_size) {
@@ -877,7 +877,7 @@ void BitSet::bunion(BitSet const& bs)
 		}
 	}
 	UINT const num_of_uint = cp_sz / BYTES_PER_UINT; //floor-div.
-	IS_TRUE(m_ptr, ("not yet init"));
+	ASSERT(m_ptr, ("not yet init"));
 	UINT * uint_ptr_this = (UINT*)m_ptr;
 	UINT * uint_ptr_bs = (UINT*)bs.m_ptr;
 	for (UINT i = 0; i < num_of_uint; i++) {
@@ -912,7 +912,7 @@ void BitSet::diff(UINT elem)
 		return;
 	}
 	elem = MODBPB(elem);
-	IS_TRUE(m_ptr != NULL, ("not yet init"));
+	ASSERT(m_ptr != NULL, ("not yet init"));
 	m_ptr[first_byte] &= (BYTE)(~(1 << elem));
 }
 
@@ -924,7 +924,7 @@ Returns a new set which is
 	{ x : member( x, 'set1' ) & ~ member( x, 'set2' ) }. */
 void BitSet::diff(BitSet const& bs)
 {
-	IS_TRUE0(this != &bs);
+	ASSERT0(this != &bs);
 	if (m_size == 0 || bs.m_size == 0) { return; }
 	UINT minsize = MIN(m_size, bs.m_size);
 	//Common part: copy the inverse bits.
@@ -941,7 +941,7 @@ void BitSet::diff(BitSet const& bs)
 		}
 	}
 
-	IS_TRUE(m_ptr != NULL, ("not yet init"));
+	ASSERT(m_ptr != NULL, ("not yet init"));
 	for (UINT i = num_of_uint * BYTES_PER_UINT; i < minsize; i++) {
 		BYTE d = bs.m_ptr[i];
 		if (d != 0) {
@@ -954,7 +954,7 @@ void BitSet::diff(BitSet const& bs)
 //Returns the a new set which is intersection of 'set1' and 'set2'.
 void BitSet::intersect(BitSet const& bs)
 {
-	IS_TRUE0(this != &bs);
+	ASSERT0(this != &bs);
 	if (m_ptr == NULL) { return; }
 	if (m_size > bs.m_size) {
 		for (UINT i = 0; i < bs.m_size; i++) {
@@ -974,9 +974,9 @@ e.g: 1001 to 0110
 'last_bit_pos': start at 0, e.g:given '101', last bit pos is 2. */
 void BitSet::rev(UINT last_bit_pos)
 {
-	IS_TRUE(m_ptr != NULL, ("can not reverse empty set"));
+	ASSERT(m_ptr != NULL, ("can not reverse empty set"));
 	UINT const last_byte_pos = last_bit_pos / BITS_PER_BYTE;
-	IS_TRUE0(last_byte_pos < m_size);
+	ASSERT0(last_byte_pos < m_size);
 
 	UINT const n = last_byte_pos / BYTES_PER_UINT;
 	for (UINT i = 0; i < n; i++) {
@@ -1018,7 +1018,7 @@ UINT BitSet::get_elem_count() const
 	UINT count = 0;
 //#define HAMMING_WEIGHT_METHOD
 #ifdef HAMMING_WEIGHT_METHOD
-	IS_TRUE0(BYTES_PER_UINT == 4);
+	ASSERT0(BYTES_PER_UINT == 4);
 	UINT const m = m_size / BYTES_PER_UINT;
 	for (UINT i = 0; i < m; i++) {
 		INT v = ((INT*)(m_ptr))[i];
@@ -1040,7 +1040,7 @@ UINT BitSet::get_elem_count() const
 
 bool BitSet::is_equal(BitSet const& bs) const
 {
-	IS_TRUE0(this != &bs);
+	ASSERT0(this != &bs);
 	UINT size1 = m_size , size2 = bs.m_size;
 	if (size1 == 0) {
 		if (size2 == 0) { return true; }
@@ -1112,7 +1112,7 @@ if it is true, the bitset must have at least one
 element that does not belong to 'bs'. */
 bool BitSet::is_contain(BitSet const& bs, bool strict) const
 {
-	IS_TRUE0(this != &bs);
+	ASSERT0(this != &bs);
 	bool scon = false; //Set to true if 'this' strictly contained 'bs'.
 	INT const first_bit = get_first();
 	if (first_bit == -1) {
@@ -1183,7 +1183,7 @@ bool BitSet::is_empty() const
 
 bool BitSet::is_intersect(BitSet const& bs) const
 {
-	IS_TRUE0(this != &bs);
+	ASSERT0(this != &bs);
 	INT const first_bit = get_first();
 	if (first_bit == -1) {
 		return false;
@@ -1211,7 +1211,7 @@ bool BitSet::is_intersect(BitSet const& bs) const
 //'strict': 'this' strictly contained in range.
 bool BitSet::is_contained_in_range(UINT low, UINT high, bool strict) const
 {
-	IS_TRUE(low <= high, ("Invalid bit set"));
+	ASSERT(low <= high, ("Invalid bit set"));
 	INT const set_low = get_first();
 	if (set_low == -1) {
 		return false;
@@ -1238,7 +1238,7 @@ bool BitSet::is_contained_in_range(UINT low, UINT high, bool strict) const
 //Return true if 'this' contained range between 'low' and 'high'.
 bool BitSet::is_contain_range(UINT low, UINT high, bool strict) const
 {
-	IS_TRUE(low <= high, ("Invalid bit set"));
+	ASSERT(low <= high, ("Invalid bit set"));
 	INT const set_low = get_first();
 	if (set_low == -1) {
 		return false;
@@ -1267,7 +1267,7 @@ last_bit of 'this' overlapped with the range between
 'low' and 'high'. */
 bool BitSet::is_overlapped(UINT low, UINT high) const
 {
-	IS_TRUE(low <= high, ("Invalid bit set"));
+	ASSERT(low <= high, ("Invalid bit set"));
 	INT const set_low = get_first();
 	if (set_low == -1) {
 		return false;
@@ -1317,7 +1317,7 @@ bool BitSet::is_overlapped(UINT low, UINT high) const
 //any elements.
 bool BitSet::has_elem_in_range(UINT low, UINT high) const
 {
-	IS_TRUE(low <= high, ("out of boundary"));
+	ASSERT(low <= high, ("out of boundary"));
 	INT const first_bit = get_first();
 	if (first_bit == -1 || (UINT)first_bit > high) {
 		return false;
@@ -1358,9 +1358,9 @@ INT BitSet::get_first() const
 				return g_first_one[byte] + (MULBPB(i));
 			}
 		}
-		IS_TRUE(0, ("not arrival"));
+		ASSERT(0, ("not arrival"));
 	}
-	IS_TRUE0(i <= m_size);
+	ASSERT0(i <= m_size);
 	for (; i < m_size; i++) {
 		BYTE byte = m_ptr[i];
 		if (byte != (BYTE)0) {
@@ -1399,7 +1399,7 @@ INT BitSet::get_last() const
 			}
 		}
 	}
-	IS_TRUE0(m_ptr == ((BYTE*)uint_ptr) + sizeof(UINT));
+	ASSERT0(m_ptr == ((BYTE*)uint_ptr) + sizeof(UINT));
 	return -1;
 }
 
@@ -1408,8 +1408,8 @@ INT BitSet::get_last() const
 BitSet * BitSet::get_subset_in_range(IN UINT low, IN UINT high,
 									 OUT BitSet & subset)
 {
-	IS_TRUE(low <= high, ("Invalid bit set"));
-	IS_TRUE(&subset != this, ("overlapped!"));
+	ASSERT(low <= high, ("Invalid bit set"));
+	ASSERT(&subset != this, ("overlapped!"));
 
 	subset.clean();
 	INT first_bit = get_first();
@@ -1521,7 +1521,7 @@ BitSet * BitSet::get_subset_in_range(IN UINT low, IN UINT high,
 				} else if (sb_first_byte + 1 == sb_last_byte) {
 					byte = m_ptr[sb_last_byte];
 				} else {
-					IS_TRUE0(0);
+					ASSERT0(0);
 				}
 			}
 			UINT ofst = MODBPB(high);
@@ -1577,7 +1577,7 @@ void BitSet::clean()
 //Do copy from 'src' to 'des'.
 void BitSet::copy(BitSet const& src)
 {
-	IS_TRUE(this != &src, ("copy self"));
+	ASSERT(this != &src, ("copy self"));
 	if (src.m_size == 0) {
 		::memset(m_ptr, 0, m_size);
 		return;
@@ -1605,7 +1605,7 @@ void BitSet::copy(BitSet const& src)
 		::memset(m_ptr + cp_sz, 0, m_size - cp_sz);
 	}
 
-	IS_TRUE(m_ptr != NULL, ("not yet init"));
+	ASSERT(m_ptr != NULL, ("not yet init"));
 	::memcpy(m_ptr, src.m_ptr, cp_sz);
 }
 
@@ -1627,7 +1627,7 @@ void BitSet::dump(CHAR const* name, bool is_del, UINT flag, INT last_pos) const
 		unlink(name);
 	}
 	FILE * h = fopen(name, "a+");
-	IS_TRUE(h != NULL, ("%s create failed!!!", name));
+	ASSERT(h != NULL, ("%s create failed!!!", name));
 	dump(h, flag, last_pos);
 	fclose(h);
 }
@@ -1636,7 +1636,7 @@ void BitSet::dump(CHAR const* name, bool is_del, UINT flag, INT last_pos) const
 void BitSet::dump(FILE * h, UINT flag, INT last_pos) const
 {
 	if (h == NULL) { return; }
-	IS_TRUE0(last_pos < 0 || (last_pos / BITS_PER_BYTE) < (INT)m_size);
+	ASSERT0(last_pos < 0 || (last_pos / BITS_PER_BYTE) < (INT)m_size);
 
 	INT elem = get_last();
 	if (last_pos != -1) {
@@ -1700,7 +1700,7 @@ UINT BitSetMgr::count_mem(FILE * h)
 	C<BitSet*> * ct;
 	for (m_bs_list.get_head(&ct);
 		 ct != m_bs_list.end(); ct = m_bs_list.get_next(ct)) {
-		IS_TRUE0(ct->val());
+		ASSERT0(ct->val());
 		count += ct->val()->count_mem();
 	}
 	UNUSED(h);
@@ -1766,7 +1766,7 @@ UINT BitSetMgr::count_mem(FILE * h)
 BitSet * bs_union(IN BitSet const& set1, IN BitSet const& set2,
 				  OUT BitSet & res)
 {
-	IS_TRUE(set1.m_ptr != NULL && set2.m_ptr != NULL && res.m_ptr != NULL,
+	ASSERT(set1.m_ptr != NULL && set2.m_ptr != NULL && res.m_ptr != NULL,
 			("not yet init"));
 	if (&res == &set1) {
 		res.bunion(set2);
@@ -1787,7 +1787,7 @@ BitSet * bs_union(IN BitSet const& set1, IN BitSet const& set2,
 //Returns a new set which is { x : member( x, 'set1' ) & ~ member( x, 'set2' ) }.
 BitSet * bs_diff(IN BitSet const& set1, IN BitSet const& set2, OUT BitSet & res)
 {
-	IS_TRUE(set1.m_ptr != NULL &&
+	ASSERT(set1.m_ptr != NULL &&
 			set2.m_ptr != NULL &&
 			res.m_ptr != NULL, ("not yet init"));
 	if (&res == &set1) {
@@ -1809,7 +1809,7 @@ BitSet * bs_intersect(IN BitSet const& set1,
 					  IN BitSet const& set2,
 					  OUT BitSet & res)
 {
-	IS_TRUE(set1.m_ptr != NULL &&
+	ASSERT(set1.m_ptr != NULL &&
 			set2.m_ptr != NULL &&
 			res.m_ptr != NULL, ("not yet init"));
 	if (&res == &set1) {
@@ -1833,13 +1833,13 @@ UINT MiscBitSetMgr::count_mem(FILE * h) const
 	UINT count = 0;
 	for (SC<SBitSet*> * st = m_sbitset_list.get_head(); 
 		 st != m_sbitset_list.end(); st = m_sbitset_list.get_next(st)) {
-		IS_TRUE0(st->val());
+		ASSERT0(st->val());
 		count += st->val()->count_mem();
 	}
 
 	for (SC<DBitSet*> * dt = m_dbitset_list.get_head();
 		 dt != m_dbitset_list.end(); dt = m_dbitset_list.get_next(dt)) {
-		IS_TRUE0(dt->val());
+		ASSERT0(dt->val());
 		count += dt->val()->count_mem();
 	}
 
@@ -1857,7 +1857,7 @@ UINT MiscBitSetMgr::count_mem(FILE * h) const
 		for (SC<SBitSet*> * st = m_sbitset_list.get_head();
 			 st != m_sbitset_list.end(); st = m_sbitset_list.get_next(st)) {
 			SBitSet const* bs = st->val(); 
-			IS_TRUE0(bs);
+			ASSERT0(bs);
 
 			UINT c = bs->count_mem();
 			C<UINT> * ct;
@@ -1911,13 +1911,13 @@ UINT MiscBitSetMgr::count_mem(FILE * h) const
 void SBitSetCore::bunion(SBitSetCore const& src, SegMgr * sm,
 					  SC<SEG*> ** free_list, SMemPool * pool)
 {
-	IS_TRUE(this != &src, ("operate on same set"));
+	ASSERT(this != &src, ("operate on same set"));
 	SC<SEG*> * tgtst = segs.get_head();
 	SC<SEG*> * prev_st = NULL;
 	for (SC<SEG*> * srcst = src.segs.get_head();
 		 srcst != src.segs.end(); srcst = src.segs.get_next(srcst)) {
 		SEG * s = srcst->val();
-		IS_TRUE0(s);
+		ASSERT0(s);
 		
 		UINT src_start = s->start;
 
@@ -2001,12 +2001,12 @@ void SBitSetCore::bunion(UINT elem, SegMgr * sm,
 void SBitSetCore::copy(SBitSetCore const& src, SegMgr * sm,
 					SC<SEG*> ** free_list, SMemPool * pool)
 {
-	IS_TRUE(this != &src, ("operate on same set"));
+	ASSERT(this != &src, ("operate on same set"));
 	clean(sm, free_list);
 	for (SC<SEG*> * st = src.segs.get_head(); 
 		 st != src.segs.end(); st = src.segs.get_next(st)) {
 		SEG * s = st->val();
-		IS_TRUE0(s);
+		ASSERT0(s);
 		
 		SEG * t = sm->new_seg();
 		t->copy(*s);
@@ -2020,7 +2020,7 @@ void SBitSetCore::clean(SegMgr * sm, SC<SEG*> ** free_list)
 	for (SC<SEG*> * st = segs.get_head(); 
 		 st != segs.end(); st = segs.get_next(st)) {
 		SEG * s = st->val();
-		IS_TRUE0(s);
+		ASSERT0(s);
 		
 		sm->free(s);
 	}
@@ -2036,7 +2036,7 @@ void SBitSetCore::destroy_seg_and_clean(SegMgr * sm, SC<SEG*> ** free_list)
 		 st != segs.end(); st = segs.get_next(st)) {
 		//Delete it here, and we are not going to give it back to SegMgr.
 		SEG * s = st->val();
-		IS_TRUE0(s);
+		ASSERT0(s);
 		
 		UNUSED(sm);
 		#ifdef _DEBUG_
@@ -2058,7 +2058,7 @@ UINT SBitSetCore::count_mem() const
 	for (SC<SEG*> * st = segs.get_head(); 
 		 st != segs.end(); st = segs.get_next(st)) {
 		SEG * s = st->val();
-		IS_TRUE0(s);
+		ASSERT0(s);
 		
 		c += s->count_mem();
 	}
@@ -2096,7 +2096,7 @@ void SBitSetCore::diff(UINT elem, SegMgr * sm, SC<SEG*> ** free_list)
 //will be modified.
 void SBitSetCore::diff(SBitSetCore const& src, SegMgr * sm, SC<SEG*> ** free_list)
 {
-	IS_TRUE(this != &src, ("operate on same set"));
+	ASSERT(this != &src, ("operate on same set"));
 	SC<SEG*> * tgtst = segs.get_head();
 	SC<SEG*> * prev_st = NULL;
 	SC<SEG*> * next_st = tgtst;
@@ -2142,7 +2142,7 @@ void SBitSetCore::diff(SBitSetCore const& src, SegMgr * sm, SC<SEG*> ** free_lis
 
 void SBitSetCore::dump2(FILE * h) const
 {
-	IS_TRUE0(h);
+	ASSERT0(h);
 	fprintf(h, "\n");
 	if (segs.get_elem_count() == 0) {
 		fprintf(h, "empty");
@@ -2155,11 +2155,11 @@ void SBitSetCore::dump2(FILE * h) const
 
 void SBitSetCore::dump(FILE * h) const
 {
-	IS_TRUE0(h);
+	ASSERT0(h);
 	for (SC<SEG*> * st = segs.get_head(); 
 		 st != segs.end(); st = segs.get_next(st)) {
 		SEG * s = st->val();
-		IS_TRUE0(s);
+		ASSERT0(s);
 		
 		fprintf(h, " [");
 		INT n;
@@ -2191,18 +2191,18 @@ UINT SBitSetCore::get_elem_count() const
 //*cur will be set to NULL if set is empty.
 INT SBitSetCore::get_first(SC<SEG*> ** cur) const
 {
-	IS_TRUE0(cur);
+	ASSERT0(cur);
 	SC<SEG*> * sc = segs.get_head();
 	if (sc == segs.end()) {
-		IS_TRUE0(segs.get_elem_count() == 0);
+		ASSERT0(segs.get_elem_count() == 0);
 		*cur = NULL;
 		return -1;
 	}
 	*cur = sc;
-	IS_TRUE0(sc->val());
+	ASSERT0(sc->val());
 
 	SEG * s = sc->val();
-	IS_TRUE(!s->bs.is_empty(), ("empty SEG should not exist."));
+	ASSERT(!s->bs.is_empty(), ("empty SEG should not exist."));
 	return s->get_start() + s->bs.get_first();
 }
 
@@ -2210,18 +2210,18 @@ INT SBitSetCore::get_first(SC<SEG*> ** cur) const
 //*cur will be set to NULL if set is empty.
 INT SBitSetCore::get_last(SC<SEG*> ** cur) const
 {
-	IS_TRUE0(cur);
+	ASSERT0(cur);
 	SC<SEG*> * sc = segs.get_tail();
 	if (sc == segs.end()) {
-		IS_TRUE0(segs.get_elem_count() == 0);
+		ASSERT0(segs.get_elem_count() == 0);
 		*cur = NULL;
 		return -1;
 	}
 	*cur = sc;
-	IS_TRUE0(sc->val());
+	ASSERT0(sc->val());
 
 	SEG * s = sc->val();
-	IS_TRUE0(!s->bs.is_empty());
+	ASSERT0(!s->bs.is_empty());
 	return s->get_start() + s->bs.get_last();
 }
 
@@ -2233,7 +2233,7 @@ INT SBitSetCore::get_next(UINT elem, SC<SEG*> ** cur) const
 		for (SC<SEG*> * st = segs.get_head(); 
 			 st != segs.end(); st = segs.get_next(st)) {
 			SEG * s = st->val();
-			IS_TRUE0(s);
+			ASSERT0(s);
 				
 			UINT start = s->get_start();
 			if (elem < start) { continue; }
@@ -2249,7 +2249,7 @@ INT SBitSetCore::get_next(UINT elem, SC<SEG*> ** cur) const
 				
 				start = SC_val(st)->get_start();
 				n = SC_val(st)->bs.get_first();
-				IS_TRUE0(n >= 0);
+				ASSERT0(n >= 0);
 				return start + (UINT)n;
 			}
 		}
@@ -2275,14 +2275,14 @@ INT SBitSetCore::get_next(UINT elem, SC<SEG*> ** cur) const
 	*cur = st;
 	start = SC_val(st)->get_start();
 	n = SC_val(st)->bs.get_first();
-	IS_TRUE0(n >= 0);
+	ASSERT0(n >= 0);
 	return start + (UINT)n;
 }
 
 
 bool SBitSetCore::is_equal(SBitSetCore const& src) const
 {
-	IS_TRUE(this != &src, ("operate on same set"));
+	ASSERT(this != &src, ("operate on same set"));
 	SC<SEG*> * srcst = src.segs.get_head();
 	SC<SEG*> * tgtst = segs.get_head();
 	for (; srcst != src.segs.end() || tgtst != segs.end(); )  {
@@ -2290,7 +2290,7 @@ bool SBitSetCore::is_equal(SBitSetCore const& src) const
 			return false;
 		}
 		
-		IS_TRUE0(srcst);
+		ASSERT0(srcst);
 		
 		if (SC_val(srcst)->start != SC_val(tgtst)->start) {
 			return false;
@@ -2309,7 +2309,7 @@ bool SBitSetCore::is_equal(SBitSetCore const& src) const
 
 bool SBitSetCore::is_intersect(SBitSetCore const& src) const
 {
-	IS_TRUE(this != &src, ("operate on same set"));
+	ASSERT(this != &src, ("operate on same set"));
 	SC<SEG*> * srcst = src.segs.get_head();
 	SC<SEG*> * tgtst = segs.get_head();
 	for (; srcst != src.segs.end() && tgtst != segs.end(); ) {
@@ -2355,7 +2355,7 @@ bool SBitSetCore::is_empty() const
 	SC<SEG*> * st = segs.get_head();
 	#ifdef _DEBUG_	
 	if (st != segs.end()) {
-		IS_TRUE0(st->val() && !st->val()->bs.is_empty());
+		ASSERT0(st->val() && !st->val()->bs.is_empty());
 	}
 	#endif
 	return st == segs.end();
@@ -2367,7 +2367,7 @@ bool SBitSetCore::is_empty() const
 void SBitSetCore::intersect(SBitSetCore const& src, SegMgr * sm,
 						 SC<SEG*> ** free_list)
 {
-	IS_TRUE(this != &src, ("operate on same set"));
+	ASSERT(this != &src, ("operate on same set"));
 	SC<SEG*> * tgtst = segs.get_head();
 	SC<SEG*> * prev_st = NULL;
 	SC<SEG*> * next_st = tgtst;
@@ -2442,21 +2442,21 @@ void SBitSetCore::intersect(SBitSetCore const& src, SegMgr * sm,
 //*cur will be set to NULL if set is empty.
 INT DBitSetCore::get_first(SC<SEG*> ** cur) const
 {
-	IS_TRUE0(cur);
+	ASSERT0(cur);
 
 	SC<SEG*> * sc = segs.get_head();
 	if (sc == segs.end()) {		
-		IS_TRUE0(segs.get_elem_count() == 0);
+		ASSERT0(segs.get_elem_count() == 0);
 		*cur = NULL;
 		return -1;
 	}
 
 	*cur = sc;
-	IS_TRUE0(sc->val());
+	ASSERT0(sc->val());
 	SEG * s = sc->val();
 	
 	//DBitSetCore allow bs is empty if it is not sparse.
-	//IS_TRUE0(!s->bs.is_empty());
+	//ASSERT0(!s->bs.is_empty());
 	return s->get_start() + s->bs.get_first();
 }
 
@@ -2466,19 +2466,19 @@ INT DBitSetCore::get_last(SC<SEG*> ** cur) const
 {
 	SC<SEG*> * sc = segs.get_tail();
 	if (sc == segs.end()) {
-		IS_TRUE0(segs.get_elem_count() == 0);
+		ASSERT0(segs.get_elem_count() == 0);
 		*cur = NULL;
 		return -1;
 	}
 
-	IS_TRUE0(cur);
+	ASSERT0(cur);
 	*cur = sc;
-	IS_TRUE0(sc->val());
+	ASSERT0(sc->val());
 
 	SEG * s = sc->val();
 
 	//DBitSetCore allow bs is empty if it is not sparse.
-	//IS_TRUE0(!s->bs.is_empty());
+	//ASSERT0(!s->bs.is_empty());
 	return s->get_start() + s->bs.get_last();
 }
 //END DBitSetCore

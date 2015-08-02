@@ -24,16 +24,16 @@ template <class T, class Ttgt>
 void dump_rbt(RBT<T, Ttgt> & rbt, CHAR const* name = NULL,
 			  UINT nil_count = NIL_START)
 {
-	typedef RBTN<T, Ttgt> TN;
+	typedef RBTNode<T, Ttgt> TN;
 	Vector<TN*> nilvec;
 	if (name == NULL) {
 		name = "graph_rbt.vcg";
 	}
 	unlink(name);
 	FILE * hvcg = fopen(name, "a+");
-	IS_TRUE(hvcg, ("%s create failed!!!", name));
+	ASSERT(hvcg, ("%s create failed!!!", name));
 	fprintf(hvcg, "graph: {"
-			  "title: \"TREE\"\n"
+			  "title: \"Tree\"\n"
 			  "shrink:  15\n"
 			  "stretch: 27\n"
 			  "layout_downfactor: 1\n"
@@ -100,7 +100,7 @@ void dump_rbt(RBT<T, Ttgt> & rbt, CHAR const* name = NULL,
 				key, key);
 		} else {
 			if (is_nil) {
-				IS_TRUE0(key >= NIL_START);
+				ASSERT0(key >= NIL_START);
 				//nil
 				fprintf(hvcg,
 					"\nnode: { title:\"%u\" label:\"%u\" shape:box "
@@ -153,7 +153,7 @@ void dump_rbt(RBT<T, Ttgt> & rbt, CHAR const* name = NULL,
 	}
 	for (INT i = 0; i <= nilvec.get_last_idx(); i++) {
 		TN * z = nilvec.get(i);
-		IS_TRUE0(z);
+		ASSERT0(z);
 		delete z;
 	}
 	fprintf(hvcg, "\n}\n");

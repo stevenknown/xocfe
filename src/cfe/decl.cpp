@@ -28,7 +28,7 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "cfecom.h"
 
 /*
-Example to show the structure of class DECL.
+Example to show the structure of class Decl.
 	e.g1:
 	int * a, * const * volatile b[10];
 	declaration----
@@ -77,9 +77,9 @@ Example to show the structure of class DECL.
 
 
 The layout of Declaration:
-DECL, with DECL_dt is DCL_DECLARATION or DCL_TYPE_NAME
+Decl, with DECL_dt is DCL_DECLARATION or DCL_TYPE_NAME
 	|->SCOPE
-	|->TYPE Specifier
+	|->TypeSpec Specifier
 		|->const|volatile
 		|->void|long|int|short|char|float|double|signed|unsigned|struct|union
 		|->auto|register|static|extern|typedef
@@ -87,18 +87,18 @@ DECL, with DECL_dt is DCL_DECLARATION or DCL_TYPE_NAME
 		|->DCL_ID(optional)->DCL_FUN->DCL_POINTER->...
 */
 
-static TREE * initializer(TYPE * qua);
-static DECL * declarator(TYPE * qua);
-static TYPE * specifier_qualifier_list();
-static DECL * struct_declaration();
-static DECL * struct_declarator_list(TYPE * qua);
-static DECL * abstract_declarator(TYPE * qua);
-static DECL * pointer(TYPE ** qua);
-static INT compute_array_dim(DECL * dclr, bool allow_dim0_is_empty);
-static TREE * refine_tree_list(TREE * t);
-static bool is_enum_const_name_exist(ENUM * e, CHAR * ev_name, OUT INT * idx);
-static bool is_enum_id_exist(IN ENUM_LIST * e_list,
-							 IN CHAR * e_id_name, OUT ENUM ** e);
+static Tree * initializer(TypeSpec * qua);
+static Decl * declarator(TypeSpec * qua);
+static TypeSpec * specifier_qualifier_list();
+static Decl * struct_declaration();
+static Decl * struct_declarator_list(TypeSpec * qua);
+static Decl * abstract_declarator(TypeSpec * qua);
+static Decl * pointer(TypeSpec ** qua);
+static INT compute_array_dim(Decl * dclr, bool allow_dim0_is_empty);
+static Tree * refine_tree_list(Tree * t);
+static bool is_enum_const_name_exist(Enum * e, CHAR * ev_name, OUT INT * idx);
+static bool is_enum_id_exist(IN EnumList * e_list,
+							 IN CHAR * e_id_name, OUT Enum ** e);
 
 #ifdef _DEBUG_
 UINT g_decl_counter = 1;
@@ -122,7 +122,7 @@ CHAR * g_dcl_name [] = {
 static void * xmalloc(unsigned long size)
 {
 	void * p = smpoolMalloc(size, g_pool_tree_used);
-	IS_TRUE0(p != NULL);
+	ASSERT0(p != NULL);
 	memset(p, 0, size);
 	return p;
 }
@@ -132,9 +132,9 @@ static void * xmalloc(unsigned long size)
 e.g: unsigned a => unsigned int a
 	register a => register int a
 */
-static void complement_qua(TYPE * ty)
+static void complement_qua(TypeSpec * ty)
 {
-	IS_TRUE0(ty);
+	ASSERT0(ty);
 	
 	INT des = TYPE_des(ty);
 	if (des == T_SPEC_UNSIGNED ||
@@ -148,18 +148,18 @@ static void complement_qua(TYPE * ty)
 }
 
 
-//Copy DECL and its specifier and qualifier, except its siblings.
-DECL * cp_decl_complete(DECL * src)
+//Copy Decl and its specifier and qualifier, except its siblings.
+Decl * cp_decl_complete(Decl * src)
 {
-	DECL * res = NULL;
-	IS_TRUE0(src);
+	Decl * res = NULL;
+	ASSERT0(src);
 	if (DECL_dt(src) == DCL_DECLARATION ||
 		DECL_dt(src) == DCL_TYPE_NAME) {
 		res = cp_decl(src);
 		DECL_spec(res) = cp_spec(DECL_spec(src));
 		DECL_decl_list(res) = cp_decl(DECL_decl_list(src));
 		if (DECL_decl_list(res) != NULL) {
-			IS_TRUE0(DECL_dt(DECL_decl_list(res)) == DCL_DECLARATOR ||
+			ASSERT0(DECL_dt(DECL_decl_list(res)) == DCL_DECLARATOR ||
 					 DECL_dt(DECL_decl_list(res)) == DCL_ABS_DECLARATOR);
 			DECL_child(DECL_decl_list(res)) =
 					cp_decl_begin_at(DECL_child(DECL_decl_list(src)));
@@ -169,7 +169,7 @@ DECL * cp_decl_complete(DECL * src)
 		res = cp_decl(src);
 		DECL_child(res) = cp_decl_begin_at(DECL_child(src));
 	} else {
-		IS_TRUE0(DECL_dt(src) == DCL_ARRAY ||
+		ASSERT0(DECL_dt(src) == DCL_ARRAY ||
 				 DECL_dt(src) == DCL_POINTER ||
 				 DECL_dt(src) == DCL_FUN ||
 				 DECL_dt(src) == DCL_ID ||
@@ -181,10 +181,10 @@ DECL * cp_decl_complete(DECL * src)
 
 
 //Completely memory copy of 'src', excepting the chain-linking region
-DECL * cp_decl(DECL * src)
+Decl * cp_decl(Decl * src)
 {
-	DECL * q = new_decl(DECL_dt(src));
-	memcpy(q, src, sizeof(DECL));
+	Decl * q = new_decl(DECL_dt(src));
+	memcpy(q, src, sizeof(Decl));
 	DECL_spec(q) = NULL;
 	DECL_decl_list(q) = NULL;
 	DECL_child(q) = NULL;
@@ -195,10 +195,10 @@ DECL * cp_decl(DECL * src)
 
 
 //Duplication declarator list begin at 'header'
-DECL * cp_decl_begin_at(DECL * header)
+Decl * cp_decl_begin_at(Decl * header)
 {
 	if (header == NULL) { return NULL; }
-	DECL * newl = NULL, * p;
+	Decl * newl = NULL, * p;
 	while (header != NULL) {
 		p = cp_decl(header);
 		add_next(&newl, p);
@@ -208,9 +208,9 @@ DECL * cp_decl_begin_at(DECL * header)
 }
 
 
-DECL * new_decl(DCL dcl_type)
+Decl * new_decl(DCL dcl_type)
 {
-	DECL * d = (DECL*)xmalloc(sizeof(DECL));
+	Decl * d = (Decl*)xmalloc(sizeof(Decl));
 	DECL_dt(d) = dcl_type;
 	#ifdef _DEBUG_
 	DECL_uid(d) = g_decl_counter++;
@@ -224,12 +224,12 @@ Construct declaration.
 'spec': specifier
 'declor': declarator.
 */
-DECL * new_declaration(TYPE * spec, DECL * declor, SCOPE * sc)
+Decl * new_declaration(TypeSpec * spec, Decl * declor, SCOPE * sc)
 {
-	DECL * declaration = new_decl(DCL_DECLARATION);
+	Decl * declaration = new_decl(DCL_DECLARATION);
 	DECL_decl_scope(declaration) = sc;
 	DECL_spec(declaration) = spec;
-	DECL * declarator = new_decl(DCL_DECLARATOR);
+	Decl * declarator = new_decl(DCL_DECLARATOR);
 	DECL_child(declarator) = declor;
 	DECL_decl_list(declaration) = declarator;
 	return declaration;
@@ -240,24 +240,24 @@ DECL * new_declaration(TYPE * spec, DECL * declor, SCOPE * sc)
 Construct new declaration within given scope.
 Front-end dependent.
 */
-DECL * new_var_decl(IN SCOPE * scope, IN CHAR * name)
+Decl * new_var_decl(IN SCOPE * scope, IN CHAR * name)
 {
-	DECL * declaration = new_decl(DCL_DECLARATION);
+	Decl * declaration = new_decl(DCL_DECLARATION);
 	DECL_decl_scope(declaration) = scope;
 
-	//Make TYPE
-	TYPE * ty = new_type();
+	//Make TypeSpec
+	TypeSpec * ty = new_type();
 	TYPE_des(ty) |= T_SPEC_VOID;
 	DECL_spec(declaration) = ty;
 
-	//Make TREE node.
-	TREE * tree = new_tree_node(TR_ID, 0);
+	//Make Tree node.
+	Tree * tree = new_tree_node(TR_ID, 0);
 	SYM * sym = g_fe_sym_tab->add(name);
 	TREE_id(tree) = sym;
 
 	//Make DCL_DECLARATOR.
-	DECL * declor = new_decl(DCL_DECLARATOR);
-	DECL * id = new_decl(DCL_ID);
+	Decl * declor = new_decl(DCL_DECLARATOR);
+	Decl * id = new_decl(DCL_ID);
 	DECL_id(id) = tree;
 	DECL_child(declor) = id;
 
@@ -267,7 +267,7 @@ DECL * new_var_decl(IN SCOPE * scope, IN CHAR * name)
 }
 
 
-TREE * get_decl_id_tree(DECL * dcl)
+Tree * get_decl_id_tree(Decl * dcl)
 {
 	while (dcl == NULL) {
 		if (DECL_dt(dcl) == DCL_ID) {
@@ -279,10 +279,10 @@ TREE * get_decl_id_tree(DECL * dcl)
 }
 
 
-DECL * get_decl_id(DECL * dcl)
+Decl * get_decl_id(Decl * dcl)
 {
-	IS_TRUE0(dcl != NULL);
-	DECL * pdcl = get_pure_declarator(dcl);
+	ASSERT0(dcl != NULL);
+	Decl * pdcl = get_pure_declarator(dcl);
 	while (pdcl != NULL) {
 		if (DECL_dt(pdcl) == DCL_ID) {
 			return pdcl;
@@ -293,7 +293,7 @@ DECL * get_decl_id(DECL * dcl)
 }
 
 
-SYM * get_decl_sym(DECL * dcl)
+SYM * get_decl_sym(Decl * dcl)
 {
 	dcl = get_decl_id(dcl);
 	if (dcl != NULL) {
@@ -304,11 +304,11 @@ SYM * get_decl_sym(DECL * dcl)
 
 
 //Return true if dcl declared with 'inline'.
-bool is_inline(DECL * dcl)
+bool is_inline(Decl * dcl)
 {
-	IS_TRUE(DECL_dt(dcl) == DCL_DECLARATION, ("need declaration"));
-	TYPE * ty = DECL_spec(dcl);
-	IS_TRUE0(ty);
+	ASSERT(DECL_dt(dcl) == DCL_DECLARATION, ("need declaration"));
+	TypeSpec * ty = DECL_spec(dcl);
+	ASSERT0(ty);
 	if (IS_INLINE(ty)) {
 		return true;
 	}
@@ -317,11 +317,11 @@ bool is_inline(DECL * dcl)
 
 
 //Return true if dcl declared with 'const'.
-bool is_constant(DECL * dcl)
+bool is_constant(Decl * dcl)
 {
-	IS_TRUE(DECL_dt(dcl) == DCL_DECLARATION, ("need declaration"));
-	TYPE * ty = DECL_spec(dcl);
-	IS_TRUE0(ty);
+	ASSERT(DECL_dt(dcl) == DCL_DECLARATION, ("need declaration"));
+	TypeSpec * ty = DECL_spec(dcl);
+	ASSERT0(ty);
 	if (IS_CONST(ty)) {
 		return true;
 	}
@@ -330,14 +330,14 @@ bool is_constant(DECL * dcl)
 
 
 //Return true if dcl has initial value.
-bool is_initialized(DECL * dcl)
+bool is_initialized(Decl * dcl)
 {
-	IS_TRUE(dcl && (DECL_dt(dcl) == DCL_DECLARATION ||
+	ASSERT(dcl && (DECL_dt(dcl) == DCL_DECLARATION ||
 					DECL_dt(dcl) == DCL_DECLARATOR),
 			("need declaration"));
 	if (DECL_dt(dcl) == DCL_DECLARATION) {
 		dcl = DECL_decl_list(dcl); //get DCRLARATOR
-		IS_TRUE(DECL_dt(dcl) == DCL_DECLARATOR,
+		ASSERT(DECL_dt(dcl) == DCL_DECLARATOR,
 				("need declaration"));
 	}
 	if (DECL_is_init(dcl)) {
@@ -347,11 +347,11 @@ bool is_initialized(DECL * dcl)
 }
 
 
-bool is_volatile(DECL * dcl)
+bool is_volatile(Decl * dcl)
 {
-	IS_TRUE(DECL_dt(dcl) == DCL_DECLARATION, ("need declaration"));
-	TYPE * ty = DECL_spec(dcl);
-	IS_TRUE0(ty);
+	ASSERT(DECL_dt(dcl) == DCL_DECLARATION, ("need declaration"));
+	TypeSpec * ty = DECL_spec(dcl);
+	ASSERT0(ty);
 	if (IS_VOLATILE(ty)) {
 		return true;
 	}
@@ -359,13 +359,13 @@ bool is_volatile(DECL * dcl)
 }
 
 
-bool is_restrict(DECL * dcl)
+bool is_restrict(Decl * dcl)
 {
-	IS_TRUE(DECL_dt(dcl) == DCL_DECLARATION, ("need declaration"));
+	ASSERT(DECL_dt(dcl) == DCL_DECLARATION, ("need declaration"));
 	if (is_pointer(dcl)) {
-		DECL * x = get_pointer_decl(dcl);
-		IS_TRUE0(x);
-		TYPE * ty = DECL_qua(x);
+		Decl * x = get_pointer_decl(dcl);
+		ASSERT0(x);
+		TypeSpec * ty = DECL_qua(x);
 		if (ty != NULL && IS_RESTRICT(ty)) {
 			return true;
 		}
@@ -374,11 +374,11 @@ bool is_restrict(DECL * dcl)
 }
 
 
-bool is_global_variable(DECL * dcl)
+bool is_global_variable(Decl * dcl)
 {
-	IS_TRUE(DECL_dt(dcl) == DCL_DECLARATION, ("need declaration"));
+	ASSERT(DECL_dt(dcl) == DCL_DECLARATION, ("need declaration"));
 	SCOPE * sc = DECL_decl_scope(dcl);
-	IS_TRUE(sc, ("variable must be allocated within a scope."));
+	ASSERT(sc, ("variable must be allocated within a scope."));
 	if (SCOPE_level(sc) == GLOBAL_SCOPE) {
 		return true;
 	}
@@ -389,11 +389,11 @@ bool is_global_variable(DECL * dcl)
 }
 
 
-bool is_static(DECL * dcl)
+bool is_static(Decl * dcl)
 {
-	IS_TRUE(DECL_dt(dcl) == DCL_DECLARATION,
+	ASSERT(DECL_dt(dcl) == DCL_DECLARATION,
 				("need declaration"));
-	IS_TRUE(DECL_spec(dcl), ("miss specify type"));
+	ASSERT(DECL_spec(dcl), ("miss specify type"));
 	if (IS_STATIC(DECL_spec(dcl))) {
 		return true;
 	}
@@ -401,11 +401,11 @@ bool is_static(DECL * dcl)
 }
 
 
-bool is_local_variable(DECL * dcl)
+bool is_local_variable(Decl * dcl)
 {
-	IS_TRUE(DECL_dt(dcl)==DCL_DECLARATION, ("need declaration"));
+	ASSERT(DECL_dt(dcl)==DCL_DECLARATION, ("need declaration"));
 	SCOPE * sc = DECL_decl_scope(dcl);
-	IS_TRUE(sc, ("variable must be allocated within a scope."));
+	ASSERT(sc, ("variable must be allocated within a scope."));
 	if (SCOPE_level(sc) >= FUNCTION_SCOPE && !is_static(dcl)) {
 		return true;
 	}
@@ -414,9 +414,9 @@ bool is_local_variable(DECL * dcl)
 
 
 //Abstract declarator does not have ID.
-bool is_abs_declaraotr(DECL * declarator)
+bool is_abs_declaraotr(Decl * declarator)
 {
-	IS_TRUE0(declarator != NULL);
+	ASSERT0(declarator != NULL);
 	declarator = get_pure_declarator(declarator);
 	if (declarator == NULL) {
 		return true;
@@ -431,45 +431,45 @@ bool is_abs_declaraotr(DECL * declarator)
 
 //Return true if dcl is daclared with user defined type.
 //e.g: typedef int * INTP;  INTP xx; xx is user type referrence.
-bool is_user_type_ref(DECL * dcl)
+bool is_user_type_ref(Decl * dcl)
 {
-	IS_TRUE0(DECL_dt(dcl) == DCL_DECLARATION ||
+	ASSERT0(DECL_dt(dcl) == DCL_DECLARATION ||
 			 DECL_dt(dcl) == DCL_TYPE_NAME);
-	IS_TRUE0(DECL_spec(dcl) != NULL);
+	ASSERT0(DECL_spec(dcl) != NULL);
 	return IS_USER_TYPE_REF(DECL_spec(dcl));
 }
 
 
 //Return ture if 'dcl' is type declaration that declared with 'typedef'.
 //e.g: typedef int * INTP; where INTP is an user type declaration.
-bool is_user_type_decl(DECL * dcl)
+bool is_user_type_decl(Decl * dcl)
 {
-	IS_TRUE0(DECL_dt(dcl) == DCL_DECLARATION);
+	ASSERT0(DECL_dt(dcl) == DCL_DECLARATION);
 	return IS_TYPEDEF(DECL_spec(dcl));
 }
 
 
 //Return true if struct definition is complete.
-bool is_struct_complete(TYPE const* type)
+bool is_struct_complete(TypeSpec const* type)
 {
-	type = get_pure_type_spec(const_cast<TYPE*>(type));
-	IS_TRUE0(IS_STRUCT(type));
+	type = get_pure_type_spec(const_cast<TypeSpec*>(type));
+	ASSERT0(IS_STRUCT(type));
 	return TYPE_struct_type(type) != NULL &&
 		   STRUCT_is_complete(TYPE_struct_type(type));
 }
 
 
 //Return true if union definition is complete.
-bool is_union_complete(TYPE const* type)
+bool is_union_complete(TypeSpec const* type)
 {
-	type = get_pure_type_spec(const_cast<TYPE*>(type));
-	IS_TRUE0(IS_UNION(type));
+	type = get_pure_type_spec(const_cast<TypeSpec*>(type));
+	ASSERT0(IS_UNION(type));
 	return TYPE_union_type(type) != NULL &&
 		   UNION_is_complete(TYPE_union_type(type));
 }
 
 
-bool is_struct_type_exist_in_cur_scope(CHAR * tag, OUT STRUCT ** s)
+bool is_struct_type_exist_in_cur_scope(CHAR * tag, OUT Struct ** s)
 {
 	SCOPE * sc = g_cur_scope;
 	if (is_struct_type_exist(SCOPE_struct_list(sc), tag, s)) {
@@ -483,7 +483,7 @@ bool is_struct_type_exist_in_cur_scope(CHAR * tag, OUT STRUCT ** s)
 Is dcl a indirection declarator,
 e.g array , pointer or function pointer
 */
-static bool is_indirection(DECL * dcl)
+static bool is_indirection(Decl * dcl)
 {
 	dcl = get_pure_declarator(dcl);
 	while (dcl != NULL) {
@@ -500,7 +500,7 @@ static bool is_indirection(DECL * dcl)
 			   DECL_dt(dcl) == DCL_DECLARATOR ||
 			   DECL_dt(dcl) == DCL_ABS_DECLARATOR ||
 			   DECL_dt(dcl) == DCL_TYPE_NAME) {
-			   IS_TRUE(0, ("\nunsuitable DECL type locate here in is_indirection()\n"));
+			   ASSERT(0, ("\nunsuitable Decl type locate here in is_indirection()\n"));
 			}
 		}
 		dcl = DECL_next(dcl);
@@ -513,10 +513,10 @@ static bool is_indirection(DECL * dcl)
 name: unique symbol for each of scope.
 dcl:   DCL_DECLARATION info
 */
-bool is_decl_exist_in_outer_scope(IN CHAR * name, OUT DECL ** dcl)
+bool is_decl_exist_in_outer_scope(IN CHAR * name, OUT Decl ** dcl)
 {
     SCOPE * scope = g_cur_scope;
-	DECL * dr = NULL, * dcl_list = NULL;
+	Decl * dr = NULL, * dcl_list = NULL;
 	while (scope != NULL) {
 		dcl_list = SCOPE_decl_list(scope);
 		while (dcl_list != NULL) {//declaration list
@@ -538,7 +538,7 @@ bool is_decl_exist_in_outer_scope(IN CHAR * name, OUT DECL ** dcl)
 
 
 //Return true if 'd1' and 'd2' are the same identifier.
-bool is_decl_equal(IN DECL * d1, IN DECL * d2)
+bool is_decl_equal(IN Decl * d1, IN Decl * d2)
 {
 	SCOPE * s1 = DECL_decl_scope(d1);
 	SCOPE * s2 = DECL_decl_scope(d2);
@@ -553,10 +553,10 @@ bool is_decl_equal(IN DECL * d1, IN DECL * d2)
 }
 
 
-//Return true if 'decl' is unique at a list of DECL.
-bool is_unique_decl(DECL * decl_list, DECL * decl)
+//Return true if 'decl' is unique at a list of Decl.
+bool is_unique_decl(Decl * decl_list, Decl * decl)
 {
-	DECL * dcl = decl_list;
+	Decl * dcl = decl_list;
 	while (dcl != NULL) {
 		if (is_decl_equal(dcl, decl) && dcl != decl) {
 			return false;
@@ -571,19 +571,19 @@ bool is_unique_decl(DECL * decl_list, DECL * decl)
 Distinguish the declaration and definition of variable.
 Return true if 'decl' is a declaration, otherwise it is a definition.
 */
-bool is_declaration(DECL * decl)
+bool is_declaration(Decl * decl)
 {
 	if (DECL_is_fun_def(decl)) {
-		IS_TRUE0(0);
+		ASSERT0(0);
 	}
 	return false;
 }
 
 
 
-DECL * get_decl_in_scope(IN CHAR * name, SCOPE * scope)
+Decl * get_decl_in_scope(IN CHAR * name, SCOPE * scope)
 {
-    DECL * dr = NULL, * dcl_list = NULL;
+    Decl * dr = NULL, * dcl_list = NULL;
 	if (scope == NULL) {
 		return NULL;
 	}
@@ -602,9 +602,9 @@ DECL * get_decl_in_scope(IN CHAR * name, SCOPE * scope)
 
 
 //Reference an user defined type-name.
-static TYPE * typedef_name(TYPE * ty)
+static TypeSpec * typedef_name(TypeSpec * ty)
 {
-	DECL * ut = NULL;
+	Decl * ut = NULL;
 	if (g_real_token != T_ID) return NULL;
 	if (!is_user_type_exist_in_outer_scope(g_real_token_string, &ut)) {
 		return NULL;
@@ -619,7 +619,7 @@ static TYPE * typedef_name(TYPE * ty)
 }
 
 
-static INT ck_type_spec_legally(TYPE * ty)
+static INT ck_type_spec_legally(TypeSpec * ty)
 {
 	INT des = TYPE_des(ty);
 	CHAR buf1[MAX_BUF_LEN]; buf1[0] = 0;
@@ -717,9 +717,9 @@ FAILED:
 
 
 //Extract the qualifier from 'ty' and fulfill 'qua'.
-static void extract_qualifier(TYPE * ty, TYPE * qua)
+static void extract_qualifier(TypeSpec * ty, TypeSpec * qua)
 {
-	IS_TRUE0(ty && qua);
+	ASSERT0(ty && qua);
 	
 	if (IS_CONST(ty)) {
 		SET_FLAG(TYPE_des(qua), T_QUA_CONST);
@@ -740,7 +740,7 @@ static void extract_qualifier(TYPE * ty, TYPE * qua)
 
 //Up to date, there is no other differences between
 //union definition and struct definition.
-static DECL * union_declaration()
+static Decl * union_declaration()
 {
 	return struct_declaration();
 }
@@ -763,9 +763,9 @@ static void consume_tok_to_semi()
 struct_declaration:
 	specifier-qualifier-list struct-declarator-list;
 */
-static DECL * struct_declaration()
+static Decl * struct_declaration()
 {
-	TYPE * type_spec = specifier_qualifier_list();
+	TypeSpec * type_spec = specifier_qualifier_list();
 	if (type_spec == NULL) {
 		err(g_real_line_num,
 			"miss qualifier, illegal member declaration of struct");
@@ -773,16 +773,16 @@ static DECL * struct_declaration()
 		return NULL;
 	}
 
-	TYPE * qualifier = new_type();
+	TypeSpec * qualifier = new_type();
 	extract_qualifier(type_spec, qualifier);
 
-	DECL * dcl_list = struct_declarator_list(qualifier);
+	Decl * dcl_list = struct_declarator_list(qualifier);
 	while (dcl_list != NULL) {
-		DECL * dcl = dcl_list;
+		Decl * dcl = dcl_list;
 		dcl_list = DECL_next(dcl_list);
 		DECL_next(dcl) = DECL_prev(dcl) = NULL;
 
-		DECL * declaration = new_decl(DCL_DECLARATION);
+		Decl * declaration = new_decl(DCL_DECLARATION);
 		DECL_spec(declaration) = type_spec;
 		DECL_decl_list(declaration) = dcl;
 		DECL_align(declaration) = g_alignment;
@@ -816,7 +816,7 @@ static DECL * struct_declaration()
 }
 
 
-static DECL * union_declaration_list()
+static Decl * union_declaration_list()
 {
 	while (g_real_token != T_RLPAREN) {
 		if (g_real_token == T_END ||
@@ -830,7 +830,7 @@ static DECL * union_declaration_list()
 }
 
 
-static DECL * struct_declaration_list()
+static Decl * struct_declaration_list()
 {
 	while (g_real_token != T_RLPAREN) {
 		if (g_real_token == T_END ||
@@ -839,7 +839,7 @@ static DECL * struct_declaration_list()
 			return SCOPE_decl_list(g_cur_scope);
 		}
 
-		DECL * field_decl = NULL;
+		Decl * field_decl = NULL;
 		if ((field_decl = struct_declaration()) == NULL) {
 			break;
 		}
@@ -848,7 +848,7 @@ static DECL * struct_declaration_list()
 }
 
 
-static TYPE * type_spec_struct(TYPE * ty)
+static TypeSpec * type_spec_struct(TypeSpec * ty)
 {
 	TYPE_des(ty) |= T_SPEC_STRUCT;
 	match(T_STRUCT);
@@ -857,7 +857,7 @@ static TYPE * type_spec_struct(TYPE * ty)
 		return ty;
 	}
 
-	STRUCT * s = NULL;
+	Struct * s = NULL;
 	if (g_real_token == T_ID) {
 		/*
 		struct definition
@@ -867,7 +867,7 @@ static TYPE * type_spec_struct(TYPE * ty)
 		the declaring declared previous.
 		*/
 		if (!is_struct_exist_in_outer_scope(g_real_token_string, &s)) {
-			s = (STRUCT*)xmalloc(sizeof(STRUCT));
+			s = (Struct*)xmalloc(sizeof(Struct));
 			STRUCT_tag(s) = g_fe_sym_tab->add(g_real_token_string);
 			STRUCT_is_complete(s) = false;
 			SCOPE_struct_list(g_cur_scope).append_tail(s);
@@ -882,7 +882,7 @@ static TYPE * type_spec_struct(TYPE * ty)
 		*/
 		if (s == NULL) {
 			//The struct declarated without TAG.
-			s = (STRUCT*)xmalloc(sizeof(STRUCT));
+			s = (Struct*)xmalloc(sizeof(Struct));
 			STRUCT_tag(s) = NULL;
 			STRUCT_is_complete(s) = false;
 			SCOPE_struct_list(g_cur_scope).append_tail(s);
@@ -906,7 +906,7 @@ static TYPE * type_spec_struct(TYPE * ty)
 		}
 
 		//Numbering field id
-		DECL * field = STRUCT_decl_list(s);
+		Decl * field = STRUCT_decl_list(s);
 		INT i = 0;
 		while (field != NULL) {
 			DECL_fieldno(field) = i++;
@@ -944,7 +944,7 @@ static TYPE * type_spec_struct(TYPE * ty)
 }
 
 
-static TYPE * type_spec_union(TYPE * ty)
+static TypeSpec * type_spec_union(TypeSpec * ty)
 {
 	TYPE_des(ty) |= T_SPEC_UNION;
 	match(T_UNION);
@@ -953,7 +953,7 @@ static TYPE * type_spec_union(TYPE * ty)
 		return ty;
 	}
 	
-	UNION * s = NULL;
+	Union * s = NULL;
 	if (g_real_token == T_ID) {
 		/*
 		union definition
@@ -965,7 +965,7 @@ static TYPE * type_spec_union(TYPE * ty)
 		declaration which has been declared before.
 		*/
 		if (!is_union_exist_in_outer_scope(g_real_token_string, &s)) {
-			s = (UNION*)xmalloc(sizeof(UNION));
+			s = (Union*)xmalloc(sizeof(Union));
 			UNION_tag(s) = g_fe_sym_tab->add(g_real_token_string);
 			UNION_is_complete(s) = false;
 			SCOPE_union_list(g_cur_scope).append_tail(s);
@@ -977,7 +977,7 @@ static TYPE * type_spec_union(TYPE * ty)
 		//formas: union TAG { ...
 		if (s == NULL) {
 			//The struct declarated without TAG.
-			s = (UNION*)xmalloc(sizeof(UNION));
+			s = (Union*)xmalloc(sizeof(Union));
 			UNION_is_complete(s) = false;
 			/*
 			's' is a incomplete union declaration,
@@ -1005,7 +1005,7 @@ static TYPE * type_spec_union(TYPE * ty)
 		}
 
 		//Numbering field id
-		DECL * field = UNION_decl_list(s);
+		Decl * field = UNION_decl_list(s);
 		INT i = 0;
 		while (field != NULL) {
 			DECL_fieldno(field) = i++;
@@ -1043,7 +1043,7 @@ static TYPE * type_spec_union(TYPE * ty)
 }
 
 
-static TYPE * type_spec(TYPE * ty)
+static TypeSpec * type_spec(TypeSpec * ty)
 {
 	if (ty == NULL) {
 		ty = new_type();
@@ -1119,13 +1119,13 @@ enumerator:
 	identifier
 	identifier = constant_expression
 */
-static EVAL_LIST * enumrator()
+static EnumValueList * enumrator()
 {
-	EVAL_LIST * evl = NULL;
-	ENUM * e = NULL;
+	EnumValueList * evl = NULL;
+	Enum * e = NULL;
 	LONGLONG idx = 0;
 	if (g_real_token == T_ID) {
-		evl = (EVAL_LIST*)xmalloc(sizeof(EVAL_LIST));
+		evl = (EnumValueList*)xmalloc(sizeof(EnumValueList));
 		EVAL_LIST_name(evl) = g_fe_sym_tab->add(g_real_token_string);
 		if (is_enum_const_exist_in_cur_scope(g_real_token_string,
 											 &e, (INT*)&idx)) {
@@ -1138,7 +1138,7 @@ static EVAL_LIST * enumrator()
 			match(T_ASSIGN);
 			//constant expression
 			if (is_in_first_set_of_exp_list(g_real_token)) {
-				TREE * t = conditional_exp();
+				Tree * t = conditional_exp();
 				idx = 0;
 				if (t == NULL) {
 					err(g_real_line_num, "empty constant expression");
@@ -1167,12 +1167,12 @@ enumerator_list:
 	enumerator
 	enumerator_list , enumerator
 */
-static EVAL_LIST * enumerator_list()
+static EnumValueList * enumerator_list()
 {
-	EVAL_LIST * evl = enumrator(), * nevl = NULL;
+	EnumValueList * evl = enumrator(), * nevl = NULL;
 	if (evl == NULL) { return NULL; }
 
-	EVAL_LIST * last = get_last(evl);
+	EnumValueList * last = get_last(evl);
 	while (g_real_token == T_COMMA) {
 		match(T_COMMA);
 		nevl = enumrator();
@@ -1190,7 +1190,7 @@ enum_specifier:
 	enum            { enumerator_list }
 	enum identifier
 */
-static TYPE * enum_spec(TYPE * ty)
+static TypeSpec * enum_spec(TypeSpec * ty)
 {
 	if (ty == NULL) { ty = new_type(); }
 
@@ -1219,7 +1219,7 @@ static TYPE * enum_spec(TYPE * ty)
 		}
 
 		//Check enum name if it is given. The name is optional.
-		ENUM * e = NULL;
+		Enum * e = NULL;
 		SYM * enumname = ENUM_name(TYPE_enum_type(ty));
 		if (enumname != NULL && 
 			is_enum_id_exist_in_outer_scope(SYM_name(enumname), &e)) {
@@ -1239,7 +1239,7 @@ type_qualifier:  one of
 	const
 	volatile
 */
-static TYPE * quan_spec(IN TYPE * ty)
+static TypeSpec * quan_spec(IN TypeSpec * ty)
 {
 	if (ty == NULL) {
 		ty = new_type();
@@ -1300,7 +1300,7 @@ storage_class_specifier:  one of
 	inline
 	typedef
 */
-static TYPE * stor_spec(IN TYPE * ty)
+static TypeSpec * stor_spec(IN TypeSpec * ty)
 {
 	if (ty == NULL) { ty = new_type(); }
 
@@ -1363,9 +1363,9 @@ declaration_specifiers:
 	type_qualifier declaration_specifiers
 	type_qualifier
 */
-static TYPE * declaration_spec()
+static TypeSpec * declaration_spec()
 {
-	TYPE * ty = NULL, * p = NULL;
+	TypeSpec * ty = NULL, * p = NULL;
 	for (;;) {
 		switch (g_real_token) {
 		case T_AUTO:
@@ -1401,9 +1401,9 @@ static TYPE * declaration_spec()
 			break;
 		case T_ID:
 			{
-				DECL * ut = NULL;
-				STRUCT * s = NULL;
-				UNION * u = NULL;
+				Decl * ut = NULL;
+				Struct * s = NULL;
+				Union * u = NULL;
 				if (is_user_type_exist_in_outer_scope(
 								g_real_token_string, &ut)) {
 					if (ty != NULL) {
@@ -1440,7 +1440,7 @@ static TYPE * declaration_spec()
 							return ty;
 						}
 					}
-					IS_TRUE0(s != NULL);
+					ASSERT0(s != NULL);
 					if (ty == NULL) {
 						ty = new_type();
 					}
@@ -1464,7 +1464,7 @@ static TYPE * declaration_spec()
 						}
 					}
 
-					IS_TRUE0(u != NULL);
+					ASSERT0(u != NULL);
 					if (ty == NULL) {
 						ty = new_type();
 					}
@@ -1486,7 +1486,7 @@ END:
 
 
 //'fun_dclor': able to modify parameter list.
-DECL * get_parameter_list(IN DECL * dcl, OUT DECL ** fun_dclor)
+Decl * get_parameter_list(IN Decl * dcl, OUT Decl ** fun_dclor)
 {
 	dcl = get_pure_declarator(dcl);
 	while (dcl != NULL && DECL_dt(dcl) != DCL_FUN) {
@@ -1506,25 +1506,25 @@ parameter_declaration:
 	declaration_specifiers abstract_declarator
 	declaration_specifiers
 */
-static DECL * parameter_declaration()
+static Decl * parameter_declaration()
 {
-	DECL * declaration = new_decl(DCL_DECLARATION);
+	Decl * declaration = new_decl(DCL_DECLARATION);
 
-	TYPE * type_spec = declaration_spec();
+	TypeSpec * type_spec = declaration_spec();
 	if (type_spec == NULL) {
 		return NULL;
 	}
 
 	complement_qua(type_spec);
 
-	TYPE * qualifier = new_type();
+	TypeSpec * qualifier = new_type();
 
 	//Extract qualifier, and regarded it as the qualifier 
 	//to the subsequently POINTER or ID.
 	extract_qualifier(type_spec, qualifier);	
 
 	//'DCL_ID' should be the list-head if it exist.
-	DECL * dcl_list = reverse_list(abstract_declarator(qualifier));
+	Decl * dcl_list = reverse_list(abstract_declarator(qualifier));
 
 	DECL_spec(declaration) = type_spec;
 
@@ -1566,9 +1566,9 @@ parameter_type_list:
 	parameter_declaration , ...
 
 */
-static DECL * parameter_type_list()
+static Decl * parameter_type_list()
 {
-	DECL * declaration = NULL , * t = NULL;
+	Decl * declaration = NULL , * t = NULL;
 	for (;;) {
 		t = parameter_declaration();
 		if (t == NULL) {
@@ -1609,9 +1609,9 @@ direct_abstract_declarator:
     direct_abstract_declarator (                     )
 	direct_abstract_declarator ( parameter_type_list )
 */
-static DECL * direct_abstract_declarator(TYPE * qua)
+static Decl * direct_abstract_declarator(TypeSpec * qua)
 {
-	DECL * dcl = NULL, * ndcl = NULL;
+	Decl * dcl = NULL, * ndcl = NULL;
 	switch (g_real_token) {
 	case T_LPAREN: //'(' abstract_declarator ')'
 		match(T_LPAREN);
@@ -1639,10 +1639,10 @@ static DECL * direct_abstract_declarator(TYPE * qua)
 	switch (g_real_token) {
 	case T_LSPAREN: //outer level operator is ARRAY
 		{
-			TREE * t = NULL;
+			Tree * t = NULL;
 			while (g_real_token == T_LSPAREN) {
 				match(T_LSPAREN);
-				DECL * ndcl = new_decl(DCL_ARRAY);
+				Decl * ndcl = new_decl(DCL_ARRAY);
 				t = conditional_exp();
 				if (match(T_RSPAREN) != ST_SUCC) {
 					err(g_real_line_num, "miss ']'");
@@ -1686,10 +1686,10 @@ abstract_declarator:
 	pointer direct_abstract_declarator
 	        direct_abstract_declarator
 */
-static DECL * abstract_declarator(TYPE * qua)
+static Decl * abstract_declarator(TypeSpec * qua)
 {
-	DECL * ptr = pointer(&qua);
-	DECL * dcl = direct_abstract_declarator(qua);
+	Decl * ptr = pointer(&qua);
+	Decl * dcl = direct_abstract_declarator(qua);
 	if (ptr == NULL && dcl == NULL) {
 		return NULL;
 	} else if (dcl == NULL) {
@@ -1714,10 +1714,10 @@ specifier_qualifier_list:
 	type_qualifier specifier_qualifier_list
 	type_qualifier
 */
-static TYPE * specifier_qualifier_list()
+static TypeSpec * specifier_qualifier_list()
 {
-	TYPE * ty = NULL;
-	TYPE * p = NULL;
+	TypeSpec * ty = NULL;
+	TypeSpec * p = NULL;
 	for (;;) {
 		switch (g_real_token) {
 		case T_VOID:
@@ -1761,11 +1761,11 @@ type_name:
 	specifier_qualifier_list
 NOTICE: Do not include user defined type
 */
-DECL * type_name()
+Decl * type_name()
 {
 	//Parse specifier and qualifier.
 	//e.g: char * const*, here 'char' is specifier, '* const*' is qualifier.
-	TYPE * type_spec = specifier_qualifier_list();
+	TypeSpec * type_spec = specifier_qualifier_list();
 	if (type_spec == NULL) {
 		return NULL;
 	}
@@ -1775,12 +1775,12 @@ DECL * type_name()
 	e.g: const int a; Add const qualifier to ID 'a'.
 		const int * a; Add const qualifier to POINTER '*'. 
 	*/
-	TYPE * qualifier = new_type();
+	TypeSpec * qualifier = new_type();
 	extract_qualifier(type_spec, qualifier);
-	DECL * abs_decl = abstract_declarator(qualifier);
+	Decl * abs_decl = abstract_declarator(qualifier);
 
 	//Generate type_name.
-	DECL * type_name = new_decl(DCL_TYPE_NAME);
+	Decl * type_name = new_decl(DCL_TYPE_NAME);
 	DECL_spec(type_name) = type_spec;
 	DECL_decl_list(type_name) = new_decl(DCL_ABS_DECLARATOR);
 	DECL_child(DECL_decl_list(type_name)) = reverse_list(abs_decl);
@@ -1795,17 +1795,17 @@ initializer_list:
 	initializer
 	initializer_list , initializer
 */
-static TREE * initializer_list(TYPE * qua)
+static Tree * initializer_list(TypeSpec * qua)
 {
-	TREE * t = initializer(qua);
+	Tree * t = initializer(qua);
 	if (t == NULL) { return NULL; }
 
-	TREE * last = get_last(t);
+	Tree * last = get_last(t);
 	while (g_real_token == T_COMMA) {
 		match(T_COMMA);
 		if (g_real_token == T_RLPAREN) { break; }
 
-		TREE * nt = initializer(qua);
+		Tree * nt = initializer(qua);
 		if (nt == NULL) { break; }
 
 		add_next(&t, &last, nt);
@@ -1822,9 +1822,9 @@ initializer:
 	{ initializer_list }
 	{ initializer_list , }
 */
-static TREE * initializer(TYPE * qua)
+static Tree * initializer(TypeSpec * qua)
 {
-	TREE * t = NULL, * es = NULL;
+	Tree * t = NULL, * es = NULL;
 	switch (g_real_token) {
 	case T_LLPAREN:
 		match(T_LLPAREN);
@@ -1865,22 +1865,22 @@ struct_declarator:
 	           : constant_expression
 	declarator : constant_expression
 */
-static DECL * struct_declarator(TYPE * qua)
+static Decl * struct_declarator(TypeSpec * qua)
 {
 	LONGLONG idx = 0;
-	DECL * dclr = declarator(qua);
+	Decl * dclr = declarator(qua);
 	if (dclr == NULL) {
 		return NULL;
 	}
 	dclr = reverse_list(dclr);
-	DECL * declarator = new_decl(DCL_DECLARATOR);
+	Decl * declarator = new_decl(DCL_DECLARATOR);
 	DECL_child(declarator) = dclr;
 	compute_array_dim(declarator, true);
 	if (g_real_token == T_COLON) {
-		TREE * t = NULL;
+		Tree * t = NULL;
 		if (is_indirection(dclr)) {
 			SYM * s = get_decl_sym(dclr);
-			IS_TRUE(s != NULL, ("member name cannot be NULL"));
+			ASSERT(s != NULL, ("member name cannot be NULL"));
 			err(g_real_line_num,
 				"'%s' : pointer type cannot assign bit length", SYM_name(s));
 			goto FAILED;
@@ -1906,9 +1906,9 @@ struct_declarator_list:
 	struct_declarator
 	struct_declarator_list , struct_declarator
 */
-static DECL * struct_declarator_list(TYPE * qua)
+static Decl * struct_declarator_list(TypeSpec * qua)
 {
-	DECL * dclr = struct_declarator(qua), * ndclr = NULL;
+	Decl * dclr = struct_declarator(qua), * ndclr = NULL;
 	if (dclr == NULL) return NULL;
 	while (g_real_token == T_COMMA) {
 		match(T_COMMA);
@@ -1928,9 +1928,9 @@ Pick out the pure declarator specification list
 		int (*) [10];
 		the pure declarator list is :  *->[10]
 */
-DECL * get_pure_declarator(DECL * decl)
+Decl * get_pure_declarator(Decl * decl)
 {
-	IS_TRUE0(decl != NULL);
+	ASSERT0(decl != NULL);
 	switch (DECL_dt(decl)) {
 	case DCL_ARRAY:
 	case DCL_POINTER:
@@ -1941,14 +1941,14 @@ DECL * get_pure_declarator(DECL * decl)
 	case DCL_ID:
 		break;
 	case DCL_VARIABLE:
-		IS_TRUE(0, ("can not in declaration"));
+		ASSERT(0, ("can not in declaration"));
 		break;
 	case DCL_TYPE_NAME:
 		decl = DECL_decl_list(decl);
 		if (decl == NULL) {
 			return NULL;
 		}
-		IS_TRUE(DECL_dt(decl) == DCL_ABS_DECLARATOR,
+		ASSERT(DECL_dt(decl) == DCL_ABS_DECLARATOR,
 				("must be DCL_ABS_DECLARATOR in TYPE_NAME"));
 		decl = DECL_child(decl);
 		break;
@@ -1960,14 +1960,14 @@ DECL * get_pure_declarator(DECL * decl)
 		if (decl == NULL) {
 			return NULL;
 		}
-		IS_TRUE0(DECL_dt(decl) == DCL_DECLARATOR ||
+		ASSERT0(DECL_dt(decl) == DCL_DECLARATOR ||
 				 DECL_dt(decl) == DCL_ABS_DECLARATOR);
 		decl = DECL_child(decl);
 		break;
 	case DCL_ABS_DECLARATOR:
 		decl = DECL_child(decl);
 		break;
-	default: IS_TRUE(0, ("unknown DECL"));
+	default: ASSERT(0, ("unknown Decl"));
 	}
 	return decl;
 }
@@ -1980,10 +1980,10 @@ it compute the really number of array element via
 DECL_array_dim_exp, that is a constant expression.
 'arr': array declaration.
 'dim': given dimension to compute, start at 0. */
-ULONG get_array_elemnum_to_dim(DECL * arr, UINT dim)
+ULONG get_array_elemnum_to_dim(Decl * arr, UINT dim)
 {
-	DECL * dcl = get_array_decl(arr);
-	IS_TRUE0(dcl);
+	Decl * dcl = get_array_decl(arr);
+	ASSERT0(dcl);
 	UINT i = 0;
 	while (i < dim && dcl != NULL) {
 		if (DECL_dt(dcl) != DCL_ARRAY) {
@@ -2005,7 +2005,7 @@ declaration of array type.
 
 'allow_dim0_is_empty': parameter array's lowest dimension size
 can NOT be zero. */
-static INT compute_array_dim(DECL * dclr, bool allow_dim0_is_empty)
+static INT compute_array_dim(Decl * dclr, bool allow_dim0_is_empty)
 {
 	//e.g: int (*(a[1][2]))[3][4];
 	BYTE dim = 0;
@@ -2024,7 +2024,7 @@ static INT compute_array_dim(DECL * dclr, bool allow_dim0_is_empty)
 		}
 
 		if (dim >= 1) {
-			TREE * t = DECL_array_dim_exp(dclr);
+			Tree * t = DECL_array_dim_exp(dclr);
 			LONGLONG idx = 0;
 			if (t == NULL) {
 				if (dim > 1) {
@@ -2070,14 +2070,14 @@ init_declarator:
 	declarator
 	declarator = initializer
 */
-static DECL * init_declarator(TYPE * qua)
+static Decl * init_declarator(TypeSpec * qua)
 {
-	DECL * dclr = declarator(qua);
+	Decl * dclr = declarator(qua);
 	if (dclr == NULL) return NULL;
 	dclr = reverse_list(dclr);
 
 	//dclr is DCL_DECLARATOR node
-	DECL * declarator = new_decl(DCL_DECLARATOR);
+	Decl * declarator = new_decl(DCL_DECLARATOR);
 	DECL_child(declarator) = dclr;
 	compute_array_dim(declarator,
 				true /*array dim size should be determined by init value.*/);
@@ -2102,16 +2102,16 @@ init_declarator_list:
 	init_declarator
 	init_declarator_list, init_declarator
 */
-static DECL * init_declarator_list(TYPE * qua)
+static Decl * init_declarator_list(TypeSpec * qua)
 {
-	DECL * dclr = init_declarator(qua);
+	Decl * dclr = init_declarator(qua);
 	if (dclr == NULL) {
 		return NULL;
 	}
 
 	while (g_real_token == T_COMMA) {
 		match(T_COMMA);
-		DECL * ndclr = init_declarator(qua);
+		Decl * ndclr = init_declarator(qua);
 		add_next(&dclr, ndclr);
 	}
 	return dclr;
@@ -2132,10 +2132,10 @@ direct_declarator:
 	//direct_declarator ( identifier_list ) obsolete C proto
 	direct_declarator (                 )
 */
-static DECL * direct_declarator(TYPE * qua)
+static Decl * direct_declarator(TypeSpec * qua)
 {
 	INT is_paren = 0;
-	DECL * dcl = NULL;
+	Decl * dcl = NULL;
 	switch (g_real_token) {
 	case T_LPAREN: //'(' declarator ')'
 		match(T_LPAREN);
@@ -2168,10 +2168,10 @@ static DECL * direct_declarator(TYPE * qua)
 	switch (g_real_token) {
 	case T_LSPAREN: //'[', the declarator is an array.
 		{
-			TREE * t = NULL;
+			Tree * t = NULL;
 			while (g_real_token == T_LSPAREN) {
 				match(T_LSPAREN);
-				DECL * ndcl = new_decl(DCL_ARRAY);
+				Decl * ndcl = new_decl(DCL_ARRAY);
 				t = conditional_exp();
 				if (match(T_RSPAREN) != ST_SUCC) {
 					err(g_real_line_num, "miss ']'");
@@ -2188,7 +2188,7 @@ static DECL * direct_declarator(TYPE * qua)
 	case T_LPAREN: //'(', the declarator is a function decl/def.
 		{
 			match(T_LPAREN);
-			DECL * ndcl = new_decl(DCL_FUN);
+			Decl * ndcl = new_decl(DCL_FUN);
 			enter_sub_scope(true);
 			DECL_fun_para_list(ndcl) = parameter_type_list();
 			return_to_parent_scope();
@@ -2209,9 +2209,9 @@ FAILED:
 
 
 //Copy specifier.
-TYPE * cp_spec(TYPE * ty)
+TypeSpec * cp_spec(TypeSpec * ty)
 {
-	TYPE * new_ty = new_type();
+	TypeSpec * new_ty = new_type();
 	new_ty->copy(*ty);
 	return new_ty;
 }
@@ -2222,13 +2222,13 @@ pointer:
 	'*' type-qualifier-list(pass)
 	'*' type-qualifier-list(pass) pointer
 */
-static DECL * pointer(TYPE ** qua)
+static Decl * pointer(TypeSpec ** qua)
 {
-	DECL * ndcl = NULL;
-	TYPE * new_qua = *qua;
+	Decl * ndcl = NULL;
+	TypeSpec * new_qua = *qua;
 	while (g_real_token == T_ASTERISK) {
 		match(T_ASTERISK);
-		DECL * dcl = new_decl(DCL_POINTER);
+		Decl * dcl = new_decl(DCL_POINTER);
 		DECL_qua(dcl) = new_qua;
 		new_qua = new_type();
 		quan_spec(new_qua);
@@ -2249,10 +2249,10 @@ declarator:
 	pointer  direct_declarator
 			 direct_declarator
 */
-static DECL * declarator(TYPE * qua)
+static Decl * declarator(TypeSpec * qua)
 {
-	DECL * ptr = pointer(&qua);
-	DECL * dclr = direct_declarator(qua);
+	Decl * ptr = pointer(&qua);
+	Decl * dclr = direct_declarator(qua);
 	if (dclr == NULL) {
 		return NULL;
 	}
@@ -2274,7 +2274,7 @@ static INT label_ck(SCOPE *s)
 	LabelInfo * lj = NULL;
 	while (lref != NULL) {
 		CHAR * name = SYM_name(LABEL_INFO_name(lref));
-		IS_TRUE0(name);
+		ASSERT0(name);
 		LabelInfo * li = SCOPE_label_list(s).get_head();
 		for (; li != NULL; li = SCOPE_label_list(s).get_next()) {
 			if (strcmp(SYM_name(LABEL_INFO_name(li)), name) == 0) {
@@ -2301,7 +2301,7 @@ FAILED:
 }
 
 
-CHAR * dump_decl(DECL * dcl, CHAR * buf)
+CHAR * dump_decl(Decl * dcl, CHAR * buf)
 {
 	if (g_tfile == NULL) return NULL;
 	bool is_ret = true;
@@ -2323,18 +2323,18 @@ CHAR * dump_decl(DECL * dcl, CHAR * buf)
 }
 
 
-void dump_decl(DECL * dcl)
+void dump_decl(Decl * dcl)
 {
 	format_declaration(dcl, 0);
 }
 
 
-static void fix_para_array_index(DECL * decl)
+static void fix_para_array_index(Decl * decl)
 {
-	TYPE * ty = NULL;
-	IS_TRUE0(DECL_is_formal_para(decl));
-	IS_TRUE0(is_pointer(decl));
-	DECL * d = get_pointer_base_decl(decl, &ty);
+	TypeSpec * ty = NULL;
+	ASSERT0(DECL_is_formal_para(decl));
+	ASSERT0(is_pointer(decl));
+	Decl * d = get_pointer_base_decl(decl, &ty);
 	if (d == NULL || DECL_dt(d) == DCL_POINTER) { return; }
 
 	if (DECL_dt(d) == DCL_ARRAY && DECL_array_dim(d) == 0) {
@@ -2357,24 +2357,24 @@ static void fix_para_array_index(DECL * decl)
 
 //Change array to pointer if it is formal parameter.
 //Fulfill the first dimension to at least 1 if it is a parameter.
-static TREE * refineArray(TREE * t)
+static Tree * refineArray(Tree * t)
 {
-	IS_TRUE0(TREE_type(t) == TR_ARRAY);
+	ASSERT0(TREE_type(t) == TR_ARRAY);
 
 	/*
 	Formal parameter of array type is a pointer in actually.
 	Insert a Dereference to comfort the C specification.
 	*/
-	TREE * base = TREE_array_base(t);
+	Tree * base = TREE_array_base(t);
 	if (TREE_type(base) == TR_ID) {
 		//dump_decl(TREE_id_decl(base), 0);
 
 		//ID is unique to its scope.
 		CHAR * name = SYM_name(TREE_id(base));
-		IS_TRUE0(TREE_id_decl(base));
+		ASSERT0(TREE_id_decl(base));
 		SCOPE * s = DECL_decl_scope(TREE_id_decl(base));
-		DECL * decl = get_decl_in_scope(name, s);
-		IS_TRUE0(decl != NULL);
+		Decl * decl = get_decl_in_scope(name, s);
+		ASSERT0(decl != NULL);
 		if (DECL_is_formal_para(decl)) {
 			/*
 			Verfiy and fix formal parameters with array type.
@@ -2382,7 +2382,7 @@ static TREE * refineArray(TREE * t)
 			e.g: 'int (*p)[]'
 			the referrence should do same operation as its declaration.
 			*/
-			DECL * base_of_pt = get_pure_declarator(decl);
+			Decl * base_of_pt = get_pure_declarator(decl);
 			if (DECL_dt(base_of_pt) == DCL_ID) {
 				base_of_pt = DECL_next(base_of_pt);
 			}
@@ -2396,7 +2396,7 @@ static TREE * refineArray(TREE * t)
 
 			if (base_of_pt != NULL && DECL_dt(base_of_pt) == DCL_ARRAY) {
 				//The base of pointer is an array. Convert a[] to (*a)[].
-				TREE * deref = new_tree_node(TR_DEREF, TREE_lineno(base));
+				Tree * deref = new_tree_node(TR_DEREF, TREE_lineno(base));
 				TREE_lchild(deref) = base;
 				setParent(deref, TREE_lchild(deref));
 				TREE_array_base(t) = deref;
@@ -2414,7 +2414,7 @@ Do refinement and amendment for tree.
 	* Revise formal parameter. In C spec, formal array is pointer
 	  that point to an array in actually.
 */
-static TREE * refine_tree(TREE * t)
+static Tree * refine_tree(Tree * t)
 {
 	if (t == NULL) return NULL;
 	if (TREE_type(t) == TR_ARRAY) {
@@ -2431,10 +2431,10 @@ static TREE * refine_tree(TREE * t)
 }
 
 
-static TREE * refine_tree_list(TREE * t)
+static Tree * refine_tree_list(Tree * t)
 {
 	if (t == NULL) return NULL;
-	TREE * head = t;
+	Tree * head = t;
 	int i = 0;
 	while (t != NULL) {
 		refine_tree(t);
@@ -2445,14 +2445,14 @@ static TREE * refine_tree_list(TREE * t)
 }
 
 
-//Convert TREE in terms of C specification.
-static void refine_func(DECL * func)
+//Convert Tree in terms of C specification.
+static void refine_func(Decl * func)
 {
 	SCOPE * scope = DECL_fun_body(func);
-	TREE * t = SCOPE_stmt_list(scope);
+	Tree * t = SCOPE_stmt_list(scope);
 	if (t != NULL) {
 		t = refine_tree_list(t);
-		IS_TRUE0(TREE_parent(t) == NULL);
+		ASSERT(TREE_parent(t) == NULL, ("parent node of Tree is NULL"));
 		SCOPE_stmt_list(scope) = t;
 	}
 }
@@ -2468,14 +2468,14 @@ NOTCIE: 'decl' cannot be pointer.
 	the first array type.
 	e.g: ID->ARRAY->ARRAY => ID->POINTER->ARRAY->ARRAY
 */
-DECL * trans_to_pointer(DECL * decl, bool is_append)
+Decl * trans_to_pointer(Decl * decl, bool is_append)
 {
-	IS_TRUE(DECL_dt(decl) == DCL_DECLARATION,
+	ASSERT(DECL_dt(decl) == DCL_DECLARATION,
 			("only DCRLARATION is valid"));
-	IS_TRUE(!is_pointer(decl), ("only DCRLARATION is valid"));
-	DECL * pure = get_pure_declarator(decl);
-	DECL * p = pure;
-	DECL * new_pure = NULL;
+	ASSERT(!is_pointer(decl), ("only DCRLARATION is valid"));
+	Decl * pure = get_pure_declarator(decl);
+	Decl * p = pure;
+	Decl * new_pure = NULL;
 	bool isdo = true;
 	INT count = 0;
 	while (pure != NULL) {
@@ -2519,21 +2519,21 @@ DECL * trans_to_pointer(DECL * decl, bool is_append)
 		case DCL_DECLARATION: //declaration
 		case DCL_ABS_DECLARATOR: //abstract declarator
 		default:
-			IS_TRUE(0, ("unexpected DECL type over here"));
+			ASSERT(0, ("unexpected Decl type over here"));
 		}
 		pure = DECL_next(pure);
 	}
 	PURE_DECL(decl) = new_pure;
-	IS_TRUE(is_pointer(decl), ("transform failed!"));
+	ASSERT(is_pointer(decl), ("transform failed!"));
 	return decl;
 }
 
 
-//Return ENUM if it has exist in 'elst', otherwise return NULL.
-ENUM * find_enum(ENUM_LIST * elst , ENUM * e)
+//Return Enum if it has exist in 'elst', otherwise return NULL.
+Enum * find_enum(EnumList * elst , Enum * e)
 {
 	if (elst == NULL || e == NULL) { return NULL; }
-	ENUM_LIST *	p = elst;
+	EnumList *	p = elst;
 	while (p != NULL) {
 		if (ENUM_LIST_enum(p) == e) {
 			return e;
@@ -2549,15 +2549,15 @@ Return NULL indicate we haven't found it in 'ut_list', and
 append 'ut' to tail of the list as correct, otherwise return
 the finded one.
 */
-DECL * add_to_user_type_list(USER_TYPE_LIST ** ut_list , DECL * decl)
+Decl * add_to_user_type_list(UserTypeList ** ut_list , Decl * decl)
 {
    if (ut_list == NULL || decl == NULL) return NULL;
    if ((*ut_list) == NULL) {
-		*ut_list = (USER_TYPE_LIST*)xmalloc(sizeof(USER_TYPE_LIST));
+		*ut_list = (UserTypeList*)xmalloc(sizeof(UserTypeList));
 		USER_TYPE_LIST_utype(*ut_list) = decl;
 		return NULL;
    } else {
-		USER_TYPE_LIST * p = *ut_list, * q = NULL;
+		UserTypeList * p = *ut_list, * q = NULL;
 		while (p != NULL) {
 			q = p;
 			if (USER_TYPE_LIST_utype(p) == decl) {
@@ -2567,7 +2567,7 @@ DECL * add_to_user_type_list(USER_TYPE_LIST ** ut_list , DECL * decl)
 			p = USER_TYPE_LIST_next(p);
 		}
 		USER_TYPE_LIST_next(q) = 
-			(USER_TYPE_LIST*)xmalloc(sizeof(USER_TYPE_LIST));
+			(UserTypeList*)xmalloc(sizeof(UserTypeList));
 		USER_TYPE_LIST_prev(USER_TYPE_LIST_next(q)) = q;
 		q = USER_TYPE_LIST_next(q);
 		USER_TYPE_LIST_utype(q) = decl;
@@ -2577,11 +2577,11 @@ DECL * add_to_user_type_list(USER_TYPE_LIST ** ut_list , DECL * decl)
 
 
 //Return true if enum-value existed.
-static bool is_enum_exist(IN ENUM_LIST * e_list, IN CHAR * e_name,
-						  OUT ENUM ** e, OUT INT * idx)
+static bool is_enum_exist(IN EnumList * e_list, IN CHAR * e_name,
+						  OUT Enum ** e, OUT INT * idx)
 {
 	if (e_list == NULL || e_name == NULL) return false;
-	ENUM_LIST * el = e_list;
+	EnumList * el = e_list;
 	while (el != NULL) {
 		if (is_enum_const_name_exist(ENUM_LIST_enum(el), e_name, idx)) {
 			*e = ENUM_LIST_enum(el);
@@ -2594,7 +2594,7 @@ static bool is_enum_exist(IN ENUM_LIST * e_list, IN CHAR * e_name,
 
 
 //Enum typed identifier is effective at all of outer scopes.
-bool is_enum_id_exist_in_outer_scope(IN CHAR * cl, OUT ENUM ** e)
+bool is_enum_id_exist_in_outer_scope(IN CHAR * cl, OUT Enum ** e)
 {
 	SCOPE * sc = g_cur_scope;
 	while (sc != NULL) {
@@ -2611,7 +2611,7 @@ bool is_enum_id_exist_in_outer_scope(IN CHAR * cl, OUT ENUM ** e)
 Return true if the struct typed declaration have already existed in both
 current and all of outer scopes.
 */
-bool is_struct_exist_in_outer_scope(IN CHAR * tag, OUT STRUCT ** s)
+bool is_struct_exist_in_outer_scope(IN CHAR * tag, OUT Struct ** s)
 {
 	SCOPE * sc = g_cur_scope;
 	while (sc != NULL) {
@@ -2628,7 +2628,7 @@ bool is_struct_exist_in_outer_scope(IN CHAR * tag, OUT STRUCT ** s)
 Return true if the union typed declaration have already existed in both
 current and all of outer scopes.
 */
-bool is_union_exist_in_outer_scope(IN CHAR * tag, OUT UNION ** s)
+bool is_union_exist_in_outer_scope(IN CHAR * tag, OUT Union ** s)
 {
 	SCOPE * sc = g_cur_scope;
 	while (sc != NULL) {
@@ -2648,7 +2648,7 @@ defined in both current and all of outer scopes.
 'e': enum type set.
 'idx': index in 'e' const list, start at 0.
 */
-bool is_enum_const_exist_in_outer_scope(CHAR * name, OUT ENUM ** e,
+bool is_enum_const_exist_in_outer_scope(CHAR * name, OUT Enum ** e,
 										OUT INT * idx)
 {
 	SCOPE * sc = g_cur_scope;
@@ -2663,7 +2663,7 @@ bool is_enum_const_exist_in_outer_scope(CHAR * name, OUT ENUM ** e,
 
 
 //Enum value only has effectivity at current scope.
-bool is_enum_const_exist_in_cur_scope(IN CHAR * cl, OUT ENUM ** e,
+bool is_enum_const_exist_in_cur_scope(IN CHAR * cl, OUT Enum ** e,
 									  OUT INT * idx)
 {
 	if (is_enum_exist(SCOPE_enum_list(g_cur_scope), cl, e, idx)) {
@@ -2673,10 +2673,10 @@ bool is_enum_const_exist_in_cur_scope(IN CHAR * cl, OUT ENUM ** e,
 }
 
 
-static bool is_enum_const_name_exist(ENUM * e, CHAR * ev_name, OUT INT * idx)
+static bool is_enum_const_name_exist(Enum * e, CHAR * ev_name, OUT INT * idx)
 {
 	if (e == NULL || ev_name == NULL) return false;
-	EVAL_LIST * evl = ENUM_vallist(e);
+	EnumValueList * evl = ENUM_vallist(e);
 	INT i = 0;
 	while (evl != NULL) {
 		if (strcmp(SYM_name(EVAL_LIST_name(evl)) , ev_name) == 0) {
@@ -2691,13 +2691,13 @@ static bool is_enum_const_name_exist(ENUM * e, CHAR * ev_name, OUT INT * idx)
 
 
 //Return true if enum identifier existed.
-static bool is_enum_id_exist(IN ENUM_LIST * e_list, IN CHAR * e_id_name,
-							 OUT ENUM ** e)
+static bool is_enum_id_exist(IN EnumList * e_list, IN CHAR * e_id_name,
+							 OUT Enum ** e)
 {
 	if (e_list == NULL || e_id_name == NULL) return false;
-	ENUM_LIST * el = e_list;
+	EnumList * el = e_list;
 	while (el != NULL) {
-		ENUM * tmp = ENUM_LIST_enum(el);
+		Enum * tmp = ENUM_LIST_enum(el);
 		if (ENUM_name(tmp) == NULL) continue;
 		if (strcmp(SYM_name(ENUM_name(tmp)), e_id_name) == 0) {
 			*e = tmp;
@@ -2709,10 +2709,10 @@ static bool is_enum_id_exist(IN ENUM_LIST * e_list, IN CHAR * e_id_name,
 }
 
 
-INT get_enum_val_idx(IN ENUM * e, IN CHAR * ev_name)
+INT get_enum_val_idx(IN Enum * e, IN CHAR * ev_name)
 {
 	if (e == NULL || ev_name == NULL) return -1;
-	EVAL_LIST * evl=ENUM_vallist(e);
+	EnumValueList * evl=ENUM_vallist(e);
 	INT i = 0;
 	while (evl != NULL) {
 		if (strcmp(SYM_name(EVAL_LIST_name(evl)) , ev_name) == 0) {
@@ -2725,13 +2725,13 @@ INT get_enum_val_idx(IN ENUM * e, IN CHAR * ev_name)
 }
 
 
-bool is_user_type_exist(IN USER_TYPE_LIST * ut_list, IN CHAR * ut_name,
-						OUT DECL ** decl)
+bool is_user_type_exist(IN UserTypeList * ut_list, IN CHAR * ut_name,
+						OUT Decl ** decl)
 {
 	if (ut_list == NULL || ut_name == NULL) return false;
-	USER_TYPE_LIST * utl = ut_list;
+	UserTypeList * utl = ut_list;
 	while (utl != NULL) {
-		DECL * dcl = USER_TYPE_LIST_utype(utl);
+		Decl * dcl = USER_TYPE_LIST_utype(utl);
 		if (strcmp(SYM_name(get_decl_sym(dcl)),ut_name) == 0) {
 			*decl = dcl;
 			return true;
@@ -2743,13 +2743,13 @@ bool is_user_type_exist(IN USER_TYPE_LIST * ut_list, IN CHAR * ut_name,
 }
 
 
-bool is_struct_type_exist(List<STRUCT*> & struct_list, 
-						  IN CHAR * tag, OUT STRUCT ** s)
+bool is_struct_type_exist(List<Struct*> & struct_list, 
+						  IN CHAR * tag, OUT Struct ** s)
 {
 	if (tag == NULL) { return false; }
 
-	C<STRUCT*> * ct;
-	for (STRUCT * st = struct_list.get_head(&ct);
+	C<Struct*> * ct;
+	for (Struct * st = struct_list.get_head(&ct);
 		 ct != NULL; st = struct_list.get_next(&ct)) {
 		SYM * sym = STRUCT_tag(st);		
 		if (sym == NULL) { continue; }
@@ -2763,13 +2763,13 @@ bool is_struct_type_exist(List<STRUCT*> & struct_list,
 }
 
 
-//Seach UNION list accroding to the 'tag' of union-type.
-bool is_union_type_exist(List<UNION*> & u_list, IN CHAR * tag, OUT UNION ** u)
+//Seach Union list accroding to the 'tag' of union-type.
+bool is_union_type_exist(List<Union*> & u_list, IN CHAR * tag, OUT Union ** u)
 {
 	if (tag == NULL) { return false; }
 
-	C<UNION*> * ct;
-	for (UNION * st = u_list.get_head(&ct); 
+	C<Union*> * ct;
+	for (Union * st = u_list.get_head(&ct); 
 		 st != NULL; st = u_list.get_next(&ct)) {
 		SYM * sym = UNION_tag(st); 	
 		if (sym == NULL) { continue; }
@@ -2783,23 +2783,23 @@ bool is_union_type_exist(List<UNION*> & u_list, IN CHAR * tag, OUT UNION ** u)
 }
 
 
-ENUM * new_enum()
+Enum * new_enum()
 {
-	return (ENUM*)xmalloc(sizeof(ENUM));
+	return (Enum*)xmalloc(sizeof(Enum));
 }
 
 
-TYPE * new_type()
+TypeSpec * new_type()
 {
-	TYPE * ty = (TYPE*)xmalloc(sizeof(TYPE));
+	TypeSpec * ty = (TypeSpec*)xmalloc(sizeof(TypeSpec));
 	ty->clean();
 	return ty;
 }
 
 
-TYPE * new_type(INT cate)
+TypeSpec * new_type(INT cate)
 {
-	TYPE * ty = (TYPE*)xmalloc(sizeof(TYPE));
+	TypeSpec * ty = (TypeSpec*)xmalloc(sizeof(TypeSpec));
 	ty->clean();
 	TYPE_des(ty) = cate;
 	return ty;
@@ -2808,7 +2808,7 @@ TYPE * new_type(INT cate)
 
 //'decl' presents DCL_DECLARATOR or DCL_ABS_DECLARATOR,
 //Compute size of total array.
-ULONGLONG compute_size_of_array(DECL * decl)
+ULONGLONG compute_size_of_array(Decl * decl)
 {
 	if (DECL_dt(decl) == DCL_DECLARATOR) {
 		decl = DECL_child(decl);
@@ -2843,17 +2843,17 @@ ULONGLONG compute_size_of_array(DECL * decl)
 		dim++;
 		decl = DECL_next(decl);
 	}
-	IS_TRUE(get_const_bit_len(num) < 64, ("too large array"));
+	ASSERT(get_const_bit_len(num) < 64, ("too large array"));
 	return num;
 }
 
 
-INT compute_struct_type_size(TYPE * ty)
+INT compute_struct_type_size(TypeSpec * ty)
 {
-	IS_TRUE0(IS_STRUCT(ty));
-	IS_TRUE0(is_struct_complete(ty));
-	STRUCT * s = TYPE_struct_type(ty);
-	DECL * dcl = STRUCT_decl_list(s);
+	ASSERT0(IS_STRUCT(ty));
+	ASSERT0(is_struct_complete(ty));
+	Struct * s = TYPE_struct_type(ty);
+	Decl * dcl = STRUCT_decl_list(s);
 	INT size = 0;
 	while (dcl != NULL) {
 		size += get_decl_size(dcl);
@@ -2868,12 +2868,12 @@ INT compute_struct_type_size(TYPE * ty)
 }
 
 
-INT compute_union_type_size(TYPE * ty)
+INT compute_union_type_size(TypeSpec * ty)
 {
-	IS_TRUE0(IS_UNION(ty));
-	IS_TRUE0(is_union_complete(ty));
-	UNION * s = TYPE_union_type(ty);
-	DECL * dcl = UNION_decl_list(s);
+	ASSERT0(IS_UNION(ty));
+	ASSERT0(is_union_complete(ty));
+	Union * s = TYPE_union_type(ty);
+	Decl * dcl = UNION_decl_list(s);
 	INT size = 0;
 	while (dcl != NULL) {
 		size = MAX(size, get_decl_size(dcl));
@@ -2893,7 +2893,7 @@ What is 'complex type'? Non-pointer and non-array type.
 e.g : int * a;
 	  int a[];
 */
-bool is_complex_type(DECL * dcl)
+bool is_complex_type(Decl * dcl)
 {
 	dcl = get_pure_declarator(dcl);
 	if (dcl == NULL) { return false; }
@@ -2910,7 +2910,7 @@ bool is_complex_type(DECL * dcl)
 	   enum a;
 	   USER_DEFINED_TYPE_NAME a;
 */
-INT get_simply_type_size_in_byte(TYPE * spec)
+INT get_simply_type_size_in_byte(TypeSpec * spec)
 {
 	if (spec == NULL) { return 0; }
 	if (HAVE_FLAG(TYPE_des(spec), T_SPEC_VOID)) return BYTE_PER_INT;
@@ -2939,22 +2939,22 @@ complex type means the type is either pointer or array.
 e.g : int * a;
 	  int a []; 
 */
-ULONG get_complex_type_size_in_byte(DECL * decl)
+ULONG get_complex_type_size_in_byte(Decl * decl)
 {
 	if (decl == NULL) { return 0; }
 
-	TYPE * spec = DECL_spec(decl);
-	DECL * d = NULL;
+	TypeSpec * spec = DECL_spec(decl);
+	Decl * d = NULL;
 	if (DECL_dt(decl) == DCL_DECLARATION ||
 	   DECL_dt(decl) == DCL_TYPE_NAME) {
 		d = get_pure_declarator(decl);
-		IS_TRUE(d != NULL, ("composing type expected decl-spec"));
+		ASSERT(d != NULL, ("composing type expected decl-spec"));
 	} else {
 		err(g_src_line_num, "expected declaration or type-name");
 		return 0;
 	}
 
-	IS_TRUE(spec != NULL, ("composing type expected specifier"));
+	ASSERT(spec != NULL, ("composing type expected specifier"));
 	ULONG declor_size = get_declarator_size_in_byte(d);
 	if (is_array(d)) {
 		ULONG s = get_simply_type_size_in_byte(spec);
@@ -2966,14 +2966,14 @@ ULONG get_complex_type_size_in_byte(DECL * decl)
 
 //Compute the byte size of declaration.
 //This function also do check in addition to compute array size.
-INT get_decl_size(DECL * decl)
+INT get_decl_size(Decl * decl)
 {
-	TYPE * spec = DECL_spec(decl);
-	DECL * d = NULL;
+	TypeSpec * spec = DECL_spec(decl);
+	Decl * d = NULL;
 	if (DECL_dt(decl) == DCL_DECLARATION ||
 		DECL_dt(decl) == DCL_TYPE_NAME) {
 		d = DECL_decl_list(decl); //get declarator
-		IS_TRUE(d &&
+		ASSERT(d &&
 				(DECL_dt(d) == DCL_DECLARATOR ||
 				 DECL_dt(d) == DCL_ABS_DECLARATOR),
 				("illegal declarator"));
@@ -2983,7 +2983,7 @@ INT get_decl_size(DECL * decl)
 			return get_simply_type_size_in_byte(spec);
 		}
 	} else {
-		IS_TRUE(0, ("expected declaration"));
+		ASSERT(0, ("expected declaration"));
 	}
 	return 0;
 }
@@ -2995,7 +2995,7 @@ There only 2 type of decl-type: pointer and array.
 		size of '*(*) [3][4]'.
 		The order of decl is: p->*->[3]->[4]->*
 */
-INT get_declarator_size_in_byte(DECL * d)
+INT get_declarator_size_in_byte(Decl * d)
 {
 	if (d == NULL) {
 		return 0;
@@ -3013,19 +3013,19 @@ INT get_declarator_size_in_byte(DECL * d)
 }
 
 
-/* Return the *first* DECL structure which indicate an array
+/* Return the *first* Decl structure which indicate an array
 in pure-list of declaration.
 
 e.g: int p[10][20]; the declarator is: DCL_ID(p)->DCL_ARRAY(20)->DCL_ARRAY(10).
 return DCL_ARRAY(20).
 */
-DECL * get_array_decl(DECL * decl)
+Decl * get_array_decl(Decl * decl)
 {
-	IS_TRUE(DECL_dt(decl) == DCL_TYPE_NAME ||
+	ASSERT(DECL_dt(decl) == DCL_TYPE_NAME ||
 			DECL_dt(decl) == DCL_DECLARATION ,
 			("expect DCRLARATION"));
-	IS_TRUE(is_array(decl), ("expect pointer type"));
-	DECL * x = get_pure_declarator(decl);
+	ASSERT(is_array(decl), ("expect pointer type"));
+	Decl * x = get_pure_declarator(decl);
 	while (x != NULL) {
 		switch (DECL_dt(x)) {
 		case DCL_FUN:
@@ -3037,11 +3037,11 @@ DECL * get_array_decl(DECL * decl)
 		case DCL_VARIABLE:
 			break;
 		default:
-			IS_TRUE(DECL_dt(x) != DCL_DECLARATION &&
+			ASSERT(DECL_dt(x) != DCL_DECLARATION &&
 					DECL_dt(x) != DCL_DECLARATOR &&
 					DECL_dt(x) != DCL_ABS_DECLARATOR &&
 					DECL_dt(x) != DCL_TYPE_NAME,
-					("\nunsuitable DECL type locate here in is_pointer()\n"));
+					("\nunsuitable Decl type locate here in is_pointer()\n"));
 			return NULL;
 		}
 		x = DECL_next(x);
@@ -3050,19 +3050,19 @@ DECL * get_array_decl(DECL * decl)
 }
 
 
-/* Return the *first* DECL structure which indicate a pointer
+/* Return the *first* Decl structure which indicate a pointer
 in pure-list of declaration.
 
 e.g: int * p; the declarator is: DCL_ID(p)->DCL_POINTER(*).
 return DCL_POINTER.
 */
-DECL * get_pointer_decl(DECL * decl)
+Decl * get_pointer_decl(Decl * decl)
 {
-	IS_TRUE(DECL_dt(decl) == DCL_TYPE_NAME ||
+	ASSERT(DECL_dt(decl) == DCL_TYPE_NAME ||
 			DECL_dt(decl) == DCL_DECLARATION ,
 			("expect DCRLARATION"));
-	IS_TRUE(is_pointer(decl), ("expect pointer type"));
-	DECL * x = get_pure_declarator(decl);
+	ASSERT(is_pointer(decl), ("expect pointer type"));
+	Decl * x = get_pure_declarator(decl);
 	while (x != NULL) {
 		switch (DECL_dt(x)) {
 		case DCL_FUN:
@@ -3083,11 +3083,11 @@ DECL * get_pointer_decl(DECL * decl)
 		case DCL_VARIABLE:
 			break;
 		default:
-			IS_TRUE(DECL_dt(x) != DCL_DECLARATION &&
+			ASSERT(DECL_dt(x) != DCL_DECLARATION &&
 					DECL_dt(x) != DCL_DECLARATOR &&
 					DECL_dt(x) != DCL_ABS_DECLARATOR &&
 					DECL_dt(x) != DCL_TYPE_NAME,
-					("\nunsuitable DECL type locate here in is_pointer()\n"));
+					("\nunsuitable Decl type locate here in is_pointer()\n"));
 			return NULL;
 		}
 		x = DECL_next(x);
@@ -3097,38 +3097,36 @@ DECL * get_pointer_decl(DECL * decl)
 
 
 //Get base type of POINTER.
-DECL * get_pointer_base_decl(DECL * decl, TYPE ** ty)
+Decl * get_pointer_base_decl(Decl * decl, TypeSpec ** ty)
 {
-	IS_TRUE(DECL_dt(decl) == DCL_TYPE_NAME ||
+	ASSERT(DECL_dt(decl) == DCL_TYPE_NAME ||
 			DECL_dt(decl) == DCL_DECLARATION ,
 			("expect DCRLARATION"));
-	IS_TRUE(is_pointer(decl), ("expect pointer type"));
+	ASSERT(is_pointer(decl), ("expect pointer type"));
 	*ty = DECL_spec(decl);
-	DECL * d = get_pure_declarator(decl);
+	Decl * d = get_pure_declarator(decl);
 	if (DECL_dt(d) == DCL_ID) {
 		d = DECL_next(d);
-		IS_TRUE(DECL_dt(d) == DCL_POINTER ||
+		ASSERT(DECL_dt(d) == DCL_POINTER ||
 				DECL_dt(d) == DCL_FUN,
 				("expect pointer declarator"));
-		return DECL_next(d); //get DECL that is the heel of '*'
+		return DECL_next(d); //get Decl that is the heel of '*'
 	} else if (DECL_dt(d) == DCL_POINTER || DECL_dt(d) == DCL_FUN) {
-		return DECL_next(d); //get DECL that is the heel of '*'
+		return DECL_next(d); //get Decl that is the heel of '*'
 	}
-	IS_TRUE(0, ("it is not a pointer type"));
+	ASSERT(0, ("it is not a pointer type"));
 	return NULL;
 }
 
 
-/*
-Compute byte size of pointer base declarator
-	e.g  Given 'int *(*p)[3]', the pointer-base is 'int * [3]'.
-*/
-INT get_pointer_base_size(DECL * decl)
+//Compute byte size of pointer base declarator.
+//e.g: Given 'int *(*p)[3]', the pointer-base is 'int * [3]'.
+UINT get_pointer_base_size(Decl * decl)
 {
-	TYPE * ty = NULL;
-	DECL * d = get_pointer_base_decl(decl, &ty);
+	TypeSpec * ty = NULL;
+	Decl * d = get_pointer_base_decl(decl, &ty);
 	if (d == NULL) {
-		//base type of pointer oughts to be TYPE-SPEC.
+		//base type of pointer oughts to be TypeSpec-SPEC.
 		if (ty != NULL &&
 			((is_struct(ty) && !is_struct_complete(ty)) ||
 			 (is_union(ty) && !is_union_complete(ty)))) {
@@ -3137,7 +3135,7 @@ INT get_pointer_base_size(DECL * decl)
 		}
 		
 		INT s = get_simply_type_size_in_byte(ty);
-		IS_TRUE(s != 0, ("simply type size cannot be zero"));
+		ASSERT(s != 0, ("simply type size cannot be zero"));
 		return s;
 	}
 
@@ -3146,12 +3144,12 @@ INT get_pointer_base_size(DECL * decl)
 	if (!is_pointer(d)) {
 		s = get_simply_type_size_in_byte(ty);
 	}
-	IS_TRUE(e != 0, ("declarator size cannot be zero"));
+	ASSERT(e != 0, ("declarator size cannot be zero"));
 	return e * s;	
 }
 
 
-bool is_simple_base_type(TYPE * ty)
+bool is_simple_base_type(TypeSpec * ty)
 {
 	if (ty == NULL) { return false; }
 	return (TYPE_des(ty) & T_SPEC_VOID ||
@@ -3183,7 +3181,7 @@ bool is_simple_base_type(INT des)
 }
 
 
-INT format_enum_complete(IN OUT CHAR buf[], IN ENUM * e)
+INT format_enum_complete(IN OUT CHAR buf[], IN Enum * e)
 {
 	if (e == NULL) { return ST_SUCC; }
 	CHAR * p = buf + strlen(buf);
@@ -3193,7 +3191,7 @@ INT format_enum_complete(IN OUT CHAR buf[], IN ENUM * e)
 	}
 	if (ENUM_vallist(e)) {
 		strcat(p, "{");
-		EVAL_LIST * ev= ENUM_vallist(e);
+		EnumValueList * ev= ENUM_vallist(e);
 		while (ev != NULL) {
 			p = p + strlen(p);
 			sprintf(p, "%s ", SYM_name(EVAL_LIST_name(ev)));
@@ -3205,7 +3203,7 @@ INT format_enum_complete(IN OUT CHAR buf[], IN ENUM * e)
 }
 
 
-INT format_enum_complete(IN OUT CHAR buf[], IN TYPE * ty)
+INT format_enum_complete(IN OUT CHAR buf[], IN TypeSpec * ty)
 {
 	if (ty == NULL) { return ST_SUCC; }
 	strcat(buf, "enum ");
@@ -3214,11 +3212,11 @@ INT format_enum_complete(IN OUT CHAR buf[], IN TYPE * ty)
 }
 
 
-INT format_enum(IN OUT CHAR buf[], IN TYPE * ty)
+INT format_enum(IN OUT CHAR buf[], IN TypeSpec * ty)
 {
 	if (ty == NULL)	{ return ST_SUCC; }
 	strcat(buf, "enum ");
-	ENUM * e = TYPE_enum_type(ty);
+	Enum * e = TYPE_enum_type(ty);
 	if (e != NULL && ENUM_name(e) != NULL) {
 		CHAR * p = buf + strlen(buf);
 		sprintf(p, "%s ", SYM_name(ENUM_name(e)));
@@ -3228,11 +3226,11 @@ INT format_enum(IN OUT CHAR buf[], IN TYPE * ty)
 
 
 //Format union's name and members.
-INT format_union_complete(IN OUT CHAR buf[], IN UNION * u)
+INT format_union_complete(IN OUT CHAR buf[], IN Union * u)
 {
 	if (u == NULL) { return ST_SUCC; }
 	strcat(buf, "union ");
-	DECL * member = UNION_decl_list(u);
+	Decl * member = UNION_decl_list(u);
 	if (UNION_tag(u)) {
 		strcat(buf, SYM_name(UNION_tag(u)));
 	}
@@ -3249,11 +3247,11 @@ INT format_union_complete(IN OUT CHAR buf[], IN UNION * u)
 
 
 //Format struct's name and members.
-INT format_struct_complete(IN OUT CHAR buf[], IN STRUCT * s)
+INT format_struct_complete(IN OUT CHAR buf[], IN Struct * s)
 {
 	if (s == NULL) { return ST_SUCC; }
 	strcat(buf, "struct ");
-	DECL * member = STRUCT_decl_list(s);
+	Decl * member = STRUCT_decl_list(s);
 	if (STRUCT_tag(s)) {
 		strcat(buf, SYM_name(STRUCT_tag(s)));
 	}
@@ -3261,7 +3259,7 @@ INT format_struct_complete(IN OUT CHAR buf[], IN STRUCT * s)
 	//Printf members.
 	strcat(buf, "{");
 	while (member != NULL) {
-		IS_TRUE0(DECL_dt(member) == DCL_DECLARATION);
+		ASSERT0(DECL_dt(member) == DCL_DECLARATION);
 		if ((is_struct(member) || is_union(member)) &&
 			TYPE_struct_type(DECL_spec(member)) == s) {
 			/*
@@ -3273,7 +3271,7 @@ INT format_struct_complete(IN OUT CHAR buf[], IN STRUCT * s)
 				}
 			}
 			*/
-			IS_TRUE0(is_pointer(member));
+			ASSERT0(is_pointer(member));
 		}
 		format_declaration(buf, member);
 		strcat(buf, "; ");
@@ -3285,16 +3283,16 @@ INT format_struct_complete(IN OUT CHAR buf[], IN STRUCT * s)
 
 
 //Format struct/union's name and members.
-INT format_struct_union_complete(IN OUT CHAR buf[], IN TYPE * ty)
+INT format_struct_union_complete(IN OUT CHAR buf[], IN TypeSpec * ty)
 {
 	if (ty == NULL) { return ST_SUCC; }
 	format_struct_union(buf, ty);
 
 	//Printf members.
-	STRUCT * s = TYPE_struct_type(ty);
+	Struct * s = TYPE_struct_type(ty);
 	if (s == NULL) { return ST_SUCC; }
 
-	DECL * member = STRUCT_decl_list(s);
+	Decl * member = STRUCT_decl_list(s);
 	strcat(buf, "{");
 	while (member != NULL) {
 		format_declaration(buf, member);
@@ -3307,7 +3305,7 @@ INT format_struct_union_complete(IN OUT CHAR buf[], IN TYPE * ty)
 
 
 //Format struct/union's name, it does not include members.
-INT format_struct_union(IN OUT CHAR buf[], IN TYPE * ty)
+INT format_struct_union(IN OUT CHAR buf[], IN TypeSpec * ty)
 {
 	if (ty == NULL)	{ return ST_SUCC; }
 	if (TYPE_des(ty) & T_SPEC_STRUCT) {
@@ -3318,11 +3316,11 @@ INT format_struct_union(IN OUT CHAR buf[], IN TYPE * ty)
 		err(g_src_line_num, "expected a struct or union");
 		return ST_ERR;
 	}
-	STRUCT * s = TYPE_struct_type(ty);
+	Struct * s = TYPE_struct_type(ty);
 
 	//Illegal type, TYPE_struct_type can not be NULL,
 	//one should filter this case before invoke format_struct_union();
-	IS_TRUE0(s);
+	ASSERT0(s);
 
 	//printf tag
 	if (STRUCT_tag(s)) {
@@ -3333,7 +3331,7 @@ INT format_struct_union(IN OUT CHAR buf[], IN TYPE * ty)
 }
 
 
-INT format_stor_spec(IN OUT CHAR buf[], IN TYPE * ty)
+INT format_stor_spec(IN OUT CHAR buf[], IN TypeSpec * ty)
 {
 	if (ty == NULL)	{ return ST_SUCC; }
 	if (IS_REG(ty)) strcat(buf,"register ");
@@ -3344,7 +3342,7 @@ INT format_stor_spec(IN OUT CHAR buf[], IN TYPE * ty)
 }
 
 
-INT format_quan_spec(IN OUT CHAR buf[], IN TYPE * ty)
+INT format_quan_spec(IN OUT CHAR buf[], IN TypeSpec * ty)
 {
 	if (ty == NULL)	{ return ST_SUCC; }
 	if (IS_CONST(ty)) strcat(buf,"const ");
@@ -3353,7 +3351,7 @@ INT format_quan_spec(IN OUT CHAR buf[], IN TYPE * ty)
 }
 
 
-INT format_decl_spec(IN OUT CHAR buf[], IN TYPE * ty, bool is_ptr)
+INT format_decl_spec(IN OUT CHAR buf[], IN TypeSpec * ty, bool is_ptr)
 {
 	if (ty == NULL) { return ST_SUCC; }
 	BYTE is_su = (BYTE)(IS_STRUCT(ty) || IS_UNION(ty)),
@@ -3381,7 +3379,7 @@ INT format_decl_spec(IN OUT CHAR buf[], IN TYPE * ty, bool is_ptr)
 }
 
 
-INT format_parameter_list(IN OUT CHAR buf[], IN DECL * decl)
+INT format_parameter_list(IN OUT CHAR buf[], IN Decl * decl)
 {
 	if (decl == NULL) { return ST_SUCC; }
 	while (decl != NULL) {
@@ -3393,7 +3391,7 @@ INT format_parameter_list(IN OUT CHAR buf[], IN DECL * decl)
 }
 
 
-INT format_dcrl_reverse(IN OUT CHAR buf[], IN DECL * decl)
+INT format_dcrl_reverse(IN OUT CHAR buf[], IN Decl * decl)
 {
 	if (decl == NULL) {
 		return ST_SUCC;
@@ -3401,7 +3399,7 @@ INT format_dcrl_reverse(IN OUT CHAR buf[], IN DECL * decl)
 	switch (DECL_dt(decl)) {
 	case DCL_POINTER:
 		{
-			TYPE * quan = DECL_qua(decl);
+			TypeSpec * quan = DECL_qua(decl);
 			if (quan != NULL) {
 				if (IS_CONST(quan)) strcat(buf,"const ");
 				if (IS_VOLATILE(quan)) strcat(buf,"volatile ");
@@ -3419,10 +3417,10 @@ INT format_dcrl_reverse(IN OUT CHAR buf[], IN DECL * decl)
 		break;
 	case DCL_ID:
 		{
-			TREE * t = DECL_id(decl);
-			TYPE * quan = DECL_qua(decl);
+			Tree * t = DECL_id(decl);
+			TypeSpec * quan = DECL_qua(decl);
 			if (quan != NULL) {
-				IS_TRUE0(!IS_RESTRICT(quan));
+				ASSERT0(!IS_RESTRICT(quan));
 				if (IS_VOLATILE(quan)) strcat(buf,"volatile ");
 				if (IS_CONST(quan)) strcat(buf,"const ");
 			}
@@ -3470,13 +3468,13 @@ INT format_dcrl_reverse(IN OUT CHAR buf[], IN DECL * decl)
 			break;
 		}
 	default:
-		IS_TRUE(0, ("unknown DECL type"));
+		ASSERT(0, ("unknown Decl type"));
 	}
 	return ST_SUCC;
 }
 
 
-INT format_declarator(IN OUT CHAR buf[], IN DECL * decl)
+INT format_declarator(IN OUT CHAR buf[], IN Decl * decl)
 {
 	CHAR b[10];
 	b[0] = 0;
@@ -3489,7 +3487,7 @@ INT format_declarator(IN OUT CHAR buf[], IN DECL * decl)
 		decl = DECL_child(decl);
 	}
 	if (decl != NULL) {
-		IS_TRUE((DECL_dt(decl) == DCL_ARRAY ||
+		ASSERT((DECL_dt(decl) == DCL_ARRAY ||
 			DECL_dt(decl) == DCL_POINTER ||
 			DECL_dt(decl) == DCL_FUN     ||
 			DECL_dt(decl) == DCL_ID      ||
@@ -3506,24 +3504,24 @@ INT format_declarator(IN OUT CHAR buf[], IN DECL * decl)
 }
 
 
-INT format_user_type_spec(IN OUT CHAR buf[], IN TYPE * ty)
+INT format_user_type_spec(IN OUT CHAR buf[], IN TypeSpec * ty)
 {
 	if (buf == NULL || ty == NULL) return ST_SUCC;
-	IS_TRUE0(HAVE_FLAG(TYPE_des(ty), T_SPEC_USER_TYPE));
-	DECL * ut = TYPE_user_type(ty);
-	IS_TRUE0(ut != NULL);
+	ASSERT0(HAVE_FLAG(TYPE_des(ty), T_SPEC_USER_TYPE));
+	Decl * ut = TYPE_user_type(ty);
+	ASSERT0(ut != NULL);
 	return format_user_type_spec(buf, ut);
 }
 
 
-INT format_user_type_spec(IN OUT CHAR buf[], IN DECL * ut)
+INT format_user_type_spec(IN OUT CHAR buf[], IN Decl * ut)
 {
 	if (buf == NULL || ut == NULL) return ST_SUCC;
 	return format_declaration(buf, ut);
 }
 
 
-INT format_base_type_spec(IN OUT CHAR buf[], IN TYPE * ty)
+INT format_base_type_spec(IN OUT CHAR buf[], IN TypeSpec * ty)
 {
 	if (buf == NULL || ty == NULL) { return ST_SUCC; }
 	if (!is_simple_base_type(ty)) {
@@ -3554,19 +3552,19 @@ INT format_base_type_spec(IN OUT CHAR buf[], IN TYPE * ty)
 }
 
 
-INT format_declaration(IN OUT CHAR buf[], IN DECL * decl)
+INT format_declaration(IN OUT CHAR buf[], IN Decl * decl)
 {
 	if (decl == NULL) { return ST_SUCC; }
 	if (DECL_dt(decl) == DCL_DECLARATION ||
 		DECL_dt(decl) == DCL_TYPE_NAME) {
-		TYPE * ty = DECL_spec(decl);
-		DECL * dcl = DECL_decl_list(decl);
+		TypeSpec * ty = DECL_spec(decl);
+		Decl * dcl = DECL_decl_list(decl);
 		format_decl_spec(buf, ty, is_pointer(decl));
 		format_declarator(buf, dcl);
 		return ST_SUCC;
 	} else if (DECL_dt(decl) == DCL_DECLARATOR ||
 			   DECL_dt(decl) == DCL_ABS_DECLARATOR) {
-		DECL * dcl = DECL_decl_list(decl);
+		Decl * dcl = DECL_decl_list(decl);
 		strcat(buf, "NULL ");
 		format_declarator(buf, dcl);
 	} else if (DECL_dt(decl) == DCL_POINTER ||
@@ -3578,13 +3576,13 @@ INT format_declaration(IN OUT CHAR buf[], IN DECL * decl)
 	} else if (DECL_dt(decl) == DCL_VARIABLE) {
 		strcat(buf, "...");
 	} else {
-		IS_TRUE(0, ("Unkonwn DECL type"));
+		ASSERT(0, ("Unkonwn Decl type"));
 	}
 	return ST_ERR;
 }
 
 
-//Dump DECL TREE...
+//Dump Decl Tree...
 //Print indent blank.
 static void pd(INT indent)
 {
@@ -3592,7 +3590,7 @@ static void pd(INT indent)
 }
 
 
-INT format_parameter_list(IN DECL * decl, INT indent)
+INT format_parameter_list(IN Decl * decl, INT indent)
 {
 	if (decl == NULL) { return ST_SUCC; }
 	while (decl != NULL) {
@@ -3604,7 +3602,7 @@ INT format_parameter_list(IN DECL * decl, INT indent)
 }
 
 
-INT format_dcrl(IN DECL * decl, INT indent)
+INT format_dcrl(IN Decl * decl, INT indent)
 {
 	if (decl == NULL) {
 		return ST_SUCC;
@@ -3612,7 +3610,7 @@ INT format_dcrl(IN DECL * decl, INT indent)
 	switch (DECL_dt(decl)) {
 	case DCL_POINTER:
 		{
-			TYPE * quan = DECL_qua(decl);
+			TypeSpec * quan = DECL_qua(decl);
 			if (quan != NULL) {
 				if (IS_CONST(quan)) fprintf(g_tfile, "const ");
 				if (IS_VOLATILE(quan)) fprintf(g_tfile, "volatile ");
@@ -3631,10 +3629,10 @@ INT format_dcrl(IN DECL * decl, INT indent)
 		break;
 	case DCL_ID:
 		{
-			TREE * t = DECL_id(decl);
-			TYPE * quan = DECL_qua(decl);
+			Tree * t = DECL_id(decl);
+			TypeSpec * quan = DECL_qua(decl);
 			if (quan != NULL) {
-				IS_TRUE0(!IS_RESTRICT(quan));
+				ASSERT0(!IS_RESTRICT(quan));
 				if (IS_CONST(quan)) fprintf(g_tfile, "const ");
 				if (IS_VOLATILE(quan)) fprintf(g_tfile, "volatile ");
 			}
@@ -3644,13 +3642,13 @@ INT format_dcrl(IN DECL * decl, INT indent)
 		}
 		break;
 	case DCL_FUN:
-		IS_TRUE0(DECL_prev(decl) != NULL);
+		ASSERT0(DECL_prev(decl) != NULL);
 		if (DECL_dt(DECL_prev(decl)) == DCL_POINTER) {
 			fprintf(g_tfile, "FUN_POINTER");
 		} else if (DECL_dt(DECL_prev(decl)) == DCL_ID) {
 			fprintf(g_tfile, "FUN_DECL");
 		} else {
-			IS_TRUE0(0);
+			ASSERT0(0);
 		}
 
 		if (DECL_fun_para_list(decl) == NULL) {
@@ -3686,13 +3684,13 @@ INT format_dcrl(IN DECL * decl, INT indent)
 			break;
 		}
 	default:
-		IS_TRUE(0, ("unknown DECL type"));
+		ASSERT(0, ("unknown Decl type"));
 	}
 	return ST_SUCC;
 }
 
 
-INT format_declarator(IN DECL * decl, INT indent)
+INT format_declarator(IN Decl * decl, INT indent)
 {
 	if (decl == NULL) { return ST_SUCC; }
 	pd(indent);
@@ -3707,7 +3705,7 @@ INT format_declarator(IN DECL * decl, INT indent)
 	}
 
 	if (decl != NULL) {
-		IS_TRUE((DECL_dt(decl) == DCL_ARRAY ||
+		ASSERT((DECL_dt(decl) == DCL_ARRAY ||
 			DECL_dt(decl) == DCL_POINTER ||
 			DECL_dt(decl) == DCL_FUN     ||
 			DECL_dt(decl) == DCL_ID      ||
@@ -3720,7 +3718,7 @@ INT format_declarator(IN DECL * decl, INT indent)
 }
 
 
-INT format_user_type_spec(IN TYPE * ty, INT indent)
+INT format_user_type_spec(IN TypeSpec * ty, INT indent)
 {
 	if (ty == NULL) {
 		return ST_SUCC;
@@ -3728,12 +3726,12 @@ INT format_user_type_spec(IN TYPE * ty, INT indent)
 	if ((TYPE_des(ty) & T_SPEC_USER_TYPE) == 0) {
 		return ST_ERR;
 	}
-	DECL * ut = TYPE_user_type(ty);
+	Decl * ut = TYPE_user_type(ty);
 	return format_user_type_spec(ut, indent);
 }
 
 
-INT format_user_type_spec(IN DECL * ut, INT indent)
+INT format_user_type_spec(IN Decl * ut, INT indent)
 {
 	if (ut == NULL) {
 		return ST_SUCC;
@@ -3742,7 +3740,7 @@ INT format_user_type_spec(IN DECL * ut, INT indent)
 }
 
 
-INT format_declaration(IN DECL * decl, INT indent)
+INT format_declaration(IN Decl * decl, INT indent)
 {
 	if (decl == NULL || g_tfile == NULL) return ST_SUCC;
 	fprintf(g_tfile, "\n");
@@ -3750,9 +3748,15 @@ INT format_declaration(IN DECL * decl, INT indent)
 	CHAR buf[MAX_BUF_LEN];
 	buf[0] = 0;
 	if (DECL_dt(decl) == DCL_DECLARATION || DECL_dt(decl) == DCL_TYPE_NAME) {
-		TYPE * ty = DECL_spec(decl);
-		DECL * dcl = DECL_decl_list(decl);
-		fprintf(g_tfile, "%s\n", g_dcl_name[DECL_dt(decl)]);
+		TypeSpec * ty = DECL_spec(decl);
+		Decl * dcl = DECL_decl_list(decl);
+		fprintf(g_tfile, "%s", g_dcl_name[DECL_dt(decl)]);
+		#ifdef _DEBUG_
+		fprintf(g_tfile, "(uid:%d)", DECL_uid(decl));
+		#endif
+		fprintf(g_tfile, "(line:%d)", DECL_lineno(decl));
+		fprintf(g_tfile, "\n");
+
 		format_decl_spec(buf, ty, is_pointer(decl));
 		pd(indent + DECL_FMT_INDENT_INTERVAL);
 		fprintf(g_tfile, "SPECIFIER:%s", buf);
@@ -3763,8 +3767,9 @@ INT format_declaration(IN DECL * decl, INT indent)
 		return ST_SUCC;
 	} else if (DECL_dt(decl) == DCL_DECLARATOR ||
 			   DECL_dt(decl) == DCL_ABS_DECLARATOR) {
-		DECL * dcl = DECL_decl_list(decl);
-		fprintf(g_tfile, "%s\n", g_dcl_name[DECL_dt(decl)]);
+		Decl * dcl = DECL_decl_list(decl);
+		fprintf(g_tfile, "%s", g_dcl_name[DECL_dt(decl)]);
+		fprintf(g_tfile, "\n");
 		format_declarator(dcl, indent + DECL_FMT_INDENT_INTERVAL);
 	} else if (DECL_dt(decl) == DCL_POINTER ||
 			 DECL_dt(decl) == DCL_ARRAY ||
@@ -3775,7 +3780,7 @@ INT format_declaration(IN DECL * decl, INT indent)
 	} else if (DECL_dt(decl) == DCL_VARIABLE) {
 		fprintf(g_tfile, "... ");
 	} else {
-		IS_TRUE(0, ("Unkonwn DECL type"));
+		ASSERT(0, ("Unkonwn Decl type"));
 	}
 	fflush(g_tfile);
 	return ST_ERR;
@@ -3784,10 +3789,10 @@ INT format_declaration(IN DECL * decl, INT indent)
 
 
 //Fetch const value of 't' refered
-INT get_enum_const_val(ENUM * e, INT idx)
+INT get_enum_const_val(Enum * e, INT idx)
 {
 	if (e == NULL) { return -1; }
-	EVAL_LIST * evl = ENUM_vallist(e);
+	EnumValueList * evl = ENUM_vallist(e);
 	while (idx > 0 && evl != NULL) {
 		evl = EVAL_LIST_next(evl);
 		idx--;
@@ -3801,10 +3806,10 @@ INT get_enum_const_val(ENUM * e, INT idx)
 
 
 //Fetch const value of 't' refered
-CHAR * get_enum_const_name(ENUM * e, INT idx)
+CHAR * get_enum_const_name(Enum * e, INT idx)
 {
 	if (e == NULL) { return NULL; }
-	EVAL_LIST * evl = ENUM_vallist(e);
+	EnumValueList * evl = ENUM_vallist(e);
 	while (idx > 0 && evl != NULL) {
 		evl = EVAL_LIST_next(evl);
 		idx--;
@@ -3818,9 +3823,9 @@ CHAR * get_enum_const_name(ENUM * e, INT idx)
 
 
 //If type is a user-defined type, return the actually type-spec.
-TYPE * get_pure_type_spec(TYPE * type)
+TypeSpec * get_pure_type_spec(TypeSpec * type)
 {
-	DECL * utdcl;
+	Decl * utdcl;
 	if (IS_USER_TYPE_REF(type)) {
 		utdcl = TYPE_user_type(type);
 		return get_pure_type_spec(DECL_spec(utdcl));
@@ -3829,51 +3834,51 @@ TYPE * get_pure_type_spec(TYPE * type)
 }
 
 
-bool is_bitfield(DECL * decl)
+bool is_bitfield(Decl * decl)
 {
 	decl = get_pure_declarator(decl);
 	return decl != NULL && DECL_is_bit_field(decl);
 }
 
 
-bool is_struct(TYPE * type)
+bool is_struct(TypeSpec * type)
 {
 	type = get_pure_type_spec(type);
 	return type != NULL && IS_STRUCT(type);
 }
 
 
-bool is_struct(DECL * decl)
+bool is_struct(Decl * decl)
 {
-	IS_TRUE(decl &&
+	ASSERT(decl &&
 			(DECL_dt(decl) == DCL_TYPE_NAME ||
 			 DECL_dt(decl) == DCL_DECLARATION),
-			("need TYPE-NAME or DCRLARATION"));
+			("need TypeSpec-NAME or DCRLARATION"));
 	return is_struct(DECL_spec(decl));
 }
 
 
-bool is_union(TYPE * type)
+bool is_union(TypeSpec * type)
 {
 	type = get_pure_type_spec(type);
 	return type != NULL && IS_UNION(type);
 }
 
 
-bool is_union(DECL * decl)
+bool is_union(Decl * decl)
 {
-	IS_TRUE(decl &&
+	ASSERT(decl &&
 			(DECL_dt(decl) == DCL_TYPE_NAME ||
 			 DECL_dt(decl) == DCL_DECLARATION),
-			("need TYPE-NAME or DCRLARATION"));
+			("need TypeSpec-NAME or DCRLARATION"));
 	return is_union(DECL_spec(decl));
 }
 
 
 //Is float-point.
-bool is_fp(DECL * dcl)
+bool is_fp(Decl * dcl)
 {
-	IS_TRUE(dcl &&
+	ASSERT(dcl &&
 			(DECL_dt(dcl) == DCL_TYPE_NAME ||
 		     DECL_dt(dcl) == DCL_DECLARATION),
 			("expect type-name or dcrlaration"));
@@ -3882,16 +3887,16 @@ bool is_fp(DECL * dcl)
 
 
 //Is float-point.
-bool is_fp(TYPE * ty)
+bool is_fp(TypeSpec * ty)
 {
 	return (IS_TYPE(ty, T_SPEC_FLOAT) || IS_TYPE(ty, T_SPEC_DOUBLE));
 }
 
 
 //Is integer
-bool is_integer(DECL *dcl)
+bool is_integer(Decl *dcl)
 {
-	IS_TRUE(DECL_dt(dcl) == DCL_TYPE_NAME ||
+	ASSERT(DECL_dt(dcl) == DCL_TYPE_NAME ||
 		    DECL_dt(dcl) == DCL_DECLARATION,
 			("expect type-name or dcrlaration"));
 	return is_integer(DECL_spec(dcl));
@@ -3899,7 +3904,7 @@ bool is_integer(DECL *dcl)
 
 
 //Is integer
-bool is_integer(TYPE * ty)
+bool is_integer(TypeSpec * ty)
 {
 	return (IS_TYPE(ty, T_SPEC_CHAR) ||
 		    IS_TYPE(ty, T_SPEC_SHORT)||
@@ -3916,18 +3921,18 @@ bool is_integer(TYPE * ty)
 Return boolean for arithmetic type.
 Include integer and float pointer.
 */
-bool is_arith(DECL *dcl)
+bool is_arith(Decl *dcl)
 {
-	IS_TRUE(DECL_dt(dcl) == DCL_TYPE_NAME ||
+	ASSERT(DECL_dt(dcl) == DCL_TYPE_NAME ||
 		    DECL_dt(dcl) == DCL_DECLARATION,
 		    ("expect type-name or dcrlaration"));
-	TYPE * ty = DECL_spec(dcl);
+	TypeSpec * ty = DECL_spec(dcl);
 	return is_integer(ty) || is_fp(ty);
 }
 
 
 //Return true if the return-value type is VOID.
-bool is_fun_void_return(DECL * dcl)
+bool is_fun_void_return(Decl * dcl)
 {
 	if (!is_fun_decl(dcl)) return false;
 	if (HAVE_FLAG(TYPE_des(DECL_spec(dcl)), T_SPEC_VOID) &&
@@ -3939,7 +3944,7 @@ bool is_fun_void_return(DECL * dcl)
 
 
 //Return true if 'dcl' is function-type declaration.
-bool is_fun_decl(DECL * dcl)
+bool is_fun_decl(Decl * dcl)
 {
 	dcl = get_pure_declarator(dcl);
 	while (dcl != NULL) {
@@ -3966,11 +3971,11 @@ bool is_fun_decl(DECL * dcl)
 		case DCL_VARIABLE:
 			break;
 		default:
-			IS_TRUE(DECL_dt(dcl) != DCL_DECLARATION &&
+			ASSERT(DECL_dt(dcl) != DCL_DECLARATION &&
 					DECL_dt(dcl) != DCL_DECLARATOR &&
 					DECL_dt(dcl) != DCL_ABS_DECLARATOR &&
 					DECL_dt(dcl) != DCL_TYPE_NAME,
-					("\nunsuitable DECL type locate here in is_fun()\n"));
+					("\nunsuitable Decl type locate here in is_fun()\n"));
 			return false;
 		}
 		dcl = DECL_next(dcl);
@@ -3980,7 +3985,7 @@ bool is_fun_decl(DECL * dcl)
 
 
 //Return true if 'dcl' is function pointer variable.
-bool is_fun_pointer(DECL * dcl)
+bool is_fun_pointer(Decl * dcl)
 {
 	dcl = get_pure_declarator(dcl);
 	while (dcl != NULL) {
@@ -4006,11 +4011,11 @@ bool is_fun_pointer(DECL * dcl)
 		case DCL_VARIABLE:
 			break;
 		default:
-			IS_TRUE(DECL_dt(dcl) != DCL_DECLARATION &&
+			ASSERT(DECL_dt(dcl) != DCL_DECLARATION &&
 					DECL_dt(dcl) != DCL_DECLARATOR &&
 					DECL_dt(dcl) != DCL_ABS_DECLARATOR &&
 					DECL_dt(dcl) != DCL_TYPE_NAME,
-					("\nunsuitable DECL type locate here in is_fun()\n"));
+					("\nunsuitable Decl type locate here in is_fun()\n"));
 			return false;
 		}
 		dcl = DECL_next(dcl);
@@ -4021,12 +4026,12 @@ bool is_fun_pointer(DECL * dcl)
 
 /*
 Is 'dcl' a pointer-declarator,
-e.g:Given DECL as : 'int * a', then the second decltor in the type-chain
+e.g:Given Decl as : 'int * a', then the second decltor in the type-chain
 	must be DCL_POINTER, the first is DCL_ID 'a'.
 	And simplar for abs-decl, as an example 'int *', the first decltor
 	in the type-chain must be DCL_POINTER.
 */
-bool is_pointer(DECL * dcl)
+bool is_pointer(Decl * dcl)
 {
 	dcl = get_pure_declarator(dcl);
 	while (dcl != NULL) {
@@ -4049,11 +4054,11 @@ bool is_pointer(DECL * dcl)
 		case DCL_VARIABLE:
 			break;
 		default:
-			IS_TRUE(DECL_dt(dcl) != DCL_DECLARATION &&
+			ASSERT(DECL_dt(dcl) != DCL_DECLARATION &&
 					DECL_dt(dcl) != DCL_DECLARATOR &&
 					DECL_dt(dcl) != DCL_ABS_DECLARATOR &&
 					DECL_dt(dcl) != DCL_TYPE_NAME,
-					("\nunsuitable DECL type locate here in is_pointer()\n"));
+					("\nunsuitable Decl type locate here in is_pointer()\n"));
 			return false;
 		}
 		dcl = DECL_next(dcl);
@@ -4068,7 +4073,7 @@ Is dcl is array declarator,
 	the first is DCL_ID.
 	for abs-decl: int [], the first decltor must be DCL_ARRAY.
 */
-bool is_array(DECL * dcl)
+bool is_array(Decl * dcl)
 {
 	dcl = get_pure_declarator(dcl);
 	while (dcl != NULL) {
@@ -4079,11 +4084,11 @@ bool is_array(DECL * dcl)
 		case DCL_VARIABLE:
 			break;
 		default:
-			IS_TRUE(DECL_dt(dcl) != DCL_DECLARATION &&
+			ASSERT(DECL_dt(dcl) != DCL_DECLARATION &&
 					DECL_dt(dcl) != DCL_DECLARATOR &&
 					DECL_dt(dcl) != DCL_ABS_DECLARATOR &&
 					DECL_dt(dcl) != DCL_TYPE_NAME,
-					("\nunsuitable DECL type locate here in is_array()\n"));
+					("\nunsuitable Decl type locate here in is_array()\n"));
 			return false;
 		}
 		dcl = DECL_next(dcl);
@@ -4093,15 +4098,15 @@ bool is_array(DECL * dcl)
 
 
 //Create a new type-name, and ONLY copy declaration info list and type-spec.
-DECL * cp_type_name(DECL * src)
+Decl * cp_type_name(Decl * src)
 {
-	IS_TRUE(DECL_dt(src) == DCL_TYPE_NAME, ("cp_type_name"));
-	DECL * dest = new_decl(DCL_TYPE_NAME);
+	ASSERT(DECL_dt(src) == DCL_TYPE_NAME, ("cp_type_name"));
+	Decl * dest = new_decl(DCL_TYPE_NAME);
 	DECL_decl_list(dest) = cp_decl(DECL_decl_list(src));
 	PURE_DECL(dest) = NULL;
 	DECL_spec(dest) = DECL_spec(src);
 
-	DECL * p = PURE_DECL(src), * q;
+	Decl * p = PURE_DECL(src), * q;
 	while (p != NULL) {
 		q = cp_decl(p);
 		add_next(&PURE_DECL(dest), q);
@@ -4112,9 +4117,9 @@ DECL * cp_type_name(DECL * src)
 
 
 //Get offset of appointed 'name' in struct 'st'
-UINT get_struct_field_ofst(STRUCT * st, CHAR * name)
+UINT get_struct_field_ofst(Struct * st, CHAR * name)
 {
-	DECL * decl = STRUCT_decl_list(st);
+	Decl * decl = STRUCT_decl_list(st);
 	UINT ofst = 0;
 	UINT size = 0;
 	while (decl != NULL) {
@@ -4126,33 +4131,33 @@ UINT get_struct_field_ofst(STRUCT * st, CHAR * name)
 		ofst += (UINT)ceil_align(size, STRUCT_align(st));
 		decl = DECL_next(decl);
 	}
-	IS_TRUE(0, ("Unknown struct field"));
+	ASSERT(0, ("Unknown struct field"));
 	return 0;
 }
 
 
-void dump_struct(STRUCT * s)
+void dump_struct(Struct * s)
 {
 	CHAR buf[MAX_BUF_LEN];
 	buf[0] = 0;
-	IS_TRUE(ST_SUCC == format_struct_complete(buf, s),
+	ASSERT(ST_SUCC == format_struct_complete(buf, s),
 			("illegal struct type"));
 	note("\n%s  %s\n", buf, STRUCT_is_complete(s) ? "intact" : "incomplete");
 }
 
 
-void dump_union(UNION * s)
+void dump_union(Union * s)
 {
 	CHAR buf[MAX_BUF_LEN];
 	buf[0] = 0;
-	IS_TRUE(ST_SUCC == format_union_complete(buf, s), ("illegal union type"));
+	ASSERT(ST_SUCC == format_union_complete(buf, s), ("illegal union type"));
 	note("\n%s %s\n", buf, UNION_is_complete(s) ? "intact" : "incomplete");
 }
 
 
 //Dump type specifier.
-//ty: is TYPE specifier of declaration.
-void dump_type(TYPE * ty, bool is_ptr)
+//ty: is TypeSpec specifier of declaration.
+void dump_type(TypeSpec * ty, bool is_ptr)
 {
 	if (g_tfile == NULL) { return; }
 	CHAR buf[MAX_BUF_LEN];
@@ -4163,14 +4168,14 @@ void dump_type(TYPE * ty, bool is_ptr)
 }
 
 
-static void remove_redundant_para(DECL * declaration)
+static void remove_redundant_para(Decl * declaration)
 {
-	IS_TRUE0(DECL_dt(declaration) == DCL_DECLARATION);
-	DECL * dclor;
-	DECL * para_list = get_parameter_list(declaration, &dclor);
+	ASSERT0(DECL_dt(declaration) == DCL_DECLARATION);
+	Decl * dclor;
+	Decl * para_list = get_parameter_list(declaration, &dclor);
 	if (para_list != NULL) {
-		TYPE * spec = DECL_spec(para_list);
-		IS_TRUE0(spec != NULL);
+		TypeSpec * spec = DECL_spec(para_list);
+		ASSERT0(spec != NULL);
 		if (IS_TYPE(spec, T_SPEC_VOID)) {
 			if (is_abs_declaraotr(para_list) && !is_pointer(para_list)) {
 				//e.g int foo(void), there is no any parameter.
@@ -4187,9 +4192,9 @@ static void remove_redundant_para(DECL * declaration)
 
 
 //Check struct/union completeness if decl is struct/union.
-static bool check_struct_union_complete(DECL * decl)
+static bool check_struct_union_complete(Decl * decl)
 {
-	TYPE * type_spec = DECL_spec(decl);
+	TypeSpec * type_spec = DECL_spec(decl);
 	if (is_struct(type_spec) || is_union(type_spec)) {
 		SYM * sym = get_decl_sym(decl);
 		CHAR const* name = SYM_name(sym);
@@ -4205,7 +4210,7 @@ static bool check_struct_union_complete(DECL * decl)
 			}
 			if (e) {
 				//error occur!
-				IS_TRUE0(t);
+				ASSERT0(t);
 				CHAR buf[512];
 				buf[0] = 0;
 				if (name != NULL) {
@@ -4227,7 +4232,7 @@ static bool check_struct_union_complete(DECL * decl)
 }
 
 
-static bool check_bitfield(DECL * decl)
+static bool check_bitfield(Decl * decl)
 {
 	if (is_bitfield(decl) && is_pointer(decl)) {
 		err(g_real_line_num, "pointer type can not assign bit length");
@@ -4237,7 +4242,7 @@ static bool check_bitfield(DECL * decl)
 }
 
 
-static bool func_def(DECL * declaration)
+static bool func_def(Decl * declaration)
 {
 	//Function definition only permit in global scope in C spec.
 	if (SCOPE_level(g_cur_scope) != GLOBAL_SCOPE) {
@@ -4246,7 +4251,7 @@ static bool func_def(DECL * declaration)
 	}
 
 	//Check if 'decl' is unique at scope declaration list.
-	DECL * dcl = SCOPE_decl_list(g_cur_scope);
+	Decl * dcl = SCOPE_decl_list(g_cur_scope);
 	while (dcl != NULL) {
 		if (is_decl_equal(dcl, declaration) && declaration != dcl
 			&& DECL_is_fun_def(dcl)) {
@@ -4268,12 +4273,12 @@ static bool func_def(DECL * declaration)
 	}
 
 	remove_redundant_para(declaration);
-	DECL * para_list = get_parameter_list(declaration);
+	Decl * para_list = get_parameter_list(declaration);
 	DECL_fun_body(declaration) = compound_stmt(para_list);
 	//dump_scope(DECL_fun_body(declaration), 0xfffFFFF);
 
 	DECL_is_fun_def(declaration) = true;
-	IS_TRUE(SCOPE_level(g_cur_scope) == GLOBAL_SCOPE,
+	ASSERT(SCOPE_level(g_cur_scope) == GLOBAL_SCOPE,
 			("Funtion declaration should in global scope"));
 
 	refine_func(declaration);
@@ -4288,12 +4293,12 @@ static bool func_def(DECL * declaration)
 }
 
 
-static DECL * factor_user_type_rec(DECL * decl, TYPE ** new_spec)
+static Decl * factor_user_type_rec(Decl * decl, TypeSpec ** new_spec)
 {
-	IS_TRUE0(DECL_dt(decl) == DCL_DECLARATION);
+	ASSERT0(DECL_dt(decl) == DCL_DECLARATION);
 
-	TYPE * spec = DECL_spec(decl);
-	DECL * new_declor = NULL;
+	TypeSpec * spec = DECL_spec(decl);
+	Decl * new_declor = NULL;
 	if (IS_USER_TYPE_REF(spec)) {
 		new_declor = factor_user_type_rec(TYPE_user_type(spec), new_spec);
 	} else {
@@ -4301,7 +4306,7 @@ static DECL * factor_user_type_rec(DECL * decl, TYPE ** new_spec)
 		REMOVE_FLAG(TYPE_des(*new_spec), T_STOR_TYPEDEF);
 	}
 
-	DECL * cur_declor = get_pure_declarator(decl);
+	Decl * cur_declor = get_pure_declarator(decl);
 	if (DECL_dt(cur_declor) == DCL_ID) {
 
 		//neglect the first DCL_ID node, we only need the rest.
@@ -4315,14 +4320,14 @@ static DECL * factor_user_type_rec(DECL * decl, TYPE ** new_spec)
 
 
 //Expanding user-defined type, declared with 'typedef' in C
-DECL * expand_user_type(DECL * ut)
+Decl * expand_user_type(Decl * ut)
 {
-	IS_TRUE0(is_user_type_ref(ut) || is_user_type_decl(ut));
-	IS_TRUE0(DECL_dt(ut) == DCL_TYPE_NAME ||
+	ASSERT0(is_user_type_ref(ut) || is_user_type_decl(ut));
+	ASSERT0(DECL_dt(ut) == DCL_TYPE_NAME ||
 			 DECL_dt(ut) == DCL_DECLARATION);
 	if (is_user_type_ref(ut)) {
-		DECL * tmp = expand_user_type(TYPE_user_type(DECL_spec(ut)));
-		IS_TRUE0(DECL_spec(tmp) != NULL);
+		Decl * tmp = expand_user_type(TYPE_user_type(DECL_spec(ut)));
+		ASSERT0(DECL_spec(tmp) != NULL);
 		REMOVE_FLAG(TYPE_des(DECL_spec(tmp)), T_STOR_TYPEDEF);
 		DECL_spec(ut) = DECL_spec(tmp);
 		tmp = get_pure_declarator(tmp);
@@ -4335,8 +4340,8 @@ DECL * expand_user_type(DECL * ut)
 		return ut;
 	}
 
-	DECL * tmp = cp_decl_complete(ut);
-	IS_TRUE0(DECL_spec(tmp) != NULL);
+	Decl * tmp = cp_decl_complete(ut);
+	ASSERT0(DECL_spec(tmp) != NULL);
 	REMOVE_FLAG(TYPE_des(DECL_spec(tmp)), T_STOR_TYPEDEF);
 	return tmp;
 }
@@ -4345,34 +4350,34 @@ DECL * expand_user_type(DECL * ut)
 /* Factor the compound user type into basic type.
 e.g: typedef int * INTP;
 	'INTP a' will be factored to 'int * a'. */
-DECL * factor_user_type(DECL * decl)
+Decl * factor_user_type(Decl * decl)
 {
-	IS_TRUE0(DECL_dt(decl) == DCL_DECLARATION || 
+	ASSERT0(DECL_dt(decl) == DCL_DECLARATION || 
 			 DECL_dt(decl) == DCL_TYPE_NAME);
-	TYPE * spec = DECL_spec(decl);
-	IS_TRUE0(IS_USER_TYPE_REF(spec));
+	TypeSpec * spec = DECL_spec(decl);
+	ASSERT0(IS_USER_TYPE_REF(spec));
 	
 	//Indicate current specifier is typedef operation.
 	bool is_typedef = IS_TYPEDEF(spec);
 
 	//Create new type specifer according to the factored type information.
-	TYPE * new_spec = NULL;
-	DECL * new_declor = factor_user_type_rec(TYPE_user_type(spec), &new_spec);
-	IS_TRUE0(new_spec);
+	TypeSpec * new_spec = NULL;
+	Decl * new_declor = factor_user_type_rec(TYPE_user_type(spec), &new_spec);
+	ASSERT0(new_spec);
 	if (is_typedef) {
 		SET_FLAG(TYPE_des(new_spec), T_STOR_TYPEDEF);
 	}
 	
-	DECL * cur_declor = get_pure_declarator(decl);
+	Decl * cur_declor = get_pure_declarator(decl);
 	if (cur_declor == NULL) {
 		//cur_declor may be abstract declarator list.
 		//There is at least DCL_ID if the declaration is typedef.
-		IS_TRUE0(!is_typedef); 
+		ASSERT0(!is_typedef); 
 		return new_declaration(new_spec, new_declor, g_cur_scope);
 	}
 
-	IS_TRUE(DECL_decl_list(decl), ("miss declarator"));
-	IS_TRUE(DECL_dt(cur_declor) == DCL_ID ||
+	ASSERT(DECL_decl_list(decl), ("miss declarator"));
+	ASSERT(DECL_dt(cur_declor) == DCL_ID ||
 			DECL_dt(DECL_decl_list(decl)) == DCL_ABS_DECLARATOR,
 		("either decl is abstract declarator or miss typedef/variable name."));
 
@@ -4382,26 +4387,26 @@ DECL * factor_user_type(DECL * decl)
 
 	//Put an ID to be the head of declarator list.
 	DECL_next(cur_declor) = NULL;
-	IS_TRUE0(DECL_prev(cur_declor) == NULL);
+	ASSERT0(DECL_prev(cur_declor) == NULL);
 	insertbefore_one(&new_declor, new_declor, cur_declor);
 
 	//Create a new declaration with factored specifier.
-	DECL * declaration = new_declaration(new_spec, new_declor, g_cur_scope);
+	Decl * declaration = new_declaration(new_spec, new_declor, g_cur_scope);
 	return declaration;
 }
 
 
-static void process_enum(TYPE * ty)
+static void process_enum(TypeSpec * ty)
 {
 	if (!IS_ENUM_TYPE(ty) || TYPE_enum_type(ty) == NULL) { return; }
 
-	EVAL_LIST * evals = ENUM_vallist(TYPE_enum_type(ty));
+	EnumValueList * evals = ENUM_vallist(TYPE_enum_type(ty));
 	if (evals == NULL) { return; }
 
-	ENUM_LIST * elst = (ENUM_LIST*)xmalloc(sizeof(ENUM_LIST));
+	EnumList * elst = (EnumList*)xmalloc(sizeof(EnumList));
 	ENUM_LIST_enum(elst) = TYPE_enum_type(ty);
 
-	IS_TRUE0(!find_enum(SCOPE_enum_list(g_cur_scope), TYPE_enum_type(ty)));
+	ASSERT0(!find_enum(SCOPE_enum_list(g_cur_scope), TYPE_enum_type(ty)));
 	insertbefore_one(&SCOPE_enum_list(g_cur_scope),
 					 SCOPE_enum_list(g_cur_scope), elst);
 }
@@ -4416,14 +4421,14 @@ Return true if variable definition is found.
 bool declaration()
 {
 	bool is_last_fun_def = false;
-	DECL * dcl_list = NULL;
-	DECL * dcl = NULL;
+	Decl * dcl_list = NULL;
+	Decl * dcl = NULL;
 	UINT lineno = g_real_line_num;
- 	TYPE * type_spec = declaration_spec();
+ 	TypeSpec * type_spec = declaration_spec();
 
 	if (type_spec == NULL) { return false; }
 
-	TYPE * qualifier = new_type();
+	TypeSpec * qualifier = new_type();
 	extract_qualifier(type_spec, qualifier);
 	complement_qua(type_spec);
 
@@ -4452,10 +4457,10 @@ bool declaration()
 		dcl = dcl_list;
 		dcl_list = DECL_next(dcl_list);
 
-		//Generate the DCL_DECLARATION accroding TYPE, DECLLARATOR.
+		//Generate the DCL_DECLARATION accroding TypeSpec, DECLLARATOR.
 		DECL_next(dcl) = DECL_prev(dcl) = NULL;
 
-		DECL * declaration = new_decl(DCL_DECLARATION);
+		Decl * declaration = new_decl(DCL_DECLARATION);
 		DECL_spec(declaration) = type_spec;
 		DECL_decl_list(declaration) = dcl;
 		DECL_align(declaration) = g_alignment;

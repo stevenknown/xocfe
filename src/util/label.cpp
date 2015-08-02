@@ -26,7 +26,7 @@ LabelInfo * newInternalLabel(SMemPool * pool)
 LabelInfo * newLabel(SMemPool * pool)
 {
 	LabelInfo * p = (LabelInfo*)smpoolMalloc(sizeof(LabelInfo), pool);
-	IS_TRUE0(p);
+	ASSERT0(p);
 	memset(p, 0, sizeof(LabelInfo));
 	return p;
 }
@@ -44,7 +44,7 @@ void dumpLabel(LabelInfo const* li)
 	} else if (LABEL_INFO_type(li) == L_PRAGMA) {
 		fprintf(g_tfile, "\npragms(%s)",
 				SYM_name(LABEL_INFO_pragma(li)));
-	} else { IS_TRUE0(0); }
+	} else { ASSERT0(0); }
 
 	if (LABEL_INFO_b1(li) != 0) {
 		fprintf(g_tfile, "(");

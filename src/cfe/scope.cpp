@@ -39,7 +39,7 @@ LAB2LINE_MAP g_lab2lineno;
 static void * xmalloc(size_t size)
 {
 	void * p = smpoolMalloc(size, g_pool_general_used);
-	IS_TRUE0(p);
+	ASSERT0(p);
 	memset(p, 0, size);
 	return p;
 }
@@ -134,7 +134,7 @@ SCOPE * get_global_scope()
 
 SCOPE * get_last_sub_scope(SCOPE * s)
 {
-	IS_TRUE0(s);
+	ASSERT0(s);
 	SCOPE * sub = SCOPE_sub(s);
 	while (SCOPE_nsibling(sub) != NULL) {
 		sub = SCOPE_nsibling(sub);
@@ -158,7 +158,7 @@ void dump_scope_tree(SCOPE * s, INT indent)
 }
 
 
-//Recusively dumping SCOPE trees.
+//Recusively dump SCOPE information, include symbol, label, type info, and trees.
 void dump_scope(SCOPE * s, UINT flag)
 {
 	if (g_tfile == NULL) return;
@@ -187,7 +187,7 @@ void dump_scope(SCOPE * s, UINT flag)
 		g_indent++;
 		note("\n");
 		for (; li != NULL; li = SCOPE_label_list(s).get_next()) {
-			IS_TRUE0(map_lab2lineno(li) != 0);
+			ASSERT0(map_lab2lineno(li) != 0);
 			note("%s (def in line:%d)\n",
 				 SYM_name(LABEL_INFO_name(li)),
 				 map_lab2lineno(li));
@@ -210,7 +210,7 @@ void dump_scope(SCOPE * s, UINT flag)
 	}
 
 	//enums
-	ENUM_LIST * el = SCOPE_enum_list(s);
+	EnumList * el = SCOPE_enum_list(s);
 	if (el != NULL) {
 		note("\nENUM List:");
 		g_indent++;
@@ -225,9 +225,9 @@ void dump_scope(SCOPE * s, UINT flag)
 	}
 
 	//user defined type, by 'typedef'
-	USER_TYPE_LIST * utl = SCOPE_user_type_list(s);
+	UserTypeList * utl = SCOPE_user_type_list(s);
 	if (utl != NULL) {
-		note("\nUSER TYPE:");
+		note("\nUSER Type:");
 		g_indent++;
 		note("\n");
 		while (utl != NULL) {
@@ -245,8 +245,8 @@ void dump_scope(SCOPE * s, UINT flag)
 		g_indent++;
 		note("\n");
 
-		C<STRUCT*> * ct;
-		for (STRUCT * st = SCOPE_struct_list(s).get_head(&ct);
+		C<Struct*> * ct;
+		for (Struct * st = SCOPE_struct_list(s).get_head(&ct);
 			 st != NULL; st = SCOPE_struct_list(s).get_next(&ct)) {
 			buf[0] = 0;
 			format_struct_complete(buf, st);
@@ -262,8 +262,8 @@ void dump_scope(SCOPE * s, UINT flag)
 		g_indent++;
 		note("\n");
 
-		C<UNION*> * ct;
-		for (UNION * st = SCOPE_union_list(s).get_head(&ct);
+		C<Union*> * ct;
+		for (Union * st = SCOPE_union_list(s).get_head(&ct);
 			 st != NULL; st = SCOPE_union_list(s).get_next(&ct)) {
 			buf[0] = 0;
 			format_union_complete(buf, st);
@@ -274,7 +274,7 @@ void dump_scope(SCOPE * s, UINT flag)
 	}
 
 	//declarations
-	DECL * dcl = SCOPE_decl_list(s);
+	Decl * dcl = SCOPE_decl_list(s);
 	if (dcl != NULL) {
 		note("\nDECLARATIONS:");
 		note("\n");
@@ -308,7 +308,7 @@ void dump_scope(SCOPE * s, UINT flag)
 	fflush(g_tfile);
 
 	if (HAVE_FLAG(flag, DUMP_SCOPE_STMT_TREE)) {
-		TREE * t = SCOPE_stmt_list(s);
+		Tree * t = SCOPE_stmt_list(s);
 		if (t != NULL) {
 			note("\nSTATEMENT:");
 			g_indent++;

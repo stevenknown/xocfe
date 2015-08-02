@@ -1,10 +1,8 @@
 #ifndef __SYMTAB_H__
 #define __SYMTAB_H__
 
-/*
-Record a variety of symbols such as user defined variables,
-compiler internal variables, LABEL, ID, TYPE_NAME etc.
-*/
+//Record a variety of symbols such as user defined variables,
+//compiler internal variables, LABEL, ID, TYPE_NAME etc.
 #define SYM_name(sym)			((sym)->s)
 class SYM {
 public:
@@ -27,7 +25,7 @@ public:
 
 	UINT get_hash_value(SYM const* s, UINT bs) const
 	{
-		IS_TRUE0(is_power_of_2(bs));
+		ASSERT0(is_power_of_2(bs));
 		UINT v = computeCharSum(SYM_name(s));
 		return hash32bit(v) & (bs - 1);
 	}
@@ -35,9 +33,9 @@ public:
 	//Note v must be const string pointer.
 	UINT get_hash_value(OBJTY v, UINT bs) const
 	{
-		IS_TRUE(sizeof(OBJTY) == sizeof(CHAR const*),
+		ASSERT(sizeof(OBJTY) == sizeof(CHAR const*),
 				("exception will taken place in type-cast"));
-		IS_TRUE0(is_power_of_2(bs));
+		ASSERT0(is_power_of_2(bs));
 		UINT n = computeCharSum((CHAR const*)v);
 		return hash32bit(n) & (bs - 1);
 	}
@@ -47,7 +45,7 @@ public:
 
 	bool compare(SYM const* s, OBJTY val) const
 	{
-		IS_TRUE(sizeof(OBJTY) == sizeof(CHAR const*),
+		ASSERT(sizeof(OBJTY) == sizeof(CHAR const*),
 				("exception will taken place in type-cast"));
 		return (strcmp(SYM_name(s),  (CHAR const*)val) == 0);
 	}
@@ -69,7 +67,7 @@ public:
 
 	UINT get_hash_value(SYM * s, UINT bs) const
 	{
-		IS_TRUE0(is_power_of_2(bs));
+		ASSERT0(is_power_of_2(bs));
 		UINT v = computeCharSum(SYM_name(s));
 		return hash32bit(v) & (bs - 1);
 	}
@@ -77,9 +75,9 @@ public:
 	//Note v must be string pointer.
 	UINT get_hash_value(OBJTY v, UINT bs) const
 	{
-		IS_TRUE(sizeof(OBJTY) == sizeof(CHAR*),
+		ASSERT(sizeof(OBJTY) == sizeof(CHAR*),
 				("exception will taken place in type-cast"));
-		IS_TRUE0(is_power_of_2(bs));
+		ASSERT0(is_power_of_2(bs));
 		UINT n = computeCharSum((CHAR*)v);
 		return hash32bit(n) & (bs - 1);
 	}
@@ -89,7 +87,7 @@ public:
 
 	bool compare(SYM * s, OBJTY val) const
 	{
-		IS_TRUE(sizeof(OBJTY) == sizeof(CHAR*),
+		ASSERT(sizeof(OBJTY) == sizeof(CHAR*),
 				("exception will taken place in type-cast"));
 		return (strcmp(SYM_name(s),  (CHAR*)val) == 0);
 	}

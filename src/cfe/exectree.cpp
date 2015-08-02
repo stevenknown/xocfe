@@ -35,7 +35,7 @@ Computing expected value in compiling period, such as constant expression.
 
 static bool g_is_allow_float = false;
 static Stack<CELL*> g_cell_stack;
-static bool compute_conditional_exp(IN TREE * t);
+static bool compute_conditional_exp(IN Tree * t);
 
 static CELL * pushv(LONGLONG v)
 {
@@ -59,11 +59,11 @@ static LONGLONG popv()
 }
 
 
-static bool compute_enum_const(TREE * t)
+static bool compute_enum_const(Tree * t)
 {
-	ENUM * e = TREE_enum(t);
+	Enum * e = TREE_enum(t);
 	INT i = TREE_enum_val_idx(t);
-	EVAL_LIST * evl = ENUM_vallist(e);
+	EnumValueList * evl = ENUM_vallist(e);
 	while (i>0) {
 		evl = EVAL_LIST_next(evl);
 	}
@@ -75,13 +75,13 @@ static bool compute_enum_const(TREE * t)
 /* Compute byte size of TYPE_NAME and record in the cell stack, or record
 -1 if failed. The function return true if the computation is success, 
 otherwise return false. */
-static bool compute_sizeof(TREE * t)
+static bool compute_sizeof(Tree * t)
 {
-	TREE * p = TREE_sizeof_exp(t);
+	Tree * p = TREE_sizeof_exp(t);
 	if (TREE_type(p) == TR_TYPE_NAME) {
-		DECL * dcl = TREE_type_name(p);
-		IS_TRUE0(dcl && DECL_dt(dcl) == DCL_TYPE_NAME);
-		IS_TRUE0(DECL_spec(dcl));
+		Decl * dcl = TREE_type_name(p);
+		ASSERT0(dcl && DECL_dt(dcl) == DCL_TYPE_NAME);
+		ASSERT0(DECL_spec(dcl));
 
 		if (is_user_type_ref(dcl)) {
 			dcl = factor_user_type(dcl);
@@ -109,7 +109,7 @@ static bool compute_sizeof(TREE * t)
 }
 
 
-static bool compute_unary_op(TREE * t)
+static bool compute_unary_op(Tree * t)
 {
 	if (!compute_conditional_exp(TREE_lchild(t))) {
 		return false;
@@ -136,7 +136,7 @@ static bool compute_unary_op(TREE * t)
 }
 
 
-static bool compute_binary_op(TREE * t)
+static bool compute_binary_op(Tree * t)
 {
 	if (t == NULL) { return false; }
 	LONGLONG r,l;
@@ -175,7 +175,7 @@ static bool compute_binary_op(TREE * t)
 			l = (l != r);
 			pushv(l);
 			break;
-		default: IS_TRUE0(0);
+		default: ASSERT0(0);
 		}
 		break;
 	case TR_RELATION: // < > >= <=
@@ -196,7 +196,7 @@ static bool compute_binary_op(TREE * t)
 			l = (l <= r);
 			pushv(l);
 			break;
-		default: IS_TRUE0(0);
+		default: ASSERT0(0);
 		}
 		break;
 	case TR_SHIFT:   // >> <<
@@ -209,7 +209,7 @@ static bool compute_binary_op(TREE * t)
 			l = (l << r);
 			pushv(l);
 			break;
-		default: IS_TRUE0(0);
+		default: ASSERT0(0);
 		}
 		break;
 	case TR_ADDITIVE: // '+' '-'
@@ -222,7 +222,7 @@ static bool compute_binary_op(TREE * t)
 			l = (l - r);
 			pushv(l);
 			break;
-		default: IS_TRUE0(0);
+		default: ASSERT0(0);
 		}
 		break;
 	case TR_MULTI:    // '*' '/' '%'
@@ -241,7 +241,7 @@ static bool compute_binary_op(TREE * t)
 			pushv(l);
 			if (r == 0) { warn1("divisor is zero"); }
 			break;
-		default: IS_TRUE0(0);
+		default: ASSERT0(0);
 		}
 		break;
 	default:
@@ -252,7 +252,7 @@ static bool compute_binary_op(TREE * t)
 }
 
 
-static bool compute_conditional_exp(IN TREE * t)
+static bool compute_conditional_exp(IN Tree * t)
 {
 	if (t == NULL) { return true;}
 	switch (TREE_type(t)) {
@@ -289,7 +289,7 @@ static bool compute_conditional_exp(IN TREE * t)
 		return compute_sizeof(t);
 	case TR_ID:
 		{
-			DECL * dcl = NULL;
+			Decl * dcl = NULL;
 			if (!is_decl_exist_in_outer_scope(SYM_name(TREE_id(t)), &dcl)) {
 				err(TREE_lineno(t), "'%s' undefined");
 				return false;
@@ -316,9 +316,9 @@ static bool compute_conditional_exp(IN TREE * t)
 }
 
 
-bool compute_constant_exp(IN TREE * t, OUT LONGLONG * v, bool is_allow_float)
+bool compute_constant_exp(IN Tree * t, OUT LONGLONG * v, bool is_allow_float)
 {
-	IS_TRUE0(t != NULL && v != NULL);
+	ASSERT0(t != NULL && v != NULL);
 	g_is_allow_float = is_allow_float;
 	if (!compute_conditional_exp(t)) {
 		*v = 0;
