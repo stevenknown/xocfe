@@ -29,8 +29,14 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "comf.h"
 #include "smempool.h"
 #include "sstl.h"
+
+using namespace xcom;
+
 #include "util.h"
 #include "symtab.h"
+
+using namespace xoc;
+
 #include "label.h"
 #include "cfe_targ_const_info.h"
 #include "errno.h"

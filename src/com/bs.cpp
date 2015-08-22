@@ -1,6 +1,9 @@
 /*@
-Copyright (c) 2013-2014, Su Zhenyu steven.known@gmail.com
-All rights reserved.
+XOC Release License
+
+Copyright (c) 2013-2014, Alibaba Group, All rights reserved.
+
+    compiler@aliexpress.com
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -14,22 +17,27 @@ modification, are permitted provided that the following conditions are met:
       may be used to endorse or promote products derived from this software
       without specific prior written permission.
 
-THIS SOFTWARE IS PROVIDED "AS IS" AND ANY
-EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
-USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+THIS SOFTWARE IS PROVIDED "AS IS" AND ANY EXPRESS OR IMPLIED
+WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS
+BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+author: Su Zhenyu
 @*/
 #include "ltype.h"
 #include "comf.h"
 #include "smempool.h"
 #include "sstl.h"
 #include "bs.h"
+
+namespace xcom {
 
 #if BITS_PER_BYTE == 8
 #define DIVBPB(a) ((a) >> 3)
@@ -891,7 +899,7 @@ void BitSet::bunion(BitSet const& bs)
 
 //Add a element which corresponding to 'elem' bit, and set this bit.
 void BitSet::bunion(UINT elem)
-{	
+{
 	UINT const first_byte = DIVBPB(elem);
 	if (m_size < (first_byte+1)) {
 		m_ptr = (BYTE*)realloc(m_ptr, m_size, first_byte + 1);
@@ -1405,8 +1413,7 @@ INT BitSet::get_last() const
 
 
 //Extract subset in range between 'low' and 'high'.
-BitSet * BitSet::get_subset_in_range(IN UINT low, IN UINT high,
-									 OUT BitSet & subset)
+BitSet * BitSet::get_subset_in_range(UINT low, UINT high, OUT BitSet & subset)
 {
 	ASSERT(low <= high, ("Invalid bit set"));
 	ASSERT(&subset != this, ("overlapped!"));
@@ -1710,11 +1717,11 @@ UINT BitSetMgr::count_mem(FILE * h)
         //Dump mem usage into file.
 		List<UINT> lst;
 		C<BitSet*> * ct2;
-		for (m_bs_list.get_head(&ct2); 
+		for (m_bs_list.get_head(&ct2);
 			 ct2 != m_bs_list.end(); ct2 = m_bs_list.get_next(ct2)) {
-			BitSet const* bs = ct2->val(); 	
+			BitSet const* bs = ct2->val();
 			UINT c = bs->count_mem();
-			
+
 			C<UINT> * ct;
 			UINT n = lst.get_elem_count();
 			lst.get_head(&ct);
@@ -1729,7 +1736,7 @@ UINT BitSetMgr::count_mem(FILE * h)
 				lst.append_head(c);
 			}
 		}
-		
+
 		UINT v = lst.get_head();
 		fprintf(h, "\n== DUMP BitSetMgr: total %d bitsets, mem usage are:\n",
 				   m_bs_list.get_elem_count());
@@ -1763,8 +1770,7 @@ UINT BitSetMgr::count_mem(FILE * h)
 //
 //Returns a new set which is the union of set1 and set2,
 //and modify 'res' as result.
-BitSet * bs_union(IN BitSet const& set1, IN BitSet const& set2,
-				  OUT BitSet & res)
+BitSet * bs_union(BitSet const& set1, BitSet const& set2, OUT BitSet & res)
 {
 	ASSERT(set1.m_ptr != NULL && set2.m_ptr != NULL && res.m_ptr != NULL,
 			("not yet init"));
@@ -1785,7 +1791,7 @@ BitSet * bs_union(IN BitSet const& set1, IN BitSet const& set2,
 
 //Subtracting set2 from set1
 //Returns a new set which is { x : member( x, 'set1' ) & ~ member( x, 'set2' ) }.
-BitSet * bs_diff(IN BitSet const& set1, IN BitSet const& set2, OUT BitSet & res)
+BitSet * bs_diff(BitSet const& set1, BitSet const& set2, OUT BitSet & res)
 {
 	ASSERT(set1.m_ptr != NULL &&
 			set2.m_ptr != NULL &&
@@ -1805,9 +1811,7 @@ BitSet * bs_diff(IN BitSet const& set1, IN BitSet const& set2, OUT BitSet & res)
 
 
 //Returns a new set which is intersection of 'set1' and 'set2'.
-BitSet * bs_intersect(IN BitSet const& set1,
-					  IN BitSet const& set2,
-					  OUT BitSet & res)
+BitSet * bs_intersect(BitSet const& set1, BitSet const& set2, OUT BitSet & res)
 {
 	ASSERT(set1.m_ptr != NULL &&
 			set2.m_ptr != NULL &&
@@ -1823,809 +1827,4 @@ BitSet * bs_intersect(IN BitSet const& set1,
 	return &res;
 }
 
-
-//
-//START MiscBitSetMgr
-//
-//'h': dump mem usage detail to file.
-UINT MiscBitSetMgr::count_mem(FILE * h) const
-{
-	UINT count = 0;
-	for (SC<SBitSet*> * st = m_sbitset_list.get_head(); 
-		 st != m_sbitset_list.end(); st = m_sbitset_list.get_next(st)) {
-		ASSERT0(st->val());
-		count += st->val()->count_mem();
-	}
-
-	for (SC<DBitSet*> * dt = m_dbitset_list.get_head();
-		 dt != m_dbitset_list.end(); dt = m_dbitset_list.get_next(dt)) {
-		ASSERT0(dt->val());
-		count += dt->val()->count_mem();
-	}
-
-	//DBitSetCore and SBitSetCore are allocated in the pool.
-	count += smpoolGetPoolSize(m_sbitsetc_pool);
-	count += smpoolGetPoolSize(m_dbitsetc_pool);
-	count += smpoolGetPoolSize(ptr_pool);
-	count += sm.count_mem();
-
-	UNUSED(h);
-	#ifdef _DEBUG_
-	if (h != NULL) {
-		//Dump mem usage into file.
-		List<UINT> lst;
-		for (SC<SBitSet*> * st = m_sbitset_list.get_head();
-			 st != m_sbitset_list.end(); st = m_sbitset_list.get_next(st)) {
-			SBitSet const* bs = st->val(); 
-			ASSERT0(bs);
-
-			UINT c = bs->count_mem();
-			C<UINT> * ct;
-			UINT n = lst.get_elem_count();
-			lst.get_head(&ct);
-			UINT i;
-			for (i = 0; i < n; i++, ct = lst.get_next(ct)) {
-				if (c >= ct->val()) {
-					lst.insert_before(c, ct);
-					break;
-				}
-			}
-			if (i == n) {
-				lst.append_head(c);
-			}
-		}
-			 
-		UINT v = lst.get_head();
-		fprintf(h, "\n== DUMP BitSetMgr: total %d "
-					"bitsets, mem usage are:\n",
-					m_sbitset_list.get_elem_count());
-		
-		UINT b = 0;
-		UINT n = lst.get_elem_count();
-		for (UINT i = 0; i < n; i++, v = lst.get_next(), b++) {
-			if (b == 20) {
-				fprintf(h, "\n");
-				b = 0;
-			}
-			if (v < 1024) {
-				fprintf(h, "%dB,", v);
-			} else if (v < 1024 * 1024) {
-				fprintf(h, "%dKB,", v/1024);
-			} else {
-				fprintf(h, "%dMB,", v/1024/1024);
-			}
-		}
-		fflush(h);
-	}
-	#endif
-	return count;
-}
-//END MiscBitSetMgr
-
-
-//
-//START SBitSetCore
-//
-//'free_list': free list for SC<SEG*>
-//'pool': be used to alloc SC<SEG*>
-void SBitSetCore::bunion(SBitSetCore const& src, SegMgr * sm,
-					  SC<SEG*> ** free_list, SMemPool * pool)
-{
-	ASSERT(this != &src, ("operate on same set"));
-	SC<SEG*> * tgtst = segs.get_head();
-	SC<SEG*> * prev_st = NULL;
-	for (SC<SEG*> * srcst = src.segs.get_head();
-		 srcst != src.segs.end(); srcst = src.segs.get_next(srcst)) {
-		SEG * s = srcst->val();
-		ASSERT0(s);
-		
-		UINT src_start = s->start;
-
-		bool handled = false;
-		for (; tgtst != segs.end(); 
-			 prev_st = tgtst, tgtst = segs.get_next(tgtst)) {
-			SEG * t = tgtst->val();
-			UINT tgt_start = t->start;
-			if (src_start < tgt_start) {
-				/*
-				s: |----|
-				t:       |----|
-				*/
-				SEG * x = sm->new_seg();
-				x->copy(*s);
-				if (prev_st == NULL) {
-					prev_st = segs.append_head(x, free_list, pool);
-				} else {
-					prev_st = segs.insert_after(x, prev_st, free_list, pool);
-				}
-				handled = true; //current tgt segment has been handled.
-				break;
-			} else if (src_start == tgt_start) {
-				t->bs.bunion(s->bs);
-				prev_st = tgtst;
-
-				tgtst = segs.get_next(tgtst);
-
-				handled = true; //current tgt segment has been handled.
-				break;
-			}
-		}
-
-		if (tgtst == NULL && !handled) {
-			//Append rest of src segments to tail.
-			SEG * x = sm->new_seg();
-			x->copy(*s);
-			segs.append_tail(x, free_list, pool);
-		}
-	}
-}
-
-
-//'free_list': free list for SC<SEG*>
-//'pool': be used to alloc SC<SEG*>
-void SBitSetCore::bunion(UINT elem, SegMgr * sm,
-					  SC<SEG*> ** free_list, SMemPool * pool)
-{
-	SC<SEG*> * prev_sct = NULL;
-	SC<SEG*> * sct = segs.get_head();
-	SC<SEG*> * next_sct = sct;
-	for (; sct != segs.end(); prev_sct = sct, sct = next_sct) {
-		SEG * s = SC_val(sct);
-		next_sct = segs.get_next(next_sct);
-
-		UINT start = s->get_start();
-		if (elem < start) { break; }
-		
-		UINT last = s->get_end();
-		if (elem <= last) {
-			s->bs.bunion(elem - start);
-			return;
-		}
-	}
-
-	SEG * x = sm->new_seg();
-	if (sct != NULL) {
-		if (prev_sct == NULL) {
-			segs.append_head(x, free_list, pool);
-		} else {
-			segs.insert_after(x, prev_sct, free_list, pool);
-		}
-	} else {
-		segs.append_tail(x, free_list, pool);
-	}
-	x->start = elem / BITS_PER_SEG * BITS_PER_SEG;
-	x->bs.bunion(elem - x->start);
-}
-
-
-void SBitSetCore::copy(SBitSetCore const& src, SegMgr * sm,
-					SC<SEG*> ** free_list, SMemPool * pool)
-{
-	ASSERT(this != &src, ("operate on same set"));
-	clean(sm, free_list);
-	for (SC<SEG*> * st = src.segs.get_head(); 
-		 st != src.segs.end(); st = src.segs.get_next(st)) {
-		SEG * s = st->val();
-		ASSERT0(s);
-		
-		SEG * t = sm->new_seg();
-		t->copy(*s);
-		segs.append_tail(t, free_list, pool);
-	}
-}
-
-
-void SBitSetCore::clean(SegMgr * sm, SC<SEG*> ** free_list)
-{
-	for (SC<SEG*> * st = segs.get_head(); 
-		 st != segs.end(); st = segs.get_next(st)) {
-		SEG * s = st->val();
-		ASSERT0(s);
-		
-		sm->free(s);
-	}
-
-	//Free the list of container of SEG* back to SegMgr.
-	segs.clean(free_list);
-}
-
-
-void SBitSetCore::destroy_seg_and_clean(SegMgr * sm, SC<SEG*> ** free_list)
-{
-	for (SC<SEG*> * st = segs.get_head(); 
-		 st != segs.end(); st = segs.get_next(st)) {
-		//Delete it here, and we are not going to give it back to SegMgr.
-		SEG * s = st->val();
-		ASSERT0(s);
-		
-		UNUSED(sm);
-		#ifdef _DEBUG_
-		sm->dec_seg_count();
-		#endif
-		
-		delete s;
-	}
-
-	//Because SC<SEG*> is always allocated from pool, recycle
-	//it to free_list, at last give it back to the pool.
-	segs.clean(free_list);
-}
-
-
-UINT SBitSetCore::count_mem() const
-{
-	UINT c = 0;
-	for (SC<SEG*> * st = segs.get_head(); 
-		 st != segs.end(); st = segs.get_next(st)) {
-		SEG * s = st->val();
-		ASSERT0(s);
-		
-		c += s->count_mem();
-	}
-	c += segs.count_mem();
-	return c;
-}
-
-
-void SBitSetCore::diff(UINT elem, SegMgr * sm, SC<SEG*> ** free_list)
-{
-	SC<SEG*> * sct = segs.get_head();
-	SC<SEG*> * next_sct = sct;
-	SC<SEG*> * prev_sct = NULL;
-	for (; sct != segs.end(); prev_sct = sct, sct = next_sct) {
-		SEG * s = SC_val(sct);
-		next_sct = segs.get_next(next_sct);
-		
-		UINT start = s->get_start();
-		if (elem < start) { break; }
-		
-		UINT last = s->get_end();
-		if (elem <= last) {
-			s->bs.diff(elem - start);
-			if (s->bs.is_empty()) {
-				segs.remove(prev_sct, sct, free_list);
-				sm->free(s);
-			}
-			return;
-		}
-	}
-}
-
-
-//Difference between current bitset and 'src', current bitset
-//will be modified.
-void SBitSetCore::diff(SBitSetCore const& src, SegMgr * sm, SC<SEG*> ** free_list)
-{
-	ASSERT(this != &src, ("operate on same set"));
-	SC<SEG*> * tgtst = segs.get_head();
-	SC<SEG*> * prev_st = NULL;
-	SC<SEG*> * next_st = tgtst;
-	SC<SEG*> * next_srcst = src.segs.get_head();
-	SC<SEG*> * srcst = next_srcst;
-	for (; srcst != src.segs.end(); srcst = next_srcst) {
-		next_srcst = src.segs.get_next(next_srcst);
-		
-		SEG * s = SC_val(srcst);
-		UINT src_start = s->start;
-		
-		for (; tgtst != segs.end();) {
-			SEG * t = SC_val(tgtst);
-			UINT tgt_start = t->start;
-
-			if (src_start < tgt_start) {
-				break;
-			}
-
-			if (src_start > tgt_start) {
-				next_st = segs.get_next(next_st);
-				prev_st = tgtst;
-				tgtst = next_st;
-				continue;
-			}
-			
-			next_st = segs.get_next(next_st);
-			t->bs.diff(s->bs);
-			
-			if (t->bs.is_empty()) {
-				segs.remove(prev_st, tgtst, free_list);
-				//prev_st keep unchanged.
-				tgtst = next_st;
-				sm->free(t);
-			} else {
-				prev_st = tgtst;
-				tgtst = next_st;
-			}
-		}
-	}
-}
-
-
-void SBitSetCore::dump2(FILE * h) const
-{
-	ASSERT0(h);
-	fprintf(h, "\n");
-	if (segs.get_elem_count() == 0) {
-		fprintf(h, "empty");
-		fflush(h);
-		return;
-	}
-	dump(h);
-}
-
-
-void SBitSetCore::dump(FILE * h) const
-{
-	ASSERT0(h);
-	for (SC<SEG*> * st = segs.get_head(); 
-		 st != segs.end(); st = segs.get_next(st)) {
-		SEG * s = st->val();
-		ASSERT0(s);
-		
-		fprintf(h, " [");
-		INT n;
-		for (INT i = s->bs.get_first(); i >= 0; i = n) {
-			n = s->bs.get_next(i);
-			fprintf(h, "%d", i + s->get_start());
-			if (n >= 0) {
-				fprintf(h, ",");
-			}
-		}
-		fprintf(h, "]");
-	}
-	fflush(h);
-}
-
-
-UINT SBitSetCore::get_elem_count() const
-{
-	UINT c = 0;
-	for (SC<SEG*> * st = segs.get_head(); 
-		 st != segs.end(); st = segs.get_next(st)) {
-		SEG * s = st->val();
-		c += s->bs.get_elem_count();
-	}
-	return c;
-}
-
-
-//*cur will be set to NULL if set is empty.
-INT SBitSetCore::get_first(SC<SEG*> ** cur) const
-{
-	ASSERT0(cur);
-	SC<SEG*> * sc = segs.get_head();
-	if (sc == segs.end()) {
-		ASSERT0(segs.get_elem_count() == 0);
-		*cur = NULL;
-		return -1;
-	}
-	*cur = sc;
-	ASSERT0(sc->val());
-
-	SEG * s = sc->val();
-	ASSERT(!s->bs.is_empty(), ("empty SEG should not exist."));
-	return s->get_start() + s->bs.get_first();
-}
-
-
-//*cur will be set to NULL if set is empty.
-INT SBitSetCore::get_last(SC<SEG*> ** cur) const
-{
-	ASSERT0(cur);
-	SC<SEG*> * sc = segs.get_tail();
-	if (sc == segs.end()) {
-		ASSERT0(segs.get_elem_count() == 0);
-		*cur = NULL;
-		return -1;
-	}
-	*cur = sc;
-	ASSERT0(sc->val());
-
-	SEG * s = sc->val();
-	ASSERT0(!s->bs.is_empty());
-	return s->get_start() + s->bs.get_last();
-}
-
-
-//Note *cur must be initialized.
-INT SBitSetCore::get_next(UINT elem, SC<SEG*> ** cur) const
-{
-	if (cur == NULL) {
-		for (SC<SEG*> * st = segs.get_head(); 
-			 st != segs.end(); st = segs.get_next(st)) {
-			SEG * s = st->val();
-			ASSERT0(s);
-				
-			UINT start = s->get_start();
-			if (elem < start) { continue; }
-			UINT last = s->get_end();
-			if (elem <= last) {
-				INT n = s->bs.get_next(elem - start);
-				if (n >= 0) { return start + (UINT)n; }
-
-				st = segs.get_next(st);
-				if (st == NULL) {
-					return -1;
-				}
-				
-				start = SC_val(st)->get_start();
-				n = SC_val(st)->bs.get_first();
-				ASSERT0(n >= 0);
-				return start + (UINT)n;
-			}
-		}
-		return -1;
-	}
-	
-	SC<SEG*> * st = *cur;
-	if (st == NULL) { return -1; }
-	
-	UINT start = SC_val(st)->get_start();
-	INT n = SC_val(st)->bs.get_next(elem - start);
-	if (n >= 0) {
-		return start + (UINT)n;
-	}
-	
-	st = segs.get_next(st);
-	if (st == segs.end()) {
-		*cur = NULL;
-		return -1;
-	}
-
-	//Update container.
-	*cur = st;
-	start = SC_val(st)->get_start();
-	n = SC_val(st)->bs.get_first();
-	ASSERT0(n >= 0);
-	return start + (UINT)n;
-}
-
-
-bool SBitSetCore::is_equal(SBitSetCore const& src) const
-{
-	ASSERT(this != &src, ("operate on same set"));
-	SC<SEG*> * srcst = src.segs.get_head();
-	SC<SEG*> * tgtst = segs.get_head();
-	for (; srcst != src.segs.end() || tgtst != segs.end(); )  {
-		if ((srcst == NULL) ^ (tgtst == NULL)) {
-			return false;
-		}
-		
-		ASSERT0(srcst);
-		
-		if (SC_val(srcst)->start != SC_val(tgtst)->start) {
-			return false;
-		}
-		
-		if (!SC_val(srcst)->bs.is_equal(SC_val(tgtst)->bs)) {
-			return false;
-		}
-		
-		srcst = src.segs.get_next(srcst);
-		tgtst = segs.get_next(tgtst);
-	}
-	return true;
-}
-
-
-bool SBitSetCore::is_intersect(SBitSetCore const& src) const
-{
-	ASSERT(this != &src, ("operate on same set"));
-	SC<SEG*> * srcst = src.segs.get_head();
-	SC<SEG*> * tgtst = segs.get_head();
-	for (; srcst != src.segs.end() && tgtst != segs.end(); ) {
-		if (SC_val(srcst)->start < SC_val(tgtst)->start) {
-			srcst = src.segs.get_next(srcst);
-			continue;
-		} else if (SC_val(srcst)->start == SC_val(tgtst)->start) {
-			if (SC_val(srcst)->bs.is_intersect(SC_val(tgtst)->bs)) {
-				return true;
-			}
-			
-			srcst = src.segs.get_next(srcst);
-			tgtst = segs.get_next(tgtst);
-			continue;
-		} else {
-			//srcst's start > tgtst's start
-			tgtst = segs.get_next(tgtst);
-			continue;
-		}
-	}
-	return false;
-}
-
-
-bool SBitSetCore::is_contain(UINT elem) const
-{
-	for (SC<SEG*> * st = segs.get_head(); 
-		 st != segs.end(); st = segs.get_next(st)) {
-		SEG * seg = SC_val(st);
-        UINT start = seg->get_start();
-        if (elem < start) { return false; }
-		
-        if (elem >= start && elem <= seg->get_end()) {
-            return seg->bs.is_contain(elem - start);
-        }
-	}
-	return false;
-}
-
-
-bool SBitSetCore::is_empty() const
-{
-	SC<SEG*> * st = segs.get_head();
-	#ifdef _DEBUG_	
-	if (st != segs.end()) {
-		ASSERT0(st->val() && !st->val()->bs.is_empty());
-	}
-	#endif
-	return st == segs.end();
-}
-
-
-//Do intersection for current bitset and 'src', current bitset
-//will be modified.
-void SBitSetCore::intersect(SBitSetCore const& src, SegMgr * sm,
-						 SC<SEG*> ** free_list)
-{
-	ASSERT(this != &src, ("operate on same set"));
-	SC<SEG*> * tgtst = segs.get_head();
-	SC<SEG*> * prev_st = NULL;
-	SC<SEG*> * next_st = tgtst;
-	SC<SEG*> * next_srcst = src.segs.get_head();
-	SC<SEG*> * srcst = next_srcst;
-	for (; srcst != src.segs.end(); srcst = next_srcst) {
-		next_srcst = src.segs.get_next(next_srcst);
-		
-		SEG * s = SC_val(srcst);
-		UINT src_start = s->start;
-		
-		for (; tgtst != segs.end();) {
-			SEG * t = SC_val(tgtst);
-			UINT tgt_start = t->start;
-
-			if (src_start < tgt_start) {
-				if (next_srcst == NULL) {
-					//the last segment of src.
-					next_st = segs.get_next(next_st);
-					segs.remove(prev_st, tgtst, free_list);
-					//prev_st keep unchanged.
-					tgtst = next_st;
-					sm->free(t);
-					continue;
-				}
-				break;
-			}
-			
-			if (src_start > tgt_start) {
-				next_st = segs.get_next(next_st);
-				segs.remove(prev_st, tgtst, free_list);
-				//prev_st keep unchanged.
-				tgtst = next_st;
-				sm->free(t);
-				continue;
-			}
-
-			next_st = segs.get_next(next_st);
-			t->bs.intersect(s->bs);
-			if (t->bs.is_empty()) {
-				segs.remove(prev_st, tgtst, free_list);
-				//prev_st keep unchanged.
-				tgtst = next_st;
-				sm->free(t);
-			} else {
-				prev_st = tgtst;
-				tgtst = next_st;
-			}
-		}
-	}
-	
-	if (next_srcst == src.segs.end()) {
-		//tgt list is longer than src. So tgt list still have
-		//element to cope with.
-		for (; tgtst != segs.end(); tgtst = next_st) {
-			SEG * t = SC_val(tgtst);
-			next_st = segs.get_next(next_st);
-			segs.remove(prev_st, tgtst, free_list);
-			
-			//prev_st keep unchanged.
-			tgtst = next_st;
-			sm->free(t);
-		}
-	}
-}
-//END SBitSetCore
-
-
-//
-//START DBitSetCore
-//
-//*cur will be set to NULL if set is empty.
-INT DBitSetCore::get_first(SC<SEG*> ** cur) const
-{
-	ASSERT0(cur);
-
-	SC<SEG*> * sc = segs.get_head();
-	if (sc == segs.end()) {		
-		ASSERT0(segs.get_elem_count() == 0);
-		*cur = NULL;
-		return -1;
-	}
-
-	*cur = sc;
-	ASSERT0(sc->val());
-	SEG * s = sc->val();
-	
-	//DBitSetCore allow bs is empty if it is not sparse.
-	//ASSERT0(!s->bs.is_empty());
-	return s->get_start() + s->bs.get_first();
-}
-
-
-//*cur will be set to NULL if set is empty.
-INT DBitSetCore::get_last(SC<SEG*> ** cur) const
-{
-	SC<SEG*> * sc = segs.get_tail();
-	if (sc == segs.end()) {
-		ASSERT0(segs.get_elem_count() == 0);
-		*cur = NULL;
-		return -1;
-	}
-
-	ASSERT0(cur);
-	*cur = sc;
-	ASSERT0(sc->val());
-
-	SEG * s = sc->val();
-
-	//DBitSetCore allow bs is empty if it is not sparse.
-	//ASSERT0(!s->bs.is_empty());
-	return s->get_start() + s->bs.get_last();
-}
-//END DBitSetCore
-
-
-#ifdef _DEBUG_
-void bs_test()
-{
-	extern FILE * g_tfile;
-	SegMgr sm;
-
-	DBitSet a(&sm);
-	DBitSet b(&sm);
-	a.set_sparse(false);
-	b.set_sparse(false);
-	a.bunion(5);
-	a.bunion(511);
-	a.bunion(515);
-	b.bunion(21);
-	a.dump(g_tfile);
-	//int u = a.count_mem();
-	b.dump(g_tfile);
-	a.bunion(b);
-	a.dump(g_tfile);
-
-
-	DBitSet x(&sm, 20);
-	x.set_sparse(false);
-	x.bunion(1999);
-	//x.bunion(1);
-	x.bunion(2000);
-	//x.bunion(2007);
-	//x.bunion(2016);
-	x.bunion(2014);
-	//x.bunion(2025);
-	//x.bunion(2033);
-	x.bunion(2048);
-	//x.bunion(1997);
-	//x.bunion(1991);
-	x.bunion(1983);
-	x.bunion(2112);
-	x.bunion(2113);
-	x.diff(2048);
-	x.bunion(2048);
-	x.bunion(13555);
-	x.dump(g_tfile);
-	int n = x.get_elem_count();
-	SC<SEG*> * ct = NULL;
-	n = x.get_first(&ct);
-	n = x.get_next(n, &ct);
-	n = x.get_next(n, &ct);
-	n = x.get_next(n, &ct);
-	n = x.get_next(n, &ct);
-	n = x.get_next(n, &ct);
-	n = x.get_next(n, &ct);
-	n = x.get_last(&ct);
-
-	DBitSet y(&sm, 20);
-	y.set_sparse(false);
-	y.bunion(23);
-	y.bunion(1990);
-	y.bunion(2113);
-	y.bunion(12345);
-	y.bunion(10000);
-	y.bunion(14330);
-	y.bunion(15330);
-	y.bunion(16330);
-
-	fprintf(g_tfile, "\n");
-	x.dump(g_tfile);
-	fprintf(g_tfile, "\n");
-	y.dump(g_tfile);
-	fprintf(g_tfile, "\n");
-
-	y.bunion(x);
-	fprintf(g_tfile, "\n=====\n");
-	y.dump(g_tfile);
-
-	//y.intersect(x);
-	x.bunion(0);
-	x.bunion(100000000);
-	fprintf(g_tfile, "\ny:"); y.dump(g_tfile);
-	fprintf(g_tfile, "\nx:"); x.dump(g_tfile);
-	x.diff(y);
-	fprintf(g_tfile, "\n=====\n");
-	x.dump(g_tfile);
-}
-
-
-void bs_test2()
-{
-	extern FILE * g_tfile;
-	SegMgr sm;
-	SBitSet a(&sm),b(&sm);
-	a.bunion(8);
-	a.bunion(512);
-	a.dump2(g_tfile);
-	a.intersect(b);
-	a.dump2(g_tfile);
-
-
-	SBitSet c(&sm),d(&sm);
-	c.bunion(8);
-	c.bunion(512);
-	c.dump2(g_tfile);
-	d.diff(c);
-	d.dump2(g_tfile);
-
-
-	BitSet e,f;
-	e.bunion(64);
-	//int i = e.get_first();
-
-
-	SBitSet g(&sm),h(&sm);
-	g.bunion(1);
-	g.bunion(100);
-	g.bunion(600);
-	g.bunion(1500);
-	g.dump2(g_tfile);
-	h.bunion(1501);
-	h.bunion(2500);
-	h.bunion(3500);
-	g.is_intersect(h);
-	return;
-}
-
-
-#ifdef DEBUG_SEG
-extern FILE * g_tfile;
-void dump_seg(SegMgr & m)
-{
-	if (g_tfile == NULL) { return; }
-	SC<SEG*> * st = NULL;
-	fprintf(g_tfile, "\n====start %d:%d===\n",
-			m.get_free_list()->get_elem_count(),
-			m.get_seg_count());
-	
-	BitSet x;
-	SList<SEG*> const* flst = m.get_free_list();
-	for (flst->get_head(&st); st != flst.end(); st = flst->get_next(st)) {
-		SEG const* s = st->val();
-		fprintf(g_tfile, "%d,", s->id);
-		x.bunion(s->id);
-	}
-	fflush(g_tfile);
-	x.dump(g_tfile);
-}
-#endif
-#endif
+} //namespace xcom

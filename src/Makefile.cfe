@@ -26,6 +26,10 @@ CFLAGS = -D_LINUX_ -Wno-write-strings -Wsign-promo \
         -D_DEBUG_ -Wswitch #-Wall
         #-Werror=overloaded-virtual \
 
+xocfe: cfe_objs com_objs util_objs
+	gcc $(UTIL_OBJS) $(CFE_OBJS) $(COM_OBJS) $(CFLAGS) -o xocfe.exe -lstdc++ -lm
+	@echo "success!!"
+
 INC=-I com -I cfe -I cfe.prj -I util 
 %.o:%.cpp
 	@echo "build $<"
@@ -34,10 +38,6 @@ INC=-I com -I cfe -I cfe.prj -I util
 cfe_objs: $(CFE_OBJS)
 com_objs: $(COM_OBJS)
 util_objs: $(UTIL_OBJS)
-
-xocfe: cfe_objs com_objs util_objs
-	gcc $(UTIL_OBJS) $(CFE_OBJS) $(COM_OBJS) $(CFLAGS) -o xocfe.exe -lstdc++ -lm
-	@echo "success!!"
 
 clean:
 	@find -name "*.o" | xargs rm -f

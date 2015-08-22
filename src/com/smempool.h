@@ -1,6 +1,9 @@
 /*@
-Copyright (c) 2013-2014, Su Zhenyu steven.known@gmail.com
-All rights reserved.
+XOC Release License
+
+Copyright (c) 2013-2014, Alibaba Group, All rights reserved.
+
+    compiler@aliexpress.com
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -14,16 +17,19 @@ modification, are permitted provided that the following conditions are met:
       may be used to endorse or promote products derived from this software
       without specific prior written permission.
 
-THIS SOFTWARE IS PROVIDED "AS IS" AND ANY
-EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
-USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+THIS SOFTWARE IS PROVIDED "AS IS" AND ANY EXPRESS OR IMPLIED
+WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS
+BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+author: Su Zhenyu
 @*/
 #ifndef __MEM_POOL_H__
 #define __MEM_POOL_H__
@@ -49,7 +55,6 @@ typedef enum {
 } MEMPOOLTYPE;
 
 
-
 #define MEMPOOL_type(p)					((p)->pool_type)
 #define MEMPOOL_next(p)					((p)->next)
 #define MEMPOOL_prev(p)					((p)->prev)
@@ -71,7 +76,7 @@ typedef struct _MemPool {
 	size_t mem_pool_size; //represent mem pool size
 	size_t grow_size;
 	void * ppool; //start address of mem pool
-	
+
 	#ifdef _DEBUG_
 	ULONG chunk_id;
 	#endif
@@ -90,7 +95,7 @@ INT smpoolDeleteViaPoolIndex(MEMPOOLIDX mpt_idx);
 INT smpoolDelete(SMemPool * handle);
 
 //alloc memory from corresponding mem pool
-void * smpoolMallocViaPoolIndex(size_t size, MEMPOOLIDX mpt_idx, 
+void * smpoolMallocViaPoolIndex(size_t size, MEMPOOLIDX mpt_idx,
 								size_t grow_size = 0);
 void * smpoolMalloc(size_t size, SMemPool * handle, size_t grow_size = 0);
 void * smpoolMallocConstSize(size_t elem_size, IN SMemPool * handler);
@@ -108,4 +113,3 @@ void dumpPool(SMemPool * handler, FILE * h);
 
 extern ULONGLONG g_stat_mem_size;
 #endif
-

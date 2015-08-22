@@ -96,8 +96,8 @@ static INT process_array_init(Decl * dcl, TypeSpec * ty, Tree ** init)
 		}
 	} else {
 	    //single dimension array
-		/* When we meet a TR_EXP_SCOPE, because now we are 
-		initializing a array, so the initialization set up 
+		/* When we meet a TR_EXP_SCOPE, because now we are
+		initializing a array, so the initialization set up
 		from subset of EXP_SCOPE */
 		if (TREE_type(*init) == TR_EXP_SCOPE) {
 			Tree * t = TREE_exp_scope(*init);
@@ -457,7 +457,7 @@ static INT get_cvt_rank(INT des)
 		return 20;
 	} else if (IS_TYPED(des, T_SPEC_SHORT)) {
 		return 30;
-	} else if (IS_TYPED(des, T_SPEC_INT) || 
+	} else if (IS_TYPED(des, T_SPEC_INT) ||
 			   IS_TYPED(des, T_SPEC_UNSIGNED) ||
 			   IS_TYPED(des, T_SPEC_ENUM)) {
 		return 40;
@@ -493,13 +493,13 @@ static Decl * build_binary_op_type(Decl * l, Decl * r)
 	if (get_cvt_rank(TYPE_des(lty)) > get_cvt_rank(TYPE_des(rty))) {
 		return l;
 	}
-	return r;	
+	return r;
 }
 
 
 //Checking type-convert of modifier
 static bool ck_assign(Tree * t, Decl * ld, Decl *)
-{	
+{
 	CHAR buf[MAX_BUF_LEN];
 	buf[0] = 0;
 	if (is_array(ld)) {
@@ -1497,7 +1497,7 @@ static void type_trans_init()
 
 
 //Decl hash table
-class DECL_HASH : public SHash<Decl*> {
+class DECL_HASH : public Hash<Decl*> {
 public:
    	UINT compute_hash_value(CHAR const* s) const
 	{

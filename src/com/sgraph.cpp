@@ -1,6 +1,9 @@
 /*@
-Copyright (c) 2013-2014, Su Zhenyu steven.known@gmail.com
-All rights reserved.
+XOC Release License
+
+Copyright (c) 2013-2014, Alibaba Group, All rights reserved.
+
+    compiler@aliexpress.com
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -14,23 +17,29 @@ modification, are permitted provided that the following conditions are met:
       may be used to endorse or promote products derived from this software
       without specific prior written permission.
 
-THIS SOFTWARE IS PROVIDED "AS IS" AND ANY
-EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
-USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+THIS SOFTWARE IS PROVIDED "AS IS" AND ANY EXPRESS OR IMPLIED
+WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS
+BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+author: Su Zhenyu
 @*/
 #include "ltype.h"
 #include "comf.h"
 #include "smempool.h"
 #include "sstl.h"
 #include "bs.h"
+#include "sbs.h"
 #include "sgraph.h"
+
+namespace xcom {
 
 //Expect for unique vertex in graphic depitction
 #define ALWAYS_VERTEX_UNIQUE
@@ -468,7 +477,7 @@ Return false if 'vid' is not on graph.
 bool Graph::get_neighbor_list(OUT List<UINT> & ni_list, UINT vid) const
 {
 	ASSERT(m_ec_pool != NULL, ("not yet initialized."));
-	
+
 	//Ensure VertexHash::find is readonly.
 	Graph * pthis = const_cast<Graph*>(this);
 	Vertex * vex  = pthis->get_vertex(vid);
@@ -495,15 +504,12 @@ bool Graph::get_neighbor_list(OUT List<UINT> & ni_list, UINT vid) const
 }
 
 
-/*
-Return all neighbors of 'vid' on graph.
-Return false if 'vid' is not on graph.
-
-'niset': record the neighbours of 'vid'.
-	Note that this function ensure each neighbours in niset is unique.
-	Using sparse bitset is faster than list in most cases.
-*/
-bool Graph::get_neighbor_set(OUT SBitSet & niset, UINT vid) const
+//Return all neighbors of 'vid' on graph.
+//Return false if 'vid' is not on graph.
+//'niset': record the neighbours of 'vid'.
+//	Note that this function ensure each neighbours in niset is unique.
+//	Using sparse bitset is faster than list in most cases.
+bool Graph::get_neighbor_set(OUT DefSBitSet & niset, UINT vid) const
 {
 	ASSERT(m_ec_pool != NULL, ("not yet initialized."));
 	//Ensure VertexHash::find is readonly.
@@ -1024,7 +1030,7 @@ bool DGraph::computeDom(List<Vertex const*> const* vlst, BitSet const* uni)
 	} else {
 		BitSet * x = new BitSet();
 		C<Vertex const*> * ct = NULL;
-		for (pvlst->get_head(&ct); 
+		for (pvlst->get_head(&ct);
 			 ct != pvlst->end(); ct = pvlst->get_next(ct)) {
 			Vertex const* u = ct->val();
 			ASSERT0(u);
@@ -1056,7 +1062,7 @@ bool DGraph::computeDom(List<Vertex const*> const* vlst, BitSet const* uni)
 		count++;
 		change = false;
 		C<Vertex const*> * ct;
-		for (pvlst->get_head(&ct); 
+		for (pvlst->get_head(&ct);
 			 ct != pvlst->end(); ct = pvlst->get_next(ct)) {
 			Vertex const* v = ct->val();
 			ASSERT0(v);
@@ -1138,7 +1144,7 @@ bool DGraph::computeDom3(List<Vertex const*> const* vlst, BitSet const* uni)
 		count++;
 		change = false;
 		C<Vertex const*> * ct;
-		for (pvlst->get_head(&ct); 
+		for (pvlst->get_head(&ct);
 			 ct != pvlst->end(); ct = pvlst->get_next(ct)) {
 			Vertex const* v = ct->val();
 			ASSERT0(v);
@@ -1561,10 +1567,10 @@ void DGraph::dump_dom(FILE * h, bool dump_dom_tree)
 		 v != NULL; v = m_vertices.get_next(c)) {
 		UINT vid = VERTEX_id(v);
 		fprintf(h, "\nVERTEX(%d) dom: ", vid);
-		
+
 		BitSet * bs;
 		if ((bs = m_dom_set.get(vid)) != NULL) {
-			for (INT id = bs->get_first(); 
+			for (INT id = bs->get_first();
 				 id != -1 ; id = bs->get_next((UINT)id)) {
 				if ((UINT)id != vid) {
 					fprintf(h, "%d ", id);
@@ -1575,7 +1581,7 @@ void DGraph::dump_dom(FILE * h, bool dump_dom_tree)
 		fprintf(h, "\n     pdom: ");
 
 		if ((bs = m_pdom_set.get(vid)) != NULL) {
-			for (INT id = bs->get_first(); 
+			for (INT id = bs->get_first();
 				 id != -1; id = bs->get_next((UINT)id)) {
 				if ((UINT)id != vid) {
 					fprintf(h, "%d ", id);
@@ -1744,3 +1750,5 @@ bool DGraph::removeUnreachNode(UINT entry_id)
 	return removed;
 }
 //END DGraph
+
+} //namespace xcom

@@ -93,7 +93,7 @@ void dump_tree(Tree * t)
 			//'>>='  '&='  '^='  '|='
 			note("\nASSIGN(id:%d):%s <%s>",
 				TREE_uid(t),
-				TOKEN_INFO_name(&g_token_info[TREE_token(t)]), 
+				TOKEN_INFO_name(&g_token_info[TREE_token(t)]),
 				res_type_buf);
 			g_indent += dn;
 			dump_trees(TREE_lchild(t));
@@ -118,36 +118,36 @@ void dump_tree(Tree * t)
 							 TREE_uid(t), name, SCOPE_level(s), res_type_buf);
 					}
 				} else {
-					note("\nreferred ID(id:%d):'%s' <%s>", 
+					note("\nreferred ID(id:%d):'%s' <%s>",
 						 TREE_uid(t), name, res_type_buf);
 				}
 				break;
 			}
 		case TR_IMM:
 			#ifdef _VC6_
-			note("\nIMM(id:%d):%d (0x%x) <%s>", 
+			note("\nIMM(id:%d):%d (0x%x) <%s>",
 				TREE_uid(t),
 				(INT)TREE_imm_val(t),
-				(INT)TREE_imm_val(t), 
+				(INT)TREE_imm_val(t),
 				res_type_buf);
 			#else
 			note("\nIMM(id:%d):%lld (0x%llx) <%s>",
 				TREE_uid(t),
-				TREE_imm_val(t), 
-				TREE_imm_val(t), 
+				TREE_imm_val(t),
+				TREE_imm_val(t),
 				res_type_buf);
 			#endif
 			break;
 		case TR_IMML:
-			note("\nIMML(id:%d):%lld <%s>", 
-				TREE_uid(t), 
-				TREE_imm_val(t), 
+			note("\nIMML(id:%d):%lld <%s>",
+				TREE_uid(t),
+				TREE_imm_val(t),
 				res_type_buf);
 			break;
 		case TR_FP:  //3.1415926
-			note("\nFP(id:%d):%s <%s>", 
+			note("\nFP(id:%d):%s <%s>",
 				TREE_uid(t),
-				SYM_name(TREE_fp_str_val(t)), 
+				SYM_name(TREE_fp_str_val(t)),
 				res_type_buf);
 			break;
 		case TR_ENUM_CONST:
@@ -155,14 +155,14 @@ void dump_tree(Tree * t)
 				INT v = get_enum_const_val(TREE_enum(t), TREE_enum_val_idx(t));
 				CHAR * s = get_enum_const_name(TREE_enum(t),
 											   TREE_enum_val_idx(t));
-				note("\nENUM_CONST(id:%d):%s %d <%s>", 
+				note("\nENUM_CONST(id:%d):%s %d <%s>",
 					TREE_uid(t), s, v, res_type_buf);
 				break;
 			}
 		case TR_STRING:
 			note("\nSTRING(id:%d):%s <%s>",
 				TREE_uid(t),
-				SYM_name(TREE_string_val(t)), 
+				SYM_name(TREE_string_val(t)),
 				res_type_buf);
 			break;
 		case TR_LOGIC_OR: //logical or        ||
@@ -177,7 +177,7 @@ void dump_tree(Tree * t)
 		case TR_MULTI:    // '*' '/' '%'
 			note("\nOP(id:%d):%s <%s>",
 				TREE_uid(t),
-				TOKEN_INFO_name(&g_token_info[TREE_token(t)]), 
+				TOKEN_INFO_name(&g_token_info[TREE_token(t)]),
 				res_type_buf);
 			g_indent += dn;
 			dump_trees(TREE_lchild(t));

@@ -587,7 +587,7 @@ static TOKEN look_next_token(INT n, OUT CHAR ** tok_string,
 			ASSERT0(c);
 			return TOKEN_INFO_token((TOKEN_INFO*)CELL_val(c));
 		}
-		
+
 		//New tokens need to be fetched into the buffer.
 		n -= count;
 		//Restore current token into token-buffer
@@ -604,11 +604,11 @@ static TOKEN look_next_token(INT n, OUT CHAR ** tok_string,
 							g_real_token_string, g_real_line_num);
 			n--;
 		}
-		
+
 		reset_tok();
 		return tok;
 	}
-	
+
 	//For now, count == 0
 	//Fetch a number of n tokens into the buffer
 	append_tok_tail(g_real_token, g_real_token_string, g_real_line_num);
@@ -643,7 +643,7 @@ bool look_forward_token(INT num, ...)
 	if (num <= 0) {
 		return 0;
 	}
-	
+
 	va_list arg;
 	va_start(arg, num);
 	TOKEN v = (TOKEN)va_arg(arg, INT);
@@ -702,7 +702,7 @@ static Tree * param_list()
 {
 	Tree * t = exp();
 	Tree * last = get_last(t);
-	
+
 	while (g_real_token == T_COMMA) {
 		match(T_COMMA);
 		Tree * nt = exp();

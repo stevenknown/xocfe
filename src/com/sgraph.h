@@ -1,6 +1,9 @@
 /*@
-Copyright (c) 2013-2014, Su Zhenyu steven.known@gmail.com
-All rights reserved.
+XOC Release License
+
+Copyright (c) 2013-2014, Alibaba Group, All rights reserved.
+
+    compiler@aliexpress.com
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -14,19 +17,24 @@ modification, are permitted provided that the following conditions are met:
       may be used to endorse or promote products derived from this software
       without specific prior written permission.
 
-THIS SOFTWARE IS PROVIDED "AS IS" AND ANY
-EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
-USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+THIS SOFTWARE IS PROVIDED "AS IS" AND ANY EXPRESS OR IMPLIED
+WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS
+BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+author: Su Zhenyu
 @*/
 #ifndef __GRAPH_H_
 #define __GRAPH_H_
+
+namespace xcom {
 
 #define MAGIC_METHOD
 
@@ -105,7 +113,7 @@ class EdgeHashFunc {
 public:
 	UINT get_hash_value(Edge * e, UINT bs) const
 	{
-		ASSERT0(is_power_of_2(bs));
+		ASSERT0(isPowerOf2(bs));
 		return hash32bit(MAKE_VALUE(VERTEX_id(EDGE_from(e)),
 									VERTEX_id(EDGE_to(e)))) & (bs - 1);
 	}
@@ -128,22 +136,22 @@ public:
 };
 
 
-class EdgeHash : public SHash<Edge*, EdgeHashFunc> {
+class EdgeHash : public Hash<Edge*, EdgeHashFunc> {
 	Graph * m_g;
 public:
-	EdgeHash(UINT bsize = 64) : SHash<Edge*, EdgeHashFunc>(bsize) {}
+	EdgeHash(UINT bsize = 64) : Hash<Edge*, EdgeHashFunc>(bsize) {}
 	virtual ~EdgeHash() {}
 
 	void init(Graph * g, UINT bsize)
 	{
 		m_g = g;
-		SHash<Edge*, EdgeHashFunc>::init(bsize);
+		Hash<Edge*, EdgeHashFunc>::init(bsize);
 	}
 
 	void destroy()
 	{
 		m_g = NULL;
-		SHash<Edge*, EdgeHashFunc>::destroy();
+		Hash<Edge*, EdgeHashFunc>::destroy();
 	}
 
 	virtual Edge * create(OBJTY v);
@@ -154,13 +162,13 @@ class VertexHashFunc {
 public:
 	UINT get_hash_value(OBJTY val, UINT bs) const
 	{
-		ASSERT0(is_power_of_2(bs));
+		ASSERT0(isPowerOf2(bs));
 		return hash32bit((UINT)(size_t)val) & (bs - 1);
 	}
 
 	UINT get_hash_value(Vertex const* vex, UINT bs) const
 	{
-		ASSERT0(is_power_of_2(bs));
+		ASSERT0(isPowerOf2(bs));
 		return hash32bit(VERTEX_id(vex)) & (bs - 1);
 	}
 
@@ -172,11 +180,11 @@ public:
 };
 
 
-class VertexHash : public SHash<Vertex*, VertexHashFunc> {
+class VertexHash : public Hash<Vertex*, VertexHashFunc> {
 protected:
 	SMemPool * m_ec_pool;
 public:
-	VertexHash(UINT bsize = 64) : SHash<Vertex*, VertexHashFunc>(bsize)
+	VertexHash(UINT bsize = 64) : Hash<Vertex*, VertexHashFunc>(bsize)
 	{
 		m_ec_pool = smpoolCreate(sizeof(Vertex) * 4, MEM_CONST_SIZE);
 	}
@@ -186,7 +194,7 @@ public:
 
 	virtual Vertex * create(OBJTY v)
 	{
-		Vertex * vex = 
+		Vertex * vex =
 			(Vertex*)smpoolMallocConstSize(sizeof(Vertex), m_ec_pool);
 		ASSERT0(vex);
 		memset(vex, 0, sizeof(Vertex));
@@ -344,7 +352,7 @@ public:
 
 	void dump_dot(CHAR const* name = NULL);
 	void dump_vcg(CHAR const* name = NULL);
-	
+
 	//Return true if 'succ' is successor of 'v'.
 	bool is_succ(Vertex * v, Vertex * succ) const
 	{
@@ -357,7 +365,7 @@ public:
 		}
 		return false;
 	}
-	
+
 	//Return true if 'pred' is predecessor of 'v'.
 	bool is_pred(Vertex * v, Vertex * pred) const
 	{
@@ -369,7 +377,7 @@ public:
 			e = EC_next(e);
 		}
 		return false;
-	}	
+	}
 
 	bool is_equal(Graph & g) const;
 	bool is_unique() const { return m_is_unique; }
@@ -382,11 +390,13 @@ public:
 		return is_reachable(get_vertex(from), get_vertex(to));
 	}
 	bool is_reachable(Vertex * from, Vertex * to) const;
-	void insertVertexBetween(IN Vertex * v1, IN Vertex * v2,
-							   IN Vertex * newv, OUT Edge ** e1 = NULL,
-							   OUT Edge ** e2 = NULL);
-	void insertVertexBetween(UINT v1, UINT v2, UINT newv,
-							   OUT Edge ** e1 = NULL, OUT Edge ** e2 = NULL);
+	void insertVertexBetween(
+			IN Vertex * v1, IN Vertex * v2,
+			IN Vertex * newv, OUT Edge ** e1 = NULL,
+			OUT Edge ** e2 = NULL);
+	void insertVertexBetween(
+			UINT v1, UINT v2, UINT newv,
+			OUT Edge ** e1 = NULL, OUT Edge ** e2 = NULL);
 	bool is_graph_entry(Vertex const* v) const
 	{ return VERTEX_in_list(v) == NULL;	}
 
@@ -397,7 +407,7 @@ public:
 	void erase();
 
 	bool get_neighbor_list(IN OUT List<UINT> & ni_list, UINT vid) const;
-	bool get_neighbor_set(OUT SBitSet & niset, UINT vid) const;
+	bool get_neighbor_set(OUT DefSBitSet & niset, UINT vid) const;
 	inline UINT get_degree(UINT vid) const
 	{
 		ASSERT(m_ec_pool != NULL, ("not yet initialized."));
@@ -592,14 +602,14 @@ public:
 
 	//Return true if 'v1' dominate 'v2'.
 	bool is_dom(UINT v1, UINT v2) const
-	{ 
+	{
 		ASSERT0(get_dom_set_c(v2));
-		return get_dom_set_c(v2)->is_contain(v1); 
+		return get_dom_set_c(v2)->is_contain(v1);
 	}
 
 	//Return true if 'v1' post dominate 'v2'.
 	bool is_pdom(UINT v1, UINT v2) const
-	{ 
+	{
 		ASSERT0(get_pdom_set_c(v2));
 		return get_pdom_set_c(v2)->is_contain(v1);
 	}
@@ -613,4 +623,6 @@ public:
 	void set_bs_mgr(BitSetMgr * bs_mgr) { m_bs_mgr = bs_mgr; }
 	bool removeUnreachNode(UINT entry_id);
 };
+
+} //namespace xcom
 #endif

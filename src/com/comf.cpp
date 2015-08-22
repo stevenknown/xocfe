@@ -1,6 +1,9 @@
 /*@
-Copyright (c) 2013-2014, Su Zhenyu steven.known@gmail.com
-All rights reserved.
+XOC Release License
+
+Copyright (c) 2013-2014, Alibaba Group, All rights reserved.
+
+    compiler@aliexpress.com
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -14,16 +17,19 @@ modification, are permitted provided that the following conditions are met:
       may be used to endorse or promote products derived from this software
       without specific prior written permission.
 
-THIS SOFTWARE IS PROVIDED "AS IS" AND ANY
-EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
-USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+THIS SOFTWARE IS PROVIDED "AS IS" AND ANY EXPRESS OR IMPLIED
+WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS
+BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+author: Su Zhenyu
 @*/
 #ifdef WIN32
 #include <time.h>
@@ -40,6 +46,7 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "sstl.h"
 #include "bs.h"
 
+namespace xcom {
 
 static CHAR g_hexdigits[] = "0123456789ABCDEF";
 
@@ -165,9 +172,9 @@ CHAR * xstrcat(CHAR * buf, UINT bufl, CHAR const* info, ...)
 	//ptr += sizeof(CHAR*);
 	UINT l = ::strlen(buf);
 	if (l >= bufl) { return buf; }
-	
+
 	UINT x = bufl - l;
-	
+
 	va_list ptr;
 	va_start(ptr, info);
 
@@ -489,7 +496,7 @@ void xstrcpy(CHAR * tgt, CHAR const* src, UINT size)
 
 
 //Reverse the string.
-UCHAR * reverse_string(UCHAR * v)
+UCHAR * reverseString(UCHAR * v)
 {
 	INT end = strlen((CHAR*)v) - 1;
 	INT start = 0;
@@ -522,7 +529,7 @@ UCHAR * xltoa(LONG v, OUT UCHAR * buf)
 		*str++ = '-';
 	}
 	*str = 0; //end of string
-	reverse_string(buf);
+	reverseString(buf);
 	return buf;
 }
 
@@ -549,9 +556,9 @@ void prim(INT m, OUT INT * buf)
 		sign = true;
 		m = -m;
 	}
-	
+
 	_prim(m, 2, buf, 0);
-	
+
 	if (sign) {
 		buf[0] = -buf[0];
 	}
@@ -564,11 +571,11 @@ void dumpf_svec(void * vec, UINT ty, CHAR const* name, bool is_del)
 	if (name == NULL) {
 		name = "matrix.tmp";
 	}
-	
+
 	if (is_del) {
 		unlink(name);
 	}
-	
+
 	static INT g_count = 0;
 	FILE * h = fopen(name, "a+");
 	ASSERT(h, ("%s create failed!!!", name));
@@ -671,7 +678,7 @@ void af2i(IN CHAR * f, OUT BYTE * buf, UINT buflen, bool is_double)
 
 //Compute the power of 2, return the result.
 //Note v must be power of 2.
-UINT get_power_of_2(ULONGLONG v)
+UINT getPowerOf2(ULONGLONG v)
 {
 	UINT n = 0;
 	while ((v & 1) == 0) {
@@ -683,7 +690,7 @@ UINT get_power_of_2(ULONGLONG v)
 
 
 //Compute the number of 1.
-UINT get_sparse_popcount(ULONGLONG v)
+UINT getSparsePopCount(ULONGLONG v)
 {
 	int n = 0;
 	while (v != 0) {
@@ -695,7 +702,7 @@ UINT get_sparse_popcount(ULONGLONG v)
 
 
 //Compute the number of 1.
-UINT get_lookup_popcount(ULONGLONG v)
+UINT getLookupPopCount(ULONGLONG v)
 {
 	BYTE * p = (BYTE*)&v;
 	return g_bit_count[p[0]] + g_bit_count[p[1]] +
@@ -927,7 +934,7 @@ CHAR * lower(CHAR * n)
 Get the index of the first '1' start at most right side.
 e.g: given m=0x8, the first '1' index is 3.
 */
-INT get_first_one_pos(INT m)
+INT getFirstOneAtRightSide(INT m)
 {
 	static const INT dbitpos[32] = {
 	  0, 1, 28, 2, 29, 14, 24, 3, 30, 22, 20, 15, 25, 17, 4, 8,
@@ -948,7 +955,7 @@ bool is_integer(float f)
 	INT i = *(INT*)p;
 	INT m = i & 0x007FFFFF; //mantissa
 	INT n = ((i & 0x7F800000) >> 23) - 127; //number of exp
-	INT j = get_first_one_pos(m);
+	INT j = getFirstOneAtRightSide(m);
 	return 23 - j <= n;
 }
 
@@ -971,7 +978,7 @@ bool is_integerd(double d)
 }
 
 
-bool is_power_of_5(double f)
+bool isPowerOf5(double f)
 {
 	ASSERT0(f >= 0.0);
 	if (f == 0.0) { return false; }
@@ -1461,3 +1468,4 @@ OVER:
 	return buf;
 }
 
+} //namespace xcom

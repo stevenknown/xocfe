@@ -37,6 +37,8 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "smempool.h"
 #include "sstl.h"
 
+using namespace xcom;
+
 //ir_lex used.
 #include "util.h"
 #include "err.h"

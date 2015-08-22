@@ -61,7 +61,7 @@ Example to show the structure of class Decl.
 						|---decl-type (pointer:const)
 						|---decl-type (function)
 
-	e.g4:	
+	e.g4:
 	USER_DEFINED_TYPE var;
 	declaration----
 				  |--type-spec (T_SPEC_USER_TYPE)
@@ -72,7 +72,7 @@ Example to show the structure of class Decl.
 	int *
 	declaration----
 				  |--type-spec (int)
-				  |--declarator (DCL_ABS_DECLARATOR)	
+				  |--declarator (DCL_ABS_DECLARATOR)
 						|---NULL
 
 
@@ -135,7 +135,7 @@ e.g: unsigned a => unsigned int a
 static void complement_qua(TypeSpec * ty)
 {
 	ASSERT0(ty);
-	
+
 	INT des = TYPE_des(ty);
 	if (des == T_SPEC_UNSIGNED ||
 		des == T_SPEC_SIGNED ||
@@ -720,7 +720,7 @@ FAILED:
 static void extract_qualifier(TypeSpec * ty, TypeSpec * qua)
 {
 	ASSERT0(ty && qua);
-	
+
 	if (IS_CONST(ty)) {
 		SET_FLAG(TYPE_des(qua), T_QUA_CONST);
 		REMOVE_FLAG(TYPE_des(ty), T_QUA_CONST);
@@ -790,7 +790,7 @@ static Decl * struct_declaration()
 		DECL_lineno(declaration) = g_real_line_num;
 
 		if (is_user_type_decl(declaration)) {
-			err(g_real_line_num, 
+			err(g_real_line_num,
 				"illegal storage class, should not use typedef in "
 				"struct/union declaration.");
 			continue;
@@ -952,7 +952,7 @@ static TypeSpec * type_spec_union(TypeSpec * ty)
 		err(g_real_line_num, "type specifier is illegal");
 		return ty;
 	}
-	
+
 	Union * s = NULL;
 	if (g_real_token == T_ID) {
 		/*
@@ -1037,7 +1037,7 @@ static TypeSpec * type_spec_union(TypeSpec * ty)
 		err(g_real_line_num, "illegal use '%s'", g_real_token_string);
 		return ty;
 	}
-	
+
 	TYPE_union_type(ty) = s;
 	return ty;
 }
@@ -1221,9 +1221,9 @@ static TypeSpec * enum_spec(TypeSpec * ty)
 		//Check enum name if it is given. The name is optional.
 		Enum * e = NULL;
 		SYM * enumname = ENUM_name(TYPE_enum_type(ty));
-		if (enumname != NULL && 
+		if (enumname != NULL &&
 			is_enum_id_exist_in_outer_scope(SYM_name(enumname), &e)) {
-			err(g_real_line_num, "'%s' : enum type redefinition", 
+			err(g_real_line_num, "'%s' : enum type redefinition",
 				SYM_name(enumname));
 			goto FAILED;
 		}
@@ -1519,9 +1519,9 @@ static Decl * parameter_declaration()
 
 	TypeSpec * qualifier = new_type();
 
-	//Extract qualifier, and regarded it as the qualifier 
+	//Extract qualifier, and regarded it as the qualifier
 	//to the subsequently POINTER or ID.
-	extract_qualifier(type_spec, qualifier);	
+	extract_qualifier(type_spec, qualifier);
 
 	//'DCL_ID' should be the list-head if it exist.
 	Decl * dcl_list = reverse_list(abstract_declarator(qualifier));
@@ -1533,7 +1533,7 @@ static Decl * parameter_declaration()
 	} else {
 		DECL_decl_list(declaration) = new_decl(DCL_ABS_DECLARATOR);
 	}
-	
+
 	DECL_child(DECL_decl_list(declaration)) = dcl_list;
 
 	//array parameter has at least one elem.
@@ -1773,7 +1773,7 @@ Decl * type_name()
 	/* Parse POINTER/ARRAY/ID, and complement their qualifier.
 	Collect const/volatile prefix, add them to POINTER/ARRAY/ID.
 	e.g: const int a; Add const qualifier to ID 'a'.
-		const int * a; Add const qualifier to POINTER '*'. 
+		const int * a; Add const qualifier to POINTER '*'.
 	*/
 	TypeSpec * qualifier = new_type();
 	extract_qualifier(type_spec, qualifier);
@@ -2566,7 +2566,7 @@ Decl * add_to_user_type_list(UserTypeList ** ut_list , Decl * decl)
 			}
 			p = USER_TYPE_LIST_next(p);
 		}
-		USER_TYPE_LIST_next(q) = 
+		USER_TYPE_LIST_next(q) =
 			(UserTypeList*)xmalloc(sizeof(UserTypeList));
 		USER_TYPE_LIST_prev(USER_TYPE_LIST_next(q)) = q;
 		q = USER_TYPE_LIST_next(q);
@@ -2743,7 +2743,7 @@ bool is_user_type_exist(IN UserTypeList * ut_list, IN CHAR * ut_name,
 }
 
 
-bool is_struct_type_exist(List<Struct*> & struct_list, 
+bool is_struct_type_exist(List<Struct*> & struct_list,
 						  IN CHAR * tag, OUT Struct ** s)
 {
 	if (tag == NULL) { return false; }
@@ -2751,9 +2751,9 @@ bool is_struct_type_exist(List<Struct*> & struct_list,
 	C<Struct*> * ct;
 	for (Struct * st = struct_list.get_head(&ct);
 		 ct != NULL; st = struct_list.get_next(&ct)) {
-		SYM * sym = STRUCT_tag(st);		
+		SYM * sym = STRUCT_tag(st);
 		if (sym == NULL) { continue; }
-		
+
 		if (strcmp(SYM_name(sym), tag) == 0) {
 			*s = st;
 			return true;
@@ -2769,11 +2769,11 @@ bool is_union_type_exist(List<Union*> & u_list, IN CHAR * tag, OUT Union ** u)
 	if (tag == NULL) { return false; }
 
 	C<Union*> * ct;
-	for (Union * st = u_list.get_head(&ct); 
+	for (Union * st = u_list.get_head(&ct);
 		 st != NULL; st = u_list.get_next(&ct)) {
-		SYM * sym = UNION_tag(st); 	
+		SYM * sym = UNION_tag(st);
 		if (sym == NULL) { continue; }
-		
+
 		if (strcmp(SYM_name(sym), tag) == 0) {
 			*u = st;
 			return true;
@@ -2937,7 +2937,7 @@ INT get_simply_type_size_in_byte(TypeSpec * spec)
 /* Compute byte size to complex type.
 complex type means the type is either pointer or array.
 e.g : int * a;
-	  int a []; 
+	  int a [];
 */
 ULONG get_complex_type_size_in_byte(Decl * decl)
 {
@@ -3131,9 +3131,9 @@ UINT get_pointer_base_size(Decl * decl)
 			((is_struct(ty) && !is_struct_complete(ty)) ||
 			 (is_union(ty) && !is_union_complete(ty)))) {
 			//The struct/union is incomplete.
-			return 0;			
+			return 0;
 		}
-		
+
 		INT s = get_simply_type_size_in_byte(ty);
 		ASSERT(s != 0, ("simply type size cannot be zero"));
 		return s;
@@ -3145,7 +3145,7 @@ UINT get_pointer_base_size(Decl * decl)
 		s = get_simply_type_size_in_byte(ty);
 	}
 	ASSERT(e != 0, ("declarator size cannot be zero"));
-	return e * s;	
+	return e * s;
 }
 
 
@@ -4352,11 +4352,11 @@ e.g: typedef int * INTP;
 	'INTP a' will be factored to 'int * a'. */
 Decl * factor_user_type(Decl * decl)
 {
-	ASSERT0(DECL_dt(decl) == DCL_DECLARATION || 
+	ASSERT0(DECL_dt(decl) == DCL_DECLARATION ||
 			 DECL_dt(decl) == DCL_TYPE_NAME);
 	TypeSpec * spec = DECL_spec(decl);
 	ASSERT0(IS_USER_TYPE_REF(spec));
-	
+
 	//Indicate current specifier is typedef operation.
 	bool is_typedef = IS_TYPEDEF(spec);
 
@@ -4367,12 +4367,12 @@ Decl * factor_user_type(Decl * decl)
 	if (is_typedef) {
 		SET_FLAG(TYPE_des(new_spec), T_STOR_TYPEDEF);
 	}
-	
+
 	Decl * cur_declor = get_pure_declarator(decl);
 	if (cur_declor == NULL) {
 		//cur_declor may be abstract declarator list.
 		//There is at least DCL_ID if the declaration is typedef.
-		ASSERT0(!is_typedef); 
+		ASSERT0(!is_typedef);
 		return new_declaration(new_spec, new_declor, g_cur_scope);
 	}
 

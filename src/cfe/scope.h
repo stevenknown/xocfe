@@ -105,7 +105,7 @@ public:
 		lref_list.init();
 		struct_list.init();
 		union_list.init();
-		
+
 		SCOPE_id(this) = sc++;
 		SCOPE_level(this) = -1;
 		SCOPE_parent(this) = NULL;

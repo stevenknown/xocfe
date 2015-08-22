@@ -73,7 +73,7 @@ static bool compute_enum_const(Tree * t)
 
 
 /* Compute byte size of TYPE_NAME and record in the cell stack, or record
--1 if failed. The function return true if the computation is success, 
+-1 if failed. The function return true if the computation is success,
 otherwise return false. */
 static bool compute_sizeof(Tree * t)
 {
@@ -94,7 +94,7 @@ static bool compute_sizeof(Tree * t)
 		//} else {
 		//	sz = get_simply_type_size_in_byte(type_spec);
 		//}
-		
+
 		if (sz != 0) {
 			pushv(sz);
 			return true;
@@ -102,9 +102,9 @@ static bool compute_sizeof(Tree * t)
 	} else {
 		return compute_conditional_exp(p);
 	}
-	
+
 	err(TREE_lineno(p), "'sizeof' need type-name");
-	
+
 	return false;
 }
 

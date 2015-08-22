@@ -1,6 +1,9 @@
 /*@
-Copyright (c) 2013-2014, Su Zhenyu steven.known@gmail.com
-All rights reserved.
+XOC Release License
+
+Copyright (c) 2013-2014, Alibaba Group, All rights reserved.
+
+    compiler@aliexpress.com
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -14,31 +17,31 @@ modification, are permitted provided that the following conditions are met:
       may be used to endorse or promote products derived from this software
       without specific prior written permission.
 
-THIS SOFTWARE IS PROVIDED "AS IS" AND ANY
-EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
-USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+THIS SOFTWARE IS PROVIDED "AS IS" AND ANY EXPRESS OR IMPLIED
+WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS
+BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+author: Su Zhenyu
 @*/
 #ifndef _L_TYPE_
 #define _L_TYPE_
 
-#ifdef _LINUX_
-	#include "unistd.h" //for unlink declaration
-	#define ALLOCA	alloca //linux version
-#else
+#ifdef _WINDOWS_
 	#ifdef _VC6_
 	#include "windows.h"
 	#include "errors.h"
 	#endif
 
 	//The enumerate has no associated handler in a switch statement.
-	#pragma warning(disable: 4061) 
+	#pragma warning(disable: 4061)
 
 	//Conditional expression is constant.
 	#pragma warning(disable: 4127)
@@ -51,6 +54,10 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 	#include "malloc.h"
 	#define ALLOCA	_alloca //windows version
+#else
+	//Default is linux version
+	#include "unistd.h" //for unlink declaration
+	#define ALLOCA	alloca //linux version
 #endif
 
 #include "stdlib.h"
@@ -58,7 +65,6 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "stdio.h"
 #include "string.h"
 #include "memory.h"
-#include <new>
 
 //These types may be defined, but we need to override them.
 #undef STATUS
@@ -95,30 +101,29 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 	#define ULONGLONG unsigned long long
 #endif
 
-#ifdef _DEBUG_
-	#ifndef ASSERT
-		#include "stdio.h"
-		INT m518087(CHAR const* info, ...);
-		INT m022138(CHAR const* filename, INT line);
-		#define ASSERT(a, b)  \
-					((a) ? 0 : (m022138(__FILE__, __LINE__), m518087 b))
-		#define IS_TRUEL(a, filename, line, b)  \
-					((a) ? 0 : (m022138(filename, line), m518087 b))
-	#endif
+//Avoid using the predefined ASSERT.
+#undef ASSERT
+#undef ASSERTL
+#undef ASSERT0
+#undef ASSERTL0
 
-	#ifndef ASSERT0
-		#include "stdio.h"
-		INT m518087(CHAR const* info, ...);
-		INT m022138(CHAR const* filename, INT line);
-		#define ASSERT0(a)  ((a) ? 0 : (m022138(__FILE__, __LINE__), m518087 ("")))
-		#define IS_TRUEL0(a, filename, line)  \
-					((a) ? 0 : (m022138(filename, line), m518087 ("")))
-	#endif
+#ifdef _DEBUG_
+	#include "stdio.h"
+	INT m518087(CHAR const* info, ...);
+	INT m022138(CHAR const* filename, INT line);
+
+	#define ASSERT(a, b)  \
+				((a) ? 0 : (m022138(__FILE__, __LINE__), m518087 b))
+	#define ASSERTL(a, filename, line, b)  \
+				((a) ? 0 : (m022138(filename, line), m518087 b))
+	#define ASSERT0(a)  ((a) ? 0 : (m022138(__FILE__, __LINE__), m518087 ("")))
+	#define ASSERTL0(a, filename, line)  \
+				((a) ? 0 : (m022138(filename, line), m518087 ("")))
 #else
 	#define ASSERT(a, b)
-	#define IS_TRUEL(a, filename, line, b)
+	#define ASSERTL(a, filename, line, b)
 	#define ASSERT0(a)
-	#define IS_TRUEL0(a, filename, line)
+	#define ASSERTL0(a, filename, line)
 #endif
 
 #define UNREACH()  ASSERT(0, ("Unreachable."))
@@ -160,7 +165,7 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define GET_HIGH_32BIT(l)	(((l)>>32)&0xffffFFFF)
 
 #define IS_UNSIGN_TY(type)		((type)0 - 1 > 0) //Be true if type is unsigned.
-#define IS_UNSIGN_VAR(var)			(var > 0 && ~var > 0) //Be true if variable is unsigned.
+#define IS_UNSIGN_VAR(var)		(var > 0 && ~var > 0) //Be true if variable is unsigned.
 
 #define IN //input
 #define OUT //output
@@ -179,4 +184,3 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #endif
 
 #endif
-

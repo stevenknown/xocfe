@@ -1,6 +1,9 @@
 /*@
-Copyright (c) 2013-2014, Su Zhenyu steven.known@gmail.com
-All rights reserved.
+XOC Release License
+
+Copyright (c) 2013-2014, Alibaba Group, All rights reserved.
+
+    compiler@aliexpress.com
 
 Redistribution and use in source and binary forms, with or without
 modification, are permitted provided that the following conditions are met:
@@ -14,16 +17,19 @@ modification, are permitted provided that the following conditions are met:
       may be used to endorse or promote products derived from this software
       without specific prior written permission.
 
-THIS SOFTWARE IS PROVIDED "AS IS" AND ANY
-EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
-DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
-USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+THIS SOFTWARE IS PROVIDED "AS IS" AND ANY EXPRESS OR IMPLIED
+WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS
+BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR
+BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+author: Su Zhenyu
 @*/
 #include "ltype.h"
 #include "comf.h"
@@ -35,13 +41,14 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define BOUNDARY_NUM 	0xAA
 #define END_BOUND_BYTE 	4
 
+using namespace xcom;
 
-class MEMPOOL_HASH : public SHash<SMemPool*> {
+class MEMPOOL_HASH : public Hash<SMemPool*> {
 public:
 #ifdef _VC6_
-	MEMPOOL_HASH():SHash<SMemPool*>(1024){}
+	MEMPOOL_HASH():Hash<SMemPool*>(1024){}
 #else
-	MEMPOOL_HASH():SHash<SMemPool*>::SHash(1024){}
+	MEMPOOL_HASH():Hash<SMemPool*>::Hash(1024){}
 #endif
 	~MEMPOOL_HASH(){}
 };
@@ -239,7 +246,7 @@ MEMPOOLIDX smpoolCreatePoolIndex(size_t size, MEMPOOLTYPE mpt)
 		MEMPOOLIDX idx,i = 0;
 		idx = (MEMPOOLIDX)rand();
 		do {
-			if (idx != 0 && 
+			if (idx != 0 &&
 				g_mem_pool_hash_tab->find((OBJTY)(size_t)idx) == NULL) {
  				//Unique pool idx
 				break;
@@ -342,9 +349,9 @@ INT smpoolDeleteViaPoolIndex(MEMPOOLIDX mpt_idx)
 }
 
 
-/* Allocate one element from const size pool.
-User must ensure each elment in const size pool are same size.
-'elem_size': indicate the byte size of each element. */
+//Allocate one element from const size pool.
+//User must ensure each elment in const size pool are same size.
+//'elem_size': indicate the byte size of each element.
 void * smpoolMallocConstSize(size_t elem_size, IN SMemPool * handler)
 {
 	ASSERT(elem_size > 0, ("elem size can not be 0"));
