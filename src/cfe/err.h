@@ -31,21 +31,21 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //record each error msg
 class WARN_MSG {
 public:
-	CHAR * msg;
-	INT lineno;
+    CHAR * msg;
+    INT lineno;
 };
-#define WARN_MSG_msg(e)		(e)->msg
-#define WARN_MSG_lineno(e)	(e)->lineno
+#define WARN_MSG_msg(e)        (e)->msg
+#define WARN_MSG_lineno(e)    (e)->lineno
 
 
 //record each error msg
 class ERR_MSG {
 public:
-	CHAR * msg;
-	INT lineno;
+    CHAR * msg;
+    INT lineno;
 };
-#define ERR_MSG_msg(e)		(e)->msg
-#define ERR_MSG_lineno(e)	(e)->lineno
+#define ERR_MSG_msg(e)        (e)->msg
+#define ERR_MSG_lineno(e)    (e)->lineno
 
 #define TOO_MANY_ERR 10
 #define ERR_SHOW 1

@@ -32,11 +32,11 @@ static List<CELL*> g_cell_free_list;
 
 static void * xmalloc(size_t size)
 {
-	ASSERT0(g_pool_general_used != NULL);
-	void * p = smpoolMalloc(size, g_pool_general_used);
-	if (p == NULL) return NULL;
-	memset(p, 0, size);
-	return p;
+    ASSERT0(g_pool_general_used != NULL);
+    void * p = smpoolMalloc(size, g_pool_general_used);
+    if (p == NULL) return NULL;
+    memset(p, 0, size);
+    return p;
 }
 
 
@@ -48,31 +48,31 @@ When you need a new CELL , invoking 'newcell()', but is not 'get_free_cell()'.
 */
 void free_cell(CELL * c)
 {
-	if (c == NULL) {
-		return;
-	}
-	g_cell_free_list.append_tail(c);
-	return ;
+    if (c == NULL) {
+        return;
+    }
+    g_cell_free_list.append_tail(c);
+    return ;
 }
 
 
 CELL * get_free_cell()
 {
-	CELL * c = g_cell_free_list.remove_tail();
-	if (c) {
-		memset(c, 0 , sizeof(CELL));
-		return c;
-	}
-	return NULL;
+    CELL * c = g_cell_free_list.remove_tail();
+    if (c) {
+        memset(c, 0 , sizeof(CELL));
+        return c;
+    }
+    return NULL;
 }
 
 
 CELL * newcell(INT type)
 {
-	CELL * c = get_free_cell();
-	if (!c) {
-		c = (CELL*)xmalloc(sizeof(CELL));
-	}
-	CELL_type(c) = type;
-	return c;
+    CELL * c = get_free_cell();
+    if (!c) {
+        c = (CELL*)xmalloc(sizeof(CELL));
+    }
+    CELL_type(c) = type;
+    return c;
 }
