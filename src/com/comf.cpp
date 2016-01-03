@@ -296,7 +296,7 @@ INT gcdm(UINT num, ...)
 }
 
 
-static INT _exgcd(IN INT a, IN INT b, OUT INT & x, OUT INT & y)
+static INT _exgcd(INT a, INT b, OUT INT & x, OUT INT & y)
 {
     if (b == 0) {
         x = 1;
@@ -313,7 +313,7 @@ static INT _exgcd(IN INT a, IN INT b, OUT INT & x, OUT INT & y)
 
 //Extended Euclid Method.
 //    ax + by = ay' + b(x' -floor(a/b)*y') = gcd(a,b) = gcd(b, a%b)
-INT exgcd(IN INT a, IN INT b, OUT INT & x, OUT INT & y)
+INT exgcd(INT a, INT b, OUT INT & x, OUT INT & y)
 {
     INT gcd = _exgcd(a, b, x, y);
     if (gcd < 0) {
@@ -482,6 +482,46 @@ INT xstrstr(CHAR const* src, CHAR const* par, INT i)
         s++;
     }
     return -1;
+}
+
+
+//Split string by given separetor, and return the number of substring.
+//str: input string.
+//ret: record each substring which separated by sep.
+//sep: separator.
+//Note caller is responsible for the free of each string memory in ret.
+UINT xsplit(CHAR const* str, OUT Vector<CHAR*> & ret, CHAR const* sep)
+{
+    ASSERT0(str);
+    ASSERT(strlen(sep) == 1, ("separator must be single character"));
+    CHAR const* start = str;
+    CHAR const* end = str;
+
+    UINT num = 0;
+    UINT len = 0;
+    for (; *end != 0;) {
+        if (*end != *sep) { len++; end++; continue; }
+
+        CHAR * substr = (CHAR*)malloc(len + 1);
+        memcpy(substr, start, len);
+        substr[len] = 0;
+        ret.set(num, substr);
+        num++;
+        len = 0;
+        end++;
+        start = end;
+    }
+
+    CHAR * substr = (CHAR*)malloc(len + 1);
+    memcpy(substr, start, len);
+    substr[len] = 0;
+    ret.set(num, substr);
+    num++;
+    len = 0;
+    end++;
+    start = end;
+
+    return num;
 }
 
 
@@ -881,6 +921,22 @@ CHAR const* extractRightMostSubString(CHAR const* string, CHAR separator)
 
     //Not found method name.
     return p;
+}
+
+
+//Extract the left most sub-string which separated by 'separator' from string.
+void extractLeftMostSubString(CHAR * tgt, CHAR const* string, CHAR separator)
+{
+    CHAR const* p = string;
+    for (CHAR c = *p; c != 0; p++, c = *p) {
+        if (c == separator) {
+            break;
+        }
+    }
+
+    UINT l = p - string;
+    memcpy(tgt, string, l);
+    tgt[l] = 0;
 }
 
 

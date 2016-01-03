@@ -26,8 +26,9 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 @*/
 #include "cfecom.h"
+#include "cfecommacro.h"
 
-class TY_CTX {
+class TYCtx {
 public:
     //for lvalue expression , TR_ID should corresponding with IR_ID, but IR_LD.
     bool is_lvalue;
@@ -63,7 +64,7 @@ static INT process_struct_init(TypeSpec * ty, Tree ** init);
 static INT process_union_init(TypeSpec * ty, Tree ** init);
 static INT process_base_init(TypeSpec * ty, Tree ** init);
 static TypeSpec * build_base_type_spec(INT des);
-static INT c_type_ck(Tree * t, TY_CTX * cont);
+static INT c_type_ck(Tree * t, TYCtx * cont);
 
 #define BUILD_TYNAME(T)  build_type_name(build_base_type_spec(T))
 
@@ -519,7 +520,7 @@ static bool ck_assign(Tree * t, Decl * ld, Decl *)
 }
 
 
-static bool type_tran_id(Tree * t, TY_CTX * cont, CHAR buf[])
+static bool type_tran_id(Tree * t, TYCtx * cont, CHAR buf[])
 {
     //Construct type-name and expand user type if it was declared.
     Decl * tmp_decl = NULL;
@@ -527,10 +528,9 @@ static bool type_tran_id(Tree * t, TY_CTX * cont, CHAR buf[])
     if (parent != NULL && cont->is_field &&
         (TREE_type(parent) == TR_DMEM ||
          TREE_type(parent) == TR_INDMEM)) {
-        /*
-        At present, the ID may be a field of struct/union,
-        and you need to check out if it is not the correct field.
-        */
+        //At present, the ID may be a field of struct/union,
+        //and you need to check out if it is not the correct field.
+
         //Get the struct/union type base.
         Decl * base = TREE_result_type(cont->base_tree_node);
         ASSERT(base, ("should be struct/union type"));
@@ -546,6 +546,7 @@ static bool type_tran_id(Tree * t, TY_CTX * cont, CHAR buf[])
                     buf, SYM_name(TREE_id(t)));
                 return false;
             }
+
             while (field != NULL) {
                 SYM * sym = get_decl_sym(field);
                 if (!strcmp(SYM_name(sym), SYM_name(TREE_id(t)))) {
@@ -568,6 +569,7 @@ static bool type_tran_id(Tree * t, TY_CTX * cont, CHAR buf[])
                     buf, SYM_name(TREE_id(t)));
                 return false;
             }
+
             while (field != NULL) {
                 SYM * sym = get_decl_sym(field);
                 if (!strcmp(SYM_name(sym), SYM_name(TREE_id(t)))) {
@@ -578,12 +580,13 @@ static bool type_tran_id(Tree * t, TY_CTX * cont, CHAR buf[])
                 field = DECL_next(field);
             }
         }
+
         if (tmp_decl == NULL) {
             buf[0] = 0;
             format_struct_union_complete(buf, DECL_spec(base));
             err(TREE_lineno(t),
-                 " '%s' : is not a member of type '%s'",
-                 SYM_name(TREE_id(t)), buf);
+                " '%s' : is not a member of type '%s'",
+                SYM_name(TREE_id(t)), buf);
             return false;
         }
     } else {
@@ -599,14 +602,15 @@ static bool type_tran_id(Tree * t, TY_CTX * cont, CHAR buf[])
     //Construct TYPE_NAME for ID, that would
     //be used to infer type for tree node.
     TREE_result_type(t) = build_type_name(DECL_spec(tmp_decl));
+    Decl * res_ty = TREE_result_type(t);
+
 
     //Set bit info if idenifier is bitfield.
     //Bit info stored at declarator list.
     Decl * declarator = DECL_decl_list(tmp_decl);
-    DECL_is_bit_field(DECL_decl_list(TREE_result_type(t))) =
-                DECL_is_bit_field(declarator);
-    DECL_bit_len(DECL_decl_list(TREE_result_type(t))) =
-                DECL_bit_len(declarator);
+    DECL_is_bit_field(DECL_decl_list(res_ty)) = DECL_is_bit_field(declarator);
+    DECL_bit_len(DECL_decl_list(res_ty)) = DECL_bit_len(declarator);
+
     if (DECL_is_bit_field(declarator)) {
         if (is_pointer(tmp_decl)) {
             format_declaration(buf, tmp_decl);
@@ -614,17 +618,20 @@ static bool type_tran_id(Tree * t, TY_CTX * cont, CHAR buf[])
                 "'%s' : pointer cannot assign bit length", buf);
             return false;
         }
+
         if (is_array(tmp_decl)) {
             format_declaration(buf, tmp_decl);
             err(TREE_lineno(t),
                 "'%s' : array type cannot assign bit length", buf);
             return false;
         }
+
         if (!is_integer(tmp_decl)) {
             format_declaration(buf, tmp_decl);
             err(TREE_lineno(t), "'%s' : bit field must have integer type", buf);
             return false;
         }
+
         //Check bitfield's base type is big enough to hold it.
         INT size = get_decl_size(tmp_decl) * BIT_PER_BYTE;
         if (size < DECL_bit_len(declarator)) {
@@ -637,14 +644,16 @@ static bool type_tran_id(Tree * t, TY_CTX * cont, CHAR buf[])
 
     Decl * dcl_list = get_pure_declarator(tmp_decl);
     ASSERT(DECL_dt(dcl_list) == DCL_ID,
-    ("'id' should be declarator-list-head. Illegal declaration"));
+           ("'id' should be declarator-list-head. Illegal declaration"));
 
     //neglect the first DCL_ID node, we only need the rest.
     dcl_list = DECL_next(dcl_list);
     dcl_list = cp_decl_begin_at(dcl_list);
 
-    //Simplification function pointer
-    //e.g int ** fun() => int fun(), p = ** fun => p = fun
+    //Reduce the number of POINTER of function-pointer to 1.
+    //e.g: In C, you can define function pointer like:
+    //  int (****fun)();
+    //We simply it to be 'int (*fun)()'.
     Decl * tmp = dcl_list;
     while (tmp != NULL) {
         if (DECL_dt(tmp) == DCL_POINTER) {
@@ -658,18 +667,27 @@ static bool type_tran_id(Tree * t, TY_CTX * cont, CHAR buf[])
             }
         }
     }
-    PURE_DECL(TREE_result_type(t)) = tmp != NULL ? tmp : dcl_list;
+
+    if (tmp != NULL &&
+        DECL_dt(tmp) == DCL_FUN &&
+        DECL_prev(tmp) != NULL &&
+        DECL_dt(DECL_prev(tmp)) == DCL_POINTER) {
+        PURE_DECL(res_ty) = DECL_prev(tmp);
+        DECL_prev(DECL_prev(tmp)) = NULL;
+    } else {
+        PURE_DECL(res_ty) = tmp != NULL ? tmp : dcl_list;
+    }
     return true;
 }
 
 
 //Transfering type declaration for all AST nodes.
-static INT c_type_tran(Tree * t, TY_CTX * cont)
+static INT c_type_tran(Tree * t, TYCtx * cont)
 {
     CHAR buf[MAX_BUF_LEN];
     buf[0] = 0;
     if (cont == NULL) {
-        TY_CTX ct = {0};
+        TYCtx ct = {0};
         cont = &ct;
     }
     while (t != NULL) {
@@ -1116,6 +1134,7 @@ static INT c_type_tran(Tree * t, TY_CTX * cont)
         case TR_POST_DEC: //a--
             {
                 if (ST_SUCC != c_type_tran(TREE_dec_exp(t), cont)) goto FAILED;
+
                 Decl * d = TREE_result_type(TREE_dec_exp(t));
                 if (!is_arith(d) && !is_pointer(d)) {
                     format_declaration(buf, d);
@@ -1133,6 +1152,10 @@ static INT c_type_tran(Tree * t, TY_CTX * cont)
         case TR_SIZEOF: // sizeof(a)
             {
                 Tree * kid = TREE_sizeof_exp(t);
+                if (kid == NULL) {
+                    err(TREE_lineno(t), "miss expression after sizeof");
+                    break;
+                }
                 INT size;
                 if (TREE_type(kid) == TR_TYPE_NAME) {
                     ASSERT0(TREE_type_name(kid));
@@ -1327,7 +1350,7 @@ static INT c_declaration_ck(Decl * d)
 }
 
 
-static bool type_ck_call(Tree * t, TY_CTX * cont)
+static bool type_ck_call(Tree * t, TYCtx * cont)
 {
     if (ST_SUCC != c_type_ck(TREE_para_list(t), cont)) return false;
     if (ST_SUCC != c_type_ck(TREE_fun_exp(t), cont)) return false;
@@ -1400,12 +1423,13 @@ static bool type_ck_call(Tree * t, TY_CTX * cont)
 
 
 //Perform type checking.
-static INT c_type_ck(Tree * t, TY_CTX * cont)
+static INT c_type_ck(Tree * t, TYCtx * cont)
 {
     if (cont == NULL) {
-        TY_CTX ct = {0};
+        TYCtx ct = {0};
         cont = &ct;
     }
+
     while (t != NULL) {
         g_src_line_num = TREE_lineno(t);
         switch (TREE_type(t)) {

@@ -173,6 +173,9 @@ INT findstr(CHAR * src, CHAR * s);
 //e.g: Given string is a\b\c, separator is '\', return c;
 CHAR const* extractRightMostSubString(CHAR const* string, CHAR separator);
 
+//Extract the left most sub-string which separated by 'separator' from string.
+//e.g: Given string is a\b\c, separator is '\', return a;
+void extractLeftMostSubString(CHAR * tgt, CHAR const* string, CHAR separator);
 //Great common divisor for number of values.
 INT gcdm(UINT num, ...);
 
@@ -311,6 +314,13 @@ UCHAR * xltoa(LONG v, OUT UCHAR * buf);
 INT xceiling(INT a, INT b);
 INT xfloor(INT a, INT b);
 INT xstrstr(CHAR const* src, CHAR const* par, INT i);
+
+//Split string by given separetor, and return the number of substring.
+//str: input string.
+//ret: record each substring which separated by sep.
+//sep: separator.
+//Note caller is responsible for the free of each string memory in ret.
+UINT xsplit(CHAR const* str, OUT Vector<CHAR*, 8> & ret, CHAR const* sep);
 void xstrcpy(CHAR * tgt, CHAR const* src, UINT size);
 inline bool xisspace(CHAR c) { return c == ' ' || c == '\t'; }
 inline bool xisdigit(CHAR c) { return c >= '0' && c <= '9'; }

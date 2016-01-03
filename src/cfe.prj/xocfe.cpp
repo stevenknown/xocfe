@@ -51,14 +51,14 @@ UINT fe_process()
 static bool is_c_source_file(CHAR * fn)
 {
     CHAR * buf = (CHAR*)ALLOCA(strlen(fn) + 1);
-    if (strcmp(upper(getfilesuffix(fn, buf)), "C") == 0) {
+    if (strcmp(upper(getfilesuffix(fn, buf, strlen(fn) + 1)), "C") == 0) {
         return true;
     }
     return false;
 }
 
 
-static CHAR * process_d(INT argc, CHAR * argv[], IN INT & i)
+static CHAR * process_d(INT argc, CHAR * argv[], INT & i)
 {
     CHAR * n = NULL;
     if (i + 1 < argc && argv[i + 1] != NULL) {
@@ -104,8 +104,9 @@ bool process_cmd(INT argc, CHAR * argv[])
 INT main(INT argcc, CHAR * argvc[])
 {
     CHAR * argv[] = {
-        "xoc.exe",
-        "..\\..\\test\\test_ansic.c",
+        "xocfe.exe",
+        "..\\..\\testsuite\\caldron\\test_ansic.c",
+        //"../test/test_ansic.c",
         "-dump","cfe.tmp",
     };
     INT argc = sizeof(argv)/sizeof(argv[0]);

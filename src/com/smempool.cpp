@@ -38,7 +38,7 @@ author: Su Zhenyu
 
 #define msg
 #define MAGIC_NUM         0xFC
-#define BOUNDARY_NUM     0xAA
+#define BOUNDARY_NUM      0xAA
 #define END_BOUND_BYTE     4
 
 using namespace xcom;
@@ -502,7 +502,7 @@ void * smpoolMallocViaPoolIndex(size_t size, MEMPOOLIDX mpt_idx, size_t grow_siz
     }
 
     if (mp == NULL) {
-        //Mem pool of Index %lu does not exist", mpt_idx);
+        //Mem pool of Index %lu does not exist", (ULONG)mpt_idx);
         return NULL;
     }
 

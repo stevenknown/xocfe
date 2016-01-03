@@ -26,6 +26,7 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 @*/
 #include "cfecom.h"
+#include "cfecommacro.h"
 
 #define NEWT(ttt)  new_tree_node((ttt), g_real_line_num)
 
@@ -159,7 +160,7 @@ static LabelInfo * add_label(CHAR * name, INT lineno)
     }
 
     //Allocate different LabelInfo for different lines.
-    li = newCustomerLabel(g_fe_sym_tab->add(name), g_pool_general_used);
+    li = allocCustomerLabel(g_fe_sym_tab->add(name), g_pool_general_used);
     //li = g_labtab.append_and_retrieve(li);
     set_map_lab2lineno(li, lineno);
     SCOPE_label_list(sc).append_tail(li);
@@ -182,7 +183,7 @@ static LabelInfo * add_ref_label(CHAR * name, INT lineno)
     }
 
     //Allocate different LabelInfo for different lines.
-    li = newCustomerLabel(g_fe_sym_tab->add(name), g_pool_general_used);
+    li = allocCustomerLabel(g_fe_sym_tab->add(name), g_pool_general_used);
     //li = g_labtab.append_and_retrieve(li);
     LABEL_INFO_is_used(li) = true;
     set_map_lab2lineno(li, lineno); //ONLY for debug-info or dumping
@@ -218,7 +219,7 @@ static void append_c_head(size_t v)
 //and 'g_src_line_num'
 static void append_tok_tail(TOKEN tok, CHAR * tokname, INT lineno)
 {
-    TOKEN_INFO * tki = (TOKEN_INFO*)xmalloc(sizeof(TOKEN_INFO));
+    TokenInfo * tki = (TokenInfo*)xmalloc(sizeof(TokenInfo));
     SYM * s = g_fe_sym_tab->add(tokname);
     TOKEN_INFO_name(tki) = SYM_name(s);
     TOKEN_INFO_token(tki) = tok;
@@ -231,7 +232,7 @@ static void append_tok_tail(TOKEN tok, CHAR * tokname, INT lineno)
 //and 'g_src_line_num'
 static void append_tok_head(TOKEN tok, CHAR * tokname, INT lineno)
 {
-    TOKEN_INFO * tki = (TOKEN_INFO*)xmalloc(sizeof(TOKEN_INFO));
+    TokenInfo * tki = (TokenInfo*)xmalloc(sizeof(TokenInfo));
     SYM * s = g_fe_sym_tab->add(tokname);
     TOKEN_INFO_name(tki) = SYM_name(s);
     TOKEN_INFO_token(tki) = tok;
@@ -259,7 +260,7 @@ void dump_tok_list()
     if (c) {
         scr("\nTOKEN:");
         for (; c; c = g_cell_list.get_next()) {
-            CHAR * s = TOKEN_INFO_name((TOKEN_INFO*)CELL_val(c));
+            CHAR * s = TOKEN_INFO_name((TokenInfo*)CELL_val(c));
             scr("'%s' ", s);
         }
         scr("\n");
@@ -521,8 +522,8 @@ static INT gettok()
 
 static INT reset_tok()
 {
-    TOKEN_INFO * tki;
-    if ((tki = (TOKEN_INFO*)remove_head_tok()) == NULL) {
+    TokenInfo * tki;
+    if ((tki = (TokenInfo*)remove_head_tok()) == NULL) {
         return g_real_token;
     }
     //Set the current token with the head element in token_list.
@@ -535,8 +536,8 @@ static INT reset_tok()
 
 INT suck_tok()
 {
-    TOKEN_INFO * tki;
-    if ((tki = (TOKEN_INFO*)remove_head_tok()) == NULL) {
+    TokenInfo * tki;
+    if ((tki = (TokenInfo*)remove_head_tok()) == NULL) {
         gettok();
     } else {
         //Set the current token with head in token-info list
@@ -585,7 +586,7 @@ static TOKEN look_next_token(INT n, OUT CHAR ** tok_string,
             //'n' can be finded in token-buffer
             CELL * c = g_cell_list.get_head_nth(n - 1);
             ASSERT0(c);
-            return TOKEN_INFO_token((TOKEN_INFO*)CELL_val(c));
+            return TOKEN_INFO_token((TokenInfo*)CELL_val(c));
         }
 
         //New tokens need to be fetched into the buffer.
@@ -661,7 +662,7 @@ bool look_forward_token(INT num, ...)
         c = g_cell_list.get_head();
         while (num > 0) {
             if (c) { //match element resided in token_list.
-                TOKEN_INFO * tki = (TOKEN_INFO*)CELL_val(c);
+                TokenInfo * tki = (TokenInfo*)CELL_val(c);
                 if (TOKEN_INFO_token(tki) != v) {
                     goto UNMATCH;
                 }
@@ -1241,7 +1242,7 @@ static Tree * multiplicative_exp()
         setParent(p,TREE_rchild(p));
         if (TREE_rchild(p) == NULL) {
             err(g_real_line_num, "'%s': right operand cannot be NULL",
-                TOKEN_INFO_name(&g_token_info[TREE_token(p)]));
+                TOKEN_INFO_name(get_token_info(TREE_token(p))));
             goto FAILED;
         }
         t = p;
@@ -1275,7 +1276,7 @@ static Tree * additive_exp()
         setParent(p, TREE_rchild(p));
         if (TREE_rchild(p) == NULL) {
             err(g_real_line_num, "'%s': right operand cannot be NULL",
-                TOKEN_INFO_name(&g_token_info[TREE_token(p)]));
+                TOKEN_INFO_name(get_token_info(TREE_token(p))));
             goto FAILED;
         }
         t = p;
@@ -1309,7 +1310,7 @@ static Tree * shift_exp()
         setParent(p,TREE_rchild(p));
         if (TREE_rchild(p) == NULL) {
             err(g_real_line_num, "'%s': right operand cannot be NULL",
-                TOKEN_INFO_name(&g_token_info[TREE_token(p)]));
+                TOKEN_INFO_name(get_token_info(TREE_token(p))));
             goto FAILED;
         }
         t = p;
@@ -1344,7 +1345,7 @@ static Tree * relational_exp()
         setParent(p,TREE_rchild(p));
         if (TREE_rchild(p) == NULL) {
             err(g_real_line_num, "'%s': right operand cannot be NULL",
-                TOKEN_INFO_name(&g_token_info[TREE_token(p)]));
+                TOKEN_INFO_name(get_token_info(TREE_token(p))));
             goto FAILED;
         }
         t = p;
@@ -1378,7 +1379,7 @@ static Tree * equality_exp()
         setParent(p, TREE_rchild(p));
         if (TREE_rchild(p) == NULL) {
             err(g_real_line_num, "'%s': right operand cannot be NULL",
-                TOKEN_INFO_name(&g_token_info[TREE_token(p)]));
+                TOKEN_INFO_name(get_token_info(TREE_token(p))));
             goto FAILED;
         }
         t = p;
@@ -1411,7 +1412,7 @@ static Tree * AND_exp()
         setParent(p,TREE_rchild(p));
         if (TREE_rchild(p) == NULL) {
             err(g_real_line_num, "'%s': right operand cannot be NULL",
-                TOKEN_INFO_name(&g_token_info[TREE_token(p)]));
+                TOKEN_INFO_name(get_token_info(TREE_token(p))));
             goto FAILED;
         }
         t = p;
@@ -1444,7 +1445,7 @@ static Tree * exclusive_OR_exp()
         setParent(p,TREE_rchild(p));
         if (TREE_rchild(p) == NULL) {
             err(g_real_line_num, "'%s': right operand cannot be NULL",
-                TOKEN_INFO_name(&g_token_info[TREE_token(p)]));
+                TOKEN_INFO_name(get_token_info(TREE_token(p))));
             goto FAILED;
         }
         t = p;
@@ -1477,7 +1478,7 @@ static Tree * inclusive_OR_exp()
         setParent(p,TREE_rchild(p));
         if (TREE_rchild(p) == NULL) {
             err(g_real_line_num, "'%s': right operand cannot be NULL",
-                TOKEN_INFO_name(&g_token_info[TREE_token(p)]));
+                TOKEN_INFO_name(get_token_info(TREE_token(p))));
             goto FAILED;
         }
         t = p;
@@ -1511,7 +1512,7 @@ static Tree * logical_AND_exp()
         setParent(p,TREE_rchild(p));
         if (TREE_rchild(p) == NULL) {
             err(g_real_line_num, "'%s': right operand cannot be NULL",
-                TOKEN_INFO_name(&g_token_info[TREE_token(p)]));
+                TOKEN_INFO_name(get_token_info(TREE_token(p))));
             goto FAILED;
         }
         t = p;
@@ -1544,7 +1545,7 @@ static Tree * logical_OR_exp()
         setParent(p,TREE_rchild(p));
         if (TREE_rchild(p) == NULL) {
             err(g_real_line_num, "'%s': right operand cannot be NULL",
-                TOKEN_INFO_name(&g_token_info[TREE_token(p)]));
+                TOKEN_INFO_name(get_token_info(TREE_token(p))));
             goto FAILED;
         }
         t = p;
@@ -2089,41 +2090,44 @@ SCOPE * compound_stmt(Decl * para_list)
 
     //Append parameters to declaration list of function body scope.
     Decl * lastdcl = get_last(SCOPE_decl_list(cur_scope));
-    while (para_list != NULL) {
-        if (DECL_dt(para_list) != DCL_VARIABLE) {
-            Decl * declaration = new_decl(DCL_DECLARATION);
-            DECL_spec(declaration) = DECL_spec(para_list);
-            DECL_decl_list(declaration) = cp_decl(DECL_decl_list(para_list));
-            PURE_DECL(declaration) = PURE_DECL(para_list);
-
-            if (is_array(declaration)) {
-                /*
-                Array type formal parameter is always be treated
-                as pointer type.
-                Convert ARRAY of ID to ARRAY of POINTER.
-                In C, the parameter of function that declarated as
-                'int a[10]' is not really array of a, but is a pointer
-                that pointed to array 'a', and should be 'int (*a)[10].
-                    e.g: Convert 'void f(int a[10])' -> 'void f(int (*a)[10])'.
-                */
-                declaration = trans_to_pointer(declaration, true);
-            }
-
-            DECL_is_formal_para(declaration) = true;
-            add_next(&SCOPE_decl_list(cur_scope), &lastdcl, declaration);
-            DECL_decl_scope(declaration) = cur_scope;
-
-            lastdcl = declaration;
-
-            //Append parameter list to symbol list of function body scope.
-            SYM * sym = get_decl_sym(declaration);
-            if (add_to_symtab_list(&SCOPE_sym_tab_list(cur_scope), sym)) {
-                err(g_real_line_num, "'%s' already defined",
-                    g_real_token_string);
-                goto FAILED;
-            }
+    UINT pos = 0;
+    for (; para_list != NULL; para_list = DECL_next(para_list), pos++) {
+        if (DECL_dt(para_list) == DCL_VARIABLE) {
+            //VARIABLE parameter should be the last parameter.
+            ASSERT0(DECL_next(para_list) == NULL);
+            continue;
         }
-        para_list = DECL_next(para_list);
+
+        Decl * declaration = new_decl(DCL_DECLARATION);
+        DECL_spec(declaration) = DECL_spec(para_list);
+        DECL_decl_list(declaration) = cp_decl(DECL_decl_list(para_list));
+        PURE_DECL(declaration) = PURE_DECL(para_list);
+
+        if (is_array(declaration)) {
+            /* Array type formal parameter is always be treated
+            as pointer type.
+            Convert ARRAY of ID to ARRAY of POINTER.
+            In C, the parameter of function that declarated as
+            'int a[10]' is not really array of a, but is a pointer
+            that pointed to array 'a', and should be 'int (*a)[10].
+            e.g: Convert 'void f(int a[10])' -> 'void f(int (*a)[10])'. */
+            declaration = trans_to_pointer(declaration, true);
+        }
+
+        DECL_is_formal_para(declaration) = true;
+        add_next(&SCOPE_decl_list(cur_scope), &lastdcl, declaration);
+        DECL_decl_scope(declaration) = cur_scope;
+        DECL_formal_param_pos(declaration) = pos;
+
+        lastdcl = declaration;
+
+        //Append parameter list to symbol list of function body scope.
+        SYM * sym = get_decl_sym(declaration);
+        if (add_to_symtab_list(&SCOPE_sym_tab_list(cur_scope), sym)) {
+            err(g_real_line_num, "'%s' already defined",
+                g_real_token_string);
+            goto FAILED;
+        }
     }
 
     match(T_LLPAREN);

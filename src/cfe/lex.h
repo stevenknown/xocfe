@@ -159,10 +159,10 @@ typedef enum _TOKEN {
 } TOKEN;
 
 
-#define TOKEN_INFO_name(ti)        (ti)->name
+#define TOKEN_INFO_name(ti)     (ti)->name
 #define TOKEN_INFO_token(ti)    (ti)->tok
-#define TOKEN_INFO_lineno(ti)    (ti)->u1.lineno
-class TOKEN_INFO {
+#define TOKEN_INFO_lineno(ti)   (ti)->u1.lineno
+class TokenInfo {
 public:
     TOKEN tok;
     CHAR * name;
@@ -174,7 +174,7 @@ public:
 
 #define KEYWORD_INFO_name(ti)    (ti)->name
 #define KEYWORD_INFO_token(ti)    (ti)->tok
-class KEYWORD_INFO {
+class KeywordInfo {
 public:
     TOKEN tok;
     CHAR * name;
@@ -182,25 +182,29 @@ public:
 
 
 #define MAX_BUF_LINE            4096
-#define OFST_TAB_LINE_SIZE        (g_ofst_tab_byte_size / sizeof(LONG))
-
+#define OFST_TAB_LINE_SIZE      (g_ofst_tab_byte_size / sizeof(LONG))
 
 //Exported Variables
-extern UINT g_src_line_num;    //line number of src file
-extern CHAR g_cur_token_string[];
-extern CHAR * g_cur_line; //current parsing line of src file
-extern UINT g_cur_line_len; //the current line buf length ,than read from file buf
-extern TOKEN g_cur_token;
-extern LONG * g_ofst_tab; //Record offset of each line in src file
-extern LONG g_ofst_tab_byte_size;//Record entry number of offset table
-extern TOKEN_INFO g_token_info[];
-extern bool g_enable_newline_token; //Set true to regard '\n' as token.
-extern FILE * g_hsrc;
+extern UINT g_src_line_num; //line number of src file
+extern CHAR g_cur_token_string[]; //the string name of current token.
+extern CHAR * g_cur_line; //the current line during parsing of src file.
+extern UINT g_cur_line_len; //the current line buffer length.
+extern TOKEN g_cur_token; //the current token.
+extern LONG * g_ofst_tab; //record the byte offset of each line in src file.
+extern LONG g_ofst_tab_byte_size;//record entry number of offset table.
+extern bool g_enable_newline_token; //set true to regard '\n' as token.
+extern FILE * g_hsrc; //the file handler of source file.
 extern INT g_real_line_num;
 
 //Exported Functions
+//This is the first function you should invoke before start lex scanning.
 void init_key_word_tab();
+
+//Get current token.
 TOKEN get_token();
-inline CHAR * get_token_name(TOKEN tok)
-{ return TOKEN_INFO_name(&g_token_info[tok]); }
+
+//Get the string name of current token.
+CHAR * get_token_name(TOKEN tok);
+
+TokenInfo const* get_token_info(TOKEN tok);
 #endif

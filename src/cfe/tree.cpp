@@ -93,7 +93,7 @@ void dump_tree(Tree * t)
             //'>>='  '&='  '^='  '|='
             note("\nASSIGN(id:%d):%s <%s>",
                 TREE_uid(t),
-                TOKEN_INFO_name(&g_token_info[TREE_token(t)]),
+                TOKEN_INFO_name(get_token_info(TREE_token(t))),
                 res_type_buf);
             g_indent += dn;
             dump_trees(TREE_lchild(t));
@@ -177,7 +177,7 @@ void dump_tree(Tree * t)
         case TR_MULTI:    // '*' '/' '%'
             note("\nOP(id:%d):%s <%s>",
                 TREE_uid(t),
-                TOKEN_INFO_name(&g_token_info[TREE_token(t)]),
+                TOKEN_INFO_name(get_token_info(TREE_token(t))),
                 res_type_buf);
             g_indent += dn;
             dump_trees(TREE_lchild(t));

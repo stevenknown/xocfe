@@ -39,10 +39,8 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 using namespace xcom;
 
-//ir_lex used.
-#include "util.h"
 #include "err.h"
-
+#include "cfecommacro.h"
 #include "lex.h"
 
 static INT g_cur_token_string_pos = 0;
@@ -78,7 +76,7 @@ INT g_real_line_num;
 you have modified TOKEN enumeration declared in lex.h.
 NOTICE: Be careful the order of your new token and it must
 conform the declaration order in lex.h. */
-TOKEN_INFO g_token_info[] =
+static TokenInfo g_token_info[] =
 {
     { T_NUL,        "" },
     { T_ID,            "id" },
@@ -202,7 +200,7 @@ TOKEN_INFO g_token_info[] =
 };
 
 
-static KEYWORD_INFO g_keyword_info[] = {
+static KeywordInfo g_keyword_info[] = {
     //scalar-type-spec
     { T_VOID,        "void" },
     { T_CHAR,        "char" },
@@ -419,6 +417,7 @@ public:
 
 STR2TOKEN g_str2token(0);
 
+//This is the first function you should invoke before start lex scanning.
 void init_key_word_tab()
 {
     g_str2token.init(64); //Must be power of 2 since we use HashFuncString2.
@@ -436,10 +435,8 @@ static TOKEN get_key_word(CHAR const* s)
 }
 
 
-/*
-Get a charactor from g_cur_line , and if it meet the end of src file,
-the return value is -1, otherwise the ASCI charactor.
-*/
+//Get a charactor from g_cur_line.
+//If it meets the EOF, the return value will be -1.
 static CHAR get_next_char()
 {
     CHAR res = '0';
@@ -455,14 +452,16 @@ static CHAR get_next_char()
         res = g_cur_line[g_cur_line_pos];
         g_cur_line_pos++;
     } else {
-AGAIN:
         st = get_line();
         if (st == ST_SUCC) {
-            res = g_cur_line[g_cur_line_pos];
-            g_cur_line_pos++;
-            if (g_cur_line_num == 0) {
-                goto AGAIN;
-            }
+            do {
+                res = g_cur_line[g_cur_line_pos];
+                g_cur_line_pos++;
+                if (g_cur_line_num != 0) {
+                    break;
+                }
+                st = get_line();
+            } while (st == ST_SUCC);
         } else if (st == ST_EOF) {
               res = ST_EOF;
         }
@@ -875,12 +874,27 @@ TOKEN t_dot()
 }
 
 
+CHAR * get_token_name(TOKEN tok)
+{
+    return TOKEN_INFO_name(&g_token_info[tok]);
+}
+
+
+TokenInfo const* get_token_info(TOKEN tok)
+{
+    ASSERT0(tok <= T_END);
+    return &g_token_info[tok];
+}
+
+
+//Get current token.
 TOKEN get_token()
 {
     TOKEN token;
     if (g_cur_token == T_END) {
         return g_cur_token;
     }
+
     g_cur_token_string_pos = 0;
     g_cur_token_string[0] = 0;
     if (g_cur_char == 0) {
@@ -892,6 +906,7 @@ TOKEN get_token()
             }
          }
     }
+
     switch(g_cur_char){
     case ST_EOF:
         token = T_END;
@@ -1230,18 +1245,18 @@ void test_lex()
     get_token();
     while (g_cur_token != T_END) {
         if (g_cur_token == T_NUL) {
-            scr("ERROR in line:%u\n\t", g_src_line_num);
-            scr("S:%10s, T:%10s",
+            printf("ERROR in line:%u\n\t", g_src_line_num);
+            printf("S:%10s, T:%10s",
                 g_cur_token_string,
                 g_token_info[g_cur_token].name);
             break;
         }
-        scr("S:%10s, T:%10s, L:%10u ",
+        printf("S:%10s, T:%10s, L:%10u ",
             g_cur_token_string,
             g_token_info[g_cur_token].name,
             g_src_line_num);
         get_token();
     }
-    scr("\n\n\n");
+    printf("\n\n\n");
 }
 #endif

@@ -288,20 +288,22 @@ public:
         } u13; //only for DCL_FUN used
 
         union {
-            /*
-            Record number of bit which restricted by type-spec descriptor.
+            /* Record number of bit which restricted by type-spec descriptor.
             This value was computed in compute_constant_exp().
             only be seen as a child of DCL_DECLARATOR.
             only be valid in struct-member declare.
             only was effective after 'bit_exp' has been computed
-            completely in typeck.cpp file.
-            */
+            completely in typeck.cpp file. */
             INT  bit_len;
         } u16;
 
         //Record an identifier, only used by DCL_ID.
         //Tree type is closely related to specific language.
         Tree * id;
+
+        //Record the formal parameter position in parameter-list.
+        //Used if Decl is formal parameter.
+        UINT formal_param_pos;
     } u1;
 
     union {
@@ -316,93 +318,81 @@ public:
 };
 
 #ifdef _DEBUG_
-#define DECL_uid(d)                    (d)->id
+#define DECL_uid(d)              (d)->id
 #endif
-#define DECL_dt(d)                    (d)->decl_type
-#define DECL_next(d)                (d)->next
-#define DECL_prev(d)                (d)->prev
-#define DECL_is_paren(d)            (d)->is_paren
-#define DECL_is_bit_field(d)        (d)->is_bit_field
-#define DECL_is_sub_field(d)        (d)->is_sub_field
-#define DECL_is_formal_para(d)        (d)->is_formal_para //ONLY used in DCL_DECLARATION
-#define DECL_is_fun_def(d)            (d)->is_fun_def  //ONLY used in DCL_DECLARATION
-#define DECL_is_init(d)                (d)->is_init     //ONLY used in DCL_DECLARATOR
-#define DECL_fieldno(d)                (d)->fieldno
-#define DECL_align(d)                (d)->align
-#define DECL_base_type_spec(d)        (d)->base_type_spec
+#define DECL_dt(d)               (d)->decl_type
+#define DECL_next(d)             (d)->next
+#define DECL_prev(d)             (d)->prev
+#define DECL_is_paren(d)         (d)->is_paren
+#define DECL_is_bit_field(d)     (d)->is_bit_field
+#define DECL_is_sub_field(d)     (d)->is_sub_field
+#define DECL_is_formal_para(d)   (d)->is_formal_para //ONLY used in DCL_DECLARATION
+#define DECL_is_fun_def(d)       (d)->is_fun_def  //ONLY used in DCL_DECLARATION
+#define DECL_is_init(d)          (d)->is_init     //ONLY used in DCL_DECLARATOR
+#define DECL_fieldno(d)          (d)->fieldno
+#define DECL_align(d)            (d)->align
+#define DECL_base_type_spec(d)   (d)->base_type_spec
 
-/*
-If current 'decl' is DCL_DECLARATION, so it must has
-'declaration specifier' and 'declarator list'.
-Specifier describe the basic type such as int, char, struct/union.
-Declarator describe the compound type such as pointer, array, function, etc.
-*/
-#define DECL_spec(d)                (d)->u0.specifier
-#define DECL_decl_list(d)            (d)->u0.declarator_list
-#define DECL_decl_scope(d)            (d)->u0.scope
+//If current 'decl' is DCL_DECLARATION, so it must has
+//'declaration specifier' and 'declarator list'.
+//Specifier describe the basic type such as int, char, struct/union.
+//Declarator describe the compound type such as pointer, array, function, etc.
+#define DECL_spec(d)             (d)->u0.specifier
+#define DECL_decl_list(d)        (d)->u0.declarator_list
+#define DECL_decl_scope(d)       (d)->u0.scope
 
+//If current 'decl' is a function define, the followed member record its body.
+#define DECL_fun_body(d)         (d)->u2.fun_body
 
-//If current 'decl' is a function define, the followed member record its body
-#define DECL_fun_body(d)            (d)->u2.fun_body
+//Record the formal parameter position if Decl is a parameter.
+#define DECL_formal_param_pos(d) (d)->u1.formal_param_pos
 
-/*
-Record qualification of DCL.
-If current 'decl' is DCL_POINTER or DCL_ID, the
-followed member record its quanlifier specicfier.
-qualifier include const, volatile, restrict.
-*/
-#define DECL_qua(d)                    (d)->qualifier
+//Record qualification of DCL.
+//If current 'decl' is DCL_POINTER or DCL_ID, the
+//followed member record its quanlifier specicfier.
+//qualifier include const, volatile, restrict.
+#define DECL_qua(d)              (d)->qualifier
 
 //Line number
-#define DECL_lineno(d)                (d)->lineno
+#define DECL_lineno(d)           (d)->lineno
 
-/*
-If current 'decl' is a DCL_DECLARATOR, the followed member
-record it initializing tree
-*/
-#define DECL_init_tree(d)            (d)->u2.init
+//If current 'decl' is a DCL_DECLARATOR, the followed member
+//record it initializing tree
+#define DECL_init_tree(d)        (d)->u2.init
 
 //If current 'decl' is DCL_ID , the followed member record it
-#define DECL_id(d)                    (d)->u1.id
+#define DECL_id(d)               (d)->u1.id
 
-/*
-If current 'decl' is DCL_ARRAY, the followed members record its
-base and index value/expression, which may be NULL.
+//If current 'decl' is DCL_ARRAY, the followed members record its
+//base and index value/expression, which may be NULL.
+//
+//NOTE: During the Decl generation processing, DECL_array_dim_exp() is avaiable,
+//it records the expressions of dimension,
+//and the actually dimension value will be calculated after parsing array type
+//finished, and compute_array_dim() will be invoked to compute the integer value.
+//Meanwile, DECL_array_dim() is avaiable.
+#define DECL_array_dim(d)        (d)->u1.u12.u121.dimval
+#define DECL_array_dim_exp(d)    (d)->u1.u12.u121.dimexp
 
-NOTE: During the Decl generation processing, DECL_array_dim_exp() is avaiable,
-it records the expressions of dimension,
-and the actually dimension value will be calculated after parsing array type
-finished, and compute_array_dim() will be invoked to compute the integer value.
-Meanwile, DECL_array_dim() is avaiable.
-*/
-#define DECL_array_dim(d)            (d)->u1.u12.u121.dimval
-#define DECL_array_dim_exp(d)        (d)->u1.u12.u121.dimexp
-
-/*
-If current 'decl' is DCL_FUN, the followed members record its
-base and parameter list declaration, which may be NULL
-*/
-//#define DECL_fun_base(d)            (d)->u1.u13.fbase
-#define DECL_fun_para_list(d)        (d)->u1.u13.para_list
+//If current 'decl' is DCL_FUN, the followed members record its
+//base and parameter list declaration, which may be NULL
+//#define DECL_fun_base(d)       (d)->u1.u13.fbase
+#define DECL_fun_para_list(d)    (d)->u1.u13.para_list
 
 //Record content if current 'decl' is DCL_DECLARATOR or DCL_ABS_DECLARATOR
-#define DECL_child(d)                (d)->child
+#define DECL_child(d)            (d)->child
 
-/*
-Bit field ONLY used in DCL_DECLARATOR, and record in decl.cpp
-checking in typeck.cpp
-It will not be zero if current decl record a bit field
-*/
-#define DECL_bit_len(d)                (d)->u1.u16.bit_len
-//#define DECL_bit_exp(d)            (d)->u1.u16.bit_exp
+//Bit field ONLY used in DCL_DECLARATOR, and record in decl.cpp
+//checking in typeck.cpp
+//It will not be zero if current decl record a bit field
+#define DECL_bit_len(d)          (d)->u1.u16.bit_len
+//#define DECL_bit_exp(d)        (d)->u1.u16.bit_exp
 
-/*
-'d' must be TypeSpec-NAME ,get pure declarator list
-The macro without validation check, plz call
-get_pure_declarator if you want to check.
-*/
-#define PURE_DECL(d)                DECL_child(DECL_decl_list(d))
-#define MAX_ARRAY_INDX                0xfffffff
+//'d' must be TypeSpec-NAME ,get pure declarator list
+//The macro without validation check, plz call
+//get_pure_declarator if you want to check.
+#define PURE_DECL(d)             DECL_child(DECL_decl_list(d))
+#define MAX_ARRAY_INDX           0xfffffff
 //END Decl
 
 
@@ -508,10 +498,11 @@ bool is_struct(TypeSpec * type);
 bool is_struct(Decl * decl);
 bool is_bitfield(Decl * decl);
 
+CHAR const* get_decl_name(Decl * dcl);
+SYM * get_decl_sym(Decl * dcl);
 Decl * get_pure_declarator(Decl * decl);
 Decl * get_parameter_list(Decl * dcl, OUT Decl ** fun_dclor = NULL);
 Decl * get_decl_id(Decl * dcl);
-SYM * get_decl_sym(Decl * dcl);
 Decl * get_decl_in_scope(IN CHAR * name, SCOPE * scope);
 Tree * get_decl_id_tree(Decl * dcl);
 INT get_enum_val_idx(Enum * e, CHAR * ev_name);

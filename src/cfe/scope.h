@@ -134,7 +134,7 @@ public:
     bool is_equ(LabelInfo * t1, LabelInfo * t2) const
     { return isSameLabel(t1, t2); }
 };
-typedef TTab<LabelInfo*, Compare_Lab> LABTAB;
+typedef TTab<LabelInfo*, Compare_Lab> LabelTab;
 
 
 //Exported functions
@@ -155,7 +155,7 @@ void set_map_lab2lineno(LabelInfo * li, UINT lineno);
 
 //Export Variables
 extern SCOPE * g_cur_scope;
-extern LABTAB g_labtab;
+extern LabelTab g_labtab;
 
 //Export Functions
 SYM * add_to_symtab_list(SYM_LIST ** sym_list , SYM * sym);

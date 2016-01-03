@@ -26,6 +26,7 @@ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 @*/
 #include "cfecom.h"
+#include "cfecommacro.h"
 
 /*
 Example to show the structure of class Decl.
@@ -290,6 +291,14 @@ Decl * get_decl_id(Decl * dcl)
         pdcl = DECL_next(pdcl);
     }
     return NULL;
+}
+
+
+CHAR const* get_decl_name(Decl * dcl)
+{
+    SYM * sym = get_decl_sym(dcl);
+    if (sym == NULL) { return NULL; }
+    return SYM_name(sym);
 }
 
 
@@ -2361,10 +2370,8 @@ static Tree * refineArray(Tree * t)
 {
     ASSERT0(TREE_type(t) == TR_ARRAY);
 
-    /*
-    Formal parameter of array type is a pointer in actually.
-    Insert a Dereference to comfort the C specification.
-    */
+    //Formal parameter of array type is a pointer in actually.
+    //Insert a Dereference to comfort the C specification.
     Tree * base = TREE_array_base(t);
     if (TREE_type(base) == TR_ID) {
         //dump_decl(TREE_id_decl(base), 0);
@@ -2376,12 +2383,10 @@ static Tree * refineArray(Tree * t)
         Decl * decl = get_decl_in_scope(name, s);
         ASSERT0(decl != NULL);
         if (DECL_is_formal_para(decl)) {
-            /*
-            Verfiy and fix formal parameters with array type.
-            Check if decl is pointer that pointed to an array.
-            e.g: 'int (*p)[]'
-            the referrence should do same operation as its declaration.
-            */
+            //Verfiy and fix formal parameters with array type.
+            //Check if decl is pointer that pointed to an array.
+            //e.g: 'int (*p)[]'
+            //the referrence should do same operation as its declaration.
             Decl * base_of_pt = get_pure_declarator(decl);
             if (DECL_dt(base_of_pt) == DCL_ID) {
                 base_of_pt = DECL_next(base_of_pt);
@@ -3642,13 +3647,11 @@ INT format_dcrl(IN Decl * decl, INT indent)
         }
         break;
     case DCL_FUN:
-        ASSERT0(DECL_prev(decl) != NULL);
-        if (DECL_dt(DECL_prev(decl)) == DCL_POINTER) {
+        if (DECL_prev(decl) != NULL &&
+            DECL_dt(DECL_prev(decl)) == DCL_POINTER) {
             fprintf(g_tfile, "FUN_POINTER");
-        } else if (DECL_dt(DECL_prev(decl)) == DCL_ID) {
-            fprintf(g_tfile, "FUN_DECL");
         } else {
-            ASSERT0(0);
+            fprintf(g_tfile, "FUN_DECL");
         }
 
         if (DECL_fun_para_list(decl) == NULL) {
@@ -3943,14 +3946,14 @@ bool is_fun_void_return(Decl * dcl)
 }
 
 
-//Return true if 'dcl' is function-type declaration.
+//Return true if 'dcl' is function-type declaration or reference.
 bool is_fun_decl(Decl * dcl)
 {
     dcl = get_pure_declarator(dcl);
     while (dcl != NULL) {
         switch (DECL_dt(dcl)) {
         case DCL_FUN:
-            if (DECL_next(dcl) == NULL ||
+            if (DECL_prev(dcl) == NULL ||
                 (DECL_prev(dcl) != NULL &&
                  DECL_dt(DECL_prev(dcl)) == DCL_ID)) {
                 /*

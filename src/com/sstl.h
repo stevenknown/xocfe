@@ -67,13 +67,10 @@ namespace xcom {
 
 typedef void* OBJTY;
 
-/*
-Structure chain operations.
-
-For easing implementation, there must be 2 fields declared in T
-    1. T * next
-    2. T * prev
-*/
+//Structure chain operations.
+//For easing implementation, there must be 2 fields declared in T
+//    1. T * next
+//    2. T * prev
 template <class T>
 inline UINT cnt_list(T const* t)
 {
@@ -274,9 +271,9 @@ inline void insertbefore_one(T ** head, T * marker, T * t)
 }
 
 
-/* Insert a list that leading by 't' before 'marker'.
-'head': function might modify the header of list.
-'t': the head element of list, that to be inserted. */
+//Insert a list that leading by 't' before 'marker'.
+//'head': function might modify the header of list.
+//'t': the head element of list, that to be inserted.
 template <class T>
 inline void insertbefore(T ** head, T * marker, T * t)
 {
@@ -309,10 +306,10 @@ inline void insertbefore(T ** head, T * marker, T * t)
 }
 
 
-/* Insert t into list immediately that following 'marker'.
-e.g: a->maker->b->c
-    output is: a->maker->t->b->c
-Return header in 'marker' if list is empty. */
+//Insert t into list immediately that following 'marker'.
+//e.g: a->maker->b->c
+//    output is: a->maker->t->b->c
+//Return header in 'marker' if list is empty.
 template <class T>
 inline void insertafter_one(T ** marker, T * t)
 {
@@ -332,9 +329,9 @@ inline void insertafter_one(T ** marker, T * t)
 }
 
 
-/* Insert t into marker's list as the subsequent element.
-e.g: a->maker->b->c,  and t->x->y
-    output is: a->maker->t->x->y->b->c. */
+//Insert t into marker's list as the subsequent element.
+//e.g: a->maker->b->c,  and t->x->y
+//output is: a->maker->t->x->y->b->c.
 template <class T>
 inline void insertafter(T ** marker, T * t)
 {
@@ -411,8 +408,7 @@ public:
 
 
 
-/*
-FREE-List
+/* FREE-List
 
 T refer to basis element type.
     e.g: Suppose variable type is 'VAR*', then T is 'VAR'.
@@ -1297,19 +1293,20 @@ public:
         return C_val(c);
     }
 
-    bool find(IN T t, OUT C<T> ** holder = NULL)
+    bool find(IN T t, OUT C<T> ** holder = NULL) const
     {
         C<T> * c = m_head;
         while (c != NULL) {
             if (C_val(c) == t) {
-                if (holder    != NULL) {
+                if (holder != NULL) {
                     *holder = c;
                 }
                 return true;
             }
             c = C_next(c);
         }
-        if (holder    != NULL) {
+
+        if (holder != NULL) {
             *holder = NULL;
         }
         return false;
@@ -1437,17 +1434,16 @@ public:
 
 
 /* Single Linked List Core.
-
 Encapsulate most operations for single list.
-
-Note the single linked list is different with dual linked list.
-the dual linked list does not use mempool to hold the container.
-Compared to dual linked list, single linked list allocate containers
-in a const size pool.
-
-Before going to the destructor, even if the containers have
-been allocated in memory pool, you should free all of them
-back to a free list to reuse them. */
+Note:
+  1. You must invoke init() if the SListCore allocated in mempool.
+  2. The single linked list is different with dual linked list.
+     the dual linked list does not use mempool to hold the container.
+     Compared to dual linked list, single linked list allocate containers
+     in a const size pool.
+  3. Before going to the destructor, even if the containers have
+     been allocated in memory pool, you should invoke clean() to free
+     all of them back to a free list to reuse them. */
 template <class T> class SListCore {
 protected:
     UINT m_elem_count; //list elements counter.
@@ -1520,9 +1516,9 @@ public:
     COPY_CONSTRUCTOR(SListCore);
     ~SListCore()
     {
-        //Note: Before going to the destructor, even if the containers have
-        //been allocated in memory pool, you should free all of them
-        //back to a free list to reuse them.
+        //Note: Before invoked the destructor, even if the containers have
+        //been allocated in memory pool, you should invoke clean() to
+        //free all of them back to a free list to reuse them.
     }
 
     void init()
@@ -1713,12 +1709,15 @@ public:
 NOTICE:
     The following operations are the key points which you should attention to:
 
-    1. If you REMOVE one element, its container will be collect by FREE-List.
+    1. You must invoke init() if the SList allocated in mempool.
+    2. Before going to the destructor, even if the containers have
+       been allocated in memory pool, you should invoke clean() to free
+       all of them back to a free list to reuse them.
+    3. If you REMOVE one element, its container will be collect by FREE-List.
        So if you need a new container, please check the FREE-List first,
        accordingly, you should first invoke 'get_free_list' which get free
        containers out from 'm_free_list'.
-
-    2. If you want to invoke APPEND, please call 'newXXX' first to
+    4. If you want to invoke APPEND, please call 'newXXX' first to
        allocate a new container memory space, record your elements into
        the container, then APPEND it at list.
        newXXX such as:
@@ -1729,37 +1728,37 @@ NOTICE:
                 T_type(c) = type;
                 return t;
             }
-
-    3. The single linked list is different with dual linked list.
+    5. The single linked list is different with dual linked list.
        the dual linked list does not use mempool to hold the container.
        Compared to dual linked list, single linked list allocate containers
        in a const size pool.
        Invoke init() to do initialization if you allocate SList by malloc().
-
-    4. Compare the iterator with end() to determine if meeting the end of list.
-*/
+    6. Compare the iterator with end() to determine if meeting the end of list. */
 template <class T> class SList : public SListCore<T> {
 protected:
     SMemPool * m_free_list_pool;
     SC<T> * m_free_list; //Hold for available containers
 
 public:
-    SList(SMemPool * pool = NULL) { set_pool(pool); }
+    SList(SMemPool * pool = NULL)
+    {
+        //Invoke init() explicitly if SList is allocated from mempool.
+        set_pool(pool);
+    }
     COPY_CONSTRUCTOR(SList);
     ~SList()
     {
-        //It seem destroy() do the same things as the parent class's destructor.
+        //destroy() do the same things as the parent class's destructor.
         //So it is not necessary to double call destroy().
-
         //Note: Before going to the destructor, even if the containers have
-        //been allocated in memory pool, you should free all of them
-        //back to a free list to reuse them.
+        //been allocated in memory pool, you should invoke clean() to
+        //free all of them back to a free list to reuse them.
     }
 
     void set_pool(SMemPool * pool)
     {
-        ASSERT(pool == NULL ||
-                MEMPOOL_type(pool) == MEM_CONST_SIZE, ("need const size pool"));
+        ASSERT(pool == NULL || MEMPOOL_type(pool) == MEM_CONST_SIZE,
+               ("need const size pool"));
         m_free_list_pool = pool;
         m_free_list = NULL;
     }
@@ -2797,6 +2796,8 @@ public:
     {
         if (m_vec != NULL) {
             ::free(m_vec);
+            m_vec = NULL;
+            SVEC_elem_num(this) = 0;
         }
     }
 
@@ -3032,8 +3033,7 @@ protected:
         ASSERT0(m_free_list_pool);
         HC<T> * c = m_free_list.get_free_elem();
         if (c == NULL) {
-            c = (HC<T>*)smpoolMallocConstSize(sizeof(HC<T>),
-                                            m_free_list_pool);
+            c = (HC<T>*)smpoolMallocConstSize(sizeof(HC<T>), m_free_list_pool);
             ASSERT0(c);
             memset(c, 0, sizeof(HC<T>));
         }
@@ -3497,7 +3497,7 @@ public:
     change the order that elements in m_elem_vector and the value of m_cur.
     Because it will impact the effect of get_first(), get_next(),
     get_last() and get_prev(). */
-    bool find(T t, HC<T> const** ct = NULL)
+    bool find(T t, HC<T> const** ct = NULL) const
     {
         ASSERT(m_bucket != NULL, ("Hash not yet initialized."));
         if (t == T(0)) { return false; }
@@ -3531,7 +3531,7 @@ public:
     get_last() and get_prev().
 
     'ot': output the element if found it. */
-    bool find(T t, OUT T * ot)
+    bool find(T t, OUT T * ot) const
     {
         HC<T> const* hc;
         if (find(t, &hc)) {
@@ -4184,6 +4184,8 @@ public:
         get(t, &f);
         return f;
     }
+
+    void remove(Tsrc t) { BaseType::remove(t); }
 };
 //END TMap
 
@@ -4256,6 +4258,8 @@ public:
         ASSERT0(t != T(0));
         BaseTMap::remove(t);
     }
+
+    bool find(T t) const { return BaseTMap::find(t); }
 
     //iter should be clean by caller.
     T get_first(TabIter<T> & iter) const
