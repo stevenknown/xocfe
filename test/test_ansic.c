@@ -152,26 +152,26 @@ extern int  printf (const char *, ...);
 
 struct defs
 {
-  int cbits;			/* No. of bits per char           */
-  int ibits;			/*                 int            */
-  int sbits;			/*                 short          */
-  int lbits;			/*                 long           */
-  int ubits;			/*                 unsigned       */
-  int fbits;			/*                 float          */
-  int dbits;			/*                 double         */
+  int cbits;            /* No. of bits per char           */
+  int ibits;            /*                 int            */
+  int sbits;            /*                 short          */
+  int lbits;            /*                 long           */
+  int ubits;            /*                 unsigned       */
+  int fbits;            /*                 float          */
+  int dbits;            /*                 double         */
   /* 0.01
      float fprec;
      float dprec;
    */
-  int fprec;			/* Smallest number that can be    */
-  int dprec;			/* significantly added to 1.      */
-  int flgs;			/* Print return codes, by section */
-  int flgm;			/* Announce machine dependencies  */
-  int flgd;			/* give explicit diagnostics      */
-  int flgl;			/* Report local return codes.     */
-  int rrc;			/* recent return code             */
-  int crc;			/* Cumulative return code         */
-  char rfs[8];			/* Return from section            */
+  int fprec;            /* Smallest number that can be    */
+  int dprec;            /* significantly added to 1.      */
+  int flgs;            /* Print return codes, by section */
+  int flgm;            /* Announce machine dependencies  */
+  int flgd;            /* give explicit diagnostics      */
+  int flgl;            /* Report local return codes.     */
+  int rrc;            /* recent return code             */
+  int crc;            /* Cumulative return code         */
+  char rfs[8];            /* Return from section            */
 };
 
 /* C REFERENCE MANUAL         */
@@ -219,9 +219,9 @@ main (int n, char *args)
 
   static struct defs d0, *pd0;
 
-  d0.flgs = 1;			/* These flags dictate            */
-  d0.flgm = 1;			/*     the verbosity of           */
-  d0.flgd = 1;			/*         the program.           */
+  d0.flgs = 1;            /* These flags dictate            */
+  d0.flgm = 1;            /*     the verbosity of           */
+  d0.flgd = 1;            /*         the program.           */
   d0.flgl = 1;
 
   /* Set_out_port(); *//* for printf() 0.01 */
@@ -335,7 +335,7 @@ main (int n, char *args)
   return 0;
 }
 
-int s22 (struct defs * pd0)		/* 2.2 Identifiers (Names)      */
+int s22 (struct defs * pd0)        /* 2.2 Identifiers (Names)      */
 {
   int a234, a;
   int _, _234, A, rc;
@@ -363,7 +363,7 @@ int s22 (struct defs * pd0)		/* 2.2 Identifiers (Names)      */
     {
       rc = rc + 1;
       if (pd0->flgd != 0)
-	printf (s22er, 1);
+    printf (s22er, 1);
     }
 
   /* Upper and lower case letters are different.     */
@@ -373,14 +373,14 @@ int s22 (struct defs * pd0)		/* 2.2 Identifiers (Names)      */
     {
       rc = rc + 4;
       if (pd0->flgd != 0)
-	printf (s22er, 4);
+    printf (s22er, 4);
     }
 
   return (rc);
 }
 
-int s241 (struct defs * pd0)	/* 2.4.1 Integer constants
-				   2.4.2 Explicit long constants  */
+int s241 (struct defs * pd0)    /* 2.4.1 Integer constants
+                   2.4.2 Explicit long constants  */
 {
   long pow2 (long n);
   static char s241er[] = "s241,er%d\n";
@@ -427,7 +427,7 @@ int s241 (struct defs * pd0)	/* 2.4.1 Integer constants
 
       rc = rc + 1;
       if (pd0->flgd != 0)
-	printf (s241er, 1);
+    printf (s241er, 1);
     }
 
   /* A sequence of digits preceded by 0x or 0X (digit zero)
@@ -444,7 +444,7 @@ int s241 (struct defs * pd0)	/* 2.4.1 Integer constants
 
       rc = rc + 2;
       if (pd0->flgd != 0)
-	printf (s241er, 2);
+    printf (s241er, 2);
     }
 
   /* A decimal constant whose value exceeds the largest signed
@@ -455,14 +455,14 @@ int s241 (struct defs * pd0)	/* 2.4.1 Integer constants
   if (
       sizeof 010000000000
       !=
-      sizeof (long)	/* 2**30 */
-      || sizeof 1073741824 != sizeof (long)	/* ditto */
+      sizeof (long)    /* 2**30 */
+      || sizeof 1073741824 != sizeof (long)    /* ditto */
       || sizeof 0x40000000 != sizeof (long))
-    {				/*   "   */
+    {                /*   "   */
 
       rc = rc + 4;
       if (pd0->flgd != 0)
-	printf (s241er, 4);
+    printf (s241er, 4);
     }
 
   /* A decimal, octal, or hexadecimal constant immediately followed
@@ -477,7 +477,7 @@ int s241 (struct defs * pd0)	/* 2.4.1 Integer constants
 
       rc = rc + 8;
       if (pd0->flgd != 0)
-	printf (s241er, 8);
+    printf (s241er, 8);
     }
 
   /* Finally, we test to see that decimal (d), octal (o),
@@ -617,16 +617,16 @@ int s241 (struct defs * pd0)	/* 2.4.1 Integer constants
   for (j = 0; j < 35; j++)
     {
       if (g[j] != d[j] || d[j] != o[j] || o[j] != x[j])
-	{
+    {
 
-	  if (pd0->flgm != 0)
-	    {
+      if (pd0->flgm != 0)
+        {
 /*       printf(s241er,16);          save in case opinions change...     */
-	      printf ("Decimal and octal/hex constants sometimes give\n");
-	      printf ("   different results when assigned to longs.\n");
-	    }
+          printf ("Decimal and octal/hex constants sometimes give\n");
+          printf ("   different results when assigned to longs.\n");
+        }
 /*     lrc = 1;   save...   */
-	}
+    }
     }
 
   if (lrc != 0)
@@ -635,7 +635,7 @@ int s241 (struct defs * pd0)	/* 2.4.1 Integer constants
   return rc;
 }
 
-long pow2 (long n)			/* Calculate 2**n by multiplying, not shifting  */
+long pow2 (long n)            /* Calculate 2**n by multiplying, not shifting  */
 {
   long s;
   s = 1;
@@ -644,7 +644,7 @@ long pow2 (long n)			/* Calculate 2**n by multiplying, not shifting  */
   return s;
 }
 
-int s243 (struct defs * pd0)	/*  2.4.3 Character constants  */
+int s243 (struct defs * pd0)    /*  2.4.3 Character constants  */
 {
   static char s243er[] = "s243,er%d\n";
   static char qs243[8] = "s243   ";
@@ -797,7 +797,7 @@ int s243 (struct defs * pd0)	/*  2.4.3 Character constants  */
     {
       rc = rc + 1;
       if (pd0->flgd != 0)
-	printf (s243er, 1);
+    printf (s243er, 1);
     }
 
   /* Finally, the escape \ddd consists of the backslash followed
@@ -813,7 +813,7 @@ int s243 (struct defs * pd0)	/*  2.4.3 Character constants  */
 
       rc = rc + 8;
       if (pd0->flgd != 0)
-	  printf (s243er, 8);
+      printf (s243er, 8);
     }
 
   return rc;
@@ -923,7 +923,7 @@ s25 (struct defs * pd0)
 
       rc = rc + 1;
       if (pd0->flgd != 0)
-	printf (s25er, 1);
+    printf (s25er, 1);
     }
 
   /* The compiler places a null byte \0 at the end of each string
@@ -933,7 +933,7 @@ s25 (struct defs * pd0)
     {
       rc = rc + 4;
       if (pd0->flgd != 0)
-	printf (s25er, 4);
+    printf (s25er, 4);
     }
 
   /* In a string, the double quote character " must be preceded
@@ -943,7 +943,7 @@ s25 (struct defs * pd0)
     {
       rc = rc + 8;
       if (pd0->flgd != 0)
-	printf (s25er, 8);
+    printf (s25er, 8);
     }
 
   /* In addition, the same escapes described for character constants
@@ -957,7 +957,7 @@ s25 (struct defs * pd0)
       || s[1] != '\t'
       || s[2] != '\b'
       || s[3] != '\r'
-	  || s[4] != '\f')
+      || s[4] != '\f')
     {
       rc = rc + 16;
       if (pd0->flgd != 0)
@@ -979,12 +979,12 @@ s25 (struct defs * pd0)
     {
       rc = rc + 32;
       if (pd0->flgd != 0)
-	printf (s25er, 32);
+    printf (s25er, 32);
     }
   return rc;
 }
 int
-s26 (struct defs * pd0)		/*  2.6  Hardware Characteristics     */
+s26 (struct defs * pd0)        /*  2.6  Hardware Characteristics     */
 {
   static char qs26[8] = "s26    ";
   char *ps, *pt;
@@ -1084,16 +1084,16 @@ s26 (struct defs * pd0)		/*  2.6  Hardware Characteristics     */
 }
 
 int extvar;
-int s4 (struct defs *pd0)		/* 4. What's in a name?             */
+int s4 (struct defs *pd0)        /* 4. What's in a name?             */
 {
   static char s4er[] = "s4,er%d\n";
   static char qs4[8] = "s4     ";
   char *ps, *pt;
   int j, rc;
 
-  short sint;			/* short integer, for size test      */
-  int pint;			/* plain                             */
-  long lint;			/* long                              */
+  short sint;            /* short integer, for size test      */
+  int pint;            /* plain                             */
+  long lint;            /* long                              */
   unsigned target;
   unsigned int mask;
   int svtest (int n);
@@ -1120,9 +1120,9 @@ the block.                                                     */
   for (j = 0; j < 3; j++)
     if (svtest (j) != zero ())
       {
-	rc = 1;
-	if (pd0->flgd != 0)
-	  printf (s4er, 1);
+    rc = 1;
+    if (pd0->flgd != 0)
+      printf (s4er, 1);
       }
   ;
 
@@ -1136,7 +1136,7 @@ unication between functions, even separately compiled functions.
     {
       rc = rc + 2;
       if (pd0->flgd != 0)
-	printf (s4er, 2);
+    printf (s4er, 2);
     }
 /*
      Characters have been tested elsewhere (in s243).
@@ -1153,7 +1153,7 @@ integers.
 
       rc = rc + 4;
       if (pd0->flgd != 0)
-	printf (s4er, 4);
+    printf (s4er, 4);
     }
 
 /*   Unsigned integers, declared unsigned, obey the laws of
@@ -1175,7 +1175,7 @@ implementation                                                  */
 
       rc = rc + 8;
       if (pd0->flgd != 0)
-	printf (s4er, 8);
+    printf (s4er, 8);
     }
 
   return rc;
@@ -1195,30 +1195,30 @@ int svtest(int n)
 
     case 1:
       if (k != 1978)
-	rc = 1;
+    rc = 1;
       else
-	{
-	  k = 1929;
-	  rc = 0;
-	}
+    {
+      k = 1929;
+      rc = 0;
+    }
       break;
 
     case 2:
       if (k != 1929)
-	rc = 1;
+    rc = 1;
       else
-	rc = 0;
+    rc = 0;
       break;
     }
   return rc;
 }
 
 int zero ()
-{				/* Returns a value of zero, possibly */
-  static k;			/* with side effects, as it's called */
-  int rc;			/* alternately with svtest, above,   */
-  k = 2;			/* and has the same internal storage */
-  rc = 0;			/* requirements.                     */
+{                /* Returns a value of zero, possibly */
+  static k;            /* with side effects, as it's called */
+  int rc;            /* alternately with svtest, above,   */
+  k = 2;            /* and has the same internal storage */
+  rc = 0;            /* requirements.                     */
   return rc;
 }
 
@@ -1230,7 +1230,7 @@ int testev ()
     return 0;
 }
 
-int s61 (struct defs * pd0)		/* Characters and integers */
+int s61 (struct defs * pd0)        /* Characters and integers */
 {
   static char s61er[] = "s61,er%d\n";
   static char qs61[8] = "s61    ";
@@ -1269,7 +1269,7 @@ involves sign extension.                                */
     {
       rc = rc + 1;
       if (pd0->flgd != 0)
-	printf (s61er, 1);
+    printf (s61er, 1);
     }
 
 /*      It is guaranteed that a member of the standard char-
@@ -1286,20 +1286,20 @@ acter set is nonnegative.                               */
   for (j = 0; j < 6; j++)
     while (*pc[j])
       if (*pc[j]++ < 0)
-	lrc = 1;
+    lrc = 1;
 
   if (lrc != 0)
     {
       rc = rc + 2;
       if (pd0->flgd != 0)
-	printf (s61er, 2);
+    printf (s61er, 2);
     }
 
 /*      When a longer integer is converted to a shorter or
 to  a char, it is truncated on the left; excess bits are
 simply discarded.                                       */
 
-  longint = 1048579;		/* =2**20+3 */
+  longint = 1048579;        /* =2**20+3 */
   shortint = longint;
   charint = longint;
 
@@ -1308,14 +1308,14 @@ simply discarded.                                       */
     {
       rc = rc + 8;
       if (pd0->flgd != 0)
-	printf (s61er, 8);
+    printf (s61er, 8);
     }
 
   return rc;
 }
 
 int s626 (struct defs * pd0)
-{				/* 6.2 Float and double                  */
+{                /* 6.2 Float and double                  */
   /* 6.3 Floating and integral                 */
   /* 6.4 Pointers and integers                 */
   /* 6.5 Unsigned                              */
@@ -1434,14 +1434,14 @@ int s626 (struct defs * pd0)
 
       rc = rc + 4;
       if (pd0->flgd != 0)
-	{
+    {
 
-	  printf (s626er, 4);
-	  printf ("   key=");
-	  for (j = 0; j < 28; j++)
-	    printf ("%d", t[j]);
-	  printf ("\n");
-	}
+      printf (s626er, 4);
+      printf ("   key=");
+      for (j = 0; j < 28; j++)
+        printf ("%d", t[j]);
+      printf ("\n");
+    }
     }
 
   /* When an unsigned integer is converted to long,
@@ -1454,13 +1454,13 @@ int s626 (struct defs * pd0)
 
       rc = rc + 8;
       if (pd0->flgd != 0)
-	printf (s626er, 8);
+    printf (s626er, 8);
     }
 
   return rc;
 }
 
-int s71 (struct defs * pd0)		/*         7.1  Primary expressions   */
+int s71 (struct defs * pd0)        /*         7.1  Primary expressions   */
 {
   static char s71er[] = "s71,er%d\n";
   static char qs71[8] = "s71    ";
@@ -1494,7 +1494,7 @@ int s71 (struct defs * pd0)		/*         7.1  Primary expressions   */
     {
       rc = rc + 1;
       if (pd0->flgd != 0)
-	printf (s71er, 1);
+    printf (s71er, 1);
     }
 /*   A parenthesized expression is a primary expression whose
      type and value are the same as those of the unadorned
@@ -1504,7 +1504,7 @@ int s71 (struct defs * pd0)		/*         7.1  Primary expressions   */
     {
       rc = rc + 2;
       if (pd0->flgd != 0)
-	printf (s71er, 2);
+    printf (s71er, 2);
     }
 
 /*   A primary expression followed by an expression in square
@@ -1519,7 +1519,7 @@ int s71 (struct defs * pd0)		/*         7.1  Primary expressions   */
     {
       rc = rc + 4;
       if (pd0->flgd != 0)
-	printf (s71er, 4);
+    printf (s71er, 4);
     }
 
 /*   If the various flavors of function calls didn't work, we
@@ -1531,7 +1531,7 @@ int s71 (struct defs * pd0)		/*         7.1  Primary expressions   */
     {
       rc = rc + 8;
       if (pd0->flgd != 0)
-	printf (s71er, 8);
+    printf (s71er, 8);
     }
 
 /*   and that argument passing is strictly by value.           */
@@ -1547,7 +1547,7 @@ int s71 (struct defs * pd0)		/*         7.1  Primary expressions   */
     {
       rc = rc + 16;
       if (pd0->flgd != 0)
-	printf (s71er, 16);
+    printf (s71er, 16);
     }
 
 /*   Finally, structures and unions are addressed thusly:      */
@@ -1556,7 +1556,7 @@ int s71 (struct defs * pd0)		/*         7.1  Primary expressions   */
     {
       rc = rc + 32;
       if (pd0->flgd != 0)
-	printf (s71er, 32);
+    printf (s71er, 32);
     }
 
   return rc;
@@ -1577,7 +1577,7 @@ int clobber (int x, int *y)
   return;
 }
 
-int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
+int s714 (struct defs * pd0)    /*  7.14  Assignment operators       */
 {
   static char f[] = "Local error %d.\n";
   static char s714er[] = "s714,er%d\n";
@@ -1653,7 +1653,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 1;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   cl = 5;
   sr = 2;
@@ -1662,7 +1662,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 2;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   cl = 5;
   ir = 2;
@@ -1671,7 +1671,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 3;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   cl = 5;
   lr = 2;
@@ -1680,7 +1680,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 4;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   cl = 5;
   ur = 2;
@@ -1689,7 +1689,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 5;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   /* 0.01
      cl = 5; fr = 2;
@@ -1712,7 +1712,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 8;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   sl = 5;
   sr = 2;
@@ -1721,7 +1721,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 9;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   sl = 5;
   ir = 2;
@@ -1730,7 +1730,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 10;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   sl = 5;
   lr = 2;
@@ -1739,7 +1739,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 11;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   sl = 5;
   ur = 2;
@@ -1748,7 +1748,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 12;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   /* 0.01
      sl = 5; fr = 2;
@@ -1771,7 +1771,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 15;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   il = 5;
   sr = 2;
@@ -1780,7 +1780,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 16;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   il = 5;
   ir = 2;
@@ -1789,7 +1789,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 17;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   il = 5;
   lr = 2;
@@ -1798,7 +1798,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 18;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   il = 5;
   ur = 2;
@@ -1807,7 +1807,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 19;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   /* 0.01
      il = 5; fr = 2;
@@ -1830,7 +1830,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 22;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ll = 5;
   sr = 2;
@@ -1839,7 +1839,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 23;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ll = 5;
   ir = 2;
@@ -1848,7 +1848,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 24;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ll = 5;
   lr = 2;
@@ -1857,7 +1857,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 25;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ll = 5;
   ur = 2;
@@ -1866,7 +1866,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 26;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   /* 0.01
      ll = 5; fr = 2;
@@ -1889,7 +1889,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 29;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ul = 5;
   sr = 2;
@@ -1898,7 +1898,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 30;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ul = 5;
   ir = 2;
@@ -1907,7 +1907,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 31;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ul = 5;
   lr = 2;
@@ -1916,7 +1916,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 32;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ul = 5;
   ur = 2;
@@ -1925,7 +1925,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 33;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   /* 0.01
      ul = 5; fr = 2;
@@ -2034,7 +2034,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 50;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   cl = 5;
   sr = 2;
@@ -2043,7 +2043,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 51;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   cl = 5;
   ir = 2;
@@ -2052,7 +2052,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 52;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   cl = 5;
   lr = 2;
@@ -2061,7 +2061,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 53;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   cl = 5;
   ur = 2;
@@ -2070,7 +2070,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 54;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   /* 0.01
      cl = 5; fr = 2;
@@ -2093,7 +2093,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 57;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   sl = 5;
   sr = 2;
@@ -2102,7 +2102,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 58;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   sl = 5;
   ir = 2;
@@ -2111,7 +2111,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 59;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   sl = 5;
   lr = 2;
@@ -2120,7 +2120,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 60;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   sl = 5;
   ur = 2;
@@ -2129,7 +2129,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 61;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   /* 0.01
      sl = 5; fr = 2;
@@ -2152,7 +2152,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 64;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   il = 5;
   sr = 2;
@@ -2161,7 +2161,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 65;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   il = 5;
   ir = 2;
@@ -2170,7 +2170,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 66;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   il = 5;
   lr = 2;
@@ -2179,7 +2179,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 67;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   il = 5;
   ur = 2;
@@ -2188,7 +2188,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 68;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   /*
      il = 5; fr = 2;
@@ -2211,7 +2211,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 71;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ll = 5;
   sr = 2;
@@ -2220,7 +2220,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 72;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ll = 5;
   ir = 2;
@@ -2229,7 +2229,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 73;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ll = 5;
   lr = 2;
@@ -2238,7 +2238,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 74;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ll = 5;
   ur = 2;
@@ -2247,7 +2247,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 75;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   /*
      ll = 5; fr = 2;
@@ -2270,7 +2270,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 78;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ul = 5;
   sr = 2;
@@ -2279,7 +2279,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 79;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ul = 5;
   ir = 2;
@@ -2288,7 +2288,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 80;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ul = 5;
   lr = 2;
@@ -2297,7 +2297,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 81;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ul = 5;
   ur = 2;
@@ -2306,7 +2306,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 82;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   /*
      ul = 5; fr = 2;
@@ -2415,7 +2415,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 99;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   cl = 5;
   sr = 2;
@@ -2424,7 +2424,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 100;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   cl = 5;
   ir = 2;
@@ -2433,7 +2433,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 101;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   cl = 5;
   lr = 2;
@@ -2442,7 +2442,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 102;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   cl = 5;
   ur = 2;
@@ -2451,7 +2451,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 103;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   /*
      cl = 5; fr = 2;
@@ -2474,7 +2474,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 106;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   sl = 5;
   sr = 2;
@@ -2483,7 +2483,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 107;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   sl = 5;
   ir = 2;
@@ -2492,7 +2492,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 108;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   sl = 5;
   lr = 2;
@@ -2501,7 +2501,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 109;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   sl = 5;
   ur = 2;
@@ -2510,7 +2510,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 110;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   /*
      sl = 5; fr = 2;
@@ -2533,7 +2533,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 113;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   il = 5;
   sr = 2;
@@ -2542,7 +2542,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 114;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   il = 5;
   ir = 2;
@@ -2551,7 +2551,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 115;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   il = 5;
   lr = 2;
@@ -2560,7 +2560,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 116;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   il = 5;
   ur = 2;
@@ -2569,7 +2569,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 117;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   /*
      il = 5; fr = 2;
@@ -2592,7 +2592,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 120;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ll = 5;
   sr = 2;
@@ -2601,7 +2601,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 121;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ll = 5;
   ir = 2;
@@ -2610,7 +2610,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 122;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ll = 5;
   lr = 2;
@@ -2619,7 +2619,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 123;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ll = 5;
   ur = 2;
@@ -2628,7 +2628,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 124;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   /*
      ll = 5; fr = 2;
@@ -2651,7 +2651,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 127;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ul = 5;
   sr = 2;
@@ -2660,7 +2660,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 128;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ul = 5;
   ir = 2;
@@ -2669,7 +2669,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 129;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ul = 5;
   lr = 2;
@@ -2678,7 +2678,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 130;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ul = 5;
   ur = 2;
@@ -2687,7 +2687,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 131;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   /*
      ul = 5; fr = 2;
@@ -2796,7 +2796,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 148;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   cl = 5;
   sr = 2;
@@ -2805,7 +2805,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 149;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   cl = 5;
   ir = 2;
@@ -2814,7 +2814,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 150;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   cl = 5;
   lr = 2;
@@ -2823,7 +2823,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 151;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   cl = 5;
   ur = 2;
@@ -2832,7 +2832,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 152;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   /*
      cl = 5; fr = 2;
@@ -2855,7 +2855,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 155;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   sl = 5;
   sr = 2;
@@ -2864,7 +2864,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 156;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   sl = 5;
   ir = 2;
@@ -2873,7 +2873,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 157;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   sl = 5;
   lr = 2;
@@ -2882,7 +2882,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 158;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   sl = 5;
   ur = 2;
@@ -2891,7 +2891,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 159;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   /*
      sl = 5; fr = 2;
@@ -2914,7 +2914,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 162;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   il = 5;
   sr = 2;
@@ -2923,7 +2923,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 163;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   il = 5;
   ir = 2;
@@ -2932,7 +2932,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 164;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   il = 5;
   lr = 2;
@@ -2941,7 +2941,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 165;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   il = 5;
   ur = 2;
@@ -2950,7 +2950,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 166;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   /*
      il = 5; fr = 2;
@@ -2973,7 +2973,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 169;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ll = 5;
   sr = 2;
@@ -2982,7 +2982,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 170;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ll = 5;
   ir = 2;
@@ -2991,7 +2991,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 171;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ll = 5;
   lr = 2;
@@ -3000,7 +3000,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 172;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ll = 5;
   ur = 2;
@@ -3009,7 +3009,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 173;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   /*
      ll = 5; fr = 2;
@@ -3032,7 +3032,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 176;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ul = 5;
   sr = 2;
@@ -3041,7 +3041,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 177;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ul = 5;
   ir = 2;
@@ -3050,7 +3050,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 178;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ul = 5;
   lr = 2;
@@ -3059,7 +3059,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 179;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ul = 5;
   ur = 2;
@@ -3068,7 +3068,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 180;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   /*
      ul = 5; fr = 2;
@@ -3177,7 +3177,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 197;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   cl = 5;
   sr = 2;
@@ -3186,7 +3186,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 198;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   cl = 5;
   ir = 2;
@@ -3195,7 +3195,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 199;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   cl = 5;
   lr = 2;
@@ -3204,7 +3204,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 200;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   cl = 5;
   ur = 2;
@@ -3213,7 +3213,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 201;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   /*
      cl = 5; fr = 2;
@@ -3236,7 +3236,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 204;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   sl = 5;
   sr = 2;
@@ -3245,7 +3245,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 205;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   sl = 5;
   ir = 2;
@@ -3254,7 +3254,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 206;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   sl = 5;
   lr = 2;
@@ -3263,7 +3263,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 207;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   sl = 5;
   ur = 2;
@@ -3272,7 +3272,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 208;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   /*
      sl = 5; fr = 2;
@@ -3295,7 +3295,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 211;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   il = 5;
   sr = 2;
@@ -3304,7 +3304,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 212;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   il = 5;
   ir = 2;
@@ -3313,7 +3313,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 213;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   il = 5;
   lr = 2;
@@ -3322,7 +3322,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 214;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   il = 5;
   ur = 2;
@@ -3331,7 +3331,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 215;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   /*
      il = 5; fr = 2;
@@ -3354,7 +3354,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 218;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ll = 5;
   sr = 2;
@@ -3363,7 +3363,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 219;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ll = 5;
   ir = 2;
@@ -3372,7 +3372,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 220;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ll = 5;
   lr = 2;
@@ -3381,7 +3381,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 221;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ll = 5;
   ur = 2;
@@ -3390,7 +3390,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 222;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   /*
      ll = 5; fr = 2;
@@ -3413,7 +3413,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 225;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ul = 5;
   sr = 2;
@@ -3422,7 +3422,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 226;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ul = 5;
   ir = 2;
@@ -3431,7 +3431,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 227;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ul = 5;
   lr = 2;
@@ -3440,7 +3440,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 228;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ul = 5;
   ur = 2;
@@ -3449,7 +3449,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 229;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   /*
      ul = 5; fr = 2;
@@ -3558,7 +3558,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 246;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   cl = 5;
   sr = 2;
@@ -3567,7 +3567,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 247;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   cl = 5;
   ir = 2;
@@ -3576,7 +3576,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 248;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   cl = 5;
   lr = 2;
@@ -3585,7 +3585,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 249;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   cl = 5;
   ur = 2;
@@ -3594,7 +3594,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 250;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   sl = 5;
   cr = 2;
@@ -3603,7 +3603,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 251;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   sl = 5;
   sr = 2;
@@ -3612,7 +3612,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 252;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   sl = 5;
   ir = 2;
@@ -3621,7 +3621,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 253;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   sl = 5;
   lr = 2;
@@ -3630,7 +3630,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 254;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   sl = 5;
   ur = 2;
@@ -3639,7 +3639,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 255;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   il = 5;
   cr = 2;
@@ -3648,7 +3648,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 256;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   il = 5;
   sr = 2;
@@ -3657,7 +3657,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 257;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   il = 5;
   ir = 2;
@@ -3666,7 +3666,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 258;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   il = 5;
   lr = 2;
@@ -3675,7 +3675,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 259;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   il = 5;
   ur = 2;
@@ -3684,7 +3684,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 260;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ll = 5;
   cr = 2;
@@ -3693,7 +3693,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 261;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ll = 5;
   sr = 2;
@@ -3702,7 +3702,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 262;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ll = 5;
   ir = 2;
@@ -3711,7 +3711,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 263;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ll = 5;
   lr = 2;
@@ -3720,7 +3720,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 264;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ll = 5;
   ur = 2;
@@ -3729,7 +3729,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 265;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ul = 5;
   cr = 2;
@@ -3738,7 +3738,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 266;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ul = 5;
   sr = 2;
@@ -3747,7 +3747,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 267;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ul = 5;
   ir = 2;
@@ -3756,7 +3756,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 268;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ul = 5;
   lr = 2;
@@ -3765,7 +3765,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 269;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ul = 5;
   ur = 2;
@@ -3774,7 +3774,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 270;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   cl = 5;
   cr = 2;
@@ -3783,7 +3783,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 271;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   cl = 5;
   sr = 2;
@@ -3792,7 +3792,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 272;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   cl = 5;
   ir = 2;
@@ -3801,7 +3801,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 273;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   cl = 5;
   lr = 2;
@@ -3810,7 +3810,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 274;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   cl = 5;
   ur = 2;
@@ -3819,7 +3819,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 275;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   sl = 5;
   cr = 2;
@@ -3828,7 +3828,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 276;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   sl = 5;
   sr = 2;
@@ -3837,7 +3837,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 277;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   sl = 5;
   ir = 2;
@@ -3846,7 +3846,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 278;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   sl = 5;
   lr = 2;
@@ -3855,7 +3855,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 279;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   sl = 5;
   ur = 2;
@@ -3864,7 +3864,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 280;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   il = 5;
   cr = 2;
@@ -3873,7 +3873,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 281;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   il = 5;
   sr = 2;
@@ -3882,7 +3882,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 282;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   il = 5;
   ir = 2;
@@ -3891,7 +3891,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 283;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   il = 5;
   lr = 2;
@@ -3900,7 +3900,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 284;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   il = 5;
   ur = 2;
@@ -3909,7 +3909,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 285;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ll = 5;
   cr = 2;
@@ -3918,7 +3918,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 286;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ll = 5;
   sr = 2;
@@ -3927,7 +3927,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 287;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ll = 5;
   ir = 2;
@@ -3936,7 +3936,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 288;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ll = 5;
   lr = 2;
@@ -3945,7 +3945,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 289;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ll = 5;
   ur = 2;
@@ -3954,7 +3954,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 290;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ul = 5;
   cr = 2;
@@ -3963,7 +3963,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 291;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ul = 5;
   sr = 2;
@@ -3972,7 +3972,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 292;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ul = 5;
   ir = 2;
@@ -3981,7 +3981,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 293;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ul = 5;
   lr = 2;
@@ -3990,7 +3990,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 294;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ul = 5;
   ur = 2;
@@ -3999,7 +3999,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 295;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   cl = 5;
   cr = 2;
@@ -4008,7 +4008,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 296;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   cl = 5;
   sr = 2;
@@ -4017,7 +4017,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 297;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   cl = 5;
   ir = 2;
@@ -4026,7 +4026,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 298;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   cl = 5;
   lr = 2;
@@ -4035,7 +4035,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 299;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   cl = 5;
   ur = 2;
@@ -4044,7 +4044,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 300;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   sl = 5;
   cr = 2;
@@ -4053,7 +4053,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 301;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   sl = 5;
   sr = 2;
@@ -4062,7 +4062,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 302;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   sl = 5;
   ir = 2;
@@ -4071,7 +4071,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 303;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   sl = 5;
   lr = 2;
@@ -4080,7 +4080,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 304;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   sl = 5;
   ur = 2;
@@ -4089,7 +4089,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 305;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   il = 5;
   cr = 2;
@@ -4098,7 +4098,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 306;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   il = 5;
   sr = 2;
@@ -4107,7 +4107,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 307;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   il = 5;
   ir = 2;
@@ -4116,7 +4116,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 308;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   il = 5;
   lr = 2;
@@ -4125,7 +4125,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 309;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   il = 5;
   ur = 2;
@@ -4134,7 +4134,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 310;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ll = 5;
   cr = 2;
@@ -4143,7 +4143,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 311;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ll = 5;
   sr = 2;
@@ -4152,7 +4152,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 312;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ll = 5;
   ir = 2;
@@ -4161,7 +4161,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 313;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ll = 5;
   lr = 2;
@@ -4170,7 +4170,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 314;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ll = 5;
   ur = 2;
@@ -4179,7 +4179,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 315;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ul = 5;
   cr = 2;
@@ -4188,7 +4188,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 316;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ul = 5;
   sr = 2;
@@ -4197,7 +4197,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 317;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ul = 5;
   ir = 2;
@@ -4206,7 +4206,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 318;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ul = 5;
   lr = 2;
@@ -4215,7 +4215,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 319;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ul = 5;
   ur = 2;
@@ -4224,7 +4224,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 320;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   cl = 12;
   cr = 10;
@@ -4233,7 +4233,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 321;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   cl = 12;
   sr = 10;
@@ -4242,7 +4242,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 322;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   cl = 12;
   ir = 10;
@@ -4251,7 +4251,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 323;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   cl = 12;
   lr = 10;
@@ -4260,7 +4260,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 324;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   cl = 12;
   ur = 10;
@@ -4269,7 +4269,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 325;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   sl = 12;
   cr = 10;
@@ -4278,7 +4278,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 326;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   sl = 12;
   sr = 10;
@@ -4287,7 +4287,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 327;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   sl = 12;
   ir = 10;
@@ -4296,7 +4296,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 328;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   sl = 12;
   lr = 10;
@@ -4305,7 +4305,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 329;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   sl = 12;
   ur = 10;
@@ -4314,7 +4314,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 330;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   il = 12;
   cr = 10;
@@ -4323,7 +4323,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 331;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   il = 12;
   sr = 10;
@@ -4332,7 +4332,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 332;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   il = 12;
   ir = 10;
@@ -4341,7 +4341,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 333;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   il = 12;
   lr = 10;
@@ -4350,7 +4350,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 334;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   il = 12;
   ur = 10;
@@ -4359,7 +4359,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 335;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ll = 12;
   cr = 10;
@@ -4368,7 +4368,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 336;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ll = 12;
   sr = 10;
@@ -4377,7 +4377,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 337;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ll = 12;
   ir = 10;
@@ -4386,7 +4386,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 338;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ll = 12;
   lr = 10;
@@ -4395,7 +4395,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 339;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ll = 12;
   ur = 10;
@@ -4404,7 +4404,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 340;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ul = 12;
   cr = 10;
@@ -4413,7 +4413,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 341;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ul = 12;
   sr = 10;
@@ -4422,7 +4422,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 342;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ul = 12;
   ir = 10;
@@ -4431,7 +4431,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 343;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ul = 12;
   lr = 10;
@@ -4440,7 +4440,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 344;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ul = 12;
   ur = 10;
@@ -4449,7 +4449,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 345;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   cl = 12;
   cr = 10;
@@ -4458,7 +4458,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 346;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   cl = 12;
   sr = 10;
@@ -4467,7 +4467,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 347;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   cl = 12;
   ir = 10;
@@ -4476,7 +4476,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 348;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   cl = 12;
   lr = 10;
@@ -4485,7 +4485,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 349;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   cl = 12;
   ur = 10;
@@ -4494,7 +4494,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 350;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   sl = 12;
   cr = 10;
@@ -4503,7 +4503,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 351;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   sl = 12;
   sr = 10;
@@ -4512,7 +4512,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 352;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   sl = 12;
   ir = 10;
@@ -4521,7 +4521,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 353;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   sl = 12;
   lr = 10;
@@ -4530,7 +4530,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 354;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   sl = 12;
   ur = 10;
@@ -4539,7 +4539,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 355;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   il = 12;
   cr = 10;
@@ -4548,7 +4548,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 356;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   il = 12;
   sr = 10;
@@ -4557,7 +4557,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 357;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   il = 12;
   ir = 10;
@@ -4566,7 +4566,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 358;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   il = 12;
   lr = 10;
@@ -4575,7 +4575,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 359;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   il = 12;
   ur = 10;
@@ -4584,7 +4584,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 360;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ll = 12;
   cr = 10;
@@ -4593,7 +4593,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 361;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ll = 12;
   sr = 10;
@@ -4602,7 +4602,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 362;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ll = 12;
   ir = 10;
@@ -4611,7 +4611,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 363;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ll = 12;
   lr = 10;
@@ -4620,7 +4620,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 364;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ll = 12;
   ur = 10;
@@ -4629,7 +4629,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 365;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ul = 12;
   cr = 10;
@@ -4638,7 +4638,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 366;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ul = 12;
   sr = 10;
@@ -4647,7 +4647,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 367;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ul = 12;
   ir = 10;
@@ -4656,7 +4656,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 368;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ul = 12;
   lr = 10;
@@ -4665,7 +4665,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 369;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ul = 12;
   ur = 10;
@@ -4674,7 +4674,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 370;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   cl = 12;
   cr = 10;
@@ -4683,7 +4683,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 371;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   cl = 12;
   sr = 10;
@@ -4692,7 +4692,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 372;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   cl = 12;
   ir = 10;
@@ -4701,7 +4701,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 373;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   cl = 12;
   lr = 10;
@@ -4710,7 +4710,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 374;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   cl = 12;
   ur = 10;
@@ -4719,7 +4719,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 375;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   sl = 12;
   cr = 10;
@@ -4728,7 +4728,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 376;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   sl = 12;
   sr = 10;
@@ -4737,7 +4737,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 377;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   sl = 12;
   ir = 10;
@@ -4746,7 +4746,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 378;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   sl = 12;
   lr = 10;
@@ -4755,7 +4755,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 379;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   sl = 12;
   ur = 10;
@@ -4764,7 +4764,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 380;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   il = 12;
   cr = 10;
@@ -4773,7 +4773,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 381;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   il = 12;
   sr = 10;
@@ -4782,7 +4782,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 382;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   il = 12;
   ir = 10;
@@ -4791,7 +4791,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 383;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   il = 12;
   lr = 10;
@@ -4800,7 +4800,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 384;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   il = 12;
   ur = 10;
@@ -4809,7 +4809,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 385;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ll = 12;
   cr = 10;
@@ -4818,7 +4818,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 386;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ll = 12;
   sr = 10;
@@ -4827,7 +4827,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 387;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ll = 12;
   ir = 10;
@@ -4836,7 +4836,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 388;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ll = 12;
   lr = 10;
@@ -4845,7 +4845,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 389;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ll = 12;
   ur = 10;
@@ -4854,7 +4854,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 390;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ul = 12;
   cr = 10;
@@ -4863,7 +4863,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 391;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ul = 12;
   sr = 10;
@@ -4872,7 +4872,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 392;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ul = 12;
   ir = 10;
@@ -4881,7 +4881,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 393;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ul = 12;
   lr = 10;
@@ -4890,7 +4890,7 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 394;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   ul = 12;
   ur = 10;
@@ -4899,18 +4899,18 @@ int s714 (struct defs * pd0)	/*  7.14  Assignment operators       */
     {
       lrc = 395;
       if (prlc)
-	printf (f, lrc);
+    printf (f, lrc);
     }
   if (lrc != 0)
     {
       rc = 1;
       if (pd0->flgd != 0)
-	printf (s714er, 1);
+    printf (s714er, 1);
     }
   return rc;
 }
 
-int s715 (struct defs * pd0)	/*  7.15 Comma operator  */
+int s715 (struct defs * pd0)    /*  7.15 Comma operator  */
 {
   static char s715er[] = "s715,er%d\n";
   static char qs715[8] = "s715   ";
@@ -4933,7 +4933,7 @@ int s715 (struct defs * pd0)	/*  7.15 Comma operator  */
   if (i++, i++, i++, i++, ++i != 6)
     {
       if (pd0->flgd != 0)
-	printf (s715er, 1);
+    printf (s715er, 1);
       rc = rc + 1;
     }
 
@@ -4953,7 +4953,7 @@ int s715 (struct defs * pd0)	/*  7.15 Comma operator  */
   if (s715f(a, (t = 3), c) != 5)
     {
       if (pd0->flgd != 0)
-	printf (s715er, 2);
+    printf (s715er, 2);
       rc = rc + 2;
     }
   return rc;
@@ -4965,7 +4965,7 @@ s715f (int x, int y, int z)
   return y;
 }
 
-int s72 (struct defs * pd0)		/*  7.2  Unary operators  */
+int s72 (struct defs * pd0)        /*  7.2  Unary operators  */
 {
   static char s72er[] = "s72,er%d\n";
   static char qs72[8] = "s72    ";
@@ -5111,7 +5111,7 @@ int s757 (struct defs * pd0)
     {
       rc = rc + 1;
       if (pd0->flgd != 0)
-	printf (s757er, 1);
+    printf (s757er, 1);
     }
 
   /* In the following test, an n-bit unsigned consisting
@@ -5131,19 +5131,19 @@ int s757 (struct defs * pd0)
       rt = ~rt << k;
 
       for (j = 0; j < pd0->ubits; j++)
-	{
-	  if ((j < k) != ((rs & rt) == 0) || (j < k) != ((ls & lt) == 0))
-	    lrc = 1;
-	  rs = rs << 1;
-	  ls = ls >> 1;
-	}
+    {
+      if ((j < k) != ((rs & rt) == 0) || (j < k) != ((ls & lt) == 0))
+        lrc = 1;
+      rs = rs << 1;
+      ls = ls >> 1;
+    }
     }
 
   if (lrc != 0)
     {
       rc = rc + 2;
       if (pd0->flgd != 0)
-	printf (s757er, 2);
+    printf (s757er, 2);
     }
 
   /* The relational operators group left-to-right, but this
@@ -5159,7 +5159,7 @@ int s757 (struct defs * pd0)
     {
       rc = rc + 4;
       if (pd0->flgd != 0)
-	printf (s757er, 4);
+    printf (s757er, 4);
     }
 
   /* In general, we take note of the fact that if we got this
@@ -5172,7 +5172,7 @@ int s757 (struct defs * pd0)
     {
       rc = rc + 8;
       if (pd0->flgd != 0)
-	printf (s757er, 8);
+    printf (s757er, 8);
     }
 
   if (&x[1] < &x[0])
@@ -5196,15 +5196,15 @@ int s757 (struct defs * pd0)
   for (a = 0; a < 2; a++)
     for (b = 0; b < 2; b++)
       for (c = 0; c < 2; c++)
-	for (d = 0; d < 2; d++)
-	  if ((a < b == c < d) != x[8 * a + 4 * b + 2 * c + d])
-	    lrc = 1;
+    for (d = 0; d < 2; d++)
+      if ((a < b == c < d) != x[8 * a + 4 * b + 2 * c + d])
+        lrc = 1;
 
   if (lrc != 0)
     {
       rc = rc + 16;
       if (pd0->flgd != 0)
-	printf (s757er, 16);
+    printf (s757er, 16);
     }
 
   /* A pointer to which zero has been assigned will
@@ -5217,19 +5217,19 @@ int s757 (struct defs * pd0)
     {
       rc = rc + 32;
       if (pd0->flgd != 0)
-	printf (s757er, 32);
+    printf (s757er, 32);
     }
 
   return rc;
 }
 
 int s7813 (struct defs * pd0)
-{				/* 7.8 Bitwise AND operator
-				   7.9 Bitwise OR operator
-				   7.10 Bitwise exclusive OR operator
-				   7.11 Logical AND operator
-				   7.12 Logical OR operator
-				   7.13 Conditional operator            */
+{                /* 7.8 Bitwise AND operator
+                   7.9 Bitwise OR operator
+                   7.10 Bitwise exclusive OR operator
+                   7.11 Logical AND operator
+                   7.12 Logical OR operator
+                   7.13 Conditional operator            */
 
   register int prlc, lrc;
   int i, j, r, zero, one;
@@ -5272,457 +5272,457 @@ int s7813 (struct defs * pd0)
     {
       lrc = 1;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((char) 12 | (char) 10) != 14)
     {
       lrc = 2;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((char) 12 ^ (char) 10) != 6)
     {
       lrc = 3;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((char) 12 & (short) 10) != 8)
     {
       lrc = 4;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((char) 12 | (short) 10) != 14)
     {
       lrc = 5;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((char) 12 ^ (short) 10) != 6)
     {
       lrc = 6;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((char) 12 & (long) 10) != 8)
     {
       lrc = 7;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((char) 12 | (long) 10) != 14)
     {
       lrc = 8;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((char) 12 ^ (long) 10) != 6)
     {
       lrc = 9;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((char) 12 & (unsigned) 10) != 8)
     {
       lrc = 10;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((char) 12 | (unsigned) 10) != 14)
     {
       lrc = 11;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((char) 12 ^ (unsigned) 10) != 6)
     {
       lrc = 12;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((char) 12 & (int) 10) != 8)
     {
       lrc = 13;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((char) 12 | (int) 10) != 14)
     {
       lrc = 14;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((char) 12 ^ (int) 10) != 6)
     {
       lrc = 15;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((short) 12 & (char) 10) != 8)
     {
       lrc = 16;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((short) 12 | (char) 10) != 14)
     {
       lrc = 17;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((short) 12 ^ (char) 10) != 6)
     {
       lrc = 18;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((short) 12 & (short) 10) != 8)
     {
       lrc = 16;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((short) 12 | (short) 10) != 14)
     {
       lrc = 20;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((short) 12 ^ (short) 10) != 6)
     {
       lrc = 21;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((short) 12 & (long) 10) != 8)
     {
       lrc = 22;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((short) 12 | (long) 10) != 14)
     {
       lrc = 23;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((short) 12 ^ (long) 10) != 6)
     {
       lrc = 24;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((short) 12 & (unsigned) 10) != 8)
     {
       lrc = 25;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((short) 12 | (unsigned) 10) != 14)
     {
       lrc = 26;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((short) 12 ^ (unsigned) 10) != 6)
     {
       lrc = 27;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((short) 12 & (int) 10) != 8)
     {
       lrc = 28;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((short) 12 | (int) 10) != 14)
     {
       lrc = 26;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((short) 12 ^ (int) 10) != 6)
     {
       lrc = 30;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((long) 12 & (char) 10) != 8)
     {
       lrc = 31;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((long) 12 | (char) 10) != 14)
     {
       lrc = 32;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((long) 12 ^ (char) 10) != 6)
     {
       lrc = 33;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((long) 12 & (short) 10) != 8)
     {
       lrc = 34;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((long) 12 | (short) 10) != 14)
     {
       lrc = 35;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((long) 12 ^ (short) 10) != 6)
     {
       lrc = 36;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((long) 12 & (long) 10) != 8)
     {
       lrc = 37;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((long) 12 | (long) 10) != 14)
     {
       lrc = 38;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((long) 12 ^ (long) 10) != 6)
     {
       lrc = 39;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((long) 12 & (unsigned) 10) != 8)
     {
       lrc = 40;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((long) 12 | (unsigned) 10) != 14)
     {
       lrc = 41;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((long) 12 ^ (unsigned) 10) != 6)
     {
       lrc = 42;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((long) 12 & (int) 10) != 8)
     {
       lrc = 43;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((long) 12 | (int) 10) != 14)
     {
       lrc = 44;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((long) 12 ^ (int) 10) != 6)
     {
       lrc = 45;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((unsigned) 12 & (char) 10) != 8)
     {
       lrc = 46;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((unsigned) 12 | (char) 10) != 14)
     {
       lrc = 47;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((unsigned) 12 ^ (char) 10) != 6)
     {
       lrc = 48;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((unsigned) 12 & (short) 10) != 8)
     {
       lrc = 49;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((unsigned) 12 | (short) 10) != 14)
     {
       lrc = 50;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((unsigned) 12 ^ (short) 10) != 6)
     {
       lrc = 51;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((unsigned) 12 & (long) 10) != 8)
     {
       lrc = 52;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((unsigned) 12 | (long) 10) != 14)
     {
       lrc = 53;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((unsigned) 12 ^ (long) 10) != 6)
     {
       lrc = 54;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((unsigned) 12 & (unsigned) 10) != 8)
     {
       lrc = 55;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((unsigned) 12 | (unsigned) 10) != 14)
     {
       lrc = 56;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((unsigned) 12 ^ (unsigned) 10) != 6)
     {
       lrc = 57;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((unsigned) 12 & (int) 10) != 8)
     {
       lrc = 58;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((unsigned) 12 | (int) 10) != 14)
     {
       lrc = 56;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((unsigned) 12 ^ (int) 10) != 6)
     {
       lrc = 60;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((int) 12 & (char) 10) != 8)
     {
       lrc = 61;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((int) 12 | (char) 10) != 14)
     {
       lrc = 62;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((int) 12 ^ (char) 10) != 6)
     {
       lrc = 63;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((int) 12 & (short) 10) != 8)
     {
       lrc = 64;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((int) 12 | (short) 10) != 14)
     {
       lrc = 65;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((int) 12 ^ (short) 10) != 6)
     {
       lrc = 66;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((int) 12 & (long) 10) != 8)
     {
       lrc = 67;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((int) 12 | (long) 10) != 14)
     {
       lrc = 68;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((int) 12 ^ (long) 10) != 6)
     {
       lrc = 69;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((int) 12 & (unsigned) 10) != 8)
     {
       lrc = 70;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((int) 12 | (unsigned) 10) != 14)
     {
       lrc = 71;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((int) 12 ^ (unsigned) 10) != 6)
     {
       lrc = 72;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((int) 12 & (int) 10) != 8)
     {
       lrc = 73;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((int) 12 | (int) 10) != 14)
     {
       lrc = 74;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (((int) 12 ^ (int) 10) != 6)
     {
       lrc = 75;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
 
   if (lrc != 0)
     {
       if (pd0->flgd != 0)
-	printf (s7813er, 1);
+    printf (s7813er, 1);
       rc = rc + 1;
     }
 
@@ -5741,82 +5741,82 @@ int s7813 (struct defs * pd0)
     {
       lrc = 1;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (j != 0)
     {
       lrc = 2;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (r != 0)
     {
       lrc = 3;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   r = i && j++;
   if (i != 1)
     {
       lrc = 4;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (j != 1)
     {
       lrc = 5;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (r != 0)
     {
       lrc = 6;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   r = i-- && j;
   if (i != 0)
     {
       lrc = 7;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (j != 1)
     {
       lrc = 8;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (r != 1)
     {
       lrc = 9;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   r = i && j--;
   if (i != 0)
     {
       lrc = 10;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (j != 1)
     {
       lrc = 11;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (r != 0)
     {
       lrc = 12;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
 
   if (lrc != 0)
     {
       if (pd0->flgd != 0)
-	printf (s7813er, 2);
+    printf (s7813er, 2);
       rc = rc + 2;
     }
 
@@ -5834,82 +5834,82 @@ int s7813 (struct defs * pd0)
     {
       lrc = 1;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (j != 0)
     {
       lrc = 2;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (r != 0)
     {
       lrc = 3;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   r = j++ || i;
   if (i != 1)
     {
       lrc = 4;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (j != 1)
     {
       lrc = 5;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (r != 1)
     {
       lrc = 6;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   r = i-- || j--;
   if (i != 0)
     {
       lrc = 7;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (j != 1)
     {
       lrc = 8;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (r != 1)
     {
       lrc = 9;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   r = i || j--;
   if (i != 0)
     {
       lrc = 10;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (j != 0)
     {
       lrc = 11;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
   if (r != 1)
     {
       lrc = 12;
       if (prlc)
-	printf (fl, lrc);
+    printf (fl, lrc);
     }
 
   if (lrc != 0)
     {
       if (pd0->flgd != 0)
-	printf (s7813er, 4);
+    printf (s7813er, 4);
       rc = rc + 4;
     }
 
@@ -5922,7 +5922,7 @@ int s7813 (struct defs * pd0)
   if (r != 0 || i != 0 || j != 0)
     {
       if (pd0->flgd != 0)
-	printf (s7813er, 8);
+    printf (s7813er, 8);
       rc = rc + 8;
     }
 
@@ -5934,13 +5934,13 @@ int s7813 (struct defs * pd0)
   if ((one ? zero : 1) != 0 || (zero ? 1 : zero) != 0)
     {
       if (pd0->flgd != 0)
-	printf (s7813er, 16);
+    printf (s7813er, 16);
       rc = rc + 16;
     }
   return rc;
 }
 
-int s81 (struct defs * pd0)		/* 8.1 Storage Class Specifiers    */
+int s81 (struct defs * pd0)        /* 8.1 Storage Class Specifiers    */
 {
   static char s81er[] = "s81,er%d\n";
   static char qs81[8] = "s81    ";
@@ -5994,11 +5994,11 @@ int s81 (struct defs * pd0)		/* 8.1 Storage Class Specifiers    */
       nrint = k;
 
       if (rchar != nrchar)
-	crc = 1;
+    crc = 1;
       if (rptr != nrptr)
-	prc = 1;
+    prc = 1;
       if (rint != nrint)
-	irc = 1;
+    irc = 1;
       k = k << 1;
     }
 
@@ -6006,21 +6006,21 @@ int s81 (struct defs * pd0)		/* 8.1 Storage Class Specifiers    */
     {
       rc = rc + 1;
       if (pd0->flgd != 0)
-	printf (s81er, 1);
+    printf (s81er, 1);
     }
 
   if (prc != 0)
     {
       rc = rc + 2;
       if (pd0->flgd != 0)
-	printf (s81er, 2);
+    printf (s81er, 2);
     }
 
   if (irc != 0)
     {
       rc = rc + 4;
       if (pd0->flgd != 0)
-	printf (s81er, 4);
+    printf (s81er, 4);
     }
 
 /*   Now we check to see if variables are actually being assigned
@@ -6030,27 +6030,27 @@ int s81 (struct defs * pd0)		/* 8.1 Storage Class Specifiers    */
   if (pd0->flgm != 0)
     {
       if (k < 0)
-	printf (badtest, "char");
+    printf (badtest, "char");
       else
-	printf (goodtest, k, "char");
+    printf (goodtest, k, "char");
     }
 
   k = regp ();
   if (pd0->flgm != 0)
     {
       if (k < 0)
-	printf (badtest, "pointer");
+    printf (badtest, "pointer");
       else
-	printf (goodtest, k, "pointer");
+    printf (goodtest, k, "pointer");
     }
 
   k = regi ();
   if (pd0->flgm != 0)
     {
       if (k < 0)
-	printf (badtest, "int");
+    printf (badtest, "int");
       else
-	printf (goodtest, k, "int");
+    printf (goodtest, k, "int");
     }
 
   return rc;
@@ -6058,7 +6058,7 @@ int s81 (struct defs * pd0)		/* 8.1 Storage Class Specifiers    */
 
 int
 regc ()
-{				/*   char to register assignment   */
+{                /*   char to register assignment   */
 /*   Testing a variable whose storage class has been spec-
 ified as "register" is somewhat tricky, but it can be done in a
 fairly reliable fashion by taking advantage of our knowledge of the
@@ -6213,30 +6213,30 @@ test is unreliable.              */
     switch (s)
       {
       case 1:
-	if (d[j] != n1)
-	  {
-	    n2 = d[j];
-	    s = 2;
-	    nr = 1;
-	  }
-	break;
+    if (d[j] != n1)
+      {
+        n2 = d[j];
+        s = 2;
+        nr = 1;
+      }
+    break;
       case 2:
-	if (d[j] == n1)
-	  {
-	    s = 3;
-	    break;
-	  }
-	if (d[j] == n2)
-	  {
-	    nr = nr + 1;
-	    break;
-	  }
-	s = 4;
-	break;
+    if (d[j] == n1)
+      {
+        s = 3;
+        break;
+      }
+    if (d[j] == n2)
+      {
+        nr = nr + 1;
+        break;
+      }
+    s = 4;
+    break;
       case 3:
-	if (d[j] != n1)
-	  s = 4;
-	break;
+    if (d[j] != n1)
+      s = 4;
+    break;
       }
   ;
 
@@ -6248,7 +6248,7 @@ test is unreliable.              */
 
 int
 regi ()
-{				/*   int to register assignment    */
+{                /*   int to register assignment    */
 /*   Testing a variable whose storage class has been spec-
 ified as "register" is somewhat tricky, but it can be done in a
 fairly reliable fashion by taking advantage of our knowledge of the
@@ -6405,30 +6405,30 @@ test is unreliable.              */
     switch (s)
       {
       case 1:
-	if (d[j] != n1)
-	  {
-	    n2 = d[j];
-	    s = 2;
-	    nr = 1;
-	  }
-	break;
+    if (d[j] != n1)
+      {
+        n2 = d[j];
+        s = 2;
+        nr = 1;
+      }
+    break;
       case 2:
-	if (d[j] == n1)
-	  {
-	    s = 3;
-	    break;
-	  }
-	if (d[j] == n2)
-	  {
-	    nr = nr + 1;
-	    break;
-	  }
-	s = 4;
-	break;
+    if (d[j] == n1)
+      {
+        s = 3;
+        break;
+      }
+    if (d[j] == n2)
+      {
+        nr = nr + 1;
+        break;
+      }
+    s = 4;
+    break;
       case 3:
-	if (d[j] != n1)
-	  s = 4;
-	break;
+    if (d[j] != n1)
+      s = 4;
+    break;
       }
   ;
 
@@ -6440,7 +6440,7 @@ test is unreliable.              */
 
 int
 regp ()
-{				/*   pointer to register assignment   */
+{                /*   pointer to register assignment   */
 /*   Testing a variable whose storage class has been spec-
 ified as "register" is somewhat tricky, but it can be done in a
 fairly reliable fashion by taking advantage of our knowledge of the
@@ -6596,30 +6596,30 @@ test is unreliable.              */
     switch (s)
       {
       case 1:
-	if (d[j] != n1)
-	  {
-	    n2 = d[j];
-	    s = 2;
-	    nr = 1;
-	  }
-	break;
+    if (d[j] != n1)
+      {
+        n2 = d[j];
+        s = 2;
+        nr = 1;
+      }
+    break;
       case 2:
-	if (d[j] == n1)
-	  {
-	    s = 3;
-	    break;
-	  }
-	if (d[j] == n2)
-	  {
-	    nr = nr + 1;
-	    break;
-	  }
-	s = 4;
-	break;
+    if (d[j] == n1)
+      {
+        s = 3;
+        break;
+      }
+    if (d[j] == n2)
+      {
+        nr = nr + 1;
+        break;
+      }
+    s = 4;
+    break;
       case 3:
-	if (d[j] != n1)
-	  s = 4;
-	break;
+    if (d[j] != n1)
+      s = 4;
+    break;
       }
   ;
 
@@ -6629,7 +6629,7 @@ test is unreliable.              */
     return -1;
 }
 
-int s84 (struct defs * pd0)		/*  8.4 Meaning of declarators   */
+int s84 (struct defs * pd0)        /*  8.4 Meaning of declarators   */
 {
   int *ip, i, *fip (), (*pfi) (), j, k, array (), glork ();
   static int x3d[3][5][7];
@@ -6654,7 +6654,7 @@ int s84 (struct defs * pd0)		/*  8.4 Meaning of declarators   */
   if (*ip != 3)
     {
       if (pd0->flgd != 0)
-	printf (s84er, 1);
+    printf (s84er, 1);
       rc = rc + 1;
     }
 
@@ -6669,7 +6669,7 @@ int s84 (struct defs * pd0)		/*  8.4 Meaning of declarators   */
   if (glork (4) != 4)
     {
       if (pd0->flgd != 0)
-	printf (s84er, 2);
+    printf (s84er, 2);
       rc = rc + 2;
     }
   /* above code is 0.01 */
@@ -6705,7 +6705,7 @@ int s84 (struct defs * pd0)		/*  8.4 Meaning of declarators   */
   for (i = 0; i < 3; i++)
     for (j = 0; j < 5; j++)
       for (k = 0; k < 7; k++)
-	x3d[i][j][k] = i * 35 + j * 7 + k;
+    x3d[i][j][k] = i * 35 + j * 7 + k;
 
   i = 1;
   j = 2;
@@ -6746,7 +6746,7 @@ int glork (int x)
   return x;
 }
 
-int s85 (struct defs * pd0)		/*  8.5 Structure and union declarations   */
+int s85 (struct defs * pd0)        /*  8.5 Structure and union declarations   */
 {
   static char s85er[] = "s85,er%d\n";
   static char qs85[8] = "s85    ";
@@ -6859,7 +6859,7 @@ int s85 (struct defs * pd0)		/*  8.5 Structure and union declarations   */
       || (char *) &s1.right - (char *) &s1.left <= 0)
     {
       if (pd0->flgd != 0)
-	printf (s85er, 1);
+    printf (s85er, 1);
       rc = rc + 1;
     }
 
@@ -6896,23 +6896,23 @@ int s85 (struct defs * pd0)		/*  8.5 Structure and union declarations   */
   if (s3.threebit != 3)
     {
       if (s3.threebit == -1)
-	{
-	  if (pd0->flgm != 0)
-	    printf ("Sign extension in fields\n");
-	}
+    {
+      if (pd0->flgm != 0)
+        printf ("Sign extension in fields\n");
+    }
       else
-	{
-	  if (pd0->flgd != 0)
-	    printf (s85er, 2);
-	  rc = rc + 2;
-	}
+    {
+      if (pd0->flgd != 0)
+        printf (s85er, 2);
+      rc = rc + 2;
+    }
     }
 
   s3.onebit = 1;
   if (s3.onebit != 1)
     {
       if (pd0->flgm != 0)
-	printf ("Be especially careful with 1-bit fields!\n");
+    printf ("Be especially careful with 1-bit fields!\n");
     }
 
   /* A union may be thought of as a structure all of whose
@@ -6928,7 +6928,7 @@ int s85 (struct defs * pd0)		/*  8.5 Structure and union declarations   */
     {
 
       if (pd0->flgd != 0)
-	printf (s85er, 4);
+    printf (s85er, 4);
       rc = rc + 4;
     }
   /* 0.01 */
@@ -6939,7 +6939,7 @@ int s85 (struct defs * pd0)		/*  8.5 Structure and union declarations   */
     {
 
       if (pd0->flgd != 0)
-	printf (s85er, 8);
+    printf (s85er, 8);
       rc = rc + 8;
     }
 
@@ -6951,13 +6951,13 @@ int s85 (struct defs * pd0)		/*  8.5 Structure and union declarations   */
   if (s2.tword[0] != 3)
     {
       if (pd0->flgd != 0)
-	printf (s85er, 16);
+    printf (s85er, 16);
       rc = rc + 16;
     }
   return rc;
 }
 
-int s86 (struct defs * pd0)		/*  8.6 Initialization  */
+int s86 (struct defs * pd0)        /*  8.6 Initialization  */
 {
   static char s86er[] = "s86,er%d\n";
   static char qs86[8] = "s86    ";
@@ -7006,7 +7006,7 @@ int s86 (struct defs * pd0)		/*  8.6 Initialization  */
   if (*pint != 5)
     {
       if (pd0->flgd != 0)
-	printf (s86er, 1);
+    printf (s86er, 1);
       rc = rc + 1;
     }
 
@@ -7018,14 +7018,14 @@ int s86 (struct defs * pd0)		/*  8.6 Initialization  */
   if (*apint != 3)
     {
       if (pd0->flgd != 0)
-	printf (s86er, 2);
+    printf (s86er, 2);
       rc = rc + 2;
     }
 
   if (*rpint != 5)
     {
       if (pd0->flgd != 0)
-	printf (s86er, 4);
+    printf (s86er, 4);
       rc = rc + 4;
     }
 
@@ -7040,7 +7040,7 @@ int s86 (struct defs * pd0)		/*  8.6 Initialization  */
   if (lrc != 0)
     {
       if (pd0->flgd != 0)
-	printf (s86er, 8);
+    printf (s86er, 8);
       rc = rc + 8;
     }
 
@@ -7051,15 +7051,15 @@ int s86 (struct defs * pd0)		/*  8.6 Initialization  */
   for (i = 0; i < 4; i++)
     for (j = 0; j < 3; j++)
       {
-	k = 3 * i + j;
-	if (y1[i][j] != y2[i][j] || y1[i][j] != y0[k])
-	  lrc = 1;
+    k = 3 * i + j;
+    if (y1[i][j] != y2[i][j] || y1[i][j] != y0[k])
+      lrc = 1;
       }
 
   if (lrc != 0)
     {
       if (pd0->flgd != 0)
-	printf (s86er, 16);
+    printf (s86er, 16);
       rc = rc + 16;
     }
 
@@ -7075,7 +7075,7 @@ int s86 (struct defs * pd0)		/*  8.6 Initialization  */
   if (lrc != 0)
     {
       if (pd0->flgd != 0)
-	printf (s86er, 32);
+    printf (s86er, 32);
       rc = rc + 32;
     }
   return rc;
@@ -7087,7 +7087,7 @@ int one ()
 }
 
 int *metricp;
-int s88 (struct defs *pd0)		/*  8.8 Typedef  */
+int s88 (struct defs *pd0)        /*  8.8 Typedef  */
 {
   static char s88er[] = "s88,er%d\n";
   static char qs88[8] = "s88    ";
@@ -7127,7 +7127,7 @@ int s88 (struct defs *pd0)		/*  8.8 Typedef  */
   if (sizeof distance != sizeof (int))
     {
       if (pd0->flgd != 0)
-	printf (s88er, 1);
+    printf (s88er, 1);
       rc = rc + 1;
     }
 
@@ -7140,7 +7140,7 @@ int s88 (struct defs *pd0)		/*  8.8 Typedef  */
   if (distance != 3)
     {
       if (pd0->flgd != 0)
-	printf (s88er, 2);
+    printf (s88er, 2);
       rc = rc + 2;
     }
 
@@ -7156,14 +7156,14 @@ int s88 (struct defs *pd0)		/*  8.8 Typedef  */
   if (z.re + z.im != 2)
     {
       if (pd0->flgd != 0)
-	printf (s88er, 4);
+    printf (s88er, 4);
       rc = rc + 4;
     }
 
   return rc;
 }
 
-int s9 (struct defs * pd0)		/*  9  Statements  */
+int s9 (struct defs * pd0)        /*  9  Statements  */
 {
   static char s9er[] = "s9,er%d\n";
   static char qs9[8] = "s9     ";
@@ -7197,20 +7197,20 @@ int s9 (struct defs * pd0)		/*  9  Statements  */
       register int k;
       j = k = 2;
       {
-	int j;
-	register int k;
-	j = k = 3;
-	if ((j != 3) || (k != 3))
-	  lrc = 1;
+    int j;
+    register int k;
+    j = k = 3;
+    if ((j != 3) || (k != 3))
+      lrc = 1;
       }
       if ((j != 2) || (k != 2))
-	lrc = 1;
+    lrc = 1;
     }
 
   if (lrc != 0)
     {
       if (pd0->flgd != 0)
-	printf (s9er, 1);
+    printf (s9er, 1);
       rc = rc + 1;
     }
 
@@ -7227,26 +7227,26 @@ nobarf:;
 
 inline void
 setev ()
-{				/* Sets an external variable. Used  */
-  extern int extvar;		/* by s4, and should be compiled    */
-  extvar = 1066;		/* separately from s4.              */
+{                /* Sets an external variable. Used  */
+  extern int extvar;        /* by s4, and should be compiled    */
+  extvar = 1066;        /* separately from s4.              */
   return;
 }
 
-int lbits;			/*                 long           */
-int ubits;			/*                 unsigned       */
-int fbits;			/*                 float          */
-int dbits;			/*                 double         */
+int lbits;            /*                 long           */
+int ubits;            /*                 unsigned       */
+int fbits;            /*                 float          */
+int dbits;            /*                 double         */
      /* 0.01
         float fprec;
         float dprec;
       */
-int fprec;			/* Smallest number that can be    */
-int dprec;			/* significantly added to 1.      */
-int flgs;			/* Print return codes, by section */
-int flgm;			/* Announce machine dependencies  */
-int flgd;			/* give explicit diagnostics      */
-int flgl;			/* Report local return codes.     */
-int rrc;			/* recent return code             */
-int crc;			/* Cumulative return code         */
-char rfs[8];			/* Return from section            */
+int fprec;            /* Smallest number that can be    */
+int dprec;            /* significantly added to 1.      */
+int flgs;            /* Print return codes, by section */
+int flgm;            /* Announce machine dependencies  */
+int flgd;            /* give explicit diagnostics      */
+int flgl;            /* Report local return codes.     */
+int rrc;            /* recent return code             */
+int crc;            /* Cumulative return code         */
+char rfs[8];            /* Return from section            */

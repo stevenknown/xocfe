@@ -53,15 +53,15 @@ of course 64bit is ok if you want.
 
 
 //Const float-point byte size.
-#define BYTE_PER_CONST_FP		4
+#define BYTE_PER_CONST_FP        4
 
 //Alignment with byte.
-#define PRAGMA_ALIGN		1
+#define PRAGMA_ALIGN        1
 
 /*
 Setting for compiler build-environment.
 Byte length.
 */
-#define HOST_BITS_PER_BYTE		8
+#define HOST_BITS_PER_BYTE        8
 
 #endif

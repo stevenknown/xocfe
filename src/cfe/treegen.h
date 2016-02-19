@@ -29,15 +29,13 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define __TREE_GEN_H__
 
 //Exported Variables
-extern INT g_real_line_num;
 extern CHAR * g_real_token_string;
 extern TOKEN g_real_token;
 extern bool g_enable_C99_declaration;
-extern FILE * g_hsrc;
-extern SMEM_POOL * g_pool_general_used;
-extern SMEM_POOL * g_pool_tree_used; //front end
-extern SMEM_POOL * g_pool_st_used;
-extern SYM_TAB * g_fe_sym_tab;
+extern SMemPool * g_pool_general_used;
+extern SMemPool * g_pool_tree_used; //front end
+extern SMemPool * g_pool_st_used;
+extern SymTab * g_fe_sym_tab;
 extern bool g_dump_token;
 
 
@@ -46,24 +44,24 @@ void init_parser();
 void fini_parser();
 
 INT c_parser();
-SCOPE * compound_stmt(DECL * para_list);
-TREE * conditional_exp();
+SCOPE * compound_stmt(Decl * para_list);
+Tree * conditional_exp();
 
 void dump_tok_list();
 
-TREE * id();
+Tree * id();
 bool is_in_first_set_of_exp_list(TOKEN tok);
-bool is_user_type_exist_in_outer_scope(CHAR * cl, OUT DECL ** ut);
+bool is_user_type_exist_in_outer_scope(CHAR * cl, OUT Decl ** ut);
 bool is_in_first_set_of_declarator();
 
-TREE * exp();
-TREE * exp_list();
+Tree * exp();
+Tree * exp_list();
 
 bool look_forward_token(INT num, ...);
 
 INT match(TOKEN tok);
 
-void set_parent(TREE * parent, TREE * child);
+void setParent(Tree * parent, Tree * child);
 INT suck_tok();
 void suck_tok_to(INT placeholder, ...);
 #endif

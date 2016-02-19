@@ -25,14 +25,10 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 @*/
-//Frontend Exported Type.
+//Exported Type.
 class SCOPE;
-class TYPE;
-class DECL;
-class TREE;
+class Decl;
+class Tree;
 
-//Frontend Exported Variable.
-extern CHAR * g_target_file_name;
+//Exported Variable.
 extern CHAR * g_source_file_name;
-extern SMEM_POOL * g_pool_tmp_used; //local temporary usage
-

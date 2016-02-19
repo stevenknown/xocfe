@@ -35,17 +35,17 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 class CELL {
 public:
-	LONGLONG val;
-	union {
-		INT lineno;
-		INT flag;
-	} u1;
-	INT v_type;
+    LONGLONG val;
+    union {
+        INT lineno;
+        INT flag;
+    } u1;
+    INT v_type;
 };
-#define CELL_type(ct)			(ct)->v_type
-#define CELL_val(ct)			(ct)->val
-#define CELL_line_no(ct)		(ct)->u1.lineno
-#define CELL_flag(ct)			(ct)->u1.flag
+#define CELL_type(ct)            (ct)->v_type
+#define CELL_val(ct)            (ct)->val
+#define CELL_line_no(ct)        (ct)->u1.lineno
+#define CELL_flag(ct)            (ct)->u1.flag
 
 
 //Exported Functions

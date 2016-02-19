@@ -25,42 +25,6 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 @*/
-#ifndef _ERR_H_
-#define _ERR_H_
-
-//record each error msg
-class WARN_MSG {
-public:
-    CHAR * msg;
-    INT lineno;
-};
-#define WARN_MSG_msg(e)        (e)->msg
-#define WARN_MSG_lineno(e)    (e)->lineno
-
-
-//record each error msg
-class ERR_MSG {
-public:
-    CHAR * msg;
-    INT lineno;
-};
-#define ERR_MSG_msg(e)        (e)->msg
-#define ERR_MSG_lineno(e)    (e)->lineno
-
-#define TOO_MANY_ERR 10
-#define ERR_SHOW 1
-#define WARN_SHOW 2
-#endif
-
-
-//Exported Variables
-extern List<ERR_MSG*> g_err_msg_list;
-extern List<WARN_MSG*> g_warn_msg_list;
-
-//Exported Functions
-void warn1(CHAR * msg, ...);
-void err(INT line_num, CHAR * msg, ...);
-void show_err();
-void show_warn();
-INT is_too_many_err();
-void interwarn(CHAR * format, ...);
+#define ST_ERR      1 //Status if error occur.
+#define ST_SUCC     0 //Status if successful.
+#define ST_EOF      2 //Status meet End-Of-File.

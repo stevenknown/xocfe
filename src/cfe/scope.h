@@ -28,18 +28,18 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef __SCOPE_H__
 #define __SCOPE_H__
 
-class ENUM_LIST;
-class USER_TYPE_LIST;
-class STRUCT;
-class UNION;
-class DECL;
-class ENUM;
+class EnumList;
+class UserTypeList;
+class Struct;
+class Union;
+class Decl;
+class Enum;
 
 class SYM_LIST {
 public:
-	SYM_LIST * next;
-	SYM_LIST * prev;
-	SYM * sym;
+    SYM_LIST * next;
+    SYM_LIST * prev;
+    SYM * sym;
 };
 #define SYM_LIST_sym(syml) (syml)->sym
 #define SYM_LIST_next(syml) (syml)->next
@@ -48,93 +48,98 @@ public:
 
 /*
 SCOPE
-	|
-	|--ENUM_LIST
-	|--SYM_TAB_LIST
-	|--TYPE_LIST
-	|--SUB_SCOPE
-	|--USER_TYPE_LIST
+    |
+    |--EnumList
+    |--SYM_TAB_LIST
+    |--TYPE_LIST
+    |--SUB_SCOPE
+    |--UserTypeList
 */
 #define MAX_SCOPE_FILED 4
 #define GLOBAL_SCOPE    0  //Global memory space
 #define FUNCTION_SCOPE  1  //Function unit
 #define REGION_SCOPE    2    //Region unit
 
-#define SCOPE_id(sc)				((sc)->id)
-#define SCOPE_is_tmp_sc(sc)			((sc)->is_tmp_scope)
-#define SCOPE_parent(sc)			((sc)->parent) //owner scope, namely parent node
-#define SCOPE_nsibling(sc)			((sc)->next) //next sibling , growing to right way
-#define SCOPE_sub(sc)				((sc)->sub) //sub scope
-#define SCOPE_level(sc)				((sc)->level)
-#define SCOPE_enum_list(sc)			((sc)->enum_list)
-#define SCOPE_sym_tab_list(sc)		((sc)->sym_tab_list)
-#define SCOPE_user_type_list(sc)	((sc)->utl_list)
-#define SCOPE_label_list(sc)		((sc)->li_list)
-#define SCOPE_ref_label_list(sc)	((sc)->lref_list)
-#define SCOPE_decl_list(sc)			((sc)->decl_list)
-#define SCOPE_struct_list(sc)		((sc)->struct_list)
-#define SCOPE_union_list(sc)		((sc)->union_list)
-#define SCOPE_stmt_list(sc)			((sc)->stmt_list)
+#define SCOPE_id(sc)                ((sc)->id)
+#define SCOPE_is_tmp_sc(sc)            ((sc)->is_tmp_scope)
+#define SCOPE_parent(sc)            ((sc)->parent) //owner scope, namely parent node
+#define SCOPE_nsibling(sc)            ((sc)->next) //next sibling , growing to right way
+#define SCOPE_sub(sc)                ((sc)->sub) //sub scope
+#define SCOPE_level(sc)                ((sc)->level)
+#define SCOPE_enum_list(sc)            ((sc)->enum_list)
+#define SCOPE_sym_tab_list(sc)        ((sc)->sym_tab_list)
+#define SCOPE_user_type_list(sc)    ((sc)->utl_list)
+#define SCOPE_label_list(sc)        ((sc)->li_list)
+#define SCOPE_ref_label_list(sc)    ((sc)->lref_list)
+#define SCOPE_decl_list(sc)            ((sc)->decl_list)
+#define SCOPE_struct_list(sc)        ((sc)->struct_list)
+#define SCOPE_union_list(sc)        ((sc)->union_list)
+#define SCOPE_stmt_list(sc)            ((sc)->stmt_list)
 class SCOPE {
 public:
-	INT id; //unique id
-	INT level; //nested level
-	bool is_tmp_scope;
-	SCOPE * parent;
-	SCOPE * next;
-	SCOPE * prev;
-	SCOPE * sub;
+    INT id; //unique id
+    INT level; //nested level
+    bool is_tmp_scope;
+    SCOPE * parent;
+    SCOPE * next;
+    SCOPE * prev;
+    SCOPE * sub;
 
-	ENUM_LIST * enum_list;		//enum-type list
-	USER_TYPE_LIST * utl_list;	//record type defined with 'typedef'
+    EnumList * enum_list;        //enum-type list
+    UserTypeList * utl_list;    //record type defined with 'typedef'
 
-	LIST<LABEL_INFO*> li_list;	//label definition
-	LIST<LABEL_INFO*> lref_list;//reference label
+    List<LabelInfo*> li_list;    //label definition
+    List<LabelInfo*> lref_list;//reference label
 
-	STRUCT * struct_list;		//structure list of current scope
-	UNION * union_list;			//union list of current scope
+    List<Struct*> struct_list;    //structure list of current scope
+    List<Union*> union_list;    //union list of current scope
 
-	DECL * decl_list;			//record identifier declaration info
-	SYM_LIST * sym_tab_list;	//record identifier name
+    Decl * decl_list;            //record identifier declaration info
+    SYM_LIST * sym_tab_list;    //record identifier name
 
-	TREE * stmt_list;			//record statement list to generate code
+    Tree * stmt_list;            //record statement list to generate code
 
-	inline void init(UINT & scc)
-	{
-		li_list.init();
-		lref_list.init();
-		SCOPE_id(this) = scc++;
-		SCOPE_level(this) = -1;
-		SCOPE_parent(this) = NULL;
-		SCOPE_nsibling(this) = NULL;
-		SCOPE_sub(this)  = NULL;
-	}
+    inline void init(UINT & sc)
+    {
+        li_list.init();
+        lref_list.init();
+        struct_list.init();
+        union_list.init();
 
-	void destroy()
-	{
-		li_list.destroy();
-		lref_list.destroy();
-	}
+        SCOPE_id(this) = sc++;
+        SCOPE_level(this) = -1;
+        SCOPE_parent(this) = NULL;
+        SCOPE_nsibling(this) = NULL;
+        SCOPE_sub(this)  = NULL;
+    }
+
+    void destroy()
+    {
+        li_list.destroy();
+        lref_list.destroy();
+        struct_list.destroy();
+        union_list.destroy();
+    }
 };
 
 
-typedef TMAP<LABEL_INFO*, UINT> LAB2LINE_MAP;
+typedef TMap<LabelInfo*, UINT> LAB2LINE_MAP;
 
 
 class Compare_Lab {
 public:
-	bool is_less(LABEL_INFO * t1, LABEL_INFO * t2) const
-	{ return lab_hash_value(t1) < lab_hash_value(t2); }
+    bool is_less(LabelInfo * t1, LabelInfo * t2) const
+    { return computeLabelHashValue(t1) < computeLabelHashValue(t2); }
 
-	bool is_equ(LABEL_INFO * t1, LABEL_INFO * t2) const
-	{ return is_same_label(t1, t2); }
+    bool is_equ(LabelInfo * t1, LabelInfo * t2) const
+    { return isSameLabel(t1, t2); }
 };
-typedef TTAB<LABEL_INFO*, Compare_Lab> LABTAB;
+typedef TTab<LabelInfo*, Compare_Lab> LabelTab;
 
 
 //Exported functions
-#define DUMP_SCOPE_FUNC_BODY		1
-#define DUMP_SCOPE_STMT_TREE		2
+#define DUMP_SCOPE_FUNC_BODY        1
+#define DUMP_SCOPE_STMT_TREE        2
 
 SCOPE * enter_sub_scope(bool is_tmp_sc);
 SCOPE * return_to_parent_scope();
@@ -144,13 +149,13 @@ SCOPE * get_global_scope();
 void dump_scope(SCOPE * s, UINT flag);
 void dump_scope_tree(SCOPE * s, INT indent);
 void destroy_scope_list();
-UINT map_lab2lineno(LABEL_INFO * li);
-void set_map_lab2lineno(LABEL_INFO * li, UINT lineno);
+UINT map_lab2lineno(LabelInfo * li);
+void set_map_lab2lineno(LabelInfo * li, UINT lineno);
 
 
 //Export Variables
 extern SCOPE * g_cur_scope;
-extern LABTAB g_labtab;
+extern LabelTab g_labtab;
 
 //Export Functions
 SYM * add_to_symtab_list(SYM_LIST ** sym_list , SYM * sym);
