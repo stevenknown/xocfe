@@ -583,7 +583,7 @@ Return true if 'decl' is a declaration, otherwise it is a definition.
 bool is_declaration(Decl * decl)
 {
     if (DECL_is_fun_def(decl)) {
-        ASSERT0(0);
+        UNREACH();
     }
     return false;
 }
@@ -2848,7 +2848,7 @@ ULONGLONG compute_size_of_array(Decl * decl)
         dim++;
         decl = DECL_next(decl);
     }
-    ASSERT(get_const_bit_len(num) < 64, ("too large array"));
+    ASSERT(computeConstBitLen(num) < 64, ("too large array"));
     return num;
 }
 
