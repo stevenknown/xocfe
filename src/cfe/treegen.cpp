@@ -791,10 +791,36 @@ static Tree * primary_exp(IN OUT UINT * st)
         match(T_FP);
         break;
     case T_STRING:     // "abcd"
-        t = NEWT(TR_STRING);
-        TREE_token(t) = g_real_token;
-        TREE_string_val(t) = g_fe_sym_tab->add(g_real_token_string);
-        match(T_STRING);
+        {
+            t = NEWT(TR_STRING);
+            TREE_token(t) = g_real_token;
+            CHAR * tbuf = NULL;
+            UINT tbuflen = 0;
+            SYM * sym = g_fe_sym_tab->add(g_real_token_string);
+            match(T_STRING);
+
+            //Concatenate string.
+            for (; g_real_token == T_STRING; match(T_STRING)) {
+                if (tbuf == NULL) {
+                    tbuflen = strlen(SYM_name(sym)) +
+                              strlen(g_real_token_string) + 1;
+                    tbuf = (CHAR*)malloc(tbuflen);
+                    sprintf(tbuf, "%s%s", SYM_name(sym), g_real_token_string);
+                } else {
+                    tbuflen += strlen(g_real_token_string);
+                    CHAR * ttbuf = (CHAR*)malloc(tbuflen);
+                    sprintf(ttbuf, "%s%s", tbuf, g_real_token_string);
+                    free(tbuf);
+                    tbuf = ttbuf;
+                }
+            }
+            
+            if (tbuf != NULL) {
+                sym = g_fe_sym_tab->add(tbuf);
+                free(tbuf); 
+            }
+            TREE_string_val(t) = sym;
+        }
         return t;
     case T_CHAR_LIST:  // 'abcd'
         t = NEWT(TR_IMM);
