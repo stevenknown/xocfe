@@ -718,9 +718,9 @@ static INT c_type_tran(Tree * t, TYCtx * cont)
             TREE_result_type(t) = BUILD_TYNAME(T_SPEC_LONGLONG|T_QUA_CONST);
             break;
         case TR_FP:  //3.1415926
-            if (BYTE_PER_CONST_FP == BYTE_PER_FLOAT) {
+            if (BYTE_PER_FLOAT == BYTE_PER_FLOAT) {
                 TREE_result_type(t) = BUILD_TYNAME(T_SPEC_FLOAT|T_QUA_CONST);
-            } else if (BYTE_PER_CONST_FP == BYTE_PER_DOUBLE) {
+            } else if (BYTE_PER_FLOAT == BYTE_PER_DOUBLE) {
                 TREE_result_type(t) = BUILD_TYNAME(T_SPEC_DOUBLE|T_QUA_CONST);
             } else {
                 TREE_result_type(t) = BUILD_TYNAME(T_SPEC_FLOAT|T_QUA_CONST);
@@ -1375,38 +1375,45 @@ static bool type_ck_call(Tree * t, TYCtx * cont)
     }
 
     //Check parameter list
-    Decl * param_decl = get_parameter_list(TREE_result_type(TREE_fun_exp(t)));
-    Tree * para = TREE_para_list(t);
+    Decl * formal_param_decl = get_parameter_list(TREE_result_type(TREE_fun_exp(t)));
+    Tree * real_param = TREE_para_list(t);
     INT count = 0;
-    if (param_decl != NULL) {
-        while (param_decl != NULL && para != NULL) {
+    if (formal_param_decl != NULL) {
+        while (formal_param_decl != NULL && real_param != NULL) {
             count++;
-            Decl * pld = TREE_result_type(para);
-            if (!ck_para_type_compatible(param_decl, pld)) {
+            Decl * pld = TREE_result_type(real_param);
+            if (!ck_para_type_compatible(formal_param_decl, pld)) {
                 err(TREE_lineno(t), "%dth parameter type incompatible", count);
                 return false;
             }
-            param_decl = DECL_next(param_decl);
-            para = TREE_nsib(para);
-            if (param_decl && DECL_dt(param_decl) == DCL_VARIABLE) {
-                ASSERT(!DECL_next(param_decl),
-                        ("DCL_VARIABLE must be last formal-parameter"));
-                param_decl = NULL;
-                para = NULL;
+            
+            formal_param_decl = DECL_next(formal_param_decl);
+            real_param = TREE_nsib(real_param);
+            
+            if (formal_param_decl && 
+                DECL_dt(formal_param_decl) == DCL_VARIABLE) {
+                ASSERT(!DECL_next(formal_param_decl),
+                       ("DCL_VARIABLE must be last formal-parameter"));
+                formal_param_decl = NULL;
+                real_param = NULL;
             }
         }
     }
-    if (param_decl != NULL || para != NULL) {
+
+    if (formal_param_decl != NULL || real_param != NULL) {
+        dump_decl(formal_param_decl);
         CHAR * name = NULL;
         if (TREE_type(TREE_fun_exp(t)) == TR_ID) {
             name = SYM_name(TREE_id(TREE_fun_exp(t)));
         }
+
         Decl * p = get_parameter_list(TREE_result_type(TREE_fun_exp(t)));
         UINT c = 0;
         while (p != NULL) {
             c++;
             p = DECL_next(p);
         }
+
         if (count == 0) {
             err(TREE_lineno(t),
                 "function '%s' cannot take any parameter",
@@ -1416,6 +1423,7 @@ static bool type_ck_call(Tree * t, TYCtx * cont)
                 "function '%s' should take %d parameters",
                 name != NULL ? name : "", c);
         }
+
         return false;
     }
     return true;

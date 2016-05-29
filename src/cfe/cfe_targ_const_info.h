@@ -29,39 +29,71 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define __CFE_TARG_CONST_INFO_H__
 
 //Define machine word/half-word/byte/bit size
+#ifndef BIT_PER_BYTE
 #define BIT_PER_BYTE         8
+#endif
+
+#ifndef BYTE_PER_CHAR
 #define BYTE_PER_CHAR        1
+#endif 
+
+#ifndef BYTE_PER_SHORT
 #define BYTE_PER_SHORT       2
+#endif
+
+#ifndef BYTE_PER_INT
 #define BYTE_PER_INT         4
+#endif
+
+#ifndef BYTE_PER_LONG
 #define BYTE_PER_LONG        4
+#endif
+
+#ifndef BYTE_PER_LONGLONG
 #define BYTE_PER_LONGLONG    8
+#endif
+
+#ifndef BYTE_PER_FLOAT
 #define BYTE_PER_FLOAT       4
+#endif
+
+#ifndef BYTE_PER_DOUBLE
 #define BYTE_PER_DOUBLE      8
+#endif
+
+#ifndef BYTE_PER_ENUM
 #define BYTE_PER_ENUM        4
+#endif
+
+#ifndef BYTE_PER_POINTER
 #define BYTE_PER_POINTER     4
+#endif
+
+#ifndef GENERAL_REGISTER_SIZE
 #define GENERAL_REGISTER_SIZE (BYTE_PER_POINTER)
+#endif
 
+//Host integer and float point type.
+//e.g: Build XOCC on x8664, HOST_INT should be 64bit.
+//Or build XOCC on ARM, HOST_INT should be 32bit,
+//of course 64bit is ok if you want.
+#ifndef HOST_INT
+#define HOST_INT             LONGLONG
+#endif
 
-/*
-Host integer and float point type.
-e.g: Build XOCC on x8664, HOST_INT should be 64bit.
-Or build XOCC on ARM, HOST_INT should be 32bit,
-of course 64bit is ok if you want.
-*/
-#define HOST_INT LONGLONG
-#define HOST_FP double
+#ifndef HOST_FP
+#define HOST_FP              double
+#endif
 
+//Define target machine alignment with byte.
+//This marco used by pragma directive.
+#ifndef PRAGMA_ALIGN
+#define PRAGMA_ALIGN         1
+#endif
 
-//Const float-point byte size.
-#define BYTE_PER_CONST_FP        4
-
-//Alignment with byte.
-#define PRAGMA_ALIGN        1
-
-/*
-Setting for compiler build-environment.
-Byte length.
-*/
-#define HOST_BITS_PER_BYTE        8
+//Setting for compiler build-environment.
+#ifndef HOST_BIT_PER_BYTE
+#define HOST_BIT_PER_BYTE    8
+#endif
 
 #endif

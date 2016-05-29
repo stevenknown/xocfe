@@ -472,6 +472,7 @@ bool is_simple_base_type(INT des);
 bool is_complex_type(Decl * dcl);
 bool is_array(Decl * dcl);
 bool is_pointer(Decl * dcl);
+bool is_void(Decl * dcl);
 bool is_fun_decl(Decl * dcl);
 bool is_fun_void_return(Decl * dcl);
 bool is_fun_pointer(Decl * dcl);

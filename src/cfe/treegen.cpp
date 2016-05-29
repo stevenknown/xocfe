@@ -1809,9 +1809,9 @@ static Tree * label_stmt()
                 return t;
             }
             if (computeConstBitLen(idx) >
-                (sizeof(TREE_case_value(t)) * HOST_BITS_PER_BYTE)) {
+                (sizeof(TREE_case_value(t)) * HOST_BIT_PER_BYTE)) {
                 err(g_real_line_num, "bitsize of const is more than %dbit",
-                    (sizeof(TREE_case_value(t)) * HOST_BITS_PER_BYTE));
+                    (sizeof(TREE_case_value(t)) * HOST_BIT_PER_BYTE));
                 return t;
             }
             TREE_case_value(t) = (INT)idx;

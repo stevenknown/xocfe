@@ -885,10 +885,8 @@ static TypeSpec * type_spec_struct(TypeSpec * ty)
     }
 
     if (g_real_token == T_LLPAREN) {
-        /*
-        formas is either: struct TAG { ...
-        or: struct { ...
-        */
+        //formas is either: struct TAG { ...
+        //or: struct { ...
         if (s == NULL) {
             //The struct declarated without TAG.
             s = (Struct*)xmalloc(sizeof(Struct));
@@ -1501,11 +1499,12 @@ Decl * get_parameter_list(IN Decl * dcl, OUT Decl ** fun_dclor)
     while (dcl != NULL && DECL_dt(dcl) != DCL_FUN) {
         dcl = DECL_next(dcl);
     }
+ 
     if (fun_dclor != NULL) {
         *fun_dclor = dcl;
     }
-     dcl = DECL_fun_para_list(dcl);
-    return dcl;
+    
+    return DECL_fun_para_list(dcl);
 }
 
 
@@ -2199,7 +2198,13 @@ static Decl * direct_declarator(TypeSpec * qua)
             match(T_LPAREN);
             Decl * ndcl = new_decl(DCL_FUN);
             enter_sub_scope(true);
-            DECL_fun_para_list(ndcl) = parameter_type_list();
+            
+            //Check if param declaration is void, such as: foo(void).
+            Decl * param_decl = parameter_type_list();
+            if (cnt_list(param_decl) != 1 || !is_void(param_decl)) {
+                DECL_fun_para_list(ndcl) = param_decl;
+            }
+
             return_to_parent_scope();
             DECL_is_paren(ndcl) = is_paren;
             insertbefore_one(&dcl, dcl, ndcl);
@@ -3920,10 +3925,8 @@ bool is_integer(TypeSpec * ty)
 }
 
 
-/*
-Return boolean for arithmetic type.
-Include integer and float pointer.
-*/
+//Return boolean for arithmetic type.
+//Include integer and float pointer.
 bool is_arith(Decl *dcl)
 {
     ASSERT(DECL_dt(dcl) == DCL_TYPE_NAME ||
@@ -3931,6 +3934,12 @@ bool is_arith(Decl *dcl)
             ("expect type-name or dcrlaration"));
     TypeSpec * ty = DECL_spec(dcl);
     return is_integer(ty) || is_fp(ty);
+}
+
+
+bool is_void(Decl * dcl)
+{
+    return HAVE_FLAG(TYPE_des(DECL_spec(dcl)), T_SPEC_VOID);
 }
 
 
