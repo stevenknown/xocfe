@@ -35,7 +35,7 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #ifndef BYTE_PER_CHAR
 #define BYTE_PER_CHAR        1
-#endif 
+#endif
 
 #ifndef BYTE_PER_SHORT
 #define BYTE_PER_SHORT       2
@@ -88,7 +88,7 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //Define target machine alignment with byte.
 //This marco used by pragma directive.
 #ifndef PRAGMA_ALIGN
-#define PRAGMA_ALIGN         1
+#define PRAGMA_ALIGN         4
 #endif
 
 //Setting for compiler build-environment.

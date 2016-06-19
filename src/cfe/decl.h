@@ -476,6 +476,7 @@ bool is_void(Decl * dcl);
 bool is_fun_decl(Decl * dcl);
 bool is_fun_void_return(Decl * dcl);
 bool is_fun_pointer(Decl * dcl);
+bool is_scalar(Decl * dcl);
 bool is_arith(Decl * dcl);
 bool is_integer(Decl * dcl);
 bool is_integer(TypeSpec * ty);

@@ -1386,11 +1386,11 @@ static bool type_ck_call(Tree * t, TYCtx * cont)
                 err(TREE_lineno(t), "%dth parameter type incompatible", count);
                 return false;
             }
-            
+
             formal_param_decl = DECL_next(formal_param_decl);
             real_param = TREE_nsib(real_param);
-            
-            if (formal_param_decl && 
+
+            if (formal_param_decl &&
                 DECL_dt(formal_param_decl) == DCL_VARIABLE) {
                 ASSERT(!DECL_next(formal_param_decl),
                        ("DCL_VARIABLE must be last formal-parameter"));

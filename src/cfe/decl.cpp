@@ -1499,11 +1499,11 @@ Decl * get_parameter_list(IN Decl * dcl, OUT Decl ** fun_dclor)
     while (dcl != NULL && DECL_dt(dcl) != DCL_FUN) {
         dcl = DECL_next(dcl);
     }
- 
+
     if (fun_dclor != NULL) {
         *fun_dclor = dcl;
     }
-    
+
     return DECL_fun_para_list(dcl);
 }
 
@@ -1671,7 +1671,18 @@ static Decl * direct_abstract_declarator(TypeSpec * qua)
             ndcl = new_decl(DCL_FUN);
             //DECL_fun_base(ndcl) = dcl;
             enter_sub_scope(true);
-            DECL_fun_para_list(ndcl) = parameter_type_list();
+
+            //Check if param declaration is void, such as: foo(void).
+            Decl * param_decl = parameter_type_list();
+
+            if (cnt_list(param_decl) == 1 &&
+                is_void(param_decl) &&
+                is_scalar(param_decl)) {
+                ;
+            } else {
+                DECL_fun_para_list(ndcl) = param_decl;
+            }
+            
             return_to_parent_scope();
             insertbefore_one(&dcl, dcl, ndcl);
             if (match(T_RPAREN) != ST_SUCC) {
@@ -2198,10 +2209,14 @@ static Decl * direct_declarator(TypeSpec * qua)
             match(T_LPAREN);
             Decl * ndcl = new_decl(DCL_FUN);
             enter_sub_scope(true);
-            
+
             //Check if param declaration is void, such as: foo(void).
             Decl * param_decl = parameter_type_list();
-            if (cnt_list(param_decl) != 1 || !is_void(param_decl)) {
+            if (cnt_list(param_decl) == 1 &&
+                is_void(param_decl) &&
+                is_scalar(param_decl)) {
+                ;
+            } else {
                 DECL_fun_para_list(ndcl) = param_decl;
             }
 
@@ -3993,6 +4008,13 @@ bool is_fun_decl(Decl * dcl)
         dcl = DECL_next(dcl);
     }
     return false;
+}
+
+
+//Pointer, array, struct, union are not scalar type.
+bool is_scalar(Decl * dcl)
+{
+    return get_pure_declarator(dcl) == NULL; 
 }
 
 

@@ -814,10 +814,10 @@ static Tree * primary_exp(IN OUT UINT * st)
                     tbuf = ttbuf;
                 }
             }
-            
+
             if (tbuf != NULL) {
                 sym = g_fe_sym_tab->add(tbuf);
-                free(tbuf); 
+                free(tbuf);
             }
             TREE_string_val(t) = sym;
         }
