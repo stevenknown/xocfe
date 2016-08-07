@@ -30,7 +30,7 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 INT process_init(Decl * decl, Tree ** init);
 INT process_init(Decl * decl);
-INT type_ck();
-INT type_trans();
+INT TypeCheck();
+INT TypeTransform();
 
 #endif

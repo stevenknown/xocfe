@@ -31,7 +31,6 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 static UINT g_tree_count = 1;
 #endif
 
-
 static void * xmalloc(size_t size)
 {
     void * p = smpoolMalloc(size, g_pool_tree_used);
@@ -42,7 +41,7 @@ static void * xmalloc(size_t size)
 
 
 //Alloc a new tree node from 'g_pool_tree_used'.
-Tree * new_tree_node(TREE_TYPE tnt, INT lineno)
+Tree * allocTreeNode(TREE_TYPE tnt, INT lineno)
 {
     Tree * t = (Tree*)xmalloc(sizeof(Tree));
 #ifdef _DEBUG_
@@ -146,24 +145,22 @@ void dump_tree(Tree * t)
             break;
         case TR_FP:  //3.1415926
             note("\nFP(id:%u):%s <%s>",
-                TREE_uid(t),
-                SYM_name(TREE_fp_str_val(t)),
-                res_type_buf);
+                 TREE_uid(t),
+                 SYM_name(TREE_fp_str_val(t)),
+                 res_type_buf);
             break;
         case TR_ENUM_CONST:
             {
                 INT v = get_enum_const_val(TREE_enum(t), TREE_enum_val_idx(t));
-                CHAR * s = get_enum_const_name(TREE_enum(t),
-                                               TREE_enum_val_idx(t));
+                CHAR * s = get_enum_const_name(
+                    TREE_enum(t), TREE_enum_val_idx(t));
                 note("\nENUM_CONST(id:%u):%s %d <%s>",
-                    TREE_uid(t), s, v, res_type_buf);
+                     TREE_uid(t), s, v, res_type_buf);
                 break;
             }
         case TR_STRING:
             note("\nSTRING(id:%u):%s <%s>",
-                TREE_uid(t),
-                SYM_name(TREE_string_val(t)),
-                res_type_buf);
+                 TREE_uid(t), SYM_name(TREE_string_val(t)), res_type_buf);
             break;
         case TR_LOGIC_OR: //logical or        ||
         case TR_LOGIC_AND: //logical and      &&
@@ -175,10 +172,8 @@ void dump_tree(Tree * t)
         case TR_SHIFT:   // >> <<
         case TR_ADDITIVE: // '+' '-'
         case TR_MULTI:    // '*' '/' '%'
-            note("\nOP(id:%u):%s <%s>",
-                TREE_uid(t),
-                TOKEN_INFO_name(get_token_info(TREE_token(t))),
-                res_type_buf);
+            note("\nOP(id:%u):%s <%s>", TREE_uid(t), 
+                 TOKEN_INFO_name(get_token_info(TREE_token(t))), res_type_buf);
             g_indent += dn;
             dump_trees(TREE_lchild(t));
             dump_trees(TREE_rchild(t));

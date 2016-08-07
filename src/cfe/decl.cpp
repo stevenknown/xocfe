@@ -252,7 +252,7 @@ Decl * new_var_decl(IN SCOPE * scope, IN CHAR * name)
     DECL_spec(declaration) = ty;
 
     //Make Tree node.
-    Tree * tree = new_tree_node(TR_ID, 0);
+    Tree * tree = allocTreeNode(TR_ID, 0);
     SYM * sym = g_fe_sym_tab->add(name);
     TREE_id(tree) = sym;
 
@@ -1682,7 +1682,7 @@ static Decl * direct_abstract_declarator(TypeSpec * qua)
             } else {
                 DECL_fun_para_list(ndcl) = param_decl;
             }
-            
+
             return_to_parent_scope();
             insertbefore_one(&dcl, dcl, ndcl);
             if (match(T_RPAREN) != ST_SUCC) {
@@ -1858,7 +1858,7 @@ static Tree * initializer(TypeSpec * qua)
             err(g_real_line_num, "syntax error : '%s'", g_real_token_string);
             goto FAILED;
         }
-        es = new_tree_node(TR_EXP_SCOPE, g_real_line_num);
+        es = allocTreeNode(TR_EXP_SCOPE, g_real_line_num);
         TREE_exp_scope(es) = t;
         t = es;
         break;
@@ -2421,7 +2421,7 @@ static Tree * refineArray(Tree * t)
 
             if (base_of_pt != NULL && DECL_dt(base_of_pt) == DCL_ARRAY) {
                 //The base of pointer is an array. Convert a[] to (*a)[].
-                Tree * deref = new_tree_node(TR_DEREF, TREE_lineno(base));
+                Tree * deref = allocTreeNode(TR_DEREF, TREE_lineno(base));
                 TREE_lchild(deref) = base;
                 setParent(deref, TREE_lchild(deref));
                 TREE_array_base(t) = deref;
@@ -4014,7 +4014,7 @@ bool is_fun_decl(Decl * dcl)
 //Pointer, array, struct, union are not scalar type.
 bool is_scalar(Decl * dcl)
 {
-    return get_pure_declarator(dcl) == NULL; 
+    return get_pure_declarator(dcl) == NULL;
 }
 
 

@@ -40,10 +40,10 @@ extern bool g_dump_token;
 
 
 //Exported Functions
-void init_parser();
-void fini_parser();
+void initParser();
+void finiParser();
 
-INT c_parser();
+INT Parser();
 SCOPE * compound_stmt(Decl * para_list);
 Tree * conditional_exp();
 

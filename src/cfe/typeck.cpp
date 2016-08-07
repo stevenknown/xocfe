@@ -97,9 +97,9 @@ static INT process_array_init(Decl * dcl, TypeSpec * ty, Tree ** init)
         }
     } else {
         //single dimension array
-        /* When we meet a TR_EXP_SCOPE, because now we are
-        initializing a array, so the initialization set up
-        from subset of EXP_SCOPE */
+        //When we meet a TR_EXP_SCOPE, because now we are
+        //initializing a array, so the initialization set up
+        //from subset of EXP_SCOPE.
         if (TREE_type(*init) == TR_EXP_SCOPE) {
             Tree * t = TREE_exp_scope(*init);
             ty = get_pure_type_spec(ty);
@@ -233,15 +233,12 @@ static INT process_base_init(TypeSpec * ty, Tree ** init)
 }
 
 
-/*
-Initializing check.
-function aim:
-  1. compute the exactly array index for zero count dimension
-  2. check compatibility between init value type and type-spec info
-
-'declaration' must ONLY be DCL_DECLARATION
-
-*/
+//Initializing check.
+//function aim:
+//  1. compute the exactly array index for zero count dimension
+//  2. check compatibility between init value type and type-spec info
+//
+//'declaration' must ONLY be DCL_DECLARATION
 INT process_init(Decl * decl)
 {
     Decl * dcl = NULL;
@@ -291,25 +288,23 @@ INT process_init(Decl * decl)
 }
 
 
-/*
-'decl' does not have its own initializing form tree,
-therefore 'init' will be recorded as the initialization tree.
-*/
+//'decl' does not have its own initializing form tree,
+//therefore 'init' will be recorded as the initialization tree.
 INT process_init(Decl * decl, Tree ** init)
 {
     Decl * dcl = NULL;
     TypeSpec * ty = NULL;
     INT st = ST_SUCC;
-    if (decl == NULL) return ST_SUCC;
-    ASSERT(DECL_dt(decl) == DCL_DECLARATION,
-            ("ONLY can be DCRLARATION"));
+    if (decl == NULL) { return ST_SUCC; }
+
+    ASSERT(DECL_dt(decl) == DCL_DECLARATION, ("ONLY can be DCRLARATION"));
 
     dcl = DECL_decl_list(decl); //get DCRLARATOR
     ty = DECL_spec(decl); //get TypeSpec-SPEC
-    ASSERT((dcl && ty),
-            ("DCLARATION must have a DCRLARATOR node and TypeSpec node"));
-    ASSERT((*init) != NULL,
-            ("'init' initialization tree cannot be NULL"));
+    ASSERT((dcl && ty), 
+        ("DCLARATION must have a DCRLARATOR node and TypeSpec node"));
+    ASSERT((*init) != NULL, ("'init' initialization tree cannot be NULL"));
+
     if (is_array(dcl)) {
         st = process_array_init(dcl, ty, init);
     } else if (is_struct(ty)) {
@@ -322,6 +317,7 @@ INT process_init(Decl * decl, Tree ** init)
         //simple type init. e.g INT SHORT
         st = process_base_init(ty,init);
     }
+
     return st;
 }
 
@@ -476,17 +472,15 @@ static INT get_cvt_rank(INT des)
 }
 
 
-/*
-Accroding C89 binary operation converting rules
-l                r                       standard C convert
-double           any                     double
-float            any                     float
-unsigned         unsigned                upper rank unsigned
-signed           signed                  upper rank signed
-unsigned         lower rank signed       unsigned
-unsigned         upper rank signed       upper rank signed
-any              any                     no-convert
-*/
+//Accroding C89 binary operation converting rules
+//l                r                       standard C convert
+//double           any                     double
+//float            any                     float
+//unsigned         unsigned                upper rank unsigned
+//signed           signed                  upper rank signed
+//unsigned         lower rank signed       unsigned
+//unsigned         upper rank signed       upper rank signed
+//any              any                     no-convert
 static Decl * build_binary_op_type(Decl * l, Decl * r)
 {
     TypeSpec * lty = DECL_spec(l);
@@ -748,7 +742,7 @@ static INT c_type_tran(Tree * t, TYCtx * cont)
         case TR_INCLUSIVE_OR: //inclusive or  |
         case TR_XOR: //exclusive or
         case TR_INCLUSIVE_AND: //inclusive and &
-        case TR_SHIFT:   // >> <<
+        case TR_SHIFT: // >> <<
             {
                 if (ST_SUCC != c_type_tran(TREE_lchild(t), cont)) goto FAILED;
                 if (ST_SUCC != c_type_tran(TREE_rchild(t), cont)) goto FAILED;
@@ -758,8 +752,8 @@ static INT c_type_tran(Tree * t, TYCtx * cont)
                 if (is_pointer(ld) || is_array(ld)) {
                     format_declaration(buf,ld);
                     err(TREE_lineno(t),
-                         "illegal '%s', left operand has type '%s'",
-                         get_token_name(TREE_token(TREE_lchild(t))), buf);
+                        "illegal '%s', left operand has type '%s'",
+                        get_token_name(TREE_token(TREE_lchild(t))), buf);
                     goto FAILED;
                 }
 
@@ -787,14 +781,15 @@ static INT c_type_tran(Tree * t, TYCtx * cont)
             {
                 if (ST_SUCC != c_type_tran(TREE_lchild(t), cont)) goto FAILED;
                 if (ST_SUCC != c_type_tran(TREE_rchild(t), cont)) goto FAILED;
+
                 Decl * ld = TREE_result_type(TREE_lchild(t)),
                      * rd = TREE_result_type(TREE_rchild(t));
                 ASSERT0(ld && rd);
                 if ((is_struct(DECL_spec(ld)) || is_union(DECL_spec(ld))) &&
                     !is_pointer(ld)) {
                     err(TREE_lineno(t),
-                         "can not do '%s' operation for struct/union.",
-                         get_token_name(TREE_token(t)));
+                        "can not do '%s' operation for struct/union.",
+                        get_token_name(TREE_token(t)));
                     goto FAILED;
                 } else if ((is_struct(DECL_spec(rd)) ||
                             is_union(DECL_spec(rd))) &&
@@ -1051,14 +1046,12 @@ static INT c_type_tran(Tree * t, TYCtx * cont)
                     ASSERT0(TREE_parent(t));
                     //if (TREE_type(parent) != TR_ARRAY)
                     {
-                        /*
-                        In C, base of array only needs address, so the DEREF
-                        operator has alias effect. It means ARRAY(LD(p)) for
-                        given declaration: int (*p)[].
-
-                        The value is needed if there is not an ARRAY operator,
-                        e.g: a = *p, should generate a=LD(LD(p)).
-                        */
+                        //In C, base of array only needs address, so the DEREF
+                        //operator has alias effect. It means ARRAY(LD(p)) for
+                        //given declaration: int (*p)[].
+                        //
+                        //The value is needed if there is not an ARRAY operator,
+                        //e.g: a = *p, should generate a=LD(LD(p)).
                         remove(&PURE_DECL(td), ld);
                     }
                 } else if (DECL_dt(ld) == DCL_FUN) {
@@ -1130,7 +1123,7 @@ static INT c_type_tran(Tree * t, TYCtx * cont)
                 TREE_result_type(t) = d;
                 break;
             }
-        case TR_DEC:   //--a
+        case TR_DEC: //--a
         case TR_POST_DEC: //a--
             {
                 if (ST_SUCC != c_type_tran(TREE_dec_exp(t), cont)) goto FAILED;
@@ -1199,13 +1192,11 @@ static INT c_type_tran(Tree * t, TYCtx * cont)
             }
         case TR_ARRAY:
             {
-                /*
-                Under C specification, user can derefence pointer
-                utilizing array-operator,
-                e.g:
-                    int ** p;
-                    p[i][j] = 10;
-                */
+                //Under C specification, user can derefence pointer
+                //utilizing array-operator,
+                //e.g:
+                //    int ** p;
+                //    p[i][j] = 10;
                 if (ST_SUCC != c_type_tran(TREE_array_base(t), cont)) {
                     goto FAILED;
                 }
@@ -1297,20 +1288,18 @@ static INT c_type_tran(Tree * t, TYCtx * cont)
             }
         case TR_PRAGMA:    break;
         default: ASSERT(0,("unknown tree type:%d",TREE_type(t)));
-        }//end switch
+        }
         t = TREE_nsib(t);
-    }//end while
+    }
     return ST_SUCC;
 FAILED:
     return ST_ERR;
 }
 
 
-/*
-Checking compatible between formal parameter and real parameter.
-'formalp': formal parameter
-'realp': real parameter
-*/
+//Checking compatible between formal parameter and real parameter.
+//'formalp': formal parameter
+//'realp': real parameter
 static bool ck_para_type_compatible(Decl * formalp, Decl * realp)
 {
     UNUSED(realp);
@@ -1320,9 +1309,7 @@ static bool ck_para_type_compatible(Decl * formalp, Decl * realp)
 }
 
 
-/*
-Declaration checking
-*/
+//Declaration checking
 static INT c_declaration_ck(Decl * d)
 {
     ASSERT0(DECL_dt(d) == DCL_DECLARATION);
@@ -1448,12 +1435,12 @@ static INT c_type_ck(Tree * t, TYCtx * cont)
         case TR_FP:  //3.1415926
         case TR_ENUM_CONST:
         case TR_STRING:
-        case TR_LOGIC_OR:  //logical or       ||
-        case TR_LOGIC_AND: //logical and      &&
-        case TR_INCLUSIVE_OR: //inclusive or  |
+        case TR_LOGIC_OR:  //logical or ||
+        case TR_LOGIC_AND: //logical and &&
+        case TR_INCLUSIVE_OR: //inclusive or |
         case TR_XOR: //exclusive or
         case TR_INCLUSIVE_AND: //inclusive and &
-        case TR_SHIFT:   // >> <<
+        case TR_SHIFT:    // >> <<
         case TR_EQUALITY: // == !=
         case TR_RELATION: // < > >= <=
         case TR_ADDITIVE: // '+' '-'
@@ -1476,10 +1463,10 @@ static INT c_type_ck(Tree * t, TYCtx * cont)
         case TR_TYPE_NAME: //user defined type or C standard type
         case TR_LDA:   // &a get address of 'a'
         case TR_DEREF: //*p  dereferencing the pointer 'p'
-        case TR_PLUS: // +123
-        case TR_MINUS:  // -123
-        case TR_REV:  // Reverse
-        case TR_NOT:  // get non-value
+        case TR_PLUS:  // +123
+        case TR_MINUS: // -123
+        case TR_REV:   // Reverse
+        case TR_NOT:   // get non-value
         case TR_INC:   //++a
         case TR_POST_INC: //a++
         case TR_DEC:   //--a
@@ -1496,11 +1483,10 @@ static INT c_type_ck(Tree * t, TYCtx * cont)
         case TR_INDMEM: // a->b
         case TR_PRAGMA:
             break;
-        default:
-            ASSERT(0, ("unknown tree type:%d", TREE_type(t)));
-        } //end switch
+        default: ASSERT(0, ("unknown tree type:%d", TREE_type(t)));
+        }
         t = TREE_nsib(t);
-    } //end while
+    }
     return ST_SUCC;
 FAILED:
     return ST_ERR;
@@ -1554,7 +1540,7 @@ public:
 
 
 //Infer type to Tree nodes.
-INT type_trans()
+INT TypeTransform()
 {
     type_trans_init();
     SCOPE * s = get_global_scope();
@@ -1576,7 +1562,7 @@ INT type_trans()
 }
 
 
-INT type_ck()
+INT TypeCheck()
 {
     SCOPE * s = get_global_scope();
     Decl * dcl = SCOPE_decl_list(s);
@@ -1590,13 +1576,16 @@ INT type_ck()
                 st = ST_ERR;
                 break;
             }
+            
             if (g_err_msg_list.get_elem_count() > 0) {
                 st = ST_ERR;
                 break;
             }
         }
+        
         dcl = DECL_next(dcl);
     }
+    
     tfree();
     return st;
 }
