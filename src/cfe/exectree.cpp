@@ -90,9 +90,9 @@ static bool compute_sizeof(Tree * t)
 
         ULONG sz = get_decl_size(dcl);
         //if (is_complex_type(abs_decl) || is_user_type_ref(dcl)) {
-        //    sz = get_complex_type_size_in_byte(dcl);
+        //    sz = getComplexTypeSize(dcl);
         //} else {
-        //    sz = get_simply_type_size_in_byte(type_spec);
+        //    sz = getSimplyTypeSize(type_spec);
         //}
 
         if (sz != 0) {

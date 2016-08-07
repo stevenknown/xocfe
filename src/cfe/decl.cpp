@@ -2376,7 +2376,7 @@ static void fix_para_array_index(Decl * decl)
         DECL_array_dim(d) = 1;
     }
 
-    if (get_declarator_size_in_byte(d) == 0) {
+    if (getDeclaratorSize(d) == 0) {
         err(g_real_line_num,
             "Only the first dimension size can be 0, "
             "the lower dimension size can not be 0");
@@ -2569,12 +2569,10 @@ Enum * find_enum(EnumList * elst , Enum * e)
 }
 
 
-/*
-Return NULL indicate we haven't found it in 'ut_list', and
-append 'ut' to tail of the list as correct, otherwise return
-the finded one.
-*/
-Decl * add_to_user_type_list(UserTypeList ** ut_list , Decl * decl)
+//Return NULL indicate we haven't found it in 'ut_list', and
+//append 'ut' to tail of the list as correct, otherwise return
+//the finded one.
+Decl * addToUserTypeList(UserTypeList ** ut_list , Decl * decl)
 {
    if (ut_list == NULL || decl == NULL) return NULL;
    if ((*ut_list) == NULL) {
@@ -2833,7 +2831,7 @@ TypeSpec * new_type(INT cate)
 
 //'decl' presents DCL_DECLARATOR or DCL_ABS_DECLARATOR,
 //Compute size of total array.
-ULONGLONG compute_size_of_array(Decl * decl)
+UINT computeArraySize(Decl * decl)
 {
     if (DECL_dt(decl) == DCL_DECLARATOR) {
         decl = DECL_child(decl);
@@ -2852,20 +2850,22 @@ ULONGLONG compute_size_of_array(Decl * decl)
         return 0;
     }
 
-    ULONGLONG num = 0;
-    INT    dim = 0;
+    UINT num = 0;
+    UINT dim = 0;
     while (decl != NULL && DECL_dt(decl) == DCL_ARRAY) {
         if (DECL_array_dim(decl) == 0) {
             err(g_src_line_num, "size of %dth dimension can not be zero", dim);
             return 0;
         }
+        
         if (num == 0) {
             //Meet the first dim
-            num = DECL_array_dim(decl);
+            num = (UINT)DECL_array_dim(decl);
         } else {
-            num *= DECL_array_dim(decl);
+            num *= (UINT)DECL_array_dim(decl);
         }
-        dim++;
+        
+        dim++;        
         decl = DECL_next(decl);
     }
     ASSERT(computeConstBitLen(num) < 64, ("too large array"));
@@ -2873,19 +2873,19 @@ ULONGLONG compute_size_of_array(Decl * decl)
 }
 
 
-INT compute_struct_type_size(TypeSpec * ty)
+UINT computeStructTypeSize(TypeSpec * ty)
 {
     ASSERT0(IS_STRUCT(ty));
     ASSERT0(is_struct_complete(ty));
     Struct * s = TYPE_struct_type(ty);
     Decl * dcl = STRUCT_decl_list(s);
-    INT size = 0;
+    UINT size = 0;
     while (dcl != NULL) {
         size += get_decl_size(dcl);
         dcl = DECL_next(dcl);
     }
 
-    INT mod = size % STRUCT_align(s);
+    UINT mod = size % STRUCT_align(s);
     if (mod != 0) {
         size = (size / STRUCT_align(s) + 1) * STRUCT_align(s);
     }
@@ -2893,19 +2893,19 @@ INT compute_struct_type_size(TypeSpec * ty)
 }
 
 
-INT compute_union_type_size(TypeSpec * ty)
+UINT computeUnionTypeSize(TypeSpec * ty)
 {
     ASSERT0(IS_UNION(ty));
     ASSERT0(is_union_complete(ty));
     Union * s = TYPE_union_type(ty);
     Decl * dcl = UNION_decl_list(s);
-    INT size = 0;
+    UINT size = 0;
     while (dcl != NULL) {
         size = MAX(size, get_decl_size(dcl));
         dcl = DECL_next(dcl);
     }
 
-    INT mod = size % UNION_align(s);
+    UINT mod = size % UNION_align(s);
     if (mod != 0) {
         size = (size / UNION_align(s) + 1) * UNION_align(s);
     }
@@ -2926,20 +2926,19 @@ bool is_complex_type(Decl * dcl)
 }
 
 
-/*
- What is 'simply type'? Non-pointer and non-array type.
- e.g : int a;
-       void a;
-       struct a;
-       union a;
-       enum a;
-       USER_DEFINED_TYPE_NAME a;
-*/
-INT get_simply_type_size_in_byte(TypeSpec * spec)
+//SimplyType refer to Non-pointer and non-array type.
+// e.g : int a;
+//   void a;
+//   struct a;
+//   union a;
+//   enum a;
+//   USER_DEFINED_TYPE_NAME a;
+UINT getSimplyTypeSize(TypeSpec * spec)
 {
     if (spec == NULL) { return 0; }
-    if (HAVE_FLAG(TYPE_des(spec), T_SPEC_VOID)) return BYTE_PER_INT;
+    if (HAVE_FLAG(TYPE_des(spec), T_SPEC_VOID)) return BYTE_PER_CHAR;
     if (HAVE_FLAG(TYPE_des(spec), T_SPEC_CHAR)) return BYTE_PER_CHAR;
+    if (HAVE_FLAG(TYPE_des(spec), T_SPEC_BOOL)) return BYTE_PER_CHAR;
     if (HAVE_FLAG(TYPE_des(spec), T_SPEC_SHORT)) return BYTE_PER_SHORT;
     if (HAVE_FLAG(TYPE_des(spec), T_SPEC_INT)) return BYTE_PER_INT;
     if (HAVE_FLAG(TYPE_des(spec), T_SPEC_LONGLONG)) return BYTE_PER_LONGLONG;
@@ -2947,10 +2946,10 @@ INT get_simply_type_size_in_byte(TypeSpec * spec)
     if (HAVE_FLAG(TYPE_des(spec), T_SPEC_FLOAT)) return BYTE_PER_FLOAT;
     if (HAVE_FLAG(TYPE_des(spec), T_SPEC_DOUBLE)) return BYTE_PER_DOUBLE;
     if (HAVE_FLAG(TYPE_des(spec), T_SPEC_STRUCT)) {
-        return compute_struct_type_size(spec);
+        return computeStructTypeSize(spec);
     }
     if (HAVE_FLAG(TYPE_des(spec), T_SPEC_UNION)) {
-        return compute_union_type_size(spec);
+        return computeUnionTypeSize(spec);
     }
     if (HAVE_FLAG(TYPE_des(spec), T_SPEC_ENUM)) return BYTE_PER_ENUM;
     if (HAVE_FLAG(TYPE_des(spec), T_SPEC_SIGNED)) return BYTE_PER_INT;
@@ -2959,12 +2958,11 @@ INT get_simply_type_size_in_byte(TypeSpec * spec)
 }
 
 
-/* Compute byte size to complex type.
-complex type means the type is either pointer or array.
-e.g : int * a;
-      int a [];
-*/
-ULONG get_complex_type_size_in_byte(Decl * decl)
+//Compute byte size to complex type.
+//complex type means the type is either pointer or array.
+//e.g : int * a;
+//      int a [];
+ULONG getComplexTypeSize(Decl * decl)
 {
     if (decl == NULL) { return 0; }
 
@@ -2980,9 +2978,9 @@ ULONG get_complex_type_size_in_byte(Decl * decl)
     }
 
     ASSERT(spec != NULL, ("composing type expected specifier"));
-    ULONG declor_size = get_declarator_size_in_byte(d);
+    ULONG declor_size = getDeclaratorSize(d);
     if (is_array(d)) {
-        ULONG s = get_simply_type_size_in_byte(spec);
+        ULONG s = getSimplyTypeSize(spec);
         return declor_size * s;
     }
     return declor_size;
@@ -2990,65 +2988,52 @@ ULONG get_complex_type_size_in_byte(Decl * decl)
 
 
 //Compute the byte size of declaration.
-//This function also do check in addition to compute array size.
-INT get_decl_size(Decl * decl)
+//This function will compute array size.
+UINT get_decl_size(Decl * decl)
 {
     TypeSpec * spec = DECL_spec(decl);
     Decl * d = NULL;
     if (DECL_dt(decl) == DCL_DECLARATION ||
         DECL_dt(decl) == DCL_TYPE_NAME) {
         d = DECL_decl_list(decl); //get declarator
-        ASSERT(d &&
-                (DECL_dt(d) == DCL_DECLARATOR ||
-                 DECL_dt(d) == DCL_ABS_DECLARATOR),
-                ("illegal declarator"));
+        ASSERT(d && (DECL_dt(d) == DCL_DECLARATOR ||
+                     DECL_dt(d) == DCL_ABS_DECLARATOR),
+               ("illegal declarator"));
         if (is_complex_type(d)) {
-            return get_complex_type_size_in_byte(decl);
+            return getComplexTypeSize(decl);
         } else {
-            return get_simply_type_size_in_byte(spec);
+            return getSimplyTypeSize(spec);
         }
     } else {
-        ASSERT(0, ("expected declaration"));
+        ASSERT(0, ("unexpected declaration"));
     }
     return 0;
 }
 
 
-/* Calculate byte size of pure decl-type list, but without the 'specifier'.
-There only 2 type of decl-type: pointer and array.
-    e.g  Given type is: int *(*p)[3][4], and calculating the
-        size of '*(*) [3][4]'.
-        The order of decl is: p->*->[3]->[4]->*
-*/
-INT get_declarator_size_in_byte(Decl * d)
+//Calculate byte size of pure decl-type list, but without the 'specifier'.
+//There only 2 type of decl-type: pointer and array.
+//  e.g  Given type is: int *(*p)[3][4], and calculating the
+//    size of '*(*) [3][4]'.
+//    The order of decl is: p->*->[3]->[4]->*
+UINT getDeclaratorSize(Decl * d)
 {
-    if (d == NULL) {
-        return 0;
-    }
-
-    if (is_pointer(d)) {
-        return BYTE_PER_POINTER;
-    }
-
-    if (is_array(d)) {
-        INT e = (INT)compute_size_of_array(d);
-        return e;
-    }
+    if (d == NULL) { return 0; }
+    if (is_pointer(d)) { return BYTE_PER_POINTER; }
+    if (is_array(d)) { return computeArraySize(d); }
     return 0;
 }
 
 
-/* Return the *first* Decl structure which indicate an array
-in pure-list of declaration.
-
-e.g: int p[10][20]; the declarator is: DCL_ID(p)->DCL_ARRAY(20)->DCL_ARRAY(10).
-return DCL_ARRAY(20).
-*/
+//Return the *first* Decl structure which indicate an array
+//in pure-list of declaration.
+//e.g: int p[10][20]; the declarator is: DCL_ID(p)->DCL_ARRAY(20)->DCL_ARRAY(10).
+//return DCL_ARRAY(20).
 Decl * get_array_decl(Decl * decl)
 {
     ASSERT(DECL_dt(decl) == DCL_TYPE_NAME ||
-            DECL_dt(decl) == DCL_DECLARATION ,
-            ("expect DCRLARATION"));
+           DECL_dt(decl) == DCL_DECLARATION ,
+           ("expect DCRLARATION"));
     ASSERT(is_array(decl), ("expect pointer type"));
     Decl * x = get_pure_declarator(decl);
     while (x != NULL) {
@@ -3063,10 +3048,10 @@ Decl * get_array_decl(Decl * decl)
             break;
         default:
             ASSERT(DECL_dt(x) != DCL_DECLARATION &&
-                    DECL_dt(x) != DCL_DECLARATOR &&
-                    DECL_dt(x) != DCL_ABS_DECLARATOR &&
-                    DECL_dt(x) != DCL_TYPE_NAME,
-                    ("\nunsuitable Decl type locate here in is_pointer()\n"));
+                   DECL_dt(x) != DCL_DECLARATOR &&
+                   DECL_dt(x) != DCL_ABS_DECLARATOR &&
+                   DECL_dt(x) != DCL_TYPE_NAME,
+                   ("\nunsuitable Decl type locate here in is_pointer()\n"));
             return NULL;
         }
         x = DECL_next(x);
@@ -3159,15 +3144,15 @@ UINT get_pointer_base_size(Decl * decl)
             return 0;
         }
 
-        INT s = get_simply_type_size_in_byte(ty);
+        UINT s = getSimplyTypeSize(ty);
         ASSERT(s != 0, ("simply type size cannot be zero"));
         return s;
     }
 
-    INT s = 1;
-    INT e = get_declarator_size_in_byte(d);
+    UINT s = 1;
+    UINT e = getDeclaratorSize(d);
     if (!is_pointer(d)) {
-        s = get_simply_type_size_in_byte(ty);
+        s = getSimplyTypeSize(ty);
     }
     ASSERT(e != 0, ("declarator size cannot be zero"));
     return e * s;
@@ -4536,12 +4521,11 @@ bool declaration()
         }
 
         if (is_user_type_decl(declaration)) { //typedef declaration
-            /* As the preivous parsing in 'declarator()' has recoginzed that
-            current identifier is identical exactly in current scope,
-            it is dispensable to warry about the redefinition, even if
-            invoking is_user_type_exist(). */
-            add_to_user_type_list(&SCOPE_user_type_list(g_cur_scope),
-                                  declaration);
+            //As the preivous parsing in 'declarator()' has recoginzed that
+            //current identifier is identical exactly in current scope,
+            //it is dispensable to warry about the redefinition, even if
+            //invoking is_user_type_exist().
+            addToUserTypeList(&SCOPE_user_type_list(g_cur_scope), declaration);
         }
 
         if (!check_struct_union_complete(declaration)) {
