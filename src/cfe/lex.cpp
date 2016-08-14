@@ -85,6 +85,8 @@ static TokenInfo g_token_info[] =
     { T_IMMU,        "unsigned imme" },
     { T_IMMUL,        "unsigned long imme" },
     { T_FP,            "decimal" },
+    { T_FPF,          "float decimal" },
+    { T_FPLD,         "long double decimal" },
     { T_STRING,        "string" },
     { T_CHAR_LIST,    "char list" },
     { T_INTRI_FUN,    "" },
@@ -548,11 +550,25 @@ FIN:
                 g_cur_char = get_next_char();
                 t = T_IMMUL;
             }
+        } else if (t == T_FP) {
+            //If suffixed by the letter l or L, it has type long double.
+            g_cur_char = get_next_char();
+            t = T_FPLD;
         }
     } else if (g_cur_char == 'U' || g_cur_char == 'u') {
         //imm is unsigned.
         g_cur_char = get_next_char();
         t = T_IMMU;
+    } else if (g_cur_char == 'F' || g_cur_char == 'f') {
+        //e.g: 1.0F, float
+        if (t == T_IMM) {
+            err(g_real_line_num, "invalid suffix \"%c\" on integer constant",
+                g_cur_char);
+        } else {
+            ASSERT0(t == T_FP);
+            g_cur_char = get_next_char();
+            t = T_FPF;
+        }
     }
     return t;
 }

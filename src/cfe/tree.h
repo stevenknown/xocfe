@@ -45,7 +45,9 @@ typedef enum _TREE_TYPE {
     TR_ID,
     TR_IMM,             //integer, 1234.
     TR_IMML,            //long long integer, 1234L.
-    TR_FP,              //3.1415926f
+    TR_FP,              //double 3.1415926
+    TR_FPF,             //float 3.1415926
+    TR_FPLD,            //long double 3.1415926
     TR_ENUM_CONST,
     TR_STRING,
     TR_LOGIC_OR,        //logical or ||

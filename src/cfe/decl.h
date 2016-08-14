@@ -483,18 +483,18 @@ bool is_struct_type_exist_in_cur_scope(CHAR * tag, OUT Struct ** s);
 bool is_struct_exist_in_outer_scope(IN CHAR * tag, OUT Struct ** s);
 bool is_enum_id_exist_in_outer_scope(IN CHAR * cl, OUT Enum ** e);
 bool is_enum_const_exist_in_outer_scope(
-			CHAR * name, 
-			OUT Enum ** e, 
-			OUT INT * idx);
+            CHAR * name,
+            OUT Enum ** e,
+            OUT INT * idx);
 bool is_enum_const_exist_in_cur_scope(
-			IN CHAR * cl, 
-			OUT Enum ** e, 
-			OUT INT * idx);
+            IN CHAR * cl,
+            OUT Enum ** e,
+            OUT INT * idx);
 bool is_user_type_exist(UserTypeList * ut_list, CHAR * ut_name, Decl ** ut);
 bool is_struct_type_exist(
-			List<Struct*> & struct_list, 
-			IN CHAR * tag, 
-			OUT Struct ** s);
+            List<Struct*> & struct_list,
+            IN CHAR * tag,
+            OUT Struct ** s);
 bool is_union_type_exist(List<Union*> & u_list, IN CHAR * tag, OUT Union ** s);
 bool is_union(TypeSpec * type);
 bool is_union(Decl * decl);

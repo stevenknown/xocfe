@@ -64,7 +64,7 @@ static INT process_struct_init(TypeSpec * ty, Tree ** init);
 static INT process_union_init(TypeSpec * ty, Tree ** init);
 static INT process_base_init(TypeSpec * ty, Tree ** init);
 static TypeSpec * build_base_type_spec(INT des);
-static INT c_type_ck(Tree * t, TYCtx * cont);
+static INT typeck(Tree * t, TYCtx * cont);
 
 #define BUILD_TYNAME(T)  build_type_name(build_base_type_spec(T))
 
@@ -301,7 +301,7 @@ INT process_init(Decl * decl, Tree ** init)
 
     dcl = DECL_decl_list(decl); //get DCRLARATOR
     ty = DECL_spec(decl); //get TypeSpec-SPEC
-    ASSERT((dcl && ty), 
+    ASSERT((dcl && ty),
         ("DCLARATION must have a DCRLARATOR node and TypeSpec node"));
     ASSERT((*init) != NULL, ("'init' initialization tree cannot be NULL"));
 
@@ -711,14 +711,12 @@ static INT c_type_tran(Tree * t, TYCtx * cont)
         case TR_IMML:
             TREE_result_type(t) = BUILD_TYNAME(T_SPEC_LONGLONG|T_QUA_CONST);
             break;
-        case TR_FP:  //3.1415926
-            if (BYTE_PER_FLOAT == BYTE_PER_FLOAT) {
-                TREE_result_type(t) = BUILD_TYNAME(T_SPEC_FLOAT|T_QUA_CONST);
-            } else if (BYTE_PER_FLOAT == BYTE_PER_DOUBLE) {
-                TREE_result_type(t) = BUILD_TYNAME(T_SPEC_DOUBLE|T_QUA_CONST);
-            } else {
-                TREE_result_type(t) = BUILD_TYNAME(T_SPEC_FLOAT|T_QUA_CONST);
-            }
+        case TR_FP:
+        case TR_FPLD:
+            TREE_result_type(t) = BUILD_TYNAME(T_SPEC_DOUBLE|T_QUA_CONST);
+            break;
+        case TR_FPF:
+            TREE_result_type(t) = BUILD_TYNAME(T_SPEC_FLOAT|T_QUA_CONST);
             break;
         case TR_ENUM_CONST:
             TREE_result_type(t) = BUILD_TYNAME(T_SPEC_ENUM|T_QUA_CONST);
@@ -1339,8 +1337,8 @@ static INT c_declaration_ck(Decl * d)
 
 static bool type_ck_call(Tree * t, TYCtx * cont)
 {
-    if (ST_SUCC != c_type_ck(TREE_para_list(t), cont)) return false;
-    if (ST_SUCC != c_type_ck(TREE_fun_exp(t), cont)) return false;
+    if (ST_SUCC != typeck(TREE_para_list(t), cont)) return false;
+    if (ST_SUCC != typeck(TREE_fun_exp(t), cont)) return false;
     Decl * fun_decl = TREE_result_type(TREE_fun_exp(t));
 
     //Return type is the call type.
@@ -1418,74 +1416,119 @@ static bool type_ck_call(Tree * t, TYCtx * cont)
 
 
 //Perform type checking.
-static INT c_type_ck(Tree * t, TYCtx * cont)
+static INT typeck(Tree * t, TYCtx * cont)
 {
     if (cont == NULL) {
         TYCtx ct = {0};
         cont = &ct;
     }
 
-    while (t != NULL) {
+    for (; t != NULL; t = TREE_nsib(t)) {
         g_src_line_num = TREE_lineno(t);
         switch (TREE_type(t)) {
         case TR_ASSIGN:
+            typeck(TREE_lchild(t), cont); 
+            typeck(TREE_rchild(t), cont); 
+            break;
         case TR_ID:
         case TR_IMM:
         case TR_IMML:
-        case TR_FP:  //3.1415926
+        case TR_FP:            //double
+        case TR_FPF:           //float
+        case TR_FPLD:          //long double
         case TR_ENUM_CONST:
         case TR_STRING:
-        case TR_LOGIC_OR:  //logical or ||
-        case TR_LOGIC_AND: //logical and &&
-        case TR_INCLUSIVE_OR: //inclusive or |
-        case TR_XOR: //exclusive or
+        case TR_LOGIC_OR:      //logical or ||
+        case TR_LOGIC_AND:     //logical and &&
+        case TR_INCLUSIVE_OR:  //inclusive or |
+        case TR_XOR:           //exclusive or
         case TR_INCLUSIVE_AND: //inclusive and &
-        case TR_SHIFT:    // >> <<
-        case TR_EQUALITY: // == !=
-        case TR_RELATION: // < > >= <=
-        case TR_ADDITIVE: // '+' '-'
-        case TR_MULTI:    // '*' '/' '%'
+        case TR_SHIFT:         // >> <<
+        case TR_EQUALITY:      // == !=
+        case TR_RELATION:      // < > >= <=
+        case TR_ADDITIVE:      // '+' '-'
+        case TR_MULTI:         // '*' '/' '%'
+            typeck(TREE_lchild(t), cont); 
+            typeck(TREE_rchild(t), cont); 
+            break;
         case TR_SCOPE:
+            typeck(SCOPE_stmt_list(TREE_scope(t)), cont);
+            break;
         case TR_IF:
+            typeck(TREE_if_det(t), cont);
+            typeck(TREE_if_true_stmt(t), cont);
+            typeck(TREE_if_false_stmt(t), cont);
+            break;
         case TR_DO:
+            typeck(TREE_dowhile_body(t), cont);
+            typeck(TREE_dowhile_det(t), cont);
+            break;
         case TR_WHILE:
+            typeck(TREE_whiledo_det(t), cont);
+            typeck(TREE_whiledo_body(t), cont);
+            break;
         case TR_FOR:
+            typeck(TREE_for_init(t), cont);
+            typeck(TREE_for_det(t), cont);
+            typeck(TREE_for_step(t), cont);
+            typeck(TREE_for_body(t), cont);
+            break;
         case TR_SWITCH:
+            typeck(TREE_switch_det(t), cont);
+            typeck(TREE_switch_body(t), cont);
+            break;
         case TR_BREAK:
         case TR_CONTINUE:
         case TR_GOTO:
         case TR_LABEL:
         case TR_DEFAULT:
         case TR_CASE:
+            break;
         case TR_RETURN:
-        case TR_COND: //formulized log_OR_exp?exp:cond_exp
-        case TR_CVT: //type convertion
+            typeck(TREE_ret_exp(t), cont);
+            break;
+        case TR_COND:      //formulized log_OR_exp?exp:cond_exp
+            typeck(TREE_det(t), cont);
+            typeck(TREE_true_part(t), cont);
+            typeck(TREE_false_part(t), cont);
+            break; 
+        case TR_CVT:       //type convertion
+            typeck(TREE_cast_exp(t), cont);
+            break;
         case TR_TYPE_NAME: //user defined type or C standard type
-        case TR_LDA:   // &a get address of 'a'
-        case TR_DEREF: //*p  dereferencing the pointer 'p'
-        case TR_PLUS:  // +123
-        case TR_MINUS: // -123
-        case TR_REV:   // Reverse
-        case TR_NOT:   // get non-value
-        case TR_INC:   //++a
-        case TR_POST_INC: //a++
-        case TR_DEC:   //--a
-        case TR_POST_DEC: //a--
-        case TR_SIZEOF: // sizeof(a)
+            break;
+        case TR_LDA:       // &a get address of 'a'
+        case TR_DEREF:     //*p  dereferencing the pointer 'p'
+        case TR_PLUS:      // +123
+        case TR_MINUS:     // -123
+        case TR_REV:       // Reverse
+        case TR_NOT:       // get non-value
+            typeck(TREE_lchild(t), cont);
+            break;
+        case TR_INC:       //++a
+        case TR_POST_INC:  //a++
+            typeck(TREE_inc_exp(t), cont);
+            break;
+        case TR_DEC:       //--a
+        case TR_POST_DEC:  //a--
+            typeck(TREE_dec_exp(t), cont);
+            break;
+        case TR_SIZEOF:    // sizeof(a)
+            typeck(TREE_sizeof_exp(t), cont);
             break;
         case TR_CALL:
-            if (!type_ck_call(t, cont)) {
-                goto FAILED;
-            }
+            if (!type_ck_call(t, cont)) { goto FAILED; }
             break;
         case TR_ARRAY:
-        case TR_DMEM: // a.b
-        case TR_INDMEM: // a->b
+            typeck(TREE_array_base(t), cont);
+            typeck(TREE_array_indx(t), cont);
+            break;
+        case TR_DMEM:      // a.b
+        case TR_INDMEM:    // a->b
         case TR_PRAGMA:
             break;
         default: ASSERT(0, ("unknown tree type:%d", TREE_type(t)));
-        }
-        t = TREE_nsib(t);
+        }        
     }
     return ST_SUCC;
 FAILED:
@@ -1572,20 +1615,16 @@ INT TypeCheck()
         c_declaration_ck(dcl);
         if (DECL_is_fun_def(dcl)) {
             Tree * stmt = SCOPE_stmt_list(DECL_fun_body(dcl));
-            if (c_type_ck(stmt, NULL) != ST_SUCC) {
-                st = ST_ERR;
-                break;
-            }
-            
+            typeck(stmt, NULL);
             if (g_err_msg_list.get_elem_count() > 0) {
                 st = ST_ERR;
                 break;
             }
         }
-        
+
         dcl = DECL_next(dcl);
     }
-    
+
     tfree();
     return st;
 }

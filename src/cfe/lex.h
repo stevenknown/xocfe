@@ -36,7 +36,9 @@ typedef enum _TOKEN {
     T_IMML,            // 0~9L
     T_IMMU,            // Unsigned
     T_IMMUL,        // Unsigned Long
-    T_FP,            // decimal e.g 3.14
+    T_FP,            //double decimal e.g 3.14
+    T_FPF,            //float decimal e.g 3.14
+    T_FPLD,            //long double decimal e.g 3.14
     T_STRING,        // "abcd"
     T_CHAR_LIST,    // 'abcd'
     T_INTRI_FUN,    // intrinsic function call

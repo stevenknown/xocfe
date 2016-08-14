@@ -143,8 +143,20 @@ void dump_tree(Tree * t)
                 (LONGLONG)TREE_imm_val(t),
                 res_type_buf);
             break;
-        case TR_FP:  //3.1415926
-            note("\nFP(id:%u):%s <%s>",
+        case TR_FP:
+            note("\nFP double(id:%u):%s <%s>",
+                 TREE_uid(t),
+                 SYM_name(TREE_fp_str_val(t)),
+                 res_type_buf);
+            break;
+        case TR_FPF:
+            note("\nFP float(id:%u):%s <%s>",
+                 TREE_uid(t),
+                 SYM_name(TREE_fp_str_val(t)),
+                 res_type_buf);
+            break;
+        case TR_FPLD:
+            note("\nFP long double(id:%u):%s <%s>",
                  TREE_uid(t),
                  SYM_name(TREE_fp_str_val(t)),
                  res_type_buf);
@@ -172,7 +184,7 @@ void dump_tree(Tree * t)
         case TR_SHIFT:   // >> <<
         case TR_ADDITIVE: // '+' '-'
         case TR_MULTI:    // '*' '/' '%'
-            note("\nOP(id:%u):%s <%s>", TREE_uid(t), 
+            note("\nOP(id:%u):%s <%s>", TREE_uid(t),
                  TOKEN_INFO_name(get_token_info(TREE_token(t))), res_type_buf);
             g_indent += dn;
             dump_trees(TREE_lchild(t));
@@ -357,7 +369,7 @@ void dump_tree(Tree * t)
         case TR_POST_DEC: //a--
             note("\nPOST_INC(id:%u) <%s>", TREE_uid(t), res_type_buf);
             g_indent += dn;
-            dump_trees(TREE_inc_exp(t));
+            dump_trees(TREE_dec_exp(t));
             g_indent -= dn;
             break;
         case TR_SIZEOF: // sizeof(a)

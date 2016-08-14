@@ -84,6 +84,8 @@ static bool verify(Tree * t)
     case TR_IMM:
     case TR_IMML:
     case TR_FP:  //3.1415926
+    case TR_FPF:  //3.1415926
+    case TR_FPLD:  //3.1415926
     case TR_ENUM_CONST:
     case TR_STRING:
     case TR_LOGIC_OR: //logical or ||
@@ -314,7 +316,9 @@ bool is_in_first_set_of_exp_list(TOKEN tok)
     case T_IMML:      //0~9L
     case T_IMMU:      //Unsigned
     case T_IMMUL:     //Unsigned Long
-    case T_FP:        //decimal e.g 3.14
+    case T_FP:        //double decimal e.g 3.14
+    case T_FPF:       //float decimal e.g 3.14
+    case T_FPLD:      //long double decimal e.g 3.14
     case T_STRING:    //"abcd"
     case T_CHAR_LIST: //'abcd'
     case T_LPAREN:    //(
@@ -428,6 +432,8 @@ static inline INT is_first_set_of_unary_exp(TOKEN tok)
     case T_IMMU:
     case T_IMMUL:
     case T_FP:
+    case T_FPF:       //float decimal e.g 3.14
+    case T_FPLD:      //long double decimal e.g 3.14
     case T_STRING:
     case T_CHAR_LIST:
     case T_AND:
@@ -571,7 +577,7 @@ INT match(TOKEN tok)
 //'n': represent the next N token to current token.
 //    If n is 0, it will return current token.
 static TOKEN look_next_token(
-        INT n, 
+        INT n,
         OUT CHAR ** tok_string,
         OUT UINT * tok_line_num)
 {
@@ -786,6 +792,18 @@ static Tree * primary_exp(IN OUT UINT * st)
         TREE_token(t) = g_real_token;
         TREE_fp_str_val(t) = g_fe_sym_tab->add(g_real_token_string);
         match(T_FP);
+        break;
+    case T_FPF:         // decimal e.g 3.14
+        t = NEWTN(TR_FPF);
+        TREE_token(t) = g_real_token;
+        TREE_fp_str_val(t) = g_fe_sym_tab->add(g_real_token_string);
+        match(T_FPF);
+        break;
+    case T_FPLD:         // decimal e.g 3.14
+        t = NEWTN(TR_FPLD);
+        TREE_token(t) = g_real_token;
+        TREE_fp_str_val(t) = g_fe_sym_tab->add(g_real_token_string);
+        match(T_FPLD);
         break;
     case T_STRING:     // "abcd"
         {
@@ -1086,10 +1104,12 @@ static Tree * unary_exp()
     case T_IMML:
     case T_IMMU:
     case T_IMMUL:
-    case T_FP: // decimal e.g 3.14
-    case T_STRING: // "abcd"
-    case T_CHAR_LIST: // 'abcd'
-    case T_LPAREN: //(exp)
+    case T_FP:        //decimal e.g 3.14
+    case T_FPF:       //decimal e.g 3.14
+    case T_FPLD:      //decimal e.g 3.14
+    case T_STRING:    //"abcd"
+    case T_CHAR_LIST: //'abcd'
+    case T_LPAREN:    //(exp)
     case T_ID:
         t = postfix_exp();
         break;
@@ -2318,6 +2338,8 @@ static Tree * dispatch()
     case T_IMMU:
     case T_IMMUL:
     case T_FP:         //decimal e.g 3.14
+    case T_FPF:        //decimal e.g 3.14
+    case T_FPLD:       //decimal e.g 3.14
     case T_STRING:     //"abcd"
     case T_CHAR_LIST:  //'abcd'
     case T_LPAREN:     //(
@@ -2477,7 +2499,7 @@ INT Parser()
         } else if (is_too_many_err()) {
             return ST_ERR;
         }
-        
+
         if (dispatch() == NULL && g_err_msg_list.get_elem_count() != 0) {
             return ST_ERR;
         }

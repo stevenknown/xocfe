@@ -2857,15 +2857,15 @@ UINT computeArraySize(Decl * decl)
             err(g_src_line_num, "size of %dth dimension can not be zero", dim);
             return 0;
         }
-        
+
         if (num == 0) {
             //Meet the first dim
             num = (UINT)DECL_array_dim(decl);
         } else {
             num *= (UINT)DECL_array_dim(decl);
         }
-        
-        dim++;        
+
+        dim++;
         decl = DECL_next(decl);
     }
     ASSERT(computeConstBitLen(num) < 64, ("too large array"));

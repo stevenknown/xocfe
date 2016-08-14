@@ -279,6 +279,8 @@ static bool compute_conditional_exp(IN Tree * t)
         pushv(TREE_imm_val(t));
         break;
     case TR_FP:
+    case TR_FPF:
+    case TR_FPLD:
         if (!g_is_allow_float) {
             err(TREE_lineno(t),"constant expression is not integral");
             return false;
