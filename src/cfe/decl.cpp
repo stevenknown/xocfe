@@ -114,9 +114,9 @@ CHAR * g_dcl_name [] = {
     "ID",
     "VARIABLE",
     "TYPE_NAME",
-    "DCRLARATOR",
-    "DCRLARATION",
-    "ABS_DCRLARATOR",
+    "DECLARATOR",
+    "DECLARATION",
+    "ABS_DECLARATOR",
 };
 
 

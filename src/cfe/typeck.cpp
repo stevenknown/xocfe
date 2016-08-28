@@ -63,10 +63,10 @@ static INT process_pointer_init(Decl * dcl, TypeSpec * ty, Tree ** init);
 static INT process_struct_init(TypeSpec * ty, Tree ** init);
 static INT process_union_init(TypeSpec * ty, Tree ** init);
 static INT process_base_init(TypeSpec * ty, Tree ** init);
-static TypeSpec * build_base_type_spec(INT des);
-static INT typeck(Tree * t, TYCtx * cont);
+static TypeSpec * buildBaseTypeSpec(INT des);
+static INT TypeCheckCore(Tree * t, TYCtx * cont);
 
-#define BUILD_TYNAME(T)  build_type_name(build_base_type_spec(T))
+#define BUILD_TYNAME(T)  buildTypeName(buildBaseTypeSpec(T))
 
 
 //Go through the init tree , 'dcl' must be DCL_ARRAY
@@ -346,7 +346,7 @@ static bool is_valid_type_name(Decl * dcl)
 
 
 //Constructing TypeSpec-NAME declaration
-static Decl * build_type_name(TypeSpec * ty)
+static Decl * buildTypeName(TypeSpec * ty)
 {
     Decl * decl = new_decl(DCL_TYPE_NAME);
     DECL_decl_list(decl) = new_decl(DCL_ABS_DECLARATOR);
@@ -356,7 +356,7 @@ static Decl * build_type_name(TypeSpec * ty)
 
 
 //Only construct simply base type-spec
-static TypeSpec * build_base_type_spec(INT des)
+static TypeSpec * buildBaseTypeSpec(INT des)
 {
     if (!is_simple_base_type(des)) {
         ASSERT(0,("expect base type"));
@@ -448,7 +448,7 @@ static TypeSpec * build_base_type_spec(INT des)
 }
 
 
-static INT get_cvt_rank(INT des)
+static INT getCvtRank(INT des)
 {
     if (IS_TYPED(des, T_SPEC_CHAR)) {
         return 20;
@@ -467,7 +467,7 @@ static INT get_cvt_rank(INT des)
     } else if (IS_TYPED(des, T_SPEC_DOUBLE)) {
         return 80;
     }
-    ASSERT(0,("get_cvt_rank"));
+    ASSERT(0,("getCvtRank"));
     return 0;
 }
 
@@ -481,11 +481,11 @@ static INT get_cvt_rank(INT des)
 //unsigned         lower rank signed       unsigned
 //unsigned         upper rank signed       upper rank signed
 //any              any                     no-convert
-static Decl * build_binary_op_type(Decl * l, Decl * r)
+static Decl * buildBinaryOpType(Decl * l, Decl * r)
 {
     TypeSpec * lty = DECL_spec(l);
     TypeSpec * rty = DECL_spec(r);
-    if (get_cvt_rank(TYPE_des(lty)) > get_cvt_rank(TYPE_des(rty))) {
+    if (getCvtRank(TYPE_des(lty)) > getCvtRank(TYPE_des(rty))) {
         return l;
     }
     return r;
@@ -493,7 +493,7 @@ static Decl * build_binary_op_type(Decl * l, Decl * r)
 
 
 //Checking type-convert of modifier
-static bool ck_assign(Tree * t, Decl * ld, Decl *)
+static bool checkAssign(Tree * t, Decl * ld, Decl *)
 {
     CHAR buf[MAX_BUF_LEN];
     buf[0] = 0;
@@ -514,7 +514,7 @@ static bool ck_assign(Tree * t, Decl * ld, Decl *)
 }
 
 
-static bool type_tran_id(Tree * t, TYCtx * cont, CHAR buf[])
+static bool TypeTranID(Tree * t, TYCtx * cont, CHAR buf[])
 {
     //Construct type-name and expand user type if it was declared.
     Decl * tmp_decl = NULL;
@@ -595,7 +595,7 @@ static bool type_tran_id(Tree * t, TYCtx * cont, CHAR buf[])
 
     //Construct TYPE_NAME for ID, that would
     //be used to infer type for tree node.
-    TREE_result_type(t) = build_type_name(DECL_spec(tmp_decl));
+    TREE_result_type(t) = buildTypeName(DECL_spec(tmp_decl));
     Decl * res_ty = TREE_result_type(t);
 
 
@@ -676,7 +676,7 @@ static bool type_tran_id(Tree * t, TYCtx * cont, CHAR buf[])
 
 
 //Transfering type declaration for all AST nodes.
-static INT c_type_tran(Tree * t, TYCtx * cont)
+static INT TypeTran(Tree * t, TYCtx * cont)
 {
     CHAR buf[MAX_BUF_LEN];
     buf[0] = 0;
@@ -690,20 +690,20 @@ static INT c_type_tran(Tree * t, TYCtx * cont)
         case TR_ASSIGN:
             // one of   '='   '*='   '/='   '%='  '+='
             //          '-='  '<<='  '>>='  '&='  '^='  '|='
-            if (ST_SUCC != c_type_tran(TREE_lchild(t), cont)) {
+            if (ST_SUCC != TypeTran(TREE_lchild(t), cont)) {
                 goto FAILED;
             }
-            if (ST_SUCC != c_type_tran(TREE_rchild(t), cont)) {
+            if (ST_SUCC != TypeTran(TREE_rchild(t), cont)) {
                 goto FAILED;
             }
-            if (!ck_assign(t, TREE_result_type(TREE_lchild(t)),
+            if (!checkAssign(t, TREE_result_type(TREE_lchild(t)),
                            TREE_result_type(TREE_rchild(t)))) {
                 goto FAILED;
             }
             TREE_result_type(t) = TREE_result_type(TREE_lchild(t));
             break;
         case TR_ID:
-            if (!type_tran_id(t, cont, buf)) { goto FAILED; }
+            if (!TypeTranID(t, cont, buf)) { goto FAILED; }
             break;
         case TR_IMM:
             TREE_result_type(t) = BUILD_TYNAME(T_SPEC_INT|T_QUA_CONST);
@@ -733,8 +733,8 @@ static INT c_type_tran(Tree * t, TYCtx * cont)
             }
         case TR_LOGIC_OR:  //logical or       ||
         case TR_LOGIC_AND: //logical and      &&
-            if (ST_SUCC != c_type_tran(TREE_lchild(t), cont)) goto FAILED;
-            if (ST_SUCC != c_type_tran(TREE_rchild(t), cont)) goto FAILED;
+            if (ST_SUCC != TypeTran(TREE_lchild(t), cont)) goto FAILED;
+            if (ST_SUCC != TypeTran(TREE_rchild(t), cont)) goto FAILED;
             TREE_result_type(t) = BUILD_TYNAME(T_SPEC_UNSIGNED | T_SPEC_CHAR);
             break;
         case TR_INCLUSIVE_OR: //inclusive or  |
@@ -742,8 +742,8 @@ static INT c_type_tran(Tree * t, TYCtx * cont)
         case TR_INCLUSIVE_AND: //inclusive and &
         case TR_SHIFT: // >> <<
             {
-                if (ST_SUCC != c_type_tran(TREE_lchild(t), cont)) goto FAILED;
-                if (ST_SUCC != c_type_tran(TREE_rchild(t), cont)) goto FAILED;
+                if (ST_SUCC != TypeTran(TREE_lchild(t), cont)) goto FAILED;
+                if (ST_SUCC != TypeTran(TREE_rchild(t), cont)) goto FAILED;
 
                 Decl * ld = TREE_result_type(TREE_lchild(t));
                 Decl * rd = TREE_result_type(TREE_rchild(t));
@@ -771,14 +771,14 @@ static INT c_type_tran(Tree * t, TYCtx * cont)
                         get_token_name(TREE_token(TREE_rchild(t))));
                     goto FAILED;
                 }
-                TREE_result_type(t) = build_binary_op_type(ld, rd);
+                TREE_result_type(t) = buildBinaryOpType(ld, rd);
                 break;
             }
         case TR_EQUALITY: // == !=
         case TR_RELATION: // < > >= <=
             {
-                if (ST_SUCC != c_type_tran(TREE_lchild(t), cont)) goto FAILED;
-                if (ST_SUCC != c_type_tran(TREE_rchild(t), cont)) goto FAILED;
+                if (ST_SUCC != TypeTran(TREE_lchild(t), cont)) goto FAILED;
+                if (ST_SUCC != TypeTran(TREE_rchild(t), cont)) goto FAILED;
 
                 Decl * ld = TREE_result_type(TREE_lchild(t)),
                      * rd = TREE_result_type(TREE_rchild(t));
@@ -803,10 +803,10 @@ static INT c_type_tran(Tree * t, TYCtx * cont)
             }
         case TR_ADDITIVE: // '+' '-'
             {
-                if (ST_SUCC != c_type_tran(TREE_lchild(t), cont)) {
+                if (ST_SUCC != TypeTran(TREE_lchild(t), cont)) {
                     goto FAILED;
                 }
-                if (ST_SUCC != c_type_tran(TREE_rchild(t), cont)) {
+                if (ST_SUCC != TypeTran(TREE_rchild(t), cont)) {
                     goto FAILED;
                 }
                 Decl * ld = TREE_result_type(TREE_lchild(t)),
@@ -841,7 +841,7 @@ static INT c_type_tran(Tree * t, TYCtx * cont)
                         TREE_result_type(t) = ld;
                     } else if (is_arith(ld) && is_arith(rd)) {
                         //arithmetic operation
-                        TREE_result_type(t) = build_binary_op_type(ld, rd);
+                        TREE_result_type(t) = buildBinaryOpType(ld, rd);
                     } else {
                         ASSERT(0,("TODO"));
                     }
@@ -882,7 +882,7 @@ static INT c_type_tran(Tree * t, TYCtx * cont)
                         TREE_result_type(t) = ld;
                     } else if (is_arith(ld) && is_arith(rd)) {
                         //arithmetic operation
-                        TREE_result_type(t) = build_binary_op_type(ld, rd);
+                        TREE_result_type(t) = buildBinaryOpType(ld, rd);
                     } else {
                         ASSERT(0,("TODO"));
                     }
@@ -892,15 +892,15 @@ static INT c_type_tran(Tree * t, TYCtx * cont)
             }
         case TR_MULTI:    // '*' '/' '%'
             {
-                if (ST_SUCC != c_type_tran(TREE_lchild(t), cont)) goto FAILED;
-                if (ST_SUCC != c_type_tran(TREE_rchild(t), cont)) goto FAILED;
+                if (ST_SUCC != TypeTran(TREE_lchild(t), cont)) goto FAILED;
+                if (ST_SUCC != TypeTran(TREE_rchild(t), cont)) goto FAILED;
                 Decl * ld = TREE_result_type(TREE_lchild(t));
                 Decl * rd = TREE_result_type(TREE_rchild(t));
 
                 if (TREE_token(t) == T_ASTERISK || TREE_token(t) == T_DIV) {
                     if (is_arith(ld) && is_arith(rd)) {
                         //arithmetic operation
-                        TREE_result_type(t) = build_binary_op_type(ld, rd);
+                        TREE_result_type(t) = buildBinaryOpType(ld, rd);
                     } else {
                         err(TREE_lineno(t), "illegal operation for '%s'",
                              get_token_name(TREE_token(TREE_rchild(t))));
@@ -909,7 +909,7 @@ static INT c_type_tran(Tree * t, TYCtx * cont)
                 } else {
                     if (is_integer(ld) && is_integer(rd)) {
                         //arithmetic operation
-                        TREE_result_type(t) = build_binary_op_type(ld, rd);
+                        TREE_result_type(t) = buildBinaryOpType(ld, rd);
                     } else {
                         err(TREE_lineno(t), "illegal operation for '%%'");
                         goto FAILED;
@@ -920,31 +920,31 @@ static INT c_type_tran(Tree * t, TYCtx * cont)
         case TR_SCOPE:
             {
                 SCOPE * sc = TREE_scope(t);
-                if (ST_SUCC != c_type_tran(SCOPE_stmt_list(sc), NULL)) goto FAILED;
+                if (ST_SUCC != TypeTran(SCOPE_stmt_list(sc), NULL)) goto FAILED;
                 break;
             }
         case TR_IF:
-            if (ST_SUCC != c_type_tran(TREE_if_det(t), cont)) goto FAILED;
-            if (ST_SUCC != c_type_tran(TREE_if_true_stmt(t), cont)) goto FAILED;
-            if (ST_SUCC != c_type_tran(TREE_if_false_stmt(t), cont)) goto FAILED;
+            if (ST_SUCC != TypeTran(TREE_if_det(t), cont)) goto FAILED;
+            if (ST_SUCC != TypeTran(TREE_if_true_stmt(t), cont)) goto FAILED;
+            if (ST_SUCC != TypeTran(TREE_if_false_stmt(t), cont)) goto FAILED;
             break;
         case TR_DO:
-            if (ST_SUCC != c_type_tran(TREE_dowhile_det(t), cont)) goto FAILED;
-            if (ST_SUCC != c_type_tran(TREE_dowhile_body(t), cont)) goto FAILED;
+            if (ST_SUCC != TypeTran(TREE_dowhile_det(t), cont)) goto FAILED;
+            if (ST_SUCC != TypeTran(TREE_dowhile_body(t), cont)) goto FAILED;
             break;
         case TR_WHILE:
-            if (ST_SUCC != c_type_tran(TREE_whiledo_det(t), cont)) goto FAILED;
-            if (ST_SUCC != c_type_tran(TREE_whiledo_body(t), cont)) goto FAILED;
+            if (ST_SUCC != TypeTran(TREE_whiledo_det(t), cont)) goto FAILED;
+            if (ST_SUCC != TypeTran(TREE_whiledo_body(t), cont)) goto FAILED;
             break;
         case TR_FOR:
-            if (ST_SUCC != c_type_tran(TREE_for_init(t), NULL)) goto FAILED;
-            if (ST_SUCC != c_type_tran(TREE_for_det(t), NULL)) goto FAILED;
-            if (ST_SUCC != c_type_tran(TREE_for_step(t), NULL)) goto FAILED;
-            if (ST_SUCC != c_type_tran(TREE_for_body(t), NULL)) goto FAILED;
+            if (ST_SUCC != TypeTran(TREE_for_init(t), NULL)) goto FAILED;
+            if (ST_SUCC != TypeTran(TREE_for_det(t), NULL)) goto FAILED;
+            if (ST_SUCC != TypeTran(TREE_for_step(t), NULL)) goto FAILED;
+            if (ST_SUCC != TypeTran(TREE_for_body(t), NULL)) goto FAILED;
             break;
         case TR_SWITCH:
-            if (ST_SUCC != c_type_tran(TREE_switch_det(t), NULL)) goto FAILED;
-            if (ST_SUCC != c_type_tran(TREE_switch_body(t), NULL)) goto FAILED;
+            if (ST_SUCC != TypeTran(TREE_switch_det(t), NULL)) goto FAILED;
+            if (ST_SUCC != TypeTran(TREE_switch_body(t), NULL)) goto FAILED;
             break;
         case TR_BREAK:
         case TR_CONTINUE:
@@ -954,15 +954,15 @@ static INT c_type_tran(Tree * t, TYCtx * cont)
         case TR_CASE:
             break;
         case TR_RETURN:
-            if (ST_SUCC != c_type_tran(TREE_ret_exp(t), cont)) goto FAILED;
+            if (ST_SUCC != TypeTran(TREE_ret_exp(t), cont)) goto FAILED;
             break;
         case TR_COND: //formulized log_OR_exp?exp:cond_exp
             {
-                if (ST_SUCC != c_type_tran(TREE_det(t), cont)) goto FAILED;
-                if (ST_SUCC != c_type_tran(TREE_true_part(t), cont)) {
+                if (ST_SUCC != TypeTran(TREE_det(t), cont)) goto FAILED;
+                if (ST_SUCC != TypeTran(TREE_true_part(t), cont)) {
                     goto FAILED;
                 }
-                if (ST_SUCC != c_type_tran(TREE_false_part(t), cont)) {
+                if (ST_SUCC != TypeTran(TREE_false_part(t), cont)) {
                     goto FAILED;
                 }
                 Decl * td = TREE_result_type(TREE_true_part(t));
@@ -997,7 +997,7 @@ static INT c_type_tran(Tree * t, TYCtx * cont)
             break;
         case TR_CVT: //type convertion
             {
-                if (ST_SUCC != c_type_tran(TREE_cast_exp(t), cont)) goto FAILED;
+                if (ST_SUCC != TypeTran(TREE_cast_exp(t), cont)) goto FAILED;
 
                 Decl * type_name = TREE_type_name(TREE_cvt_type(t));
 
@@ -1017,7 +1017,7 @@ static INT c_type_tran(Tree * t, TYCtx * cont)
             break;
         case TR_LDA:   // &a get address of 'a'
             {
-                if (ST_SUCC != c_type_tran(TREE_lchild(t), cont)) goto FAILED;
+                if (ST_SUCC != TypeTran(TREE_lchild(t), cont)) goto FAILED;
                 Decl * ld = TREE_result_type(TREE_lchild(t));
                 Decl * td = cp_type_name(ld);
                 insertafter(&PURE_DECL(td), new_decl(DCL_POINTER));
@@ -1026,7 +1026,7 @@ static INT c_type_tran(Tree * t, TYCtx * cont)
             }
         case TR_DEREF: //*p  dereferencing the pointer 'p'
             {
-                if (ST_SUCC != c_type_tran(TREE_lchild(t), cont)) {
+                if (ST_SUCC != TypeTran(TREE_lchild(t), cont)) {
                     goto FAILED;
                 }
                 Decl * ld = TREE_result_type(TREE_lchild(t));
@@ -1064,7 +1064,7 @@ static INT c_type_tran(Tree * t, TYCtx * cont)
         case TR_PLUS: // +123
         case TR_MINUS:  // -123
             {
-                if (ST_SUCC != c_type_tran(TREE_lchild(t), cont)) goto FAILED;
+                if (ST_SUCC != TypeTran(TREE_lchild(t), cont)) goto FAILED;
                 Decl * ld = TREE_result_type(TREE_lchild(t));
                 if (!is_arith(ld) || is_array(ld) || is_pointer(ld)) {
                     format_declaration(buf,ld);
@@ -1081,7 +1081,7 @@ static INT c_type_tran(Tree * t, TYCtx * cont)
             }
         case TR_REV:  // Reverse
             {
-                if (ST_SUCC != c_type_tran(TREE_lchild(t), cont)) goto FAILED;
+                if (ST_SUCC != TypeTran(TREE_lchild(t), cont)) goto FAILED;
                 Decl * ld = TREE_result_type(TREE_lchild(t));
                 if (!is_integer(ld) || is_array(ld) || is_pointer(ld)) {
                     format_declaration(buf,ld);
@@ -1093,7 +1093,7 @@ static INT c_type_tran(Tree * t, TYCtx * cont)
             }
         case TR_NOT:  // get non-value
             {
-                if (ST_SUCC != c_type_tran(TREE_lchild(t), cont)) goto FAILED;
+                if (ST_SUCC != TypeTran(TREE_lchild(t), cont)) goto FAILED;
                 Decl * ld = TREE_result_type(TREE_lchild(t));
                 if (!is_arith(ld)) {
                     format_declaration(buf,ld);
@@ -1106,7 +1106,7 @@ static INT c_type_tran(Tree * t, TYCtx * cont)
         case TR_INC:   //++a
         case TR_POST_INC: //a++
             {
-                if (ST_SUCC != c_type_tran(TREE_inc_exp(t), cont)) goto FAILED;
+                if (ST_SUCC != TypeTran(TREE_inc_exp(t), cont)) goto FAILED;
                 Decl * d = TREE_result_type(TREE_inc_exp(t));
                 if (!is_arith(d) && !is_pointer(d)) {
                     format_declaration(buf, d);
@@ -1124,7 +1124,7 @@ static INT c_type_tran(Tree * t, TYCtx * cont)
         case TR_DEC: //--a
         case TR_POST_DEC: //a--
             {
-                if (ST_SUCC != c_type_tran(TREE_dec_exp(t), cont)) goto FAILED;
+                if (ST_SUCC != TypeTran(TREE_dec_exp(t), cont)) goto FAILED;
 
                 Decl * d = TREE_result_type(TREE_dec_exp(t));
                 if (!is_arith(d) && !is_pointer(d)) {
@@ -1152,40 +1152,48 @@ static INT c_type_tran(Tree * t, TYCtx * cont)
                     ASSERT0(TREE_type_name(kid));
                     size = get_decl_size(TREE_type_name(kid));
                 } else {
-                    if (ST_SUCC != c_type_tran(kid, cont)) goto FAILED;
+                    if (ST_SUCC != TypeTran(kid, cont)) goto FAILED;
                     ASSERT0(TREE_result_type(kid));
                     size = get_decl_size(TREE_result_type(kid));
                 }
                 TREE_type(t) = TR_IMM;
                 TREE_imm_val(t) = size;
-                if (ST_SUCC != c_type_tran(t, cont)) goto FAILED;
+                if (ST_SUCC != TypeTran(t, cont)) goto FAILED;
                 break;
             }
         case TR_CALL:
-            {
-                if (ST_SUCC != c_type_tran(TREE_para_list(t), cont)) {
+            {            
+                if (ST_SUCC != TypeTran(TREE_para_list(t), cont)) {
                     goto FAILED;
                 }
-                if (ST_SUCC != c_type_tran(TREE_fun_exp(t), cont)) {
+                if (ST_SUCC != TypeTran(TREE_fun_exp(t), cont)) {
                     goto FAILED;
                 }
+                
                 Decl * ld = TREE_result_type(TREE_fun_exp(t));
                 ASSERT(DECL_dt(ld) == DCL_TYPE_NAME, ("expect TypeSpec-NAME"));
+                ASSERT0(DECL_decl_list(ld));
+                ASSERT(DECL_dt(DECL_decl_list(ld)) == DCL_ABS_DECLARATOR,
+                       ("expect abs-declarator"));
 
                 //Return value type is the CALL node type.
                 //So constructing return value type.
                 TypeSpec * ty = DECL_spec(ld);
-                ld = PURE_DECL(ld);
-                if (DECL_dt(ld) == DCL_FUN) {
-                    ld = DECL_next(ld);
+                Decl * pure = PURE_DECL(ld);
+                if (DECL_dt(pure) == DCL_FUN) {
+                    pure = DECL_next(pure);
+                } else if (DECL_dt(pure) == DCL_POINTER &&
+                           DECL_next(pure) != NULL &&
+                           DECL_dt(DECL_next(pure)) == DCL_FUN) {
+                    //FUN_POINTER
+                    pure = DECL_next(DECL_next(pure));
                 }
 
-                if (ld != NULL) {
-                    ASSERT(DECL_dt(ld) != DCL_FUN, ("Illegal dcl list"));
-                }
+                ASSERT(pure == NULL || DECL_dt(pure) != DCL_FUN,
+                       ("Illegal dcl list"));
 
-                TREE_result_type(t) = build_type_name(ty);
-                PURE_DECL(TREE_result_type(t)) = ld;
+                TREE_result_type(t) = buildTypeName(ty);
+                PURE_DECL(TREE_result_type(t)) = pure;
                 break;
             }
         case TR_ARRAY:
@@ -1195,10 +1203,10 @@ static INT c_type_tran(Tree * t, TYCtx * cont)
                 //e.g:
                 //    int ** p;
                 //    p[i][j] = 10;
-                if (ST_SUCC != c_type_tran(TREE_array_base(t), cont)) {
+                if (ST_SUCC != TypeTran(TREE_array_base(t), cont)) {
                     goto FAILED;
                 }
-                if (ST_SUCC != c_type_tran(TREE_array_indx(t), cont)) {
+                if (ST_SUCC != TypeTran(TREE_array_indx(t), cont)) {
                     goto FAILED;
                 }
 
@@ -1221,7 +1229,7 @@ static INT c_type_tran(Tree * t, TYCtx * cont)
         case TR_DMEM: // a.b
             {
                 Decl * rd, * ld;
-                if (ST_SUCC != c_type_tran(TREE_base_region(t), cont)) {
+                if (ST_SUCC != TypeTran(TREE_base_region(t), cont)) {
                     goto FAILED;
                 }
                 ld = TREE_result_type(TREE_base_region(t));
@@ -1235,7 +1243,7 @@ static INT c_type_tran(Tree * t, TYCtx * cont)
 
                 cont->is_field = true;
                 cont->base_tree_node = TREE_base_region(t);
-                if (ST_SUCC != c_type_tran(TREE_field(t), cont)) goto FAILED;
+                if (ST_SUCC != TypeTran(TREE_field(t), cont)) goto FAILED;
                 rd = TREE_result_type(TREE_field(t)),
                 cont->base_tree_node = NULL;
                 cont->is_field = false;
@@ -1247,14 +1255,14 @@ static INT c_type_tran(Tree * t, TYCtx * cont)
                         SYM_name(sym));
                     goto FAILED;
                 }
-                TREE_result_type(t) = build_type_name(DECL_spec(rd));
+                TREE_result_type(t) = buildTypeName(DECL_spec(rd));
                 PURE_DECL(TREE_result_type(t)) = cp_decl_begin_at(PURE_DECL(rd));
                 break;
             }
         case TR_INDMEM: // a->b
             {
                 Decl * rd,*ld;
-                if (ST_SUCC != c_type_tran(TREE_base_region(t), cont)) goto FAILED;
+                if (ST_SUCC != TypeTran(TREE_base_region(t), cont)) goto FAILED;
                 ld = TREE_result_type(TREE_base_region(t));
 
                 ASSERT(TREE_type(TREE_field(t)) == TR_ID,
@@ -1267,7 +1275,7 @@ static INT c_type_tran(Tree * t, TYCtx * cont)
 
                 cont->is_field = true;
                 cont->base_tree_node = TREE_base_region(t);
-                if (ST_SUCC != c_type_tran(TREE_field(t), cont)) goto FAILED;
+                if (ST_SUCC != TypeTran(TREE_field(t), cont)) goto FAILED;
                 rd = TREE_result_type(TREE_field(t)),
                 cont->base_tree_node = NULL;
                 cont->is_field = false;
@@ -1279,7 +1287,7 @@ static INT c_type_tran(Tree * t, TYCtx * cont)
                         SYM_name(sym));
                     goto FAILED;
                 }
-                TREE_result_type(t) = build_type_name(DECL_spec(rd));
+                TREE_result_type(t) = buildTypeName(DECL_spec(rd));
                 PURE_DECL(TREE_result_type(t)) =
                     cp_decl_begin_at(PURE_DECL(rd));
                 break;
@@ -1298,7 +1306,7 @@ FAILED:
 //Checking compatible between formal parameter and real parameter.
 //'formalp': formal parameter
 //'realp': real parameter
-static bool ck_para_type_compatible(Decl * formalp, Decl * realp)
+static bool checkParam(Decl * formalp, Decl * realp)
 {
     UNUSED(realp);
     UNUSED(formalp);
@@ -1308,7 +1316,7 @@ static bool ck_para_type_compatible(Decl * formalp, Decl * realp)
 
 
 //Declaration checking
-static INT c_declaration_ck(Decl * d)
+static INT checkDeclaration(Decl * d)
 {
     ASSERT0(DECL_dt(d) == DCL_DECLARATION);
     Decl * dclor = get_pure_declarator(d);
@@ -1335,10 +1343,10 @@ static INT c_declaration_ck(Decl * d)
 }
 
 
-static bool type_ck_call(Tree * t, TYCtx * cont)
+static bool checkCall(Tree * t, TYCtx * cont)
 {
-    if (ST_SUCC != typeck(TREE_para_list(t), cont)) return false;
-    if (ST_SUCC != typeck(TREE_fun_exp(t), cont)) return false;
+    if (ST_SUCC != TypeCheckCore(TREE_para_list(t), cont)) return false;
+    if (ST_SUCC != TypeCheckCore(TREE_fun_exp(t), cont)) return false;
     Decl * fun_decl = TREE_result_type(TREE_fun_exp(t));
 
     //Return type is the call type.
@@ -1367,7 +1375,7 @@ static bool type_ck_call(Tree * t, TYCtx * cont)
         while (formal_param_decl != NULL && real_param != NULL) {
             count++;
             Decl * pld = TREE_result_type(real_param);
-            if (!ck_para_type_compatible(formal_param_decl, pld)) {
+            if (!checkParam(formal_param_decl, pld)) {
                 err(TREE_lineno(t), "%dth parameter type incompatible", count);
                 return false;
             }
@@ -1416,7 +1424,7 @@ static bool type_ck_call(Tree * t, TYCtx * cont)
 
 
 //Perform type checking.
-static INT typeck(Tree * t, TYCtx * cont)
+static INT TypeCheckCore(Tree * t, TYCtx * cont)
 {
     if (cont == NULL) {
         TYCtx ct = {0};
@@ -1427,8 +1435,8 @@ static INT typeck(Tree * t, TYCtx * cont)
         g_src_line_num = TREE_lineno(t);
         switch (TREE_type(t)) {
         case TR_ASSIGN:
-            typeck(TREE_lchild(t), cont); 
-            typeck(TREE_rchild(t), cont); 
+            TypeCheckCore(TREE_lchild(t), cont); 
+            TypeCheckCore(TREE_rchild(t), cont); 
             break;
         case TR_ID:
         case TR_IMM:
@@ -1448,34 +1456,34 @@ static INT typeck(Tree * t, TYCtx * cont)
         case TR_RELATION:      // < > >= <=
         case TR_ADDITIVE:      // '+' '-'
         case TR_MULTI:         // '*' '/' '%'
-            typeck(TREE_lchild(t), cont); 
-            typeck(TREE_rchild(t), cont); 
+            TypeCheckCore(TREE_lchild(t), cont); 
+            TypeCheckCore(TREE_rchild(t), cont); 
             break;
         case TR_SCOPE:
-            typeck(SCOPE_stmt_list(TREE_scope(t)), cont);
+            TypeCheckCore(SCOPE_stmt_list(TREE_scope(t)), cont);
             break;
         case TR_IF:
-            typeck(TREE_if_det(t), cont);
-            typeck(TREE_if_true_stmt(t), cont);
-            typeck(TREE_if_false_stmt(t), cont);
+            TypeCheckCore(TREE_if_det(t), cont);
+            TypeCheckCore(TREE_if_true_stmt(t), cont);
+            TypeCheckCore(TREE_if_false_stmt(t), cont);
             break;
         case TR_DO:
-            typeck(TREE_dowhile_body(t), cont);
-            typeck(TREE_dowhile_det(t), cont);
+            TypeCheckCore(TREE_dowhile_body(t), cont);
+            TypeCheckCore(TREE_dowhile_det(t), cont);
             break;
         case TR_WHILE:
-            typeck(TREE_whiledo_det(t), cont);
-            typeck(TREE_whiledo_body(t), cont);
+            TypeCheckCore(TREE_whiledo_det(t), cont);
+            TypeCheckCore(TREE_whiledo_body(t), cont);
             break;
         case TR_FOR:
-            typeck(TREE_for_init(t), cont);
-            typeck(TREE_for_det(t), cont);
-            typeck(TREE_for_step(t), cont);
-            typeck(TREE_for_body(t), cont);
+            TypeCheckCore(TREE_for_init(t), cont);
+            TypeCheckCore(TREE_for_det(t), cont);
+            TypeCheckCore(TREE_for_step(t), cont);
+            TypeCheckCore(TREE_for_body(t), cont);
             break;
         case TR_SWITCH:
-            typeck(TREE_switch_det(t), cont);
-            typeck(TREE_switch_body(t), cont);
+            TypeCheckCore(TREE_switch_det(t), cont);
+            TypeCheckCore(TREE_switch_body(t), cont);
             break;
         case TR_BREAK:
         case TR_CONTINUE:
@@ -1485,15 +1493,15 @@ static INT typeck(Tree * t, TYCtx * cont)
         case TR_CASE:
             break;
         case TR_RETURN:
-            typeck(TREE_ret_exp(t), cont);
+            TypeCheckCore(TREE_ret_exp(t), cont);
             break;
         case TR_COND:      //formulized log_OR_exp?exp:cond_exp
-            typeck(TREE_det(t), cont);
-            typeck(TREE_true_part(t), cont);
-            typeck(TREE_false_part(t), cont);
+            TypeCheckCore(TREE_det(t), cont);
+            TypeCheckCore(TREE_true_part(t), cont);
+            TypeCheckCore(TREE_false_part(t), cont);
             break; 
         case TR_CVT:       //type convertion
-            typeck(TREE_cast_exp(t), cont);
+            TypeCheckCore(TREE_cast_exp(t), cont);
             break;
         case TR_TYPE_NAME: //user defined type or C standard type
             break;
@@ -1503,25 +1511,25 @@ static INT typeck(Tree * t, TYCtx * cont)
         case TR_MINUS:     // -123
         case TR_REV:       // Reverse
         case TR_NOT:       // get non-value
-            typeck(TREE_lchild(t), cont);
+            TypeCheckCore(TREE_lchild(t), cont);
             break;
         case TR_INC:       //++a
         case TR_POST_INC:  //a++
-            typeck(TREE_inc_exp(t), cont);
+            TypeCheckCore(TREE_inc_exp(t), cont);
             break;
         case TR_DEC:       //--a
         case TR_POST_DEC:  //a--
-            typeck(TREE_dec_exp(t), cont);
+            TypeCheckCore(TREE_dec_exp(t), cont);
             break;
         case TR_SIZEOF:    // sizeof(a)
-            typeck(TREE_sizeof_exp(t), cont);
+            TypeCheckCore(TREE_sizeof_exp(t), cont);
             break;
         case TR_CALL:
-            if (!type_ck_call(t, cont)) { goto FAILED; }
+            if (!checkCall(t, cont)) { goto FAILED; }
             break;
         case TR_ARRAY:
-            typeck(TREE_array_base(t), cont);
-            typeck(TREE_array_indx(t), cont);
+            TypeCheckCore(TREE_array_base(t), cont);
+            TypeCheckCore(TREE_array_indx(t), cont);
             break;
         case TR_DMEM:      // a.b
         case TR_INDMEM:    // a->b
@@ -1536,7 +1544,7 @@ FAILED:
 }
 
 
-static void type_trans_init()
+static void initTypeTran()
 {
     g_schar_type = new_type(T_SPEC_SIGNED | T_SPEC_CHAR);
     g_sshort_type = new_type(T_SPEC_SIGNED | T_SPEC_SHORT);
@@ -1585,14 +1593,14 @@ public:
 //Infer type to Tree nodes.
 INT TypeTransform()
 {
-    type_trans_init();
+    initTypeTran();
     SCOPE * s = get_global_scope();
     Decl * dcl = SCOPE_decl_list(s);
     while (dcl != NULL) {
         ASSERT0(DECL_decl_scope(dcl) == s);
         if (DECL_is_fun_def(dcl)) {
             Tree * stmt = SCOPE_stmt_list(DECL_fun_body(dcl));
-            if (ST_SUCC != c_type_tran(stmt, NULL)) {
+            if (ST_SUCC != TypeTran(stmt, NULL)) {
                 return ST_ERR;
             }
             if (g_err_msg_list.get_elem_count() > 0) {
@@ -1612,10 +1620,10 @@ INT TypeCheck()
     INT st = ST_SUCC;
     while (dcl != NULL) {
         ASSERT0(DECL_decl_scope(dcl) == s);
-        c_declaration_ck(dcl);
+        checkDeclaration(dcl);
         if (DECL_is_fun_def(dcl)) {
             Tree * stmt = SCOPE_stmt_list(DECL_fun_body(dcl));
-            typeck(stmt, NULL);
+            TypeCheckCore(stmt, NULL);
             if (g_err_msg_list.get_elem_count() > 0) {
                 st = ST_ERR;
                 break;
