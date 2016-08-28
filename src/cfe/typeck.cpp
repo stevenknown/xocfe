@@ -1162,14 +1162,14 @@ static INT TypeTran(Tree * t, TYCtx * cont)
                 break;
             }
         case TR_CALL:
-            {            
+            {
                 if (ST_SUCC != TypeTran(TREE_para_list(t), cont)) {
                     goto FAILED;
                 }
                 if (ST_SUCC != TypeTran(TREE_fun_exp(t), cont)) {
                     goto FAILED;
                 }
-                
+
                 Decl * ld = TREE_result_type(TREE_fun_exp(t));
                 ASSERT(DECL_dt(ld) == DCL_TYPE_NAME, ("expect TypeSpec-NAME"));
                 ASSERT0(DECL_decl_list(ld));
@@ -1435,8 +1435,8 @@ static INT TypeCheckCore(Tree * t, TYCtx * cont)
         g_src_line_num = TREE_lineno(t);
         switch (TREE_type(t)) {
         case TR_ASSIGN:
-            TypeCheckCore(TREE_lchild(t), cont); 
-            TypeCheckCore(TREE_rchild(t), cont); 
+            TypeCheckCore(TREE_lchild(t), cont);
+            TypeCheckCore(TREE_rchild(t), cont);
             break;
         case TR_ID:
         case TR_IMM:
@@ -1456,8 +1456,8 @@ static INT TypeCheckCore(Tree * t, TYCtx * cont)
         case TR_RELATION:      // < > >= <=
         case TR_ADDITIVE:      // '+' '-'
         case TR_MULTI:         // '*' '/' '%'
-            TypeCheckCore(TREE_lchild(t), cont); 
-            TypeCheckCore(TREE_rchild(t), cont); 
+            TypeCheckCore(TREE_lchild(t), cont);
+            TypeCheckCore(TREE_rchild(t), cont);
             break;
         case TR_SCOPE:
             TypeCheckCore(SCOPE_stmt_list(TREE_scope(t)), cont);
@@ -1499,7 +1499,7 @@ static INT TypeCheckCore(Tree * t, TYCtx * cont)
             TypeCheckCore(TREE_det(t), cont);
             TypeCheckCore(TREE_true_part(t), cont);
             TypeCheckCore(TREE_false_part(t), cont);
-            break; 
+            break;
         case TR_CVT:       //type convertion
             TypeCheckCore(TREE_cast_exp(t), cont);
             break;
@@ -1536,7 +1536,7 @@ static INT TypeCheckCore(Tree * t, TYCtx * cont)
         case TR_PRAGMA:
             break;
         default: ASSERT(0, ("unknown tree type:%d", TREE_type(t)));
-        }        
+        }
     }
     return ST_SUCC;
 FAILED:
