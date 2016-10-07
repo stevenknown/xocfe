@@ -83,7 +83,7 @@ void dump_tree(Tree * t)
 #ifdef _DEBUG_
     if (t == NULL || g_tfile == NULL) { return; }
     UINT dn = 2;
-    static CHAR res_type_buf[1024];
+    static CHAR res_type_buf[8192];
     res_type_buf[0] = 0;
     format_declaration(res_type_buf, TREE_result_type(t));
     switch (TREE_type(t)) {
@@ -164,7 +164,7 @@ void dump_tree(Tree * t)
         case TR_ENUM_CONST:
             {
                 INT v = get_enum_const_val(TREE_enum(t), TREE_enum_val_idx(t));
-                CHAR * s = get_enum_const_name(
+                CHAR const* s = get_enum_const_name(
                     TREE_enum(t), TREE_enum_val_idx(t));
                 note("\nENUM_CONST(id:%u):%s %d <%s>",
                      TREE_uid(t), s, v, res_type_buf);
@@ -318,7 +318,7 @@ void dump_tree(Tree * t)
             dump_trees(TREE_lchild(t));
             g_indent -= dn;
             break;
-        case TR_DEREF: //*p  dereferencing the pointer 'p'
+        case TR_DEREF: // *p  dereferencing the pointer 'p'
             note("\nDEREF(id:%u) <%s>", TREE_uid(t), res_type_buf);
             g_indent += dn;
             dump_trees(TREE_lchild(t));

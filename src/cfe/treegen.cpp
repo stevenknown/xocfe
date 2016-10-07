@@ -62,9 +62,7 @@ static void * xmalloc(size_t size)
 //Verify the Tree node legality.
 static bool verify(Tree * t)
 {
-    if (t == NULL)
-        return true;
-
+    if (t == NULL) { return true; }
     switch (TREE_type(t)) {
     case TR_SCOPE:
     case TR_CALL:
@@ -74,8 +72,7 @@ static bool verify(Tree * t)
     case TR_COND:
     case TR_LABEL:
         break;
-    default:
-        ASSERT0(TREE_token(t) != T_NUL && get_token_name(TREE_token(t)));
+    default: ASSERT0(TREE_token(t) != T_NUL && get_token_name(TREE_token(t)));
     }
 
     switch (TREE_type(t)) {
@@ -114,7 +111,7 @@ static bool verify(Tree * t)
     case TR_COND:  //formulized log_OR_exp?exp:cond_exp
     case TR_CVT:   //type convertion
     case TR_LDA:   // &a get address of 'a'
-    case TR_DEREF: //*p  dereferencing the pointer 'p'
+    case TR_DEREF: // *p  dereferencing the pointer 'p'
     case TR_PLUS:  // +123
     case TR_MINUS: // -123
     case TR_REV:   // Reverse
@@ -312,25 +309,25 @@ bool is_in_first_set_of_exp_list(TOKEN tok)
             return true;
         }
         break;
-    case T_IMM:       //0~9
-    case T_IMML:      //0~9L
-    case T_IMMU:      //Unsigned
-    case T_IMMUL:     //Unsigned Long
-    case T_FP:        //double decimal e.g 3.14
-    case T_FPF:       //float decimal e.g 3.14
-    case T_FPLD:      //long double decimal e.g 3.14
-    case T_STRING:    //"abcd"
-    case T_CHAR_LIST: //'abcd'
-    case T_LPAREN:    //(
-    case T_ADD:       //+
-    case T_SUB:       //-
-    case T_ASTERISK:  //*
-    case T_BITAND:    //&
-    case T_NOT:       //!
-    case T_REV:       //~ (reverse  a = ~a)
-    case T_ADDADD:    //++
-    case T_SUBSUB:    //--
-    case T_SIZEOF:    //sizeof
+    case T_IMM:       // 0~9
+    case T_IMML:      // 0~9L
+    case T_IMMU:      // Unsigned
+    case T_IMMUL:     // Unsigned Long
+    case T_FP:        // double decimal e.g 3.14
+    case T_FPF:       // float decimal e.g 3.14
+    case T_FPLD:      // long double decimal e.g 3.14
+    case T_STRING:    // "abcd"
+    case T_CHAR_LIST: // 'abcd'
+    case T_LPAREN:    // (
+    case T_ADD:       // +
+    case T_SUB:       // -
+    case T_ASTERISK:  // *
+    case T_BITAND:    // &
+    case T_NOT:       // !
+    case T_REV:       // ~ (reverse  a = ~a)
+    case T_ADDADD:    // ++
+    case T_SUBSUB:    // --
+    case T_SIZEOF:    // sizeof
         return true;
     default:;
     }
@@ -735,8 +732,7 @@ static Tree * primary_exp(IN OUT UINT * st)
         {
             Enum * e = NULL;
             INT idx = 0;
-            if (is_enum_const_exist_in_outer_scope(g_real_token_string,
-                                                   &e, &idx)) {
+            if (findEnumConst(g_real_token_string, &e, &idx)) {
                 t = NEWTN(TR_ENUM_CONST);
                 TREE_enum(t) = e;
                 TREE_enum_val_idx(t) = idx;
@@ -754,6 +750,7 @@ static Tree * primary_exp(IN OUT UINT * st)
                 }
                 TREE_id_decl(t) = dcl;
             }
+            TREE_token(t) = g_real_token;
             match(T_ID);
         }
         break;
@@ -1781,21 +1778,22 @@ static Tree * label_stmt()
             Tree * nt = NULL;
             match(T_CASE);
             if (!is_sst_exist(st_DO) &&
-               !is_sst_exist(st_WHILE) &&
-               !is_sst_exist(st_FOR) &&
-               !is_sst_exist(st_SWITCH)) {
+                !is_sst_exist(st_WHILE) &&
+                !is_sst_exist(st_FOR) &&
+                !is_sst_exist(st_SWITCH)) {
                 err(g_real_line_num, "invalid use 'case'");
                 return t;
             }
+
             t = NEWTN(TR_CASE);
             TREE_token(t) = g_real_token;
-            nt = postfix_exp(); //case's constant value
-            if (!compute_constant_exp(nt, &idx, 0)) {
+            nt = conditional_exp(); //case expression must be constant.
+            if (!computeConstExp(nt, &idx, 0)) {
                 err(g_real_line_num, "expected constant expression");
                 return t;
             }
-            if (computeConstBitLen(idx) >
-                (sizeof(TREE_case_value(t)) * HOST_BIT_PER_BYTE)) {
+            if (computeConstBitLen((TMWORD)idx) >
+                (BYTE_PER_INT * HOST_BIT_PER_BYTE)) {
                 err(g_real_line_num, "bitsize of const is more than %dbit",
                     (sizeof(TREE_case_value(t)) * HOST_BIT_PER_BYTE));
                 return t;
@@ -2317,7 +2315,7 @@ static Tree * dispatch()
         if (is_user_type_exist_in_outer_scope(g_real_token_string, &ut)) {
             //reduce to variable declaration
             declaration();
-        } else if (is_enum_const_exist_in_outer_scope(g_real_token_string,
+        } else if (findEnumConst(g_real_token_string,
                                                       &e, &idx)) {
             t = exp_stmt();
         } else {
@@ -2337,21 +2335,21 @@ static Tree * dispatch()
     case T_IMML:
     case T_IMMU:
     case T_IMMUL:
-    case T_FP:         //decimal e.g 3.14
-    case T_FPF:        //decimal e.g 3.14
-    case T_FPLD:       //decimal e.g 3.14
-    case T_STRING:     //"abcd"
-    case T_CHAR_LIST:  //'abcd'
-    case T_LPAREN:     //(
-    case T_ADD:        //+
-    case T_SUB:        //-
-    case T_ASTERISK:   //*
-    case T_BITAND:     //&
-    case T_NOT:        //!
-    case T_REV:        //~ (reverse  a = ~a)
-    case T_ADDADD:     //++
-    case T_SUBSUB:     //--
-    case T_SIZEOF:     //sizeof
+    case T_FP:         // decimal e.g 3.14
+    case T_FPF:        // decimal e.g 3.14
+    case T_FPLD:       // decimal e.g 3.14
+    case T_STRING:     // "abcd"
+    case T_CHAR_LIST:  // 'abcd'
+    case T_LPAREN:     // (
+    case T_ADD:        // +
+    case T_SUB:        // -
+    case T_ASTERISK:   // *
+    case T_BITAND:     // &
+    case T_NOT:        // !
+    case T_REV:        // ~ (reverse  a = ~a)
+    case T_ADDADD:     // ++
+    case T_SUBSUB:     // --
+    case T_SIZEOF:     // sizeof
         t = exp_stmt();
         break;
     case T_SEMI:     // ;

@@ -27,11 +27,9 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 @*/
 #include "cfecom.h"
 
-/*
-Computing expected value in compiling period, such as constant expression.
- 'g_is_allow_float' cannot be used via extern , it must be assigned with
- 'compute_constant_value' absolutely.
-*/
+//Computing expected value in compiling period, such as constant expression.
+// 'g_is_allow_float' cannot be used via extern , it must be assigned with
+// 'compute_constant_value' absolutely.
 
 static bool g_is_allow_float = false;
 static Stack<CELL*> g_cell_stack;
@@ -64,17 +62,19 @@ static bool compute_enum_const(Tree * t)
     Enum * e = TREE_enum(t);
     INT i = TREE_enum_val_idx(t);
     EnumValueList * evl = ENUM_vallist(e);
-    while (i>0) {
-        evl = EVAL_LIST_next(evl);
+    for (; i > 0; i--, evl = EVAL_LIST_next(evl)) {
+        ASSERT0(evl);
     }
+
+    ASSERT0(evl);
     pushv(EVAL_LIST_val(evl));
     return true;
 }
 
 
-/* Compute byte size of TYPE_NAME and record in the cell stack, or record
--1 if failed. The function return true if the computation is success,
-otherwise return false. */
+//Compute byte size of TYPE_NAME and record in the cell stack, or record
+//-1 if failed. The function return true if the computation is success,
+//otherwise return false.
 static bool compute_sizeof(Tree * t)
 {
     Tree * p = TREE_sizeof_exp(t);
@@ -318,9 +318,9 @@ static bool compute_conditional_exp(IN Tree * t)
 }
 
 
-bool compute_constant_exp(IN Tree * t, OUT LONGLONG * v, bool is_allow_float)
+bool computeConstExp(IN Tree * t, OUT LONGLONG * v, bool is_allow_float)
 {
-    ASSERT0(t != NULL && v != NULL);
+    ASSERT0(t && v);
     g_is_allow_float = is_allow_float;
     if (!compute_conditional_exp(t)) {
         *v = 0;

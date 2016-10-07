@@ -169,8 +169,8 @@ static INT process_struct_init(TypeSpec * ty, Tree ** init)
     INT st = ST_SUCC;
     Struct * s = TYPE_struct_type(ty);
     ASSERT(IS_STRUCT(ty), ("ONLY must be struct type-spec"));
-    if (STRUCT_is_complete(s)) {
-        err(g_real_line_num, "uses undefined struct %s",
+    if (!STRUCT_is_complete(s)) {
+        err(g_real_line_num, "uses incomplete struct %s",
             SYM_name(STRUCT_tag(s)));
         return ST_ERR;
     }
@@ -203,10 +203,11 @@ static INT process_union_init(TypeSpec * ty, Tree ** init)
     Union * s = TYPE_union_type(ty);
     ASSERT(IS_UNION(ty), ("ONLY must be union type-spec"));
     if (!UNION_is_complete(s)) {
-        err(g_real_line_num, "uses undefined union %s",
+        err(g_real_line_num, "uses incomplete union %s",
             SYM_name((UNION_tag(s))));
         return ST_ERR;
     }
+
     Decl * sdcl = UNION_decl_list(s);
     while (sdcl != NULL && *init != NULL) {
         if ((st = process_init(sdcl,init)) != ST_SUCC) {
@@ -502,12 +503,14 @@ static bool checkAssign(Tree * t, Decl * ld, Decl *)
         err(TREE_lineno(t), "illegal '%s', left operand must be l-value", buf);
         return false;
     }
+    
     if (IS_CONST(DECL_spec(ld))) {
         format_declaration(buf, ld);
         err(TREE_lineno(t),
              "illegal '%s', l-value specifies const object", buf);
         return false;
-    }
+    }    
+    
     //TODO: we should check struct/union compatibility in 'ld' and 'rd'
     //Here look lchild of '=' as default type
     return true;
@@ -636,7 +639,7 @@ static bool TypeTranID(Tree * t, TYCtx * cont, CHAR buf[])
         }
     }
 
-    Decl * dcl_list = get_pure_declarator(tmp_decl);
+    Decl * dcl_list = const_cast<Decl*>(get_pure_declarator(tmp_decl));
     ASSERT(DECL_dt(dcl_list) == DCL_ID,
            ("'id' should be declarator-list-head. Illegal declaration"));
 
@@ -1024,7 +1027,7 @@ static INT TypeTran(Tree * t, TYCtx * cont)
                 TREE_result_type(t) = td;
                 break;
             }
-        case TR_DEREF: //*p  dereferencing the pointer 'p'
+        case TR_DEREF: // *p  dereferencing the pointer 'p'
             {
                 if (ST_SUCC != TypeTran(TREE_lchild(t), cont)) {
                     goto FAILED;
@@ -1041,17 +1044,13 @@ static INT TypeTran(Tree * t, TYCtx * cont)
                 ASSERT(ld, ("lchild must be pointer type"));
                 if (DECL_dt(ld) == DCL_POINTER ||
                     DECL_dt(ld) == DCL_ARRAY) {
-                    ASSERT0(TREE_parent(t));
-                    //if (TREE_type(parent) != TR_ARRAY)
-                    {
-                        //In C, base of array only needs address, so the DEREF
-                        //operator has alias effect. It means ARRAY(LD(p)) for
-                        //given declaration: int (*p)[].
-                        //
-                        //The value is needed if there is not an ARRAY operator,
-                        //e.g: a = *p, should generate a=LD(LD(p)).
-                        remove(&PURE_DECL(td), ld);
-                    }
+                    //In C, base of array only needs address, so the DEREF
+                    //operator has alias effect. It means ARRAY(LD(p)) for
+                    //given declaration: int (*p)[].
+                    //
+                    //The value is needed if there is not an ARRAY operator,
+                    //e.g: a = *p, should generate a=LD(LD(p)).
+                    remove(&PURE_DECL(td), ld);
                 } else if (DECL_dt(ld) == DCL_FUN) {
                     //ACCEPT
                 } else {
@@ -1316,10 +1315,10 @@ static bool checkParam(Decl * formalp, Decl * realp)
 
 
 //Declaration checking
-static INT checkDeclaration(Decl * d)
+static INT checkDeclaration(Decl const* d)
 {
     ASSERT0(DECL_dt(d) == DCL_DECLARATION);
-    Decl * dclor = get_pure_declarator(d);
+    Decl const* dclor = get_pure_declarator(d);
     ASSERT0(dclor);
     while (dclor != NULL) {
         if (DECL_dt(dclor) == DCL_FUN) {
@@ -1436,7 +1435,7 @@ static INT TypeCheckCore(Tree * t, TYCtx * cont)
         switch (TREE_type(t)) {
         case TR_ASSIGN:
             TypeCheckCore(TREE_lchild(t), cont);
-            TypeCheckCore(TREE_rchild(t), cont);
+            TypeCheckCore(TREE_rchild(t), cont);            
             break;
         case TR_ID:
         case TR_IMM:
@@ -1506,7 +1505,7 @@ static INT TypeCheckCore(Tree * t, TYCtx * cont)
         case TR_TYPE_NAME: //user defined type or C standard type
             break;
         case TR_LDA:       // &a get address of 'a'
-        case TR_DEREF:     //*p  dereferencing the pointer 'p'
+        case TR_DEREF:     // *p  dereferencing the pointer 'p'
         case TR_PLUS:      // +123
         case TR_MINUS:     // -123
         case TR_REV:       // Reverse

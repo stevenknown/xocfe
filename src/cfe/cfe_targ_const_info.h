@@ -28,8 +28,13 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef __CFE_TARG_CONST_INFO_H__
 #define __CFE_TARG_CONST_INFO_H__
 
+//Represent target machine word with host type.
+#ifndef TMWORD
+#define TMWORD                  UINT
+#endif
+
 //Define machine word/half-word/byte/bit size
-#ifndef BIT_PER_BYTE
+#ifndef BIT_PER_BYTE    
 #define BIT_PER_BYTE         8
 #endif
 
