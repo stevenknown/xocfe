@@ -4,13 +4,13 @@ INCLUDES = -I./ \
            -I./com/ \
            -I./cfe/ \
            -I./cfe.prj/ \
-           -I./util/
+           -I./opt/
 
-VPATH = ./cfe ./com ./util ./cfe.prj
+VPATH = ./cfe ./com ./opt ./cfe.prj
 
 bin_PROGRAMS = xocfe
 
-AM_CFLAGS = -D_LINUX_ -Wno-write-strings -Wsign-promo \
+AM_CFLAGS = -Wno-write-strings -Wsign-promo \
         -Wsign-compare -Wpointer-arith -Wno-multichar -Winit-self \
         -Wstrict-aliasing=3 -D_DEBUG_ -Wswitch
 AM_CXXFLAGS = $(AM_CFLAGS) -fno-rtti -fno-exceptions
@@ -33,7 +33,7 @@ xocfe_SOURCES = \
                 com/bs.cpp \
                 com/ltype.cpp \
                 \
-                util/label.cpp \
-                util/util.cpp
+                opt/label.cpp \
+                opt/util.cpp
 
 

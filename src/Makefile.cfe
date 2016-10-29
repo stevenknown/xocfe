@@ -21,7 +21,7 @@ OPT_OBJS +=\
 opt/label.o \
 opt/util.o
 
-CFLAGS = -O0 -g2 -DFOR_PAC  -D_LINUX_ -Wno-write-strings -Wsign-promo \
+CFLAGS = -O0 -g2 -Wno-write-strings -Wsign-promo \
         -Wsign-compare -Wpointer-arith -Wno-multichar -Winit-self \
         -Wstrict-aliasing=3 -Wswitch -D_DEBUG_ #-Wall
         #-Werror=overloaded-virtual \
