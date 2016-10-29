@@ -10,6 +10,6 @@ build whole compiler, or anyother project.
 
 BUILD: ./autogen.sh & ./configure & make
 
-RUN: cd src & ./xocfe ../test/test_ansic.c -dump a.log
+RUN: cd src & ./xocfe ../test/test_ansic.c -dump asttree.log
 
 Enjoy the code.
