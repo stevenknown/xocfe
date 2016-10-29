@@ -9,6 +9,7 @@ A concise and readable C++ Template Library is under 'src/com' directory. It can
 build whole compiler, or anyother project.
 
 BUILD: ./autogen.sh & ./configure & make
+
 RUN: cd src & ./xocfe ../test/test_ansic.c -dump a.log
 
 Enjoy the code.
