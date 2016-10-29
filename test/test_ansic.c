@@ -178,29 +178,28 @@ struct defs
 int
 main (int n, char *args)
 {
-
   extern int
-    s22 (),
-    s241 (),
-    s243 (),
-    s244 (),
-    s25 (),
-    s26 (),
-    s4 (),
-    s61 (),
-    s626 (),
-    s71 (),
-    s72 (),
-    s757 (),
-    s7813 (),
-    s714 (),
-    s715 (),
-    s81 (),
-    s84 (),
-    s85 (),
-    s86 (),
-    s88 (),
-    s9 ();
+    s22 (struct defs *pd0),
+    s241 (struct defs *pd0),
+    s243 (struct defs *pd0),
+    s244 (struct defs *pd0),
+    s25 (struct defs *pd0),
+    s26 (struct defs *pd0),
+    s4 (struct defs *pd0),
+    s61 (struct defs *pd0),
+    s626 (struct defs *pd0),
+    s71 (struct defs *pd0),
+    s72 (struct defs *pd0),
+    s757 (struct defs *pd0),
+    s7813 (struct defs *pd0),
+    s714 (struct defs *pd0),
+    s715 (struct defs *pd0),
+    s81 (struct defs *pd0),
+    s84 (struct defs *pd0),
+    s85 (struct defs *pd0),
+    s86 (struct defs *pd0),
+    s88 (struct defs *pd0),
+    s9 (struct defs *pd0);
 
   int j;
   static int (*sec[]) (struct defs * pd0) =
@@ -1467,7 +1466,7 @@ int s71 (struct defs * pd0)        /*         7.1  Primary expressions   */
   int rc;
   char *ps, *pt;
   static char q = 'q';
-  int x[10], McCarthy (), clobber (), a, b, *p;
+  int x[10], McCarthy (int x), clobber (), a, b, *p;
   ps = qs71;
   pt = pd0->rfs;
   rc = 0;
@@ -6631,7 +6630,7 @@ test is unreliable.              */
 
 int s84 (struct defs * pd0)        /*  8.4 Meaning of declarators   */
 {
-  int *ip, i, *fip (), (*pfi) (), j, k, array (), glork ();
+  int *ip, i, *fip (int x), (*pfi) (), j, k, array (), glork (int x);
   static int x3d[3][5][7];
   /* 0.01
      float fa[17], *afp[17], sum;

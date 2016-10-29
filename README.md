@@ -8,4 +8,7 @@ an AST tree. XOCFE only support C99.
 A concise and readable C++ Template Library is under 'src/com' directory. It can be used to 
 build whole compiler, or anyother project.
 
+BUILD: ./autogen.sh & ./configure & make
+RUN: cd src & ./xocfe ../test/test_ansic.c -dump a.log
+
 Enjoy the code.
