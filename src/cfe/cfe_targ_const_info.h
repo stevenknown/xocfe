@@ -86,6 +86,14 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define HOST_INT             LONGLONG
 #endif
 
+//Host unsigned integer.
+//e.g: Build XOCC on x8664, HOST_UINT should be 64bit.
+//Or build XOCC on ARM, HOST_UINT should be 32bit,
+//of course 64bit is ok if you want.
+#ifndef HOST_UINT
+#define HOST_UINT             ULONGLONG
+#endif
+
 #ifndef HOST_FP
 #define HOST_FP              double
 #endif

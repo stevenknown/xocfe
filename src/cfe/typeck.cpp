@@ -449,6 +449,15 @@ static TypeSpec * buildBaseTypeSpec(INT des)
 }
 
 
+//Accroding C89 binary operation converting rules
+//l                r                       standard C convert
+//double           any                     double
+//float            any                     float
+//unsigned         unsigned                upper rank unsigned
+//signed           signed                  upper rank signed
+//unsigned         lower rank signed       unsigned
+//unsigned         upper rank signed       upper rank signed
+//any              any                     no-convert
 static INT getCvtRank(INT des)
 {
     if (IS_TYPED(des, T_SPEC_CHAR)) {
@@ -482,11 +491,12 @@ static INT getCvtRank(INT des)
 //unsigned         lower rank signed       unsigned
 //unsigned         upper rank signed       upper rank signed
 //any              any                     no-convert
-static Decl * buildBinaryOpType(Decl * l, Decl * r)
+static Decl * buildBinaryOpType(TREE_TYPE tok, Decl * l, Decl * r)
 {
     TypeSpec * lty = DECL_spec(l);
     TypeSpec * rty = DECL_spec(r);
-    if (getCvtRank(TYPE_des(lty)) > getCvtRank(TYPE_des(rty))) {
+    if ((getCvtRank(TYPE_des(lty)) > getCvtRank(TYPE_des(rty))) ||
+        tok == TR_SHIFT) {
         return l;
     }
     return r;
@@ -774,7 +784,7 @@ static INT TypeTran(Tree * t, TYCtx * cont)
                         get_token_name(TREE_token(TREE_rchild(t))));
                     goto FAILED;
                 }
-                TREE_result_type(t) = buildBinaryOpType(ld, rd);
+                TREE_result_type(t) = buildBinaryOpType(TREE_type(t), ld, rd);
                 break;
             }
         case TR_EQUALITY: // == !=
@@ -844,7 +854,8 @@ static INT TypeTran(Tree * t, TYCtx * cont)
                         TREE_result_type(t) = ld;
                     } else if (is_arith(ld) && is_arith(rd)) {
                         //arithmetic operation
-                        TREE_result_type(t) = buildBinaryOpType(ld, rd);
+                        TREE_result_type(t) = buildBinaryOpType(
+                            TREE_type(t), ld, rd);
                     } else {
                         ASSERT(0,("TODO"));
                     }
@@ -885,7 +896,8 @@ static INT TypeTran(Tree * t, TYCtx * cont)
                         TREE_result_type(t) = ld;
                     } else if (is_arith(ld) && is_arith(rd)) {
                         //arithmetic operation
-                        TREE_result_type(t) = buildBinaryOpType(ld, rd);
+                        TREE_result_type(t) = buildBinaryOpType(
+                            TREE_type(t), ld, rd);
                     } else {
                         ASSERT(0,("TODO"));
                     }
@@ -903,7 +915,8 @@ static INT TypeTran(Tree * t, TYCtx * cont)
                 if (TREE_token(t) == T_ASTERISK || TREE_token(t) == T_DIV) {
                     if (is_arith(ld) && is_arith(rd)) {
                         //arithmetic operation
-                        TREE_result_type(t) = buildBinaryOpType(ld, rd);
+                        TREE_result_type(t) = buildBinaryOpType(
+                            TREE_type(t), ld, rd);
                     } else {
                         err(TREE_lineno(t), "illegal operation for '%s'",
                              get_token_name(TREE_token(TREE_rchild(t))));
@@ -912,7 +925,8 @@ static INT TypeTran(Tree * t, TYCtx * cont)
                 } else {
                     if (is_integer(ld) && is_integer(rd)) {
                         //arithmetic operation
-                        TREE_result_type(t) = buildBinaryOpType(ld, rd);
+                        TREE_result_type(t) = buildBinaryOpType(
+                            TREE_type(t), ld, rd);
                     } else {
                         err(TREE_lineno(t), "illegal operation for '%%'");
                         goto FAILED;

@@ -759,7 +759,7 @@ static Tree * primary_exp(IN OUT UINT * st)
         //If the target integer hold in 'g_real_token_string' is longer than
         //host size_t type, it will be truncated now.
         TREE_token(t) = g_real_token;
-        TREE_imm_val(t) = xatol(g_real_token_string, false);
+        TREE_imm_val(t) = (HOST_INT)xatoll(g_real_token_string, false);
         match(T_IMM);
         return t;
     case T_IMML:
@@ -767,20 +767,20 @@ static Tree * primary_exp(IN OUT UINT * st)
         //If the target integer hold in 'g_real_token_string' is longer than
         //host size_t type, it will be truncated now.
         TREE_token(t) = g_real_token;
-        TREE_imm_val(t) = xatol(g_real_token_string, false);
+        TREE_imm_val(t) = (HOST_INT)xatoll(g_real_token_string, false);
         match(T_IMML);
         return t;
     case T_IMMU:
         t = NEWTN(TR_IMM);
         TREE_token(t) = g_real_token;
-        TREE_imm_val(t) = xatol(g_real_token_string, false);
+        TREE_imm_val(t) = (HOST_UINT)xatoll(g_real_token_string, false);
         TREE_is_unsigned(t) = true;
         match(T_IMMU);
         return t;
     case T_IMMUL:
         t = NEWTN(TR_IMML);
         TREE_token(t) = g_real_token;
-        TREE_imm_val(t) = xatol(g_real_token_string, false);
+        TREE_imm_val(t) = (HOST_UINT)xatoll(g_real_token_string, false);
         TREE_is_unsigned(t) = true;
         match(T_IMMUL);
         return t;

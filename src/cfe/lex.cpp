@@ -635,10 +635,11 @@ static TOKEN t_string()
                 }
                 g_cur_token_string[g_cur_token_string_pos] = 0;
                 g_cur_token_string_pos -= n;
-                LONG o = xatol(&g_cur_token_string[g_cur_token_string_pos],
-                               true);
-                //long type truncated to char type.
-                g_cur_token_string[g_cur_token_string_pos++] = (CHAR)o;
+
+                //longlong type truncated to char type.
+                CHAR o = (CHAR)xatoll(&g_cur_token_string[
+                    g_cur_token_string_pos], true);
+                g_cur_token_string[g_cur_token_string_pos++] = o;
             } else if (c == 'x' || c == 'X' || (c >= 'a' && c <= 'f') ||
                        (c >= 'A' && c <= 'Z')) {
                 //'\xdd' or '\aabb'
@@ -729,10 +730,11 @@ static TOKEN t_char_list()
                 }
                 g_cur_token_string[g_cur_token_string_pos] = 0;
                 g_cur_token_string_pos -= n;
-                LONG o = xatol(&g_cur_token_string[g_cur_token_string_pos],
-                               true);
+                
                 //long type truncated to char type.
-                g_cur_token_string[g_cur_token_string_pos++] = (CHAR)o;
+                CHAR o = (CHAR)xatoll(&g_cur_token_string[
+                    g_cur_token_string_pos], true);
+                g_cur_token_string[g_cur_token_string_pos++] = o;
             } else if (c == 'x' || c == 'X' || (c >= 'a' && c <= 'f') ||
                        (c >= 'A' && c <= 'Z')) {
                 //'\xdd' or '\aabb'
