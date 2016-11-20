@@ -14,6 +14,7 @@ cfe/cell.o
 COM_OBJS +=\
 com/smempool.o \
 com/comf.o \
+com/strbuf.o \
 com/bs.o \
 com/ltype.o
 

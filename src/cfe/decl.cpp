@@ -686,30 +686,32 @@ static INT ck_type_spec_legally(TypeSpec * ty)
     if (c1 == 1 && c3 == 1) {
         format_base_type_spec(buf1, ty);
         err(g_real_line_num,
-            "struct or union cannot compatilable with '%s'", buf1);
+            "struct or union cannot compatilable with '%s'", buf1.buf);
         goto FAILED;
     }
     if (c1 == 1 && c4 == 1) {
         format_user_type_spec(buf1, ty);
         err(g_real_line_num,
-            "struct or union cannot compatilable with '%s'", buf1);
+            "struct or union cannot compatilable with '%s'", buf1.buf);
         goto FAILED;
     }
     if (c2 == 1 && c3 == 1) {
         format_base_type_spec(buf1, ty);
-        err(g_real_line_num, "enum-type cannot compatilable with '%s'", buf1);
+        err(g_real_line_num, "enum-type cannot compatilable with '%s'",
+            buf1.buf);
         goto FAILED;
     }
     if (c2 == 1 && c4 == 1) {
         format_user_type_spec(buf1, ty);
-        err(g_real_line_num, "enum-type cannot compatilable with '%s'", buf1);
+        err(g_real_line_num, "enum-type cannot compatilable with '%s'",
+            buf1.buf);
         goto FAILED;
     }
     if (c3 == 1 && c4 == 1) {
         format_user_type_spec(buf1, ty);
         format_base_type_spec(buf2, ty);
         err(g_real_line_num,
-            "'%s' type cannot compatilable with '%s'", buf1, buf2);
+            "'%s' type cannot compatilable with '%s'", buf1.buf, buf2.buf);
         goto FAILED;
     }
 SUCC:
@@ -4205,7 +4207,7 @@ static bool check_struct_union_complete(Decl * decl)
                         get_pure_type_spec(type_spec));
                     err(g_real_line_num,
                         "'%s' uses incomplete defined %s : %s",
-                        name, t, buf);
+                        name, t, buf.buf);
                     return false;
                 } else {
                     err(g_real_line_num,

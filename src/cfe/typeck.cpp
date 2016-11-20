@@ -509,14 +509,15 @@ static bool checkAssign(Tree * t, Decl * ld, Decl *)
     StrBuf buf(64);
     if (is_array(ld)) {
         format_declaration(buf, ld);
-        err(TREE_lineno(t), "illegal '%s', left operand must be l-value", buf.buf);
+        err(TREE_lineno(t), "illegal '%s', left operand must be l-value", 
+            buf.buf);
         return false;
     }
     
     if (IS_CONST(DECL_spec(ld))) {
         format_declaration(buf, ld);
         err(TREE_lineno(t),
-             "illegal '%s', l-value specifies const object", buf);
+            "illegal '%s', l-value specifies const object", buf.buf);
         return false;
     }    
     
