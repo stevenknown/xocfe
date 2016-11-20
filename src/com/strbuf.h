@@ -25,30 +25,40 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 @*/
-#include "ltype.h"
-#include "comf.h"
-#include "strbuf.h"
-#include "smempool.h"
-#include "sstl.h"
+#ifndef _STRBUF_H_
+#define _STRBUF_H_
 
-using namespace xcom;
+namespace xcom {
 
-#include "util.h"
-#include "symtab.h"
+class StrBuf {
+public:
+    CHAR * buf;
+    UINT buflen;
+    
+public:    
+    StrBuf(UINT initsize)
+    { 
+        ASSERT0(initsize > 0);
+        buflen = initsize; 
+        buf = (CHAR*)malloc(initsize);
+        buf[0] = 0;
+    }
+    COPY_CONSTRUCTOR(StrBuf);
+    ~StrBuf() { if (buf != NULL) { delete buf; } }
 
-using namespace xoc;
+    void clean()
+    {
+        ASSERT0(buf);
+        buf[0] = 0;
+    }
+    void sprint(CHAR const* format, ...);
+    void vsprint(CHAR const* format, va_list args);
+    void strcat(CHAR const* format, ...);    
+    void strcat(UINT l, CHAR const* format, va_list args);
+    UINT strlen() const { return ::strlen(buf); }
+    void nstrcat(UINT size, CHAR const* format, ...);
+    void vstrcat(CHAR const* format, va_list args);
+};
 
-#include "label.h"
-#include "cfe_targ_const_info.h"
-#include "errno.h"
-#include "cfexport.h"
-#include "err.h"
-#include "lex.h"
-#include "typeck.h"
-#include "scope.h"
-#include "decl.h"
-#include "tree.h"
-#include "st.h"
-#include "cell.h"
-#include "treegen.h"
-#include "exectree.h"
+} //namespace xcom
+#endif

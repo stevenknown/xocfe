@@ -162,8 +162,7 @@ void dump_scope_tree(SCOPE * s, INT indent)
 void dump_scope(SCOPE * s, UINT flag)
 {
     if (g_tfile == NULL) return;
-    static CHAR buf[8192];
-    buf[0] = 0;
+    StrBuf buf(64);
     note("\nSCOPE(id:%d, level:%d)", SCOPE_id(s), SCOPE_level(s));
     g_indent++;
 
@@ -216,9 +215,9 @@ void dump_scope(SCOPE * s, UINT flag)
         g_indent++;
         note("\n");
         while (el != NULL) {
-            buf[0] = 0;
+            buf.clean();
             format_enum_complete(buf, ENUM_LIST_enum(el));
-            note("%s\n", buf);
+            note("%s\n", buf.buf);
             el = ENUM_LIST_next(el);
         }
         g_indent--;
@@ -231,9 +230,9 @@ void dump_scope(SCOPE * s, UINT flag)
         g_indent++;
         note("\n");
         while (utl != NULL) {
-            buf[0] = 0;
+            buf.clean();
             format_user_type_spec(buf, USER_TYPE_LIST_utype(utl));
-            note("%s\n", buf);
+            note("%s\n", buf.buf);
             utl = USER_TYPE_LIST_next(utl);
         }
         g_indent--;
@@ -248,9 +247,9 @@ void dump_scope(SCOPE * s, UINT flag)
         C<Struct*> * ct;
         for (Struct * st = SCOPE_struct_list(s).get_head(&ct);
              st != NULL; st = SCOPE_struct_list(s).get_next(&ct)) {
-            buf[0] = 0;
+            buf.clean();
             format_struct_complete(buf, st);
-            note("%s\n", buf);
+            note("%s\n", buf.buf);
         }
 
         g_indent--;
@@ -265,9 +264,9 @@ void dump_scope(SCOPE * s, UINT flag)
         C<Union*> * ct;
         for (Union * st = SCOPE_union_list(s).get_head(&ct);
              st != NULL; st = SCOPE_union_list(s).get_next(&ct)) {
-            buf[0] = 0;
+            buf.clean();
             format_union_complete(buf, st);
-            note("%s\n", buf);
+            note("%s\n", buf.buf);
         }
 
         g_indent--;
@@ -280,9 +279,9 @@ void dump_scope(SCOPE * s, UINT flag)
         note("\n");
         g_indent++;
         while (dcl != NULL) {
-            buf[0] = 0;
+            buf.clean();
             format_declaration(buf, dcl);
-            note("%s", buf);
+            note("%s", buf.buf);
             dump_decl(dcl);
 
             //Dump function body

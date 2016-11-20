@@ -391,10 +391,8 @@ public:
 #define MAX_ARRAY_INDX           0xfffffff
 //END Decl
 
-
 //Format Decl to dump
 #define DECL_FMT_INDENT_INTERVAL 4
-
 
 //Exported Functions
 Decl * addToUserTypeList(UserTypeList ** ut_list , Decl * decl);
@@ -411,30 +409,22 @@ UINT computeStructTypeSize(TypeSpec * ty);
 bool declaration();
 bool declaration_list();
 void dump_decl(Decl const* dcl);
-CHAR * dump_decl(Decl const* dcl, CHAR * buf);
-void dump_struct(Struct * s);
-void dump_union(Union * s);
+void dump_decl(Decl const* dcl, StrBuf & buf);
 void dump_type(TypeSpec * ty, bool is_ptr);
 
 Decl * expand_user_type(Decl * ut);
 
 //Dump C style type-info
-INT format_dcrl_reverse(IN OUT CHAR buf[], Decl const* decl);
-INT format_struct_union(IN OUT CHAR buf[], TypeSpec const* ty);
-INT format_enum(IN OUT CHAR buf[], TypeSpec const* ty);
-INT format_enum_complete(IN OUT CHAR buf[], TypeSpec const* ty);
-INT format_enum_complete(IN OUT CHAR buf[], Enum const* e);
-INT format_struct_union_complete(IN OUT CHAR buf[], TypeSpec const* ty);
-INT format_struct_complete(IN OUT CHAR buf[], Struct const* s);
-INT format_union_complete(IN OUT CHAR buf[], Union const* u);
-INT format_decl_spec(IN OUT CHAR buf[], TypeSpec const* ty, bool is_ptr);
-INT format_parameter_list(IN OUT CHAR buf[], Decl const* decl);
-INT format_user_type_spec(IN OUT CHAR buf[], TypeSpec const* ty);
-INT format_user_type_spec(IN OUT CHAR buf[], Decl const* ut);
-INT format_base_type_spec(IN OUT CHAR buf[], TypeSpec const* ty);
-INT format_stor_spec(IN OUT CHAR buf[], TypeSpec const* ty);
-INT format_declarator(IN OUT CHAR buf[], Decl const* decl);
-INT format_declaration(IN OUT CHAR buf[], Decl const* decl);
+INT format_enum_complete(StrBuf & buf, Enum const* e);
+INT format_struct_union_complete(StrBuf & buf, TypeSpec const* ty);
+INT format_struct_complete(StrBuf & buf, Struct const* s);
+INT format_union_complete(StrBuf & buf, Union const* u);
+INT format_decl_spec(StrBuf & buf, TypeSpec const* ty, bool is_ptr);
+INT format_parameter_list(StrBuf & buf, Decl const* decl);
+INT format_user_type_spec(StrBuf & buf, TypeSpec const* ty);
+INT format_user_type_spec(StrBuf & buf, Decl const* ut);
+INT format_declarator(StrBuf & buf, Decl const* decl);
+INT format_declaration(StrBuf & buf, Decl const* decl);
 
 //Dump Decl-Tree style type-info
 INT format_dcrl(Decl const* decl, INT indent);

@@ -506,11 +506,10 @@ static Decl * buildBinaryOpType(TREE_TYPE tok, Decl * l, Decl * r)
 //Checking type-convert of modifier
 static bool checkAssign(Tree * t, Decl * ld, Decl *)
 {
-    CHAR buf[MAX_BUF_LEN];
-    buf[0] = 0;
+    StrBuf buf(64);
     if (is_array(ld)) {
         format_declaration(buf, ld);
-        err(TREE_lineno(t), "illegal '%s', left operand must be l-value", buf);
+        err(TREE_lineno(t), "illegal '%s', left operand must be l-value", buf.buf);
         return false;
     }
     
@@ -527,7 +526,7 @@ static bool checkAssign(Tree * t, Decl * ld, Decl *)
 }
 
 
-static bool TypeTranID(Tree * t, TYCtx * cont, CHAR buf[])
+static bool TypeTranID(Tree * t, TYCtx * cont)
 {
     //Construct type-name and expand user type if it was declared.
     Decl * tmp_decl = NULL;
@@ -546,11 +545,11 @@ static bool TypeTranID(Tree * t, TYCtx * cont, CHAR buf[])
             //Search for matched field.
             Decl * field = STRUCT_decl_list(s);
             if (field == NULL) {
-                buf[0] = 0;
+                StrBuf buf(64);
                 format_struct_union_complete(buf, DECL_spec(base));
                 err(TREE_lineno(t),
                     " '%s' is an empty struct, '%s' is not its field",
-                    buf, SYM_name(TREE_id(t)));
+                    buf.buf, SYM_name(TREE_id(t)));
                 return false;
             }
 
@@ -569,11 +568,11 @@ static bool TypeTranID(Tree * t, TYCtx * cont, CHAR buf[])
             //Search for matched field.
             Decl * field = UNION_decl_list(s);
             if (field == NULL) {
-                buf[0] = 0;
+                StrBuf buf(64);
                 format_struct_union_complete(buf, DECL_spec(base));
                 err(TREE_lineno(t),
                     " '%s' is an empty struct, '%s' is not its field",
-                    buf, SYM_name(TREE_id(t)));
+                    buf.buf, SYM_name(TREE_id(t)));
                 return false;
             }
 
@@ -589,11 +588,11 @@ static bool TypeTranID(Tree * t, TYCtx * cont, CHAR buf[])
         }
 
         if (tmp_decl == NULL) {
-            buf[0] = 0;
+            StrBuf buf(64);
             format_struct_union_complete(buf, DECL_spec(base));
             err(TREE_lineno(t),
                 " '%s' : is not a member of type '%s'",
-                SYM_name(TREE_id(t)), buf);
+                SYM_name(TREE_id(t)), buf.buf);
             return false;
         }
     } else {
@@ -610,8 +609,7 @@ static bool TypeTranID(Tree * t, TYCtx * cont, CHAR buf[])
     //be used to infer type for tree node.
     TREE_result_type(t) = buildTypeName(DECL_spec(tmp_decl));
     Decl * res_ty = TREE_result_type(t);
-
-
+    
     //Set bit info if idenifier is bitfield.
     //Bit info stored at declarator list.
     Decl * declarator = DECL_decl_list(tmp_decl);
@@ -620,31 +618,35 @@ static bool TypeTranID(Tree * t, TYCtx * cont, CHAR buf[])
 
     if (DECL_is_bit_field(declarator)) {
         if (is_pointer(tmp_decl)) {
+            StrBuf buf(64);
             format_declaration(buf, tmp_decl);
             err(TREE_lineno(t),
-                "'%s' : pointer cannot assign bit length", buf);
+                "'%s' : pointer cannot assign bit length", buf.buf);
             return false;
         }
 
         if (is_array(tmp_decl)) {
+            StrBuf buf(64);
             format_declaration(buf, tmp_decl);
             err(TREE_lineno(t),
-                "'%s' : array type cannot assign bit length", buf);
+                "'%s' : array type cannot assign bit length", buf.buf);
             return false;
         }
 
         if (!is_integer(tmp_decl)) {
+            StrBuf buf(64);
             format_declaration(buf, tmp_decl);
-            err(TREE_lineno(t), "'%s' : bit field must have integer type", buf);
+            err(TREE_lineno(t), "'%s' : bit field must have integer type", buf.buf);
             return false;
         }
 
         //Check bitfield's base type is big enough to hold it.
         INT size = get_decl_size(tmp_decl) * BIT_PER_BYTE;
         if (size < DECL_bit_len(declarator)) {
+            StrBuf buf(64);
             format_declaration(buf, tmp_decl);
             err(TREE_lineno(t),
-                "'%s' : type of bit field too small for number of bits", buf);
+                "'%s' : type of bit field too small for number of bits", buf.buf);
             return false;
         }
     }
@@ -691,8 +693,6 @@ static bool TypeTranID(Tree * t, TYCtx * cont, CHAR buf[])
 //Transfering type declaration for all AST nodes.
 static INT TypeTran(Tree * t, TYCtx * cont)
 {
-    CHAR buf[MAX_BUF_LEN];
-    buf[0] = 0;
     if (cont == NULL) {
         TYCtx ct = {0};
         cont = &ct;
@@ -716,7 +716,7 @@ static INT TypeTran(Tree * t, TYCtx * cont)
             TREE_result_type(t) = TREE_result_type(TREE_lchild(t));
             break;
         case TR_ID:
-            if (!TypeTranID(t, cont, buf)) { goto FAILED; }
+            if (!TypeTranID(t, cont)) { goto FAILED; }
             break;
         case TR_IMM:
             TREE_result_type(t) = BUILD_TYNAME(T_SPEC_INT|T_QUA_CONST);
@@ -761,18 +761,20 @@ static INT TypeTran(Tree * t, TYCtx * cont)
                 Decl * ld = TREE_result_type(TREE_lchild(t));
                 Decl * rd = TREE_result_type(TREE_rchild(t));
                 if (is_pointer(ld) || is_array(ld)) {
+                    StrBuf buf(64);
                     format_declaration(buf,ld);
                     err(TREE_lineno(t),
                         "illegal '%s', left operand has type '%s'",
-                        get_token_name(TREE_token(TREE_lchild(t))), buf);
+                        get_token_name(TREE_token(TREE_lchild(t))), buf.buf);
                     goto FAILED;
                 }
 
                 if (is_pointer(rd) || is_array(rd)) {
+                    StrBuf buf(64);
                     format_declaration(buf,rd);
                     err(TREE_lineno(t),
                         "illegal '%s', right operand has type '%s'",
-                        get_token_name(TREE_token(TREE_rchild(t))), buf);
+                        get_token_name(TREE_token(TREE_rchild(t))), buf.buf);
                     goto FAILED;
                 }
 
@@ -1080,13 +1082,14 @@ static INT TypeTran(Tree * t, TYCtx * cont)
                 if (ST_SUCC != TypeTran(TREE_lchild(t), cont)) goto FAILED;
                 Decl * ld = TREE_result_type(TREE_lchild(t));
                 if (!is_arith(ld) || is_array(ld) || is_pointer(ld)) {
+                    StrBuf buf(64);
                     format_declaration(buf,ld);
                     if (TREE_type(t) == TR_PLUS) {
                         err(TREE_lineno(t),
-                            "illegal positive '+' for type '%s'", buf);
+                            "illegal positive '+' for type '%s'", buf.buf);
                     } else {
                         err(TREE_lineno(t),
-                            "illegal minus '-' for type '%s'", buf);
+                            "illegal minus '-' for type '%s'", buf.buf);
                     }
                 }
                 TREE_result_type(t) = ld;
@@ -1097,9 +1100,10 @@ static INT TypeTran(Tree * t, TYCtx * cont)
                 if (ST_SUCC != TypeTran(TREE_lchild(t), cont)) goto FAILED;
                 Decl * ld = TREE_result_type(TREE_lchild(t));
                 if (!is_integer(ld) || is_array(ld) || is_pointer(ld)) {
+                    StrBuf buf(64);
                     format_declaration(buf,ld);
                     err(TREE_lineno(t),
-                        "illegal bit reverse operation for type '%s'", buf);
+                        "illegal bit reverse operation for type '%s'", buf.buf);
                 }
                 TREE_result_type(t) = ld;
                 break;
@@ -1109,9 +1113,10 @@ static INT TypeTran(Tree * t, TYCtx * cont)
                 if (ST_SUCC != TypeTran(TREE_lchild(t), cont)) goto FAILED;
                 Decl * ld = TREE_result_type(TREE_lchild(t));
                 if (!is_arith(ld)) {
-                    format_declaration(buf,ld);
+                    StrBuf buf(64);
+                    format_declaration(buf, ld);
                     err(TREE_lineno(t),
-                        "illegal logical not operation for type '%s'", buf);
+                        "illegal logical not operation for type '%s'", buf.buf);
                 }
                 TREE_result_type(t) = ld;
                 break;
@@ -1122,13 +1127,14 @@ static INT TypeTran(Tree * t, TYCtx * cont)
                 if (ST_SUCC != TypeTran(TREE_inc_exp(t), cont)) goto FAILED;
                 Decl * d = TREE_result_type(TREE_inc_exp(t));
                 if (!is_arith(d) && !is_pointer(d)) {
+                    StrBuf buf(64);
                     format_declaration(buf, d);
                     if (TREE_type(t) == TR_INC) {
                         err(TREE_lineno(t),
-                            "illegal prefixed '++', for type '%s'", buf);
+                            "illegal prefixed '++', for type '%s'", buf.buf);
                     } else {
                         err(TREE_lineno(t),
-                            "illegal postfix '++', for type '%s'", buf);
+                            "illegal postfix '++', for type '%s'", buf.buf);
                     }
                 }
                 TREE_result_type(t) = d;
@@ -1141,13 +1147,14 @@ static INT TypeTran(Tree * t, TYCtx * cont)
 
                 Decl * d = TREE_result_type(TREE_dec_exp(t));
                 if (!is_arith(d) && !is_pointer(d)) {
+                    StrBuf buf(64);
                     format_declaration(buf, d);
                     if (TREE_type(t) == TR_DEC) {
                         err(TREE_lineno(t),
-                            "illegal prefixed '--' for type '%s'", buf);
+                            "illegal prefixed '--' for type '%s'", buf.buf);
                     } else {
                         err(TREE_lineno(t),
-                            "illegal postfix '--' for type '%s'", buf);
+                            "illegal postfix '--' for type '%s'", buf.buf);
                     }
                 }
                 TREE_result_type(t) = d;

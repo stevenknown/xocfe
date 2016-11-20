@@ -25,30 +25,86 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 @*/
+#ifdef WIN32
+#include <time.h>
+#else
+#include <time.h>
+#include <sys/time.h>
+#endif
+
 #include "ltype.h"
 #include "comf.h"
 #include "strbuf.h"
+#include "stdio.h"
+#include "string.h"
 #include "smempool.h"
 #include "sstl.h"
+#include "bs.h"
 
-using namespace xcom;
+namespace xcom {
 
-#include "util.h"
-#include "symtab.h"
+void StrBuf::strcat(UINT l, CHAR const* format, va_list args)
+{
+    UINT sl = ::strlen(buf);
+    if (buflen - sl <= l) {
+        CHAR * oldbuf = buf;
+        buflen += l + 1;
+        buf = (CHAR*)malloc(buflen);
+        memcpy(buf, oldbuf, sl);
+        free(oldbuf);
+    }
+    UINT k = VSNPRINTF(buf + sl, l, format, args);
+    ASSERT0(k == l);
+    UNUSED(k);
+    buf[sl + l] = 0;
+}
 
-using namespace xoc;
 
-#include "label.h"
-#include "cfe_targ_const_info.h"
-#include "errno.h"
-#include "cfexport.h"
-#include "err.h"
-#include "lex.h"
-#include "typeck.h"
-#include "scope.h"
-#include "decl.h"
-#include "tree.h"
-#include "st.h"
-#include "cell.h"
-#include "treegen.h"
-#include "exectree.h"
+void StrBuf::strcat(CHAR const* format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    UINT l = VSNPRINTF(NULL, 0, format, args);
+    strcat(l, format, args);
+    va_end(args);
+}
+
+
+void StrBuf::vstrcat(CHAR const* format, va_list args)
+{
+    UINT l = VSNPRINTF(NULL, 0, format, args);
+    strcat(l, format, args);
+}
+
+
+void StrBuf::sprint(CHAR const* format, ...)
+{
+    clean();
+    va_list args;
+    va_start(args, format);
+    UINT l = VSNPRINTF(NULL, 0, format, args);
+    strcat(l, format, args);
+    va_end(args);
+}
+
+
+void StrBuf::vsprint(CHAR const* format, va_list args)
+{
+    clean();
+    vstrcat(format, args);
+}
+
+
+//The functions snprintf() and vsnprintf() do not write more than size 
+//bytes (including the terminating null byte ('\0')).
+void StrBuf::nstrcat(UINT size, CHAR const* format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    UINT l = VSNPRINTF(NULL, 0, format, args);
+    if (l > size) { l = size; }
+    strcat(l, format, args);
+    va_end(args);
+}
+
+}//namespace xcom

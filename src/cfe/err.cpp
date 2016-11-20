@@ -27,9 +27,6 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 @*/
 #include "cfecom.h"
 
-#define ERR_BUF_LEN 1024
-#define WARN_BUF_LEN 1024
-
 List<ERR_MSG*> g_err_msg_list;
 List<WARN_MSG*> g_warn_msg_list;
 
@@ -67,21 +64,18 @@ void show_warn()
 //Used in treegen.cpp
 void warn1(CHAR * msg, ...)
 {
+    if (msg == NULL) { return ; }
+    
     WARN_MSG * p = NULL;
-    CHAR sbuf[WARN_BUF_LEN];
-    if (msg == NULL) {
-        return ;
-    }
-    if (strlen(msg)>WARN_BUF_LEN) {
-        msg[WARN_BUF_LEN-1] = 0;
-    }
-    //CHAR * arg = (CHAR*)((CHAR*)(&msg) + sizeof(CHAR*));
+    StrBuf sbuf(64);   
+    
     va_list arg;
     va_start(arg, msg);
-    vsprintf(sbuf, msg, arg);
+    sbuf.vsprint(msg, arg);
+    
     p = (WARN_MSG*)xmalloc(sizeof(WARN_MSG));
-    p->msg = (CHAR*)xmalloc(strlen(sbuf)+1);
-    memcpy(p->msg, sbuf, strlen(sbuf)+1);
+    p->msg = (CHAR*)xmalloc(sbuf.strlen() + 1);
+    memcpy(p->msg, sbuf.buf, sbuf.strlen() + 1);
     p->lineno = g_real_line_num;
     g_warn_msg_list.append_tail(p);
     return ;
@@ -91,21 +85,17 @@ void warn1(CHAR * msg, ...)
 //Report error with line number.
 void err(INT line_num, CHAR * msg, ...)
 {
+    if (msg == NULL) { return; }
+
     ERR_MSG * p = NULL;
-    CHAR sbuf[ERR_BUF_LEN];
-    if (msg == NULL) {
-        return;
-    }
-    if (strlen(msg) > ERR_BUF_LEN) {
-        msg[ERR_BUF_LEN - 1] = 0;
-    }
-    //CHAR * arg = (CHAR*)((CHAR*)(&msg) + sizeof(CHAR*));
+    StrBuf sbuf(64);
+    
     va_list arg;
     va_start(arg, msg);
-    vsprintf(sbuf, msg, arg);
+    sbuf.vsprint(msg, arg);
     p = (ERR_MSG*)xmalloc(sizeof(ERR_MSG));
-    p->msg = (CHAR*)xmalloc(strlen(sbuf) + 1);
-    memcpy(p->msg, sbuf, strlen(sbuf) + 1);
+    p->msg = (CHAR*)xmalloc(sbuf.strlen() + 1);
+    memcpy(p->msg, sbuf.buf, sbuf.strlen() + 1);
     p->lineno = line_num;
     g_err_msg_list.append_tail(p);
     va_end(arg);

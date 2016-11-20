@@ -103,6 +103,8 @@ static bool is_enum_id_exist(
         EnumList const* e_list,
         CHAR const* e_id_name, 
         OUT Enum ** e);
+static INT format_base_type_spec(StrBuf & buf, TypeSpec const* ty);
+static INT format_struct_union(StrBuf & buf, TypeSpec const* ty);
 
 #ifdef _DEBUG_
 UINT g_decl_counter = 1;
@@ -623,8 +625,8 @@ static TypeSpec * typedef_name(TypeSpec * ty)
 static INT ck_type_spec_legally(TypeSpec * ty)
 {
     INT des = TYPE_des(ty);
-    CHAR buf1[MAX_BUF_LEN]; buf1[0] = 0;
-    CHAR buf2[MAX_BUF_LEN]; buf2[0] = 0;
+    StrBuf buf1(64);
+    StrBuf buf2(64);
     //struct or union
     BYTE c1 = (HAVE_FLAG(des, T_SPEC_STRUCT) ||
                HAVE_FLAG(des, T_SPEC_UNION)) != 0,
@@ -2334,25 +2336,15 @@ FAILED:
 }
 
 
-CHAR * dump_decl(Decl const* dcl, CHAR * buf)
+void dump_decl(Decl const* dcl, StrBuf & buf)
 {
-    if (g_tfile == NULL) return NULL;
-    bool is_ret = true;
-    if (buf == NULL) {
-        CHAR tmp[MAX_BUF_LEN*10];
-        tmp[0] = 0;
-        buf = tmp;
-        is_ret = false;
-    }
+    if (g_tfile == NULL) { return; }
+    
     format_declaration(buf, dcl);
+    
     fflush(g_tfile);
-    if (!is_ret) {
-        fprintf(g_tfile, "\n%s\n", buf);
-        fflush(g_tfile);
-        return NULL;
-    }
+    fprintf(g_tfile, "\n%s\n", buf.buf);
     fflush(g_tfile);
-    return buf;
 }
 
 
@@ -3225,83 +3217,102 @@ bool is_simple_base_type(INT des)
 }
 
 
-INT format_enum_complete(IN OUT CHAR buf[], Enum const* e)
+static INT format_base_type_spec(StrBuf & buf, TypeSpec const* ty)
+{
+    if (ty == NULL) { return ST_SUCC; }
+    if (!is_simple_base_type(ty)) {
+        return ST_ERR;
+    }
+    if (TYPE_des(ty) & T_SPEC_SIGNED)
+        buf.strcat("signed ");
+    if (TYPE_des(ty) & T_SPEC_UNSIGNED)
+        buf.strcat("unsigned ");
+    if (TYPE_des(ty) & T_SPEC_CHAR)
+        buf.strcat("char ");
+    if (TYPE_des(ty) & T_SPEC_SHORT)
+        buf.strcat("short ");
+    if (TYPE_des(ty) & T_SPEC_LONG)
+        buf.strcat("long ");
+    if (TYPE_des(ty) & T_SPEC_INT)
+        buf.strcat("int ");
+    if (TYPE_des(ty) & T_SPEC_LONGLONG)
+        buf.strcat("longlong ");
+    if (TYPE_des(ty) & T_SPEC_FLOAT)
+        buf.strcat("float ");
+    if (TYPE_des(ty) & T_SPEC_DOUBLE)
+        buf.strcat("double ");
+    if (TYPE_des(ty) & T_SPEC_VOID)
+        buf.strcat("void ");
+    return ST_SUCC;
+
+}
+
+
+INT format_enum_complete(StrBuf & buf, Enum const* e)
 {
     if (e == NULL) { return ST_SUCC; }
-    CHAR * p = buf + strlen(buf);
+    //CHAR * p = buf + strlen(buf);
     if (ENUM_name(e)) {
-        sprintf(p, "%s ", SYM_name(ENUM_name(e)));
-        p = p + strlen(p);
+        buf.strcat("%s ", SYM_name(ENUM_name(e)));
+        //p = p + strlen(p);
     }
     if (ENUM_vallist(e)) {
-        strcat(p, "{");
+        buf.strcat("{");
         EnumValueList * ev = ENUM_vallist(e);
         while (ev != NULL) {
-            p = p + strlen(p);
-            sprintf(p, "%s ", SYM_name(EVAL_LIST_name(ev)));
+            //p = p + strlen(p);
+            buf.strcat("%s ", SYM_name(EVAL_LIST_name(ev)));
             ev = EVAL_LIST_next(ev);
         }
-        strcat(buf, "} ");
+        buf.strcat("} ");
     }
     return ST_SUCC;
 }
 
 
-INT format_enum_complete(IN OUT CHAR buf[], TypeSpec const* ty)
+static INT format_enum_complete(StrBuf & buf, TypeSpec const* ty)
 {
     if (ty == NULL) { return ST_SUCC; }
-    strcat(buf, "enum ");
+    buf.strcat("enum ");
     format_enum_complete(buf, TYPE_enum_type(ty));
     return ST_SUCC;
 }
 
 
-INT format_enum(IN OUT CHAR buf[], TypeSpec const* ty)
-{
-    if (ty == NULL)    { return ST_SUCC; }
-    strcat(buf, "enum ");
-    Enum * e = TYPE_enum_type(ty);
-    if (e != NULL && ENUM_name(e) != NULL) {
-        CHAR * p = buf + strlen(buf);
-        sprintf(p, "%s ", SYM_name(ENUM_name(e)));
-    }
-    return ST_SUCC;
-}
-
-
 //Format union's name and members.
-INT format_union_complete(IN OUT CHAR buf[], Union const* u)
+INT format_union_complete(StrBuf & buf, Union const* u)
 {
     if (u == NULL) { return ST_SUCC; }
-    strcat(buf, "union ");
+    buf.strcat("union ");
     Decl * member = UNION_decl_list(u);
     if (UNION_tag(u)) {
-        strcat(buf, SYM_name(UNION_tag(u)));
+        buf.strcat(SYM_name(UNION_tag(u)));
     }
+    
     //Printf members.
-    strcat(buf, "{");
+    buf.strcat("{");
     while (member != NULL) {
         format_declaration(buf, member);
-        strcat(buf,"; ");
+        buf.strcat("; ");
         member = DECL_next(member);
     }
-    strcat(buf, "}");
+    buf.strcat("}");
     return ST_SUCC;
 }
 
 
 //Format struct's name and members.
-INT format_struct_complete(IN OUT CHAR buf[], Struct const* s)
+INT format_struct_complete(StrBuf & buf, Struct const* s)
 {
     if (s == NULL) { return ST_SUCC; }
-    strcat(buf, "struct ");
+    buf.strcat("struct ");
     Decl * member = STRUCT_decl_list(s);
     if (STRUCT_tag(s)) {
-        strcat(buf, SYM_name(STRUCT_tag(s)));
+        buf.strcat(SYM_name(STRUCT_tag(s)));
     }
 
     //Printf members.
-    strcat(buf, "{");
+    buf.strcat("{");
     while (member != NULL) {
         ASSERT0(DECL_dt(member) == DCL_DECLARATION);
         if ((is_struct(member) || is_union(member)) &&
@@ -3316,16 +3327,16 @@ INT format_struct_complete(IN OUT CHAR buf[], Struct const* s)
             ASSERT0(is_pointer(member));
         }
         format_declaration(buf, member);
-        strcat(buf, "; ");
+        buf.strcat("; ");
         member = DECL_next(member);
     }
-    strcat(buf, "}");
+    buf.strcat("}");
     return ST_SUCC;
 }
 
 
 //Format struct/union's name and members.
-INT format_struct_union_complete(IN OUT CHAR buf[], TypeSpec const* ty)
+INT format_struct_union_complete(StrBuf & buf, TypeSpec const* ty)
 {
     if (ty == NULL) { return ST_SUCC; }
     format_struct_union(buf, ty);
@@ -3335,29 +3346,30 @@ INT format_struct_union_complete(IN OUT CHAR buf[], TypeSpec const* ty)
     if (s == NULL) { return ST_SUCC; }
 
     Decl * member = STRUCT_decl_list(s);
-    strcat(buf, "{");
+    buf.strcat("{");
     while (member != NULL) {
         format_declaration(buf, member);
-        strcat(buf, "; ");
+        buf.strcat("; ");
         member = DECL_next(member);
     }
-    strcat(buf, "}");
+    buf.strcat("}");
     return ST_SUCC;
 }
 
 
 //Format struct/union's name, it does not include members.
-INT format_struct_union(IN OUT CHAR buf[], TypeSpec const* ty)
+static INT format_struct_union(StrBuf & buf, TypeSpec const* ty)
 {
-    if (ty == NULL)    { return ST_SUCC; }
+    if (ty == NULL) { return ST_SUCC; }
     if (TYPE_des(ty) & T_SPEC_STRUCT) {
-        strcat(buf, "struct ");
+        buf.strcat("struct ");
     } else if (TYPE_des(ty) & T_SPEC_UNION) {
-        strcat(buf, "union ");
+        buf.strcat("union ");
     } else {
         err(g_src_line_num, "expected a struct or union");
         return ST_ERR;
     }
+    
     Struct * s = TYPE_struct_type(ty);
 
     //Illegal type, TYPE_struct_type can not be NULL,
@@ -3366,34 +3378,34 @@ INT format_struct_union(IN OUT CHAR buf[], TypeSpec const* ty)
 
     //printf tag
     if (STRUCT_tag(s)) {
-        CHAR * p = buf + strlen(buf);
-        sprintf(p, "%s ", SYM_name(STRUCT_tag(s)));
+        //CHAR * p = buf + strlen(buf);
+        buf.strcat("%s ", SYM_name(STRUCT_tag(s)));
     }
     return ST_SUCC;
 }
 
 
-INT format_stor_spec(IN OUT CHAR buf[], TypeSpec const* ty)
+static INT format_stor_spec(StrBuf & buf, TypeSpec const* ty)
 {
-    if (ty == NULL)    { return ST_SUCC; }
-    if (IS_REG(ty)) strcat(buf,"register ");
-    if (IS_STATIC(ty)) strcat(buf,"static ");
-    if (IS_EXTERN(ty)) strcat(buf,"extern ");
-    if (IS_TYPEDEF(ty)) strcat(buf,"typedef ");
+    if (ty == NULL) { return ST_SUCC; }
+    if (IS_REG(ty)) buf.strcat("register ");
+    if (IS_STATIC(ty)) buf.strcat("static ");
+    if (IS_EXTERN(ty)) buf.strcat("extern ");
+    if (IS_TYPEDEF(ty)) buf.strcat("typedef ");
     return ST_SUCC;
 }
 
 
-INT format_quan_spec(IN OUT CHAR buf[], TypeSpec const* ty)
+INT format_quan_spec(StrBuf & buf, TypeSpec const* ty)
 {
-    if (ty == NULL)    { return ST_SUCC; }
-    if (IS_CONST(ty)) strcat(buf,"const ");
-    if (IS_VOLATILE(ty)) strcat(buf,"volatile ");
+    if (ty == NULL) { return ST_SUCC; }
+    if (IS_CONST(ty)) buf.strcat("const ");
+    if (IS_VOLATILE(ty)) buf.strcat("volatile ");
     return ST_SUCC;
 }
 
 
-INT format_decl_spec(IN OUT CHAR buf[], TypeSpec const* ty, bool is_ptr)
+INT format_decl_spec(StrBuf & buf, TypeSpec const* ty, bool is_ptr)
 {
     if (ty == NULL) { return ST_SUCC; }
     BYTE is_su = (BYTE)(IS_STRUCT(ty) || IS_UNION(ty)),
@@ -3410,7 +3422,6 @@ INT format_decl_spec(IN OUT CHAR buf[], TypeSpec const* ty, bool is_ptr)
         }
         return ST_SUCC;
     } else if (is_enum) {
-        //format_enum(buf, ty);
         return format_enum_complete(buf, ty);
     } else if (is_base) {
         return format_base_type_spec(buf, ty);
@@ -3421,37 +3432,35 @@ INT format_decl_spec(IN OUT CHAR buf[], TypeSpec const* ty, bool is_ptr)
 }
 
 
-INT format_parameter_list(IN OUT CHAR buf[], Decl const* decl)
+INT format_parameter_list(StrBuf & buf, Decl const* decl)
 {
     if (decl == NULL) { return ST_SUCC; }
     while (decl != NULL) {
         format_declaration(buf, decl);
-        strcat(buf, ",");
+        buf.strcat(",");
         decl = DECL_next(decl);
     }
     return ST_SUCC;
 }
 
 
-INT format_dcrl_reverse(IN OUT CHAR buf[], Decl const* decl)
+static INT format_dcrl_reverse(StrBuf & buf, Decl const* decl)
 {
-    if (decl == NULL) {
-        return ST_SUCC;
-    }
+    if (decl == NULL) { return ST_SUCC; }
     switch (DECL_dt(decl)) {
     case DCL_POINTER:
         {
             TypeSpec * quan = DECL_qua(decl);
             if (quan != NULL) {
-                if (IS_CONST(quan)) strcat(buf,"const ");
-                if (IS_VOLATILE(quan)) strcat(buf,"volatile ");
-                if (IS_RESTRICT(quan)) strcat(buf,"restrict ");
+                if (IS_CONST(quan)) buf.strcat("const ");
+                if (IS_VOLATILE(quan)) buf.strcat("volatile ");
+                if (IS_RESTRICT(quan)) buf.strcat("restrict ");
             }
-            strcat(buf,"* ");
+            buf.strcat("* ");
             if (DECL_is_paren(decl)) {
-                strcat(buf, "(");
+                buf.strcat("(");
                 format_dcrl_reverse(buf, DECL_prev(decl));
-                strcat(buf, ")");
+                buf.strcat(")");
             } else {
                 format_dcrl_reverse(buf, DECL_prev(decl));
             }
@@ -3463,18 +3472,18 @@ INT format_dcrl_reverse(IN OUT CHAR buf[], Decl const* decl)
             TypeSpec * quan = DECL_qua(decl);
             if (quan != NULL) {
                 ASSERT0(!IS_RESTRICT(quan));
-                if (IS_VOLATILE(quan)) strcat(buf,"volatile ");
-                if (IS_CONST(quan)) strcat(buf,"const ");
+                if (IS_VOLATILE(quan)) buf.strcat("volatile ");
+                if (IS_CONST(quan)) buf.strcat("const ");
             }
-            CHAR * p = buf + strlen(buf);
-            sprintf(p, "%s ", SYM_name(TREE_id(t)));
+            //CHAR * p = buf + strlen(buf);
+            buf.strcat("%s ", SYM_name(TREE_id(t)));
             if (DECL_is_paren(decl)) {
-                strcat(p, "(");
-                p = p + strlen(p);
-                format_dcrl_reverse(p, DECL_prev(decl));
-                strcat(p, ")");
+                buf.strcat("(");
+                //p = p + strlen(p);
+                format_dcrl_reverse(buf, DECL_prev(decl));
+                buf.strcat(")");
             } else {
-                format_dcrl_reverse(p, DECL_prev(decl));
+                format_dcrl_reverse(buf, DECL_prev(decl));
             }
         }
         break;
@@ -3482,49 +3491,48 @@ INT format_dcrl_reverse(IN OUT CHAR buf[], Decl const* decl)
         if (DECL_prev(decl) != NULL &&
             DECL_dt(DECL_prev(decl)) == DCL_POINTER) {
             //FUN_POINTER
-            strcat(buf, "(");
-            format_dcrl_reverse(buf,DECL_prev(decl));
-            strcat(buf, ")");
+            buf.strcat("(");
+            format_dcrl_reverse(buf, DECL_prev(decl));
+            buf.strcat(")");
         } else {
             //FUN_DECL
-            format_dcrl_reverse(buf,DECL_prev(decl));
+            format_dcrl_reverse(buf, DECL_prev(decl));
         }
-        strcat(buf, "(");
+        buf.strcat("(");
         format_parameter_list(buf, DECL_fun_para_list(decl));
-        strcat(buf, ")");
+        buf.strcat(")");
         break;
     case DCL_ARRAY:
         {
             if (DECL_is_paren(decl)) {
-                strcat(buf, "(");
-                format_dcrl_reverse(buf,DECL_prev(decl));
-                strcat(buf, ")");
+                buf.strcat("(");
+                format_dcrl_reverse(buf, DECL_prev(decl));
+                buf.strcat(")");
             } else {
-                format_dcrl_reverse(buf,DECL_prev(decl));
+                format_dcrl_reverse(buf, DECL_prev(decl));
             }
             //bound of each dimensions should be computed while
             //the DECLARATION parsed.
             LONGLONG v = DECL_array_dim(decl);
-            CHAR * p = buf + strlen(buf);
-            sprintf(p, "[%lld]", v);
+            //CHAR * p = buf + strlen(buf);
+            buf.strcat("[%lld]", v);
             break;
         }
-    default:
-        ASSERT(0, ("unknown Decl type"));
+    default: ASSERT(0, ("unknown Decl type"));
     }
     return ST_SUCC;
 }
 
 
-INT format_declarator(IN OUT CHAR buf[], Decl const* decl)
+INT format_declarator(StrBuf & buf, Decl const* decl)
 {
-    CHAR b[10];
+    CHAR b[128];
     b[0] = 0;
     if (decl == NULL) { return ST_SUCC; }
     if (DECL_dt(decl) == DCL_ABS_DECLARATOR||
         DECL_dt(decl) == DCL_DECLARATOR) {
         if (DECL_bit_len(decl)) {
-            sprintf(b, ":%d", DECL_bit_len(decl));
+            SNPRINTF(b, 128, ":%d", DECL_bit_len(decl));
         }
         decl = DECL_child(decl);
     }
@@ -3536,19 +3544,17 @@ INT format_declarator(IN OUT CHAR buf[], Decl const* decl)
             DECL_dt(decl) == DCL_VARIABLE),
             ("unknown declarator"));
 
-        while (DECL_next(decl) != NULL)
-            decl = DECL_next(decl);
+        while (DECL_next(decl) != NULL) { decl = DECL_next(decl); }
         format_dcrl_reverse(buf, decl);
-        strcat(buf, b);
+        buf.strcat(b);
     }
-    return ST_SUCC;
-    //return ST_ERR;
+    return ST_SUCC;    
 }
 
 
-INT format_user_type_spec(IN OUT CHAR buf[], TypeSpec const* ty)
+INT format_user_type_spec(StrBuf & buf, TypeSpec const* ty)
 {
-    if (buf == NULL || ty == NULL) return ST_SUCC;
+    if (ty == NULL) { return ST_SUCC; }
     ASSERT0(HAVE_FLAG(TYPE_des(ty), T_SPEC_USER_TYPE));
     Decl * ut = TYPE_user_type(ty);
     ASSERT0(ut != NULL);
@@ -3556,45 +3562,14 @@ INT format_user_type_spec(IN OUT CHAR buf[], TypeSpec const* ty)
 }
 
 
-INT format_user_type_spec(IN OUT CHAR buf[], Decl const* ut)
+INT format_user_type_spec(StrBuf & buf, Decl const* ut)
 {
-    if (buf == NULL || ut == NULL) return ST_SUCC;
+    if (ut == NULL) { return ST_SUCC; }
     return format_declaration(buf, ut);
 }
 
 
-INT format_base_type_spec(IN OUT CHAR buf[], TypeSpec const* ty)
-{
-    if (buf == NULL || ty == NULL) { return ST_SUCC; }
-    if (!is_simple_base_type(ty)) {
-        return ST_ERR;
-    }
-    if (TYPE_des(ty) & T_SPEC_SIGNED)
-        strcat(buf, "signed ");
-    if (TYPE_des(ty) & T_SPEC_UNSIGNED)
-        strcat(buf, "unsigned ");
-    if (TYPE_des(ty) & T_SPEC_CHAR)
-        strcat(buf, "char ");
-    if (TYPE_des(ty) & T_SPEC_SHORT)
-        strcat(buf, "short ");
-    if (TYPE_des(ty) & T_SPEC_LONG)
-        strcat(buf, "long ");
-    if (TYPE_des(ty) & T_SPEC_INT)
-        strcat(buf, "int ");
-    if (TYPE_des(ty) & T_SPEC_LONGLONG)
-        strcat(buf, "longlong ");
-    if (TYPE_des(ty) & T_SPEC_FLOAT)
-        strcat(buf, "float ");
-    if (TYPE_des(ty) & T_SPEC_DOUBLE)
-        strcat(buf, "double ");
-    if (TYPE_des(ty) & T_SPEC_VOID)
-        strcat(buf, "void ");
-    return ST_SUCC;
-
-}
-
-
-INT format_declaration(IN OUT CHAR buf[], Decl const* decl)
+INT format_declaration(StrBuf & buf, Decl const* decl)
 {
     if (decl == NULL) { return ST_SUCC; }
     if (DECL_dt(decl) == DCL_DECLARATION ||
@@ -3607,16 +3582,16 @@ INT format_declaration(IN OUT CHAR buf[], Decl const* decl)
     } else if (DECL_dt(decl) == DCL_DECLARATOR ||
                DECL_dt(decl) == DCL_ABS_DECLARATOR) {
         Decl * dcl = DECL_decl_list(decl);
-        strcat(buf, "NULL ");
+        buf.strcat("NULL ");
         format_declarator(buf, dcl);
     } else if (DECL_dt(decl) == DCL_POINTER ||
                DECL_dt(decl) == DCL_ARRAY ||
                DECL_dt(decl) == DCL_FUN ||
                DECL_dt(decl) == DCL_ID) {
-        strcat(buf, "NULL ");
+        buf.strcat("NULL ");
         format_declarator(buf, decl);
     } else if (DECL_dt(decl) == DCL_VARIABLE) {
-        strcat(buf, "...");
+        buf.strcat("...");
     } else {
         ASSERT(0, ("Unkonwn Decl type"));
     }
@@ -3694,10 +3669,9 @@ INT format_dcrl(Decl const* decl, INT indent)
         if (DECL_fun_para_list(decl) == NULL) {
             fprintf(g_tfile, ",PARAM:()\n");
         } else {
-            fprintf(g_tfile, ",PARAM:(\n");
+            fprintf(g_tfile, ",PARAM:(");
             format_parameter_list(DECL_fun_para_list(decl),
                                   indent + DECL_FMT_INDENT_INTERVAL);
-            pd(indent);
             fprintf(g_tfile, ")\n");
         }
         pd(indent);
@@ -3784,9 +3758,8 @@ INT format_declaration(Decl const* decl, INT indent)
 {
     if (decl == NULL || g_tfile == NULL) return ST_SUCC;
     fprintf(g_tfile, "\n");
-    pd(indent);
-    CHAR buf[MAX_BUF_LEN];
-    buf[0] = 0;
+    pd(indent);    
+    StrBuf sbuf(128);
     if (DECL_dt(decl) == DCL_DECLARATION || DECL_dt(decl) == DCL_TYPE_NAME) {
         TypeSpec * ty = DECL_spec(decl);
         Decl * dcl = DECL_decl_list(decl);
@@ -3797,9 +3770,9 @@ INT format_declaration(Decl const* decl, INT indent)
         fprintf(g_tfile, "(line:%d)", DECL_lineno(decl));
         fprintf(g_tfile, "\n");
 
-        format_decl_spec(buf, ty, is_pointer(decl));
+        format_decl_spec(sbuf, ty, is_pointer(decl));
         pd(indent + DECL_FMT_INDENT_INTERVAL);
-        fprintf(g_tfile, "SPECIFIER:%s", buf);
+        fprintf(g_tfile, "SPECIFIER:%s", sbuf.buf);
 
         fprintf(g_tfile, "\n");
         format_declarator(dcl, indent + DECL_FMT_INDENT_INTERVAL);
@@ -4183,38 +4156,6 @@ UINT get_struct_field_ofst(Struct * st, CHAR * name)
 }
 
 
-void dump_struct(Struct * s)
-{
-    CHAR buf[MAX_BUF_LEN];
-    buf[0] = 0;
-    ASSERT(ST_SUCC == format_struct_complete(buf, s),
-            ("illegal struct type"));
-    note("\n%s  %s\n", buf, STRUCT_is_complete(s) ? "intact" : "incomplete");
-}
-
-
-void dump_union(Union * s)
-{
-    CHAR buf[MAX_BUF_LEN];
-    buf[0] = 0;
-    ASSERT(ST_SUCC == format_union_complete(buf, s), ("illegal union type"));
-    note("\n%s %s\n", buf, UNION_is_complete(s) ? "intact" : "incomplete");
-}
-
-
-//Dump type specifier.
-//ty: is TypeSpec specifier of declaration.
-void dump_type(TypeSpec * ty, bool is_ptr)
-{
-    if (g_tfile == NULL) { return; }
-    CHAR buf[MAX_BUF_LEN];
-    buf[0] = 0;
-    format_decl_spec(buf, ty, is_ptr);
-    fprintf(g_tfile, "\n%s\n", buf);
-    fflush(g_tfile);
-}
-
-
 static void remove_redundant_para(Decl * declaration)
 {
     ASSERT0(DECL_dt(declaration) == DCL_DECLARATION);
@@ -4258,11 +4199,10 @@ static bool check_struct_union_complete(Decl * decl)
             if (e) {
                 //error occur!
                 ASSERT0(t);
-                CHAR buf[512];
-                buf[0] = 0;
+                StrBuf buf(64);
                 if (name != NULL) {
                     format_struct_union_complete(buf,
-                            get_pure_type_spec(type_spec));
+                        get_pure_type_spec(type_spec));
                     err(g_real_line_num,
                         "'%s' uses incomplete defined %s : %s",
                         name, t, buf);
@@ -4534,7 +4474,7 @@ bool declaration()
             DECL_lineno(declaration) = lineno;
         }
 
-        //dump_decl(declaration, 0);
+        //dump_decl(declaration, StrBuf(64));
 
         if (is_fun_decl(declaration)) {
             if (g_real_token == T_LLPAREN) {

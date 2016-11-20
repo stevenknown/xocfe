@@ -257,13 +257,13 @@ static size_t remove_head_tok()
 void dump_tok_list()
 {
     CELL * c = g_cell_list.get_head();
-    if (c) {
-        scr("\nTOKEN:");
+    if (c != NULL) {
+        prt2C("\nTOKEN:");
         for (; c; c = g_cell_list.get_next()) {
             CHAR * s = TOKEN_INFO_name((TokenInfo*)CELL_val(c));
-            scr("'%s' ", s);
+            prt2C("'%s' ", s);
         }
-        scr("\n");
+        prt2C("\n");
     }
 }
 
@@ -1201,7 +1201,7 @@ static Tree * unary_exp()
     }
     return t ;
 FAILED:
-    scr("error in unary_exp()");
+    prt2C("error in unary_exp()");
     return t;
 }
 
@@ -1244,7 +1244,7 @@ static Tree * cast_exp()
     }
     return t ;
 FAILED:
-    scr("error in cast_exp()");
+    prt2C("error in cast_exp()");
     return t;
 }
 
@@ -1277,8 +1277,9 @@ static Tree * multiplicative_exp()
         t = p;
     }
     return t ;
+    
 FAILED:
-    scr("error in multiplicative_exp()");
+    prt2C("error in multiplicative_exp()");
     return t;
 }
 
@@ -1309,8 +1310,9 @@ static Tree * additive_exp()
         t = p;
     }
     return t ;
+    
 FAILED:
-    scr("error in additive_exp()");
+    prt2C("error in additive_exp()");
     return t;
 }
 
@@ -1342,7 +1344,8 @@ static Tree * shift_exp()
     }
     return t ;
 FAILED:
-    scr("error in shift_exp()");
+
+    prt2C("error in shift_exp()");
     return t;
 }
 
@@ -1375,7 +1378,7 @@ static Tree * relational_exp()
     }
     return t ;
 FAILED:
-    scr("error in relational_exp()");
+    prt2C("error in relational_exp()");
     return t;
 }
 
@@ -1407,7 +1410,7 @@ static Tree * equality_exp()
     }
     return t ;
 FAILED:
-    scr("error in equality_exp()");
+    prt2C("error in equality_exp()");
     return t;
 }
 
@@ -1438,7 +1441,7 @@ static Tree * AND_exp()
     }
     return t ;
 FAILED:
-    scr("error in AND_exp()");
+    prt2C("error in AND_exp()");
     return t;
 }
 
@@ -1469,7 +1472,7 @@ static Tree * exclusive_OR_exp()
     }
     return t ;
 FAILED:
-    scr("error in exclusive_OR_exp()");
+    prt2C("error in exclusive_OR_exp()");
     return t;
 }
 
@@ -1500,7 +1503,7 @@ static Tree * inclusive_OR_exp()
     }
     return t ;
 FAILED:
-    scr("error in inclusive_OR_exp()");
+    prt2C("error in inclusive_OR_exp()");
     return t;
 }
 
@@ -1532,7 +1535,7 @@ static Tree * logical_AND_exp()
     }
     return t ;
 FAILED:
-    scr("error in logical_AND_exp()");
+    prt2C("error in logical_AND_exp()");
     return t;
 }
 
@@ -1563,7 +1566,7 @@ static Tree * logical_OR_exp()
     }
     return t ;
 FAILED:
-    scr("error in logical_OR_exp()");
+    prt2C("error in logical_OR_exp()");
     return t;
 }
 
@@ -1590,7 +1593,7 @@ Tree * conditional_exp()
     }
     return t ;
 FAILED:
-    scr("error in conditional_expt()");
+    prt2C("error in conditional_expt()");
     return t;
 }
 
@@ -1615,7 +1618,7 @@ Tree * exp()
     }
     return t;
 FAILED:
-    scr("error in expt()");
+    prt2C("error in expt()");
     return t;
 }
 
@@ -1877,7 +1880,7 @@ static Tree * do_while_stmt()
     return t;
 
 FAILED:
-    scr("error in do_while_stmt()");
+    prt2C("error in do_while_stmt()");
     return t;
 }
 
@@ -1911,7 +1914,7 @@ static Tree * while_do_stmt()
     popst();
     return t;
 FAILED:
-    scr("error in while_do_stmt()");
+    prt2C("error in while_do_stmt()");
     return t;
 }
 
@@ -1973,7 +1976,7 @@ FAILED:
     if (g_enable_C99_declaration) {
         return_to_parent_scope();
     }
-    scr("error in for_stmt()");
+    prt2C("error in for_stmt()");
     return t;
 }
 
@@ -2035,7 +2038,7 @@ static Tree * if_stmt()
     }
     return t;
 FAILED:
-    scr("error in if_stmt()");
+    prt2C("error in if_stmt()");
     return t;
 }
 
@@ -2069,7 +2072,7 @@ static Tree * switch_stmt()
     popst();
     return t;
 FAILED:
-    scr("error in switch_stmt()");
+    prt2C("error in switch_stmt()");
     return t;
 }
 

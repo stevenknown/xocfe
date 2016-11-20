@@ -733,7 +733,7 @@ static TOKEN t_char_list()
                 
                 //long type truncated to char type.
                 CHAR o = (CHAR)xatoll(&g_cur_token_string[
-                    g_cur_token_string_pos], true);
+                    g_cur_token_string_pos], true);                
                 g_cur_token_string[g_cur_token_string_pos++] = o;
             } else if (c == 'x' || c == 'X' || (c >= 'a' && c <= 'f') ||
                        (c >= 'A' && c <= 'Z')) {
