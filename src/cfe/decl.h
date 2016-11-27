@@ -399,10 +399,22 @@ Decl * addToUserTypeList(UserTypeList ** ut_list , Decl * decl);
 
 UINT computeArraySize(Decl * decl);
 Decl * cp_type_name(Decl const* src);
-Decl * cp_decl_complete(Decl * src);
+
+
+//Copy Decl of src is DCL_TYPE_NAME, or generate TYPE_NAME accroding
+//to src information.
+Decl * cp_typename(Decl const* src);
 TypeSpec * cp_spec(TypeSpec * ty);
+
+//Copy whole Decl, include all its specifier, qualifier, and declarator.
+Decl * cp_decl_fully(Decl const* src);
+
+//Only copy 'src', excepting its field.
 Decl * cp_decl(Decl const* src);
-Decl * cp_decl_begin_at(Decl * header);
+
+//Duplication declarator list begin at 'header'
+Decl * cp_decl_begin_at(Decl const* header);
+
 UINT computeUnionTypeSize(TypeSpec * ty);
 UINT computeStructTypeSize(TypeSpec * ty);
 
@@ -469,6 +481,8 @@ bool is_integer(Decl const* dcl);
 bool is_integer(TypeSpec const* ty);
 bool is_fp(Decl const* dcl);
 bool is_fp(TypeSpec const* ty);
+bool is_float(Decl const* dcl);
+bool is_double(Decl const* dcl);
 bool is_union_exist_in_outer_scope(CHAR const* tag, OUT Union ** s);
 bool is_struct_type_exist_in_cur_scope(CHAR const* tag, OUT Struct ** s);
 bool is_struct_exist_in_outer_scope(CHAR const* tag, OUT Struct ** s);

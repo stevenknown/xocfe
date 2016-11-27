@@ -275,7 +275,9 @@ static bool compute_conditional_exp(IN Tree * t)
     case TR_MULTI:// '*' '/' '%'
         return compute_binary_op(t);
     case TR_IMM:
+    case TR_IMMU:
     case TR_IMML:
+    case TR_IMMUL:
         pushv(TREE_imm_val(t));
         break;
     case TR_FP:
@@ -313,7 +315,7 @@ static bool compute_conditional_exp(IN Tree * t)
     default:
         err(TREE_lineno(t), "expected constant expression");
         return false;
-    } //end switch
+    }
     return true;
 }
 

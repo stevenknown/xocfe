@@ -135,10 +135,31 @@ void dump_tree(Tree * t)
             sbuf.buf);
         #endif
         break;
+    case TR_IMMU:
+        #ifdef _VC6_
+        note("\nIMMU(id:%u):%u (0x%x) <%s>",
+            TREE_uid(t),
+            (UINT)TREE_imm_val(t),
+            (UINT)TREE_imm_val(t),
+            sbuf.buf);
+        #else
+        note("\nIMMU(id:%u):%llu (0x%llx) <%s>",
+            TREE_uid(t),
+            (ULONGLONG)TREE_imm_val(t),
+            (ULONGLONG)TREE_imm_val(t),
+            sbuf.buf);
+        #endif
+        break;
     case TR_IMML:
         note("\nIMML(id:%u):%lld <%s>",
             TREE_uid(t),
             (LONGLONG)TREE_imm_val(t),
+            sbuf.buf);
+        break;
+    case TR_IMMUL:
+        note("\nIMMUL(id:%u):%llu <%s>",
+            TREE_uid(t),
+            (ULONGLONG)TREE_imm_val(t),
             sbuf.buf);
         break;
     case TR_FP:
@@ -463,7 +484,7 @@ void dump_tree(Tree * t)
     default:
         ASSERT(0, ("unknown tree type:%d",TREE_type(t)));
         return;
-    } //end switch
+    }
     fflush(g_tfile);
 #endif
 }

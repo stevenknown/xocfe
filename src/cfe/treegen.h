@@ -49,6 +49,9 @@ Tree * conditional_exp();
 
 void dump_tok_list();
 
+Tree * gen_typename(Decl * decl);
+Tree * gen_cvt(Decl const* tgt_type, Tree * src);
+
 Tree * id();
 bool is_in_first_set_of_exp_list(TOKEN tok);
 bool is_user_type_exist_in_outer_scope(CHAR * cl, OUT Decl ** ut);

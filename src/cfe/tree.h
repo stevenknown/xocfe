@@ -43,11 +43,13 @@ typedef enum _TREE_TYPE {
     //'>>='  '&='  '^='  '|='
     TR_ASSIGN,
     TR_ID,
-    TR_IMM,             //integer, 1234.
-    TR_IMML,            //long long integer, 1234L.
-    TR_FP,              //double 3.1415926
-    TR_FPF,             //float 3.1415926
-    TR_FPLD,            //long double 3.1415926
+    TR_IMM,             //signed integer
+    TR_IMMU,            //unsigned integer
+    TR_IMML,            //long long integer
+    TR_IMMUL,           //unsigned long long integer
+    TR_FP,              //double
+    TR_FPF,             //float
+    TR_FPLD,            //long double
     TR_ENUM_CONST,
     TR_STRING,
     TR_LOGIC_OR,        //logical or ||
@@ -199,7 +201,6 @@ public:
 
 //imm def
 #define TREE_imm_val(t)           (t)->u1.ival
-#define TREE_is_unsigned(t)       (t)->is_imm_unsigned
 
 //string def
 #define TREE_string_val(t)        (t)->u1.sval
@@ -235,7 +236,6 @@ public:
     Tree * prev;
     INT lineno; ///line number in src file
     TOKEN tok; //record the token that tree-node related.
-    BYTE is_imm_unsigned:1; //if true, immediate is unsigned.
 
     union {
         struct {

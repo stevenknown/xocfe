@@ -80,21 +80,23 @@ static bool verify(Tree * t)
     case TR_ID:
     case TR_IMM:
     case TR_IMML:
-    case TR_FP:  //3.1415926
-    case TR_FPF:  //3.1415926
-    case TR_FPLD:  //3.1415926
+    case TR_IMMU:
+    case TR_IMMUL:
+    case TR_FP:
+    case TR_FPF:
+    case TR_FPLD:
     case TR_ENUM_CONST:
     case TR_STRING:
-    case TR_LOGIC_OR: //logical or ||
-    case TR_LOGIC_AND: //logical and &&
-    case TR_INCLUSIVE_OR: //inclusive or |
-    case TR_INCLUSIVE_AND: //inclusive and &
-    case TR_XOR: //exclusive or
-    case TR_EQUALITY: // == !=
-    case TR_RELATION: // < > >= <=
-    case TR_SHIFT:   // >> <<
-    case TR_ADDITIVE: // '+' '-'
-    case TR_MULTI:    // '*' '/' '%'
+    case TR_LOGIC_OR:     // logical OR ||
+    case TR_LOGIC_AND:    // logical AND &&
+    case TR_INCLUSIVE_OR: // inclusive OR |
+    case TR_INCLUSIVE_AND:// inclusive AND &
+    case TR_XOR:          // exclusive OR
+    case TR_EQUALITY:     // == !=
+    case TR_RELATION:     // < > >= <=
+    case TR_SHIFT:        // >> <<
+    case TR_ADDITIVE:     // '+' '-'
+    case TR_MULTI:        // '*' '/' '%'
     case TR_SCOPE:
     case TR_IF:
     case TR_DO:
@@ -108,18 +110,18 @@ static bool verify(Tree * t)
     case TR_LABEL:
     case TR_CASE:
     case TR_DEFAULT:
-    case TR_COND:  //formulized log_OR_exp?exp:cond_exp
-    case TR_CVT:   //type convertion
-    case TR_LDA:   // &a get address of 'a'
-    case TR_DEREF: // *p  dereferencing the pointer 'p'
-    case TR_PLUS:  // +123
-    case TR_MINUS: // -123
-    case TR_REV:   // Reverse
-    case TR_NOT:   // get non-value
-    case TR_INC:   //++a
-    case TR_DEC:   //--a
-    case TR_POST_INC: //a++  / (*a)++
-    case TR_POST_DEC: //a--
+    case TR_COND:         // formulized log_OR_exp?exp:cond_exp
+    case TR_CVT:          // type convertion
+    case TR_LDA:          // &a get address of 'a'
+    case TR_DEREF:        // *p  dereferencing the pointer 'p'
+    case TR_PLUS:         // +123
+    case TR_MINUS:        // -123
+    case TR_REV:          // Reverse
+    case TR_NOT:          // get non-value
+    case TR_INC:          // ++a
+    case TR_DEC:          // --a
+    case TR_POST_INC:     // a++ OR (*a)++
+    case TR_POST_DEC:     // a--
     case TR_DMEM:
     case TR_INDMEM:
     case TR_ARRAY:
@@ -771,17 +773,15 @@ static Tree * primary_exp(IN OUT UINT * st)
         match(T_IMML);
         return t;
     case T_IMMU:
-        t = NEWTN(TR_IMM);
+        t = NEWTN(TR_IMMU);
         TREE_token(t) = g_real_token;
         TREE_imm_val(t) = (HOST_UINT)xatoll(g_real_token_string, false);
-        TREE_is_unsigned(t) = true;
         match(T_IMMU);
         return t;
     case T_IMMUL:
-        t = NEWTN(TR_IMML);
+        t = NEWTN(TR_IMMUL);
         TREE_token(t) = g_real_token;
         TREE_imm_val(t) = (HOST_UINT)xatoll(g_real_token_string, false);
-        TREE_is_unsigned(t) = true;
         match(T_IMMUL);
         return t;
     case T_FP:         // decimal e.g 3.14
@@ -1206,6 +1206,34 @@ FAILED:
 }
 
 
+Tree * gen_typename(Decl * decl)
+{
+    Tree * t = NEWTN(TR_TYPE_NAME);
+    TREE_type_name(t) = decl;
+    return t;
+}
+
+
+Tree * gen_cvt(Tree * tgt_type, Tree * src)
+{
+    ASSERT0(tgt_type && TREE_type(tgt_type) == TR_TYPE_NAME && src);
+    Tree * t = NEWTN(TR_CVT);
+    TREE_cvt_type(t) = tgt_type;
+    TREE_cast_exp(t) = src;
+    setParent(t, TREE_cvt_type(t));
+    setParent(t, TREE_cast_exp(t));
+    return t;
+}
+
+
+Tree * gen_cvt(Decl const* tgt_type, Tree * src)
+{
+    ASSERT0(tgt_type && src);    
+    Decl * dup = cp_typename(tgt_type);
+    return gen_cvt(gen_typename(dup), src);
+}
+    
+
 //BNF:
 //cast_expression:
 //    unary_expression
@@ -1230,11 +1258,7 @@ static Tree * cast_exp()
     //}
 
     if (TREE_type(p) == TR_TYPE_NAME) {
-        t = NEWTN(TR_CVT);
-        TREE_cvt_type(t) = p;
-        TREE_cast_exp(t) = cast_exp();
-        setParent(t, TREE_cvt_type(t));
-        setParent(t, TREE_cast_exp(t));
+        t = gen_cvt(p, cast_exp());
         if (TREE_cast_exp(t) == NULL) {
             err(g_real_line_num, "cast expression cannot be NULL");
             goto FAILED;

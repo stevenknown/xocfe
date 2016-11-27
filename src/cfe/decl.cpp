@@ -153,8 +153,32 @@ static void complement_qua(TypeSpec * ty)
 }
 
 
-//Copy Decl and its specifier and qualifier, except its siblings.
-Decl * cp_decl_complete(Decl * src)
+//Copy Decl of src is DCL_TYPE_NAME, or generate TYPE_NAME accroding
+//to src information.
+Decl * cp_typename(Decl const* src)
+{
+    if (DECL_dt(src) == DCL_TYPE_NAME) {
+        return cp_decl_fully(src);
+    }
+    
+    //Generate type_name.
+    Decl * type_name = new_decl(DCL_TYPE_NAME);
+    DECL_spec(type_name) = cp_spec(DECL_spec(src));    
+
+    Decl * decl_list_child = DECL_child(DECL_decl_list(src));
+    ASSERT0(decl_list_child && DECL_dt(decl_list_child) == DCL_ID);
+    
+    Decl * decl_list = new_decl(DCL_ABS_DECLARATOR);
+    DECL_child(decl_list) = cp_decl_begin_at(DECL_next(decl_list_child));
+
+    DECL_decl_list(type_name) = decl_list;
+    
+    return type_name;
+}
+
+
+//Copy whole Decl, include all its specifier, qualifier, and declarator.
+Decl * cp_decl_fully(Decl const* src)
 {
     Decl * res = NULL;
     ASSERT0(src);
@@ -165,9 +189,9 @@ Decl * cp_decl_complete(Decl * src)
         DECL_decl_list(res) = cp_decl(DECL_decl_list(src));
         if (DECL_decl_list(res) != NULL) {
             ASSERT0(DECL_dt(DECL_decl_list(res)) == DCL_DECLARATOR ||
-                     DECL_dt(DECL_decl_list(res)) == DCL_ABS_DECLARATOR);
-            DECL_child(DECL_decl_list(res)) =
-                    cp_decl_begin_at(DECL_child(DECL_decl_list(src)));
+                    DECL_dt(DECL_decl_list(res)) == DCL_ABS_DECLARATOR);
+            DECL_child(DECL_decl_list(res)) = cp_decl_begin_at(
+                DECL_child(DECL_decl_list(src)));
         }
     } else if (DECL_dt(src) == DCL_DECLARATOR ||
                DECL_dt(src) == DCL_ABS_DECLARATOR) {
@@ -185,7 +209,7 @@ Decl * cp_decl_complete(Decl * src)
 }
 
 
-//Completely memory copy of 'src', excepting the chain-linking region
+//Only copy 'src', excepting its field.
 Decl * cp_decl(Decl const* src)
 {
     Decl * q = new_decl(DECL_dt(src));
@@ -200,7 +224,7 @@ Decl * cp_decl(Decl const* src)
 
 
 //Duplication declarator list begin at 'header'
-Decl * cp_decl_begin_at(Decl * header)
+Decl * cp_decl_begin_at(Decl const* header)
 {
     if (header == NULL) { return NULL; }
     Decl * newl = NULL, * p;
@@ -3907,6 +3931,28 @@ bool is_fp(Decl const* dcl)
 }
 
 
+//Is single decision float-point.
+bool is_float(Decl const* dcl)
+{
+    ASSERT(dcl &&
+           (DECL_dt(dcl) == DCL_TYPE_NAME ||
+            DECL_dt(dcl) == DCL_DECLARATION),
+           ("expect type-name or dcrlaration"));
+    return IS_TYPE(DECL_spec(dcl), T_SPEC_FLOAT);
+}
+
+
+//Is double decision float-point.
+bool is_double(Decl const* dcl)
+{
+    ASSERT(dcl &&
+           (DECL_dt(dcl) == DCL_TYPE_NAME ||
+            DECL_dt(dcl) == DCL_DECLARATION),
+           ("expect type-name or dcrlaration"));
+    return IS_TYPE(DECL_spec(dcl), T_SPEC_DOUBLE);
+}
+
+
 //Is float-point.
 bool is_fp(TypeSpec const* ty)
 {
@@ -4329,7 +4375,7 @@ Decl * expand_user_type(Decl * ut)
         return ut;
     }
 
-    Decl * tmp = cp_decl_complete(ut);
+    Decl * tmp = cp_decl_fully(ut);
     ASSERT0(DECL_spec(tmp) != NULL);
     REMOVE_FLAG(TYPE_des(DECL_spec(tmp)), T_STOR_TYPEDEF);
     return tmp;

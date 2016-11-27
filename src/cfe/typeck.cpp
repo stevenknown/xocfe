@@ -527,6 +527,37 @@ static bool checkAssign(Tree * t, Decl * ld, Decl *)
 }
 
 
+//Check parameters type and insert CVT if necessary.
+static void insertCvtForParams(Tree * t)
+{
+    ASSERT0(t && TREE_type(t) == TR_CALL);
+
+    Decl * funcdecl = TREE_result_type(TREE_fun_exp(t));
+    
+    ASSERT(DECL_dt(funcdecl) == DCL_TYPE_NAME, ("expect TypeSpec-NAME"));
+    ASSERT0(DECL_decl_list(funcdecl));
+    ASSERT(DECL_dt(DECL_decl_list(funcdecl)) == DCL_ABS_DECLARATOR,
+           ("expect abs-declarator"));
+
+    Decl * formalp_decl = get_parameter_list(funcdecl);
+    Tree * newparamlist = NULL;
+    Tree * last = NULL;
+    for (Tree * realp = ::removehead(&TREE_para_list(t));
+         realp != NULL && formalp_decl != NULL; 
+         realp = ::removehead(&TREE_para_list(t)),
+         formalp_decl = TREE_nsib(formalp_decl)) {
+        Decl * realp_decl = TREE_result_type(realp);
+        if (is_double(realp_decl) && is_float(formalp_decl)) {
+            //Insert convertion operation: truncate double to float.
+            Tree * t = gen_cvt(formalp_decl, realp);
+            realp = t;
+        }
+        ::add_next(&newparamlist, &last, realp);
+    }
+    TREE_para_list(t) = newparamlist;
+}
+
+
 static bool TypeTranID(Tree * t, TYCtx * cont)
 {
     //Construct type-name and expand user type if it was declared.
@@ -722,9 +753,17 @@ static INT TypeTran(Tree * t, TYCtx * cont)
         case TR_IMM:
             TREE_result_type(t) = BUILD_TYNAME(T_SPEC_INT|T_QUA_CONST);
             break;
+        case TR_IMMU:
+            TREE_result_type(t) = BUILD_TYNAME(
+                T_SPEC_UNSIGNED|T_SPEC_INT|T_QUA_CONST);
+            break;            
         case TR_IMML:
             TREE_result_type(t) = BUILD_TYNAME(T_SPEC_LONGLONG|T_QUA_CONST);
             break;
+        case TR_IMMUL:
+            TREE_result_type(t) = BUILD_TYNAME(
+                T_SPEC_UNSIGNED|T_SPEC_LONGLONG|T_QUA_CONST);
+            break;            
         case TR_FP:
         case TR_FPLD:
             TREE_result_type(t) = BUILD_TYNAME(T_SPEC_DOUBLE|T_QUA_CONST);
@@ -1173,13 +1212,13 @@ static INT TypeTran(Tree * t, TYCtx * cont)
                     ASSERT0(TREE_type_name(kid));
                     size = get_decl_size(TREE_type_name(kid));
                 } else {
-                    if (ST_SUCC != TypeTran(kid, cont)) goto FAILED;
+                    if (ST_SUCC != TypeTran(kid, cont)) { goto FAILED; }
                     ASSERT0(TREE_result_type(kid));
                     size = get_decl_size(TREE_result_type(kid));
                 }
-                TREE_type(t) = TR_IMM;
+                TREE_type(t) = TR_IMMU;
                 TREE_imm_val(t) = size;
-                if (ST_SUCC != TypeTran(t, cont)) goto FAILED;
+                if (ST_SUCC != TypeTran(t, cont)) { goto FAILED; }
                 break;
             }
         case TR_CALL:
@@ -1190,6 +1229,8 @@ static INT TypeTran(Tree * t, TYCtx * cont)
                 if (ST_SUCC != TypeTran(TREE_fun_exp(t), cont)) {
                     goto FAILED;
                 }
+
+                insertCvtForParams(t);
 
                 Decl * ld = TREE_result_type(TREE_fun_exp(t));
                 ASSERT(DECL_dt(ld) == DCL_TYPE_NAME, ("expect TypeSpec-NAME"));
@@ -1389,7 +1430,8 @@ static bool checkCall(Tree * t, TYCtx * cont)
     }
 
     //Check parameter list
-    Decl * formal_param_decl = get_parameter_list(TREE_result_type(TREE_fun_exp(t)));
+    Decl * formal_param_decl = get_parameter_list(
+        TREE_result_type(TREE_fun_exp(t)));
     Tree * real_param = TREE_para_list(t);
     INT count = 0;
     if (formal_param_decl != NULL) {
@@ -1462,16 +1504,18 @@ static INT TypeCheckCore(Tree * t, TYCtx * cont)
         case TR_ID:
         case TR_IMM:
         case TR_IMML:
-        case TR_FP:            //double
-        case TR_FPF:           //float
-        case TR_FPLD:          //long double
+        case TR_IMMU:
+        case TR_IMMUL:
+        case TR_FP:            // double
+        case TR_FPF:           // float
+        case TR_FPLD:          // long double
         case TR_ENUM_CONST:
         case TR_STRING:
-        case TR_LOGIC_OR:      //logical or ||
-        case TR_LOGIC_AND:     //logical and &&
-        case TR_INCLUSIVE_OR:  //inclusive or |
-        case TR_XOR:           //exclusive or
-        case TR_INCLUSIVE_AND: //inclusive and &
+        case TR_LOGIC_OR:      // logical or ||
+        case TR_LOGIC_AND:     // logical and &&
+        case TR_INCLUSIVE_OR:  // inclusive or |
+        case TR_XOR:           // exclusive or
+        case TR_INCLUSIVE_AND: // inclusive and &
         case TR_SHIFT:         // >> <<
         case TR_EQUALITY:      // == !=
         case TR_RELATION:      // < > >= <=
