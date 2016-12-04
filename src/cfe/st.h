@@ -28,71 +28,69 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef __ST_H__
 #define __ST_H__
 
-/*
-We must maintenance the order of the first lex statement values as the TOKEN
-enumeration presented.
-e.g  the current value of lex statement is st_null, suchlike concurrence of
-the first token of TOKEN enumeration , and both of them are zero.
-*/
+//We must maintenance the order of the first lex statement values as the TOKEN
+//enumeration presented.
+//e.g  the current value of lex statement is st_null, suchlike concurrence of
+//the first token of TOKEN enumeration , and both of them are zero.
 typedef enum {
     st_NULL = 0,
     //non-terminal    chacartor  as followed
-    st_ID,       // ID = (A-Z|a-z)( A-Z|a-z|0-9 )*
+    st_ID,         // ID = (A-Z|a-z)( A-Z|a-z|0-9 )*
     st_IMM,        // 0~9
     st_IMML,       // 0~9L
     st_FP,         // decimal e.g 3.14
     st_STRING,     // "abcd"
     st_CHAR_LIST,  // 'abcd'
-    st_INTRI_FUN, //intrinsic function call
-    st_INTRI_VAL, //intrinsic value
-    st_LLPAREN,         //{
-    st_RLPAREN,         //}
-    st_LSPAREN ,       //[
-    st_RSPAREN ,       //]
-    st_ASSIGN, // =
-    st_LPAREN,  // (
-    st_RPAREN,  // )
-    st_ADD,      // +
-    st_SUB,      // -
-    st_MUL,      // *
-    st_DIV,      // /
-    st_AND,     //&&
-    st_BITANDEQU,     //&=
-    st_OR,      //||
-    st_AT,      //@
-    st_BITAND,  //&
-    st_BITOR,   //|
+    st_INTRI_FUN,  //intrinsic function call
+    st_INTRI_VAL,  //intrinsic value
+    st_LLPAREN,    //{
+    st_RLPAREN,    //}
+    st_LSPAREN ,   //[
+    st_RSPAREN ,   //]
+    st_ASSIGN,     // =
+    st_LPAREN,     // (
+    st_RPAREN,     // )
+    st_ADD,        // +
+    st_SUB,        // -
+    st_MUL,        // *
+    st_DIV,        // /
+    st_AND,        //&&
+    st_BITANDEQU,  //&=
+    st_OR,         //||
+    st_AT,         //@
+    st_BITAND,     //&
+    st_BITOR,      //|
     st_BITOREQU,   //|=
-    st_LESSTHAN, // <
-    st_MORETHAN, // >
-    st_RSHIFT,   // >>
-    st_RSHIFTEQU,   // >>=
-    st_LSHIFT,   // <<
-    st_LSHIFTEQU,   // <<=
+    st_LESSTHAN,   // <
+    st_MORETHAN,   // >
+    st_RSHIFT,     // >>
+    st_RSHIFTEQU,  // >>=
+    st_LSHIFT,     // <<
+    st_LSHIFTEQU,  // <<=
     st_NOMORETHAN, //<=
     st_NOLESSTHAN, //>=
-    st_NOEQU,  //!=
-    st_NOT,    //!
-    st_EQU,      // ==
-    st_ADDEQU,   // +=
-    st_SUBEQU,   // -=
-    st_MULEQU,   // *=
-    st_DIVEQU,   // /=
-    st_XOR,      // ^
-    st_XOREQU,    // ^=
-    st_MODEQU,  // %=
-    st_MOD,    // %
-    st_COLON,    // :
-    st_DCOLON,    // ::
-    st_SEMI,     // ;
-    st_QUOT,     // "
-    st_COMMA,    //,
-    st_UNDERLINE, //_
-    st_LANDSCAPE, //-
-    st_REV,    //~  reverse  a = ~a
-    st_DOT,    //.
-    st_QUES_MARK, //?
-    st_ARROW,   // ->
+    st_NOEQU,      //!=
+    st_NOT,        //!
+    st_EQU,        // ==
+    st_ADDEQU,     // +=
+    st_SUBEQU,     // -=
+    st_MULEQU,     // *=
+    st_DIVEQU,     // /=
+    st_XOR,        // ^
+    st_XOREQU,     // ^=
+    st_MODEQU,     // %=
+    st_MOD,        // %
+    st_COLON,      // :
+    st_DCOLON,     // ::
+    st_SEMI,       // ;
+    st_QUOT,       // "
+    st_COMMA,      //,
+    st_UNDERLINE,  //_
+    st_LANDSCAPE,  //-
+    st_REV,        //~  reverse  a = ~a
+    st_DOT,        //.
+    st_QUES_MARK,  //?
+    st_ARROW,      // ->
     st_ADDADD,     // ++
     st_SUBSUB,     // --
 

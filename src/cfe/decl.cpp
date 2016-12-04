@@ -1676,16 +1676,16 @@ static Decl * direct_abstract_declarator(TypeSpec * qua)
             Tree * t = NULL;
             while (g_real_token == T_LSPAREN) {
                 match(T_LSPAREN);
-                Decl * ndcl = new_decl(DCL_ARRAY);
+                Decl * ndcl2 = new_decl(DCL_ARRAY);
                 t = conditional_exp();
                 if (match(T_RSPAREN) != ST_SUCC) {
                     err(g_real_line_num, "miss ']'");
                     goto FAILED;
                 }
-                DECL_array_dim_exp(ndcl) = t;
+                DECL_array_dim_exp(ndcl2) = t;
 
                 //'id' should be the last one in declarator-list.
-                insertbefore_one(&dcl, dcl, ndcl);
+                insertbefore_one(&dcl, dcl, ndcl2);
             }
         }
         break;
@@ -2877,10 +2877,9 @@ UINT computeBitFieldByteSize(Decl const** dcl)
 {
     ASSERT(is_integer(*dcl), ("must be handled in struct_declarator()"));            
     
-    TypeSpec * ty = DECL_spec(*dcl);
-    ASSERT0(ty);
+    ASSERT0(DECL_spec(*dcl));
     
-    ULONG int_ty = TYPE_des(ty); //the integer type of the bit group.
+    ULONG int_ty = TYPE_des(DECL_spec(*dcl)); //the integer type of the bit group.
     ULONG int_bitsize = 0; //the max bit size the group hold.
     switch (int_ty) {
     case T_SPEC_CHAR: int_bitsize = BYTE_PER_CHAR * BIT_PER_BYTE; break;
@@ -2897,15 +2896,15 @@ UINT computeBitFieldByteSize(Decl const** dcl)
     UINT bitsize = 0;
     UINT total_bitsize = int_bitsize;
     for (; (*dcl) != NULL;) {
-        TypeSpec * ty = DECL_spec(*dcl);
-        ASSERT0(ty);
+        TypeSpec * ty2 = DECL_spec(*dcl);
+        ASSERT0(ty2);
 
         Decl const* declarator = get_declarator(*dcl);
         ASSERT0(declarator);
         
         ASSERT0(DECL_is_bit_field(declarator) && DECL_bit_len(declarator) > 0);
         
-        if (TYPE_des(ty) != int_ty) { break; }
+        if (TYPE_des(ty2) != int_ty) { break; }
 
         if (bitsize + DECL_bit_len(declarator) > int_bitsize) {
             total_bitsize += int_bitsize;

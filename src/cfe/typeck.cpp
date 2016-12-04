@@ -549,8 +549,7 @@ static void insertCvtForParams(Tree * t)
         Decl * realp_decl = TREE_result_type(realp);
         if (is_double(realp_decl) && is_float(formalp_decl)) {
             //Insert convertion operation: truncate double to float.
-            Tree * t = gen_cvt(formalp_decl, realp);
-            realp = t;
+            realp = gen_cvt(formalp_decl, realp);
         }
         ::add_next(&newparamlist, &last, realp);
     }

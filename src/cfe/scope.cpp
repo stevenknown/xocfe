@@ -27,10 +27,8 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 @*/
 #include "cfecom.h"
 
-/*
-The outermost scope is global region which id is 0, and the inner
-scope scope is function body-stmt which id is 1, etc.
-*/
+//The outermost scope is global region which id is 0, and the inner
+//scope scope is function body-stmt which id is 1, etc.
 SCOPE * g_cur_scope = NULL;
 List<SCOPE*> g_scope_list;
 UINT g_scope_count = 0;
@@ -54,11 +52,9 @@ SCOPE * new_scope()
 }
 
 
-/*
-Be usually used in scope process.
-Return NULL if this function do not find 'sym' in 'sym_list', and
-'sym' will be appended  into list, otherwise return 'sym'.
-*/
+//Be usually used in scope process.
+//Return NULL if this function do not find 'sym' in 'sym_list', and
+//'sym' will be appended  into list, otherwise return 'sym'.
 SYM * add_to_symtab_list(SYM_LIST ** sym_list , SYM * sym)
 {
     if (sym_list == NULL || sym == NULL) {
@@ -87,11 +83,9 @@ SYM * add_to_symtab_list(SYM_LIST ** sym_list , SYM * sym)
 }
 
 
-/*
-'is_tmp_sc': true if the new scope is used for temprary.
-And it will be removed from the sub-scope-list while return to
-the parent.
-*/
+//'is_tmp_sc': true if the new scope is used for temprary.
+//And it will be removed from the sub-scope-list while return to
+//the parent.
 SCOPE * enter_sub_scope(bool is_tmp_sc)
 {
     SCOPE * sc = new_scope();

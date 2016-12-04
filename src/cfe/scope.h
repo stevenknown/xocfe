@@ -46,35 +46,33 @@ public:
 #define SYM_LIST_prev(syml) (syml)->prev
 
 
-/*
-SCOPE
-    |
-    |--EnumList
-    |--SYM_TAB_LIST
-    |--TYPE_LIST
-    |--SUB_SCOPE
-    |--UserTypeList
-*/
+//SCOPE
+// |
+// |--EnumList
+// |--SYM_TAB_LIST
+// |--TYPE_LIST
+// |--SUB_SCOPE
+// |--UserTypeList
 #define MAX_SCOPE_FILED 4
 #define GLOBAL_SCOPE    0  //Global memory space
 #define FUNCTION_SCOPE  1  //Function unit
-#define REGION_SCOPE    2    //Region unit
+#define REGION_SCOPE    2  //Region unit
 
-#define SCOPE_id(sc)                ((sc)->id)
-#define SCOPE_is_tmp_sc(sc)            ((sc)->is_tmp_scope)
-#define SCOPE_parent(sc)            ((sc)->parent) //owner scope, namely parent node
-#define SCOPE_nsibling(sc)            ((sc)->next) //next sibling , growing to right way
-#define SCOPE_sub(sc)                ((sc)->sub) //sub scope
-#define SCOPE_level(sc)                ((sc)->level)
-#define SCOPE_enum_list(sc)            ((sc)->enum_list)
-#define SCOPE_sym_tab_list(sc)        ((sc)->sym_tab_list)
-#define SCOPE_user_type_list(sc)    ((sc)->utl_list)
-#define SCOPE_label_list(sc)        ((sc)->li_list)
-#define SCOPE_ref_label_list(sc)    ((sc)->lref_list)
-#define SCOPE_decl_list(sc)            ((sc)->decl_list)
-#define SCOPE_struct_list(sc)        ((sc)->struct_list)
-#define SCOPE_union_list(sc)        ((sc)->union_list)
-#define SCOPE_stmt_list(sc)            ((sc)->stmt_list)
+#define SCOPE_id(sc)               ((sc)->id)
+#define SCOPE_is_tmp_sc(sc)        ((sc)->is_tmp_scope)
+#define SCOPE_parent(sc)           ((sc)->parent) //owner scope, namely parent node
+#define SCOPE_nsibling(sc)         ((sc)->next) //next sibling , growing to right way
+#define SCOPE_sub(sc)              ((sc)->sub) //sub scope
+#define SCOPE_level(sc)            ((sc)->level)
+#define SCOPE_enum_list(sc)        ((sc)->enum_list)
+#define SCOPE_sym_tab_list(sc)     ((sc)->sym_tab_list)
+#define SCOPE_user_type_list(sc)   ((sc)->utl_list)
+#define SCOPE_label_list(sc)       ((sc)->li_list)
+#define SCOPE_ref_label_list(sc)   ((sc)->lref_list)
+#define SCOPE_decl_list(sc)        ((sc)->decl_list)
+#define SCOPE_struct_list(sc)      ((sc)->struct_list)
+#define SCOPE_union_list(sc)       ((sc)->union_list)
+#define SCOPE_stmt_list(sc)        ((sc)->stmt_list)
 class SCOPE {
 public:
     INT id; //unique id
