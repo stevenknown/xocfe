@@ -28,6 +28,7 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef __TYPECK_H__
 #define __TYPECK_H__
 
+bool isConsistentWithPointer(Tree * t);
 INT process_init(Decl * decl, Tree ** init);
 INT process_init(Decl * decl);
 INT TypeCheck();

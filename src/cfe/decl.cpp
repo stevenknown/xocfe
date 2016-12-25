@@ -1084,7 +1084,7 @@ static TypeSpec * type_spec(TypeSpec * ty)
         match(T_LONG);
         if (IS_TYPE(ty, T_SPEC_LONG)) {
             //It seems longlong might confuse user.
-            //warn1("'long long' is not ANSI C89, "
+            //warn("'long long' is not ANSI C89, "
             //      "using longlong as an alternative");
             TYPE_des(ty) &= ~T_SPEC_LONG;
             TYPE_des(ty) |= T_SPEC_LONGLONG;
@@ -2065,6 +2065,15 @@ ULONG get_array_elemnum_to_dim(Decl * arr, UINT dim)
 }
 
 
+//Get the bytesize of array element.
+ULONG get_array_elem_bytesize(Decl * arr)
+{    
+    ASSERT0(is_array(arr));
+    ASSERT0(DECL_spec(arr));
+    return getSimplyTypeSize(DECL_spec(arr));
+}
+
+
 //Calculate constant expression when parsing the variable
 //declaration of array type.
 //
@@ -2328,7 +2337,7 @@ static Decl * declarator(TypeSpec * qua)
 }
 
 
-static INT label_ck(SCOPE *s)
+static INT label_ck(SCOPE * s)
 {
     if (s == NULL) return ST_ERR;
     LabelInfo * lref = SCOPE_ref_label_list(s).get_head();
@@ -2353,7 +2362,7 @@ static INT label_ck(SCOPE *s)
     lj = SCOPE_label_list(s).get_head();
     for (; lj != NULL; lj = SCOPE_label_list(s).get_next()) {
         if (!LABEL_INFO_is_used(lj)) {
-            warn1("'%s' unreferenced label", SYM_name(LABEL_INFO_name(lj)));
+            warn(0, "'%s' unreferenced label", SYM_name(LABEL_INFO_name(lj)));
         }
     }
     return ST_SUCC;
@@ -2506,7 +2515,7 @@ static void refine_func(Decl * func)
 //
 //'decl': a declarator, not a pointer type.
 //'is_append': transform to pointer type by appending a DCL_POINTER.
-//    In order to achieve this purpose, insert a DCL_POINTER type before
+//    In order to achieve, insert DCL_POINTER type before
 //    the first array type.
 //    e.g: ID->ARRAY->ARRAY => ID->POINTER->ARRAY->ARRAY
 Decl * trans_to_pointer(Decl * decl, bool is_append)
@@ -2866,7 +2875,7 @@ UINT computeArraySize(Decl const* decl)
     }
 
     //Note host's UINT may be longer than target machine.
-    ASSERT(computeConstBitLen(num) < BYTE_PER_INT * BIT_PER_BYTE, 
+    ASSERT(computeConstBitLen(num) <= BYTE_PER_INT * BIT_PER_BYTE, 
            ("too large array"));
     return num;
 }
@@ -2882,14 +2891,33 @@ UINT computeBitFieldByteSize(Decl const** dcl)
     ULONG int_ty = TYPE_des(DECL_spec(*dcl)); //the integer type of the bit group.
     ULONG int_bitsize = 0; //the max bit size the group hold.
     switch (int_ty) {
-    case T_SPEC_CHAR: int_bitsize = BYTE_PER_CHAR * BIT_PER_BYTE; break;
-    case T_SPEC_SHORT: int_bitsize = BYTE_PER_SHORT * BIT_PER_BYTE; break;
+    case T_SPEC_CHAR|T_SPEC_UNSIGNED:
+    case T_SPEC_CHAR|T_SPEC_SIGNED:
+    case T_SPEC_CHAR: 
+        int_bitsize = BYTE_PER_CHAR * BIT_PER_BYTE; 
+        break;
+    case T_SPEC_SHORT|T_SPEC_UNSIGNED:
+    case T_SPEC_SHORT|T_SPEC_SIGNED:
+    case T_SPEC_SHORT: 
+        int_bitsize = BYTE_PER_SHORT * BIT_PER_BYTE; 
+        break;
     case T_SPEC_ENUM:
+    case T_SPEC_INT|T_SPEC_UNSIGNED:
+    case T_SPEC_INT|T_SPEC_SIGNED:
     case T_SPEC_INT:
     case T_SPEC_SIGNED:
-    case T_SPEC_UNSIGNED: int_bitsize = BYTE_PER_INT * BIT_PER_BYTE; break;
-    case T_SPEC_LONG: int_bitsize = BYTE_PER_LONG * BIT_PER_BYTE; break;
-    case T_SPEC_LONGLONG: int_bitsize = BYTE_PER_LONGLONG * BIT_PER_BYTE; break;
+    case T_SPEC_UNSIGNED:
+        int_bitsize = BYTE_PER_INT * BIT_PER_BYTE; break;
+    case T_SPEC_LONG|T_SPEC_UNSIGNED:
+    case T_SPEC_LONG|T_SPEC_SIGNED:
+    case T_SPEC_LONG: 
+        int_bitsize = BYTE_PER_LONG * BIT_PER_BYTE; 
+        break;
+    case T_SPEC_LONGLONG|T_SPEC_UNSIGNED:
+    case T_SPEC_LONGLONG|T_SPEC_SIGNED:
+    case T_SPEC_LONGLONG: 
+        int_bitsize = BYTE_PER_LONGLONG * BIT_PER_BYTE; 
+        break;
     default: UNREACH();
     }
     
@@ -3983,15 +4011,13 @@ bool is_integer(TypeSpec const* ty)
 }
 
 
-//Return boolean for arithmetic type.
-//Include integer and float pointer.
+//Return true for arithmetic type which include integer and float.
 bool is_arith(Decl const* dcl)
 {
-    ASSERT(DECL_dt(dcl) == DCL_TYPE_NAME ||
-           DECL_dt(dcl) == DCL_DECLARATION,
+    ASSERT(DECL_dt(dcl) == DCL_TYPE_NAME || DECL_dt(dcl) == DCL_DECLARATION,
            ("expect type-name or dcrlaration"));
     TypeSpec * ty = DECL_spec(dcl);
-    return is_integer(ty) || is_fp(ty);
+    return is_scalar(dcl) && (is_integer(ty) || is_fp(ty));
 }
 
 

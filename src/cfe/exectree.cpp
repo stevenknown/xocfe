@@ -234,12 +234,12 @@ static bool compute_binary_op(Tree * t)
         case T_DIV:
             l = (l / r);
             pushv(l);
-            if (r == 0) { warn1("divisor is zero"); }
+            if (r == 0) { warn(TREE_lineno(t), "divisor is zero"); }
             break;
         case T_MOD:
             l = (l % r);
             pushv(l);
-            if (r == 0) { warn1("divisor is zero"); }
+            if (r == 0) { warn(TREE_lineno(t), "divisor is zero"); }
             break;
         default: UNREACH();
         }

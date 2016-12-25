@@ -25,20 +25,24 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 @*/
-#include "ltype.h"
-#include "comf.h"
-#include "strbuf.h"
-#include "smempool.h"
-#include "sstl.h"
-
+#include "../com/ltype.h"
+#include "../com/comf.h"
+#include "../com/strbuf.h"
+#include "../com/smempool.h"
+#include "../com/sstl.h"
+#include "../com/bs.h"
+#include "../com/sbs.h"
+#include "../com/sbs_hash.h"
+#include "../com/sgraph.h"
+#include "../com/rational.h"
+#include "../com/flty.h"
 using namespace xcom;
 
-#include "util.h"
-#include "symtab.h"
-
+#include "../opt/util.h"
+#include "../opt/symtab.h"
 using namespace xoc;
 
-#include "label.h"
+#include "../opt/label.h"
 #include "cfe_targ_const_info.h"
 #include "errno.h"
 #include "cfexport.h"

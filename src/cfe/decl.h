@@ -528,6 +528,7 @@ UINT get_pointer_base_size(Decl * decl);
 Decl const* get_pointer_decl(Decl const* decl);
 Decl * get_array_decl(Decl * decl);
 ULONG get_array_elemnum_to_dim(Decl * arr, UINT dim);
+ULONG get_array_elem_bytesize(Decl * arr);
 Decl * get_pointer_base_decl(Decl * decl, TypeSpec ** ty);
 TypeSpec * get_pure_type_spec(TypeSpec * type);
 UINT getDeclaratorSize(Decl const* d);

@@ -61,24 +61,23 @@ void show_warn()
 }
 
 
-//Used in treegen.cpp
-void warn1(CHAR * msg, ...)
+//Report warning with line number.
+void warn(INT line_num, CHAR * msg, ...)
 {
-    if (msg == NULL) { return ; }
-    
+    if (msg == NULL) { return; }
+
     WARN_MSG * p = NULL;
-    StrBuf sbuf(64);   
+    StrBuf sbuf(64);
     
     va_list arg;
     va_start(arg, msg);
     sbuf.vsprint(msg, arg);
-    
     p = (WARN_MSG*)xmalloc(sizeof(WARN_MSG));
     p->msg = (CHAR*)xmalloc(sbuf.strlen() + 1);
     memcpy(p->msg, sbuf.buf, sbuf.strlen() + 1);
-    p->lineno = g_real_line_num;
+    p->lineno = line_num;
     g_warn_msg_list.append_tail(p);
-    return ;
+    va_end(arg);
 }
 
 

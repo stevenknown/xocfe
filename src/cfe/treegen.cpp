@@ -717,7 +717,6 @@ static Tree * param_list()
             return t;
         }
         add_next(&t, &last, nt);
-        last = get_last(nt);
     }
     return t;
 }
@@ -2530,3 +2529,4 @@ INT Parser()
         }
     }
 }
+ 
