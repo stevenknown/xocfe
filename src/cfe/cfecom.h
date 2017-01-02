@@ -25,19 +25,7 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 @*/
-#include "../com/ltype.h"
-#include "../com/comf.h"
-#include "../com/strbuf.h"
-#include "../com/smempool.h"
-#include "../com/sstl.h"
-#include "../com/bs.h"
-#include "../com/sbs.h"
-#include "../com/sbs_hash.h"
-#include "../com/sgraph.h"
-#include "../com/rational.h"
-#include "../com/flty.h"
-using namespace xcom;
-
+#include "../com/xcominc.h"
 #include "../opt/util.h"
 #include "../opt/symtab.h"
 using namespace xoc;

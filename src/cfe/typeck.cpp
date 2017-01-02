@@ -449,7 +449,7 @@ static TypeSpec * buildBaseTypeSpec(INT des)
 }
 
 
-//Accroding C89 binary operation converting rules
+//Conversion rank. Accroding C99 binary operation converting rules.
 //l                r                       standard C convert
 //double           any                     double
 //float            any                     float
@@ -458,31 +458,59 @@ static TypeSpec * buildBaseTypeSpec(INT des)
 //unsigned         lower rank signed       unsigned
 //unsigned         upper rank signed       upper rank signed
 //any              any                     no-convert
-static INT getCvtRank(INT des)
+static UINT getCvtRank(UINT des)
 {
-    if (IS_TYPED(des, T_SPEC_CHAR)) {
-        return 20;
-    } else if (IS_TYPED(des, T_SPEC_SHORT)) {
-        return 30;
-    } else if (IS_TYPED(des, T_SPEC_INT) ||
-               IS_TYPED(des, T_SPEC_UNSIGNED) ||
-               IS_TYPED(des, T_SPEC_ENUM)) {
-        return 40;
-    } else if (IS_TYPED(des, T_SPEC_LONG)) {
-        return 50;
-    } else if (IS_TYPED(des, T_SPEC_LONGLONG)) {
-        return 60;
-    } else if (IS_TYPED(des, T_SPEC_FLOAT)) {
-        return 70;
-    } else if (IS_TYPED(des, T_SPEC_DOUBLE)) {
-        return 80;
+    if (HAVE_FLAG(des, T_SPEC_LONGLONG) || HAVE_FLAG(des, T_SPEC_DOUBLE)) {
+        if (HAVE_FLAG(des, T_SPEC_DOUBLE)) {
+            return 90;
+        }
+        
+        //long long
+        //long long int
+        //signed/unsiged long long int
+        return 89;
     }
-    ASSERT(0,("getCvtRank"));
+
+    if (HAVE_FLAG(des, T_SPEC_LONG) ||
+        HAVE_FLAG(des, T_SPEC_DOUBLE) ||
+        HAVE_FLAG(des, T_SPEC_FLOAT)) {
+        if (HAVE_FLAG(des, T_SPEC_DOUBLE) ||
+            HAVE_FLAG(des, T_SPEC_FLOAT)) {
+            return 88;
+        }
+        
+        //long
+        //long int
+        //signed/unsiged long int
+        return 87;
+    }
+
+    if (HAVE_FLAG(des, T_SPEC_SHORT)) {
+        //short
+        //short int
+        //signed/unsiged short
+        //signed/unsiged short int
+        return 84;
+    }
+
+    if (HAVE_FLAG(des, T_SPEC_INT) || HAVE_FLAG(des, T_SPEC_ENUM)) {
+        //int
+        //signed/unsiged int
+        return 85;
+    }
+
+    if (HAVE_FLAG(des, T_SPEC_CHAR) || HAVE_FLAG(des, T_SPEC_BOOL)) {
+        //char
+        //signed/unsiged char
+        return 83;
+    }   
+
+    UNREACH();
     return 0;
 }
 
 
-//Accroding C89 binary operation converting rules
+//Accroding C99 integer/float conversion rank to build binary operation type.
 //l                r                       standard C convert
 //double           any                     double
 //float            any                     float
@@ -495,10 +523,22 @@ static Decl * buildBinaryOpType(TREE_TYPE tok, Decl * l, Decl * r)
 {
     TypeSpec * lty = DECL_spec(l);
     TypeSpec * rty = DECL_spec(r);
-    if ((getCvtRank(TYPE_des(lty)) > getCvtRank(TYPE_des(rty))) ||
-        tok == TR_SHIFT) {
+
+    dump_decl(l);
+    dump_decl(r);
+
+    UINT bankl = getCvtRank(TYPE_des(lty));
+    UINT bankr = getCvtRank(TYPE_des(rty));
+    if (bankl > bankr || tok == TR_SHIFT) {
         return l;
     }
+
+    if (bankl == bankr) {
+        if (IS_TYPE(lty, T_SPEC_UNSIGNED)) {
+            return l;
+        }
+    }
+
     return r;
 }
 
@@ -878,14 +918,14 @@ static INT TypeTran(Tree * t, TYCtx * cont)
                 }
                 if (ST_SUCC != TypeTran(TREE_rchild(t), cont)) {
                     goto FAILED;
-                }
+                }                
                 Decl * ld = TREE_result_type(TREE_lchild(t));
                 Decl * rd = TREE_result_type(TREE_rchild(t));
                 if (TREE_token(t) == T_ADD) { // '+'
                     if (is_pointer(ld) && is_pointer(rd)) {
                         err(TREE_lineno(t), "can not add two pointers");
                         goto FAILED;
-                    }                     
+                    }
                     if (is_array(ld) && is_array(rd)) {
                         err(TREE_lineno(t), "can not add two arrays");
                         goto FAILED;
@@ -899,7 +939,7 @@ static INT TypeTran(Tree * t, TYCtx * cont)
                         }
                     }
                     if (is_pointer(rd)) {
-                        //Swap result type.
+                        //Swap operands.
                         Decl * tmp = ld;
                         ld = rd;
                         rd = tmp;
@@ -909,13 +949,14 @@ static INT TypeTran(Tree * t, TYCtx * cont)
 
                     if (is_array(ld) && is_integer(rd)) {
                         //Regard array type as pointer, 
-                        //the result type is pointer. e.g: int a[]; ...=a+2;
+                        //the result type is pointer. 
+                        //e.g: int a[]; b=a+2; b is pointer.
                         TREE_result_type(t) = buildPointerType(DECL_spec(ld));
                     } else if (is_pointer(ld) && is_integer(rd)) {
                         //Pointer arith.
                         TREE_result_type(t) = ld;
                     } else if (is_arith(ld) && is_arith(rd)) {
-                        //Scalar arith.
+                        //Arithmetic type.
                         TREE_result_type(t) = buildBinaryOpType(
                             TREE_type(t), ld, rd);
                     } else {
@@ -958,15 +999,18 @@ static INT TypeTran(Tree * t, TYCtx * cont)
                         //pointer - integer
                         TREE_result_type(t) = ld;
                     } else if (is_arith(ld) && is_arith(rd)) {
-                        //arithmetic operation
+                        //Arithmetic type
                         TREE_result_type(t) = buildBinaryOpType(
                             TREE_type(t), ld, rd);
                     } else {
-                        ASSERT(0,("TODO"));
+                        ASSERT(0, ("illegal type for '%s'", 
+                            get_token_name(TREE_token(t))));
                     }
-
-                } else ASSERT(0,("TODO"));
-                 break;
+                } else { 
+                    ASSERT(0, ("illegal type for '%s'", 
+                           get_token_name(TREE_token(t))));                
+                }
+                break;
             }
         case TR_MULTI:    // '*' '/' '%'
             {

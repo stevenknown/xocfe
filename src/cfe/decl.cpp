@@ -2881,6 +2881,54 @@ UINT computeArraySize(Decl const* decl)
 }
 
 
+UINT computeScalarTypeBitSize(UINT des)
+{
+    ULONG bitsize = 0; //the max bit size the group hold.
+    switch (des) {
+    case T_SPEC_CHAR|T_SPEC_UNSIGNED:
+    case T_SPEC_CHAR|T_SPEC_SIGNED:
+    case T_SPEC_CHAR: 
+        bitsize = BYTE_PER_CHAR * BIT_PER_BYTE; 
+        break;
+    case T_SPEC_SHORT|T_SPEC_UNSIGNED:
+    case T_SPEC_SHORT|T_SPEC_SIGNED:
+    case T_SPEC_SHORT: 
+        bitsize = BYTE_PER_SHORT * BIT_PER_BYTE; 
+        break;
+    case T_SPEC_ENUM:
+    case T_SPEC_INT|T_SPEC_UNSIGNED:
+    case T_SPEC_INT|T_SPEC_SIGNED:
+    case T_SPEC_INT:
+    case T_SPEC_SIGNED:
+    case T_SPEC_UNSIGNED:
+        bitsize = BYTE_PER_INT * BIT_PER_BYTE; 
+        break;
+    case T_SPEC_LONG|T_SPEC_UNSIGNED:
+    case T_SPEC_LONG|T_SPEC_SIGNED:
+    case T_SPEC_LONG: 
+        bitsize = BYTE_PER_LONG * BIT_PER_BYTE; 
+        break;
+    case T_SPEC_LONGLONG|T_SPEC_UNSIGNED:
+    case T_SPEC_LONGLONG|T_SPEC_SIGNED:
+    case T_SPEC_LONGLONG: 
+        bitsize = BYTE_PER_LONGLONG * BIT_PER_BYTE; 
+        break;
+    case T_SPEC_DOUBLE:
+    case T_SPEC_DOUBLE|T_SPEC_LONG:
+    case T_SPEC_DOUBLE|T_SPEC_LONGLONG:
+        bitsize = BYTE_PER_DOUBLE * BIT_PER_BYTE; 
+        break;
+    case T_SPEC_FLOAT:
+    case T_SPEC_FLOAT|T_SPEC_LONG:
+    case T_SPEC_FLOAT|T_SPEC_LONGLONG:
+        bitsize = BYTE_PER_FLOAT * BIT_PER_BYTE; 
+        break;
+    default: UNREACH();
+    }
+    return bitsize;
+}
+
+
 //Return byte size of a group of bit fields that consisted of integer type.
 UINT computeBitFieldByteSize(Decl const** dcl)
 {
@@ -2889,37 +2937,9 @@ UINT computeBitFieldByteSize(Decl const** dcl)
     ASSERT0(DECL_spec(*dcl));
     
     ULONG int_ty = TYPE_des(DECL_spec(*dcl)); //the integer type of the bit group.
-    ULONG int_bitsize = 0; //the max bit size the group hold.
-    switch (int_ty) {
-    case T_SPEC_CHAR|T_SPEC_UNSIGNED:
-    case T_SPEC_CHAR|T_SPEC_SIGNED:
-    case T_SPEC_CHAR: 
-        int_bitsize = BYTE_PER_CHAR * BIT_PER_BYTE; 
-        break;
-    case T_SPEC_SHORT|T_SPEC_UNSIGNED:
-    case T_SPEC_SHORT|T_SPEC_SIGNED:
-    case T_SPEC_SHORT: 
-        int_bitsize = BYTE_PER_SHORT * BIT_PER_BYTE; 
-        break;
-    case T_SPEC_ENUM:
-    case T_SPEC_INT|T_SPEC_UNSIGNED:
-    case T_SPEC_INT|T_SPEC_SIGNED:
-    case T_SPEC_INT:
-    case T_SPEC_SIGNED:
-    case T_SPEC_UNSIGNED:
-        int_bitsize = BYTE_PER_INT * BIT_PER_BYTE; break;
-    case T_SPEC_LONG|T_SPEC_UNSIGNED:
-    case T_SPEC_LONG|T_SPEC_SIGNED:
-    case T_SPEC_LONG: 
-        int_bitsize = BYTE_PER_LONG * BIT_PER_BYTE; 
-        break;
-    case T_SPEC_LONGLONG|T_SPEC_UNSIGNED:
-    case T_SPEC_LONGLONG|T_SPEC_SIGNED:
-    case T_SPEC_LONGLONG: 
-        int_bitsize = BYTE_PER_LONGLONG * BIT_PER_BYTE; 
-        break;
-    default: UNREACH();
-    }
+
+    //the max bit size the group hold.
+    ULONG int_bitsize = computeScalarTypeBitSize(int_ty);
     
     UINT bitsize = 0;
     UINT total_bitsize = int_bitsize;

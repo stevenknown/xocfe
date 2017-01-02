@@ -417,6 +417,7 @@ Decl * cp_decl_begin_at(Decl const* header);
 
 UINT computeUnionTypeSize(TypeSpec * ty);
 UINT computeStructTypeSize(TypeSpec * ty);
+UINT computeScalarTypeBitSize(UINT des);
 
 bool declaration();
 bool declaration_list();
