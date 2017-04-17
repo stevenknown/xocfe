@@ -32,6 +32,7 @@ xocfe_SOURCES = \
                 com/comf.cpp \
                 com/bs.cpp \
                 com/ltype.cpp \
+                com/strbuf.cpp \
                 \
                 opt/label.cpp \
                 opt/util.cpp
