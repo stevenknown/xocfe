@@ -38,7 +38,7 @@ typedef enum _TOKEN {
     T_IMMUL,        // Unsigned Long
     T_FP,            //double decimal e.g 3.14
     T_FPF,            //float decimal e.g 3.14
-    T_FPLD,            //long double decimal e.g 3.14
+    T_FPLD,            //long double decimal e.g 3.14L
     T_STRING,        // "abcd"
     T_CHAR_LIST,    // 'abcd'
     T_INTRI_FUN,    // intrinsic function call
@@ -200,13 +200,13 @@ extern INT g_real_line_num;
 
 //Exported Functions
 //This is the first function you should invoke before start lex scanning.
-void init_key_word_tab();
+void initKeyWordTab();
 
 //Get current token.
-TOKEN get_token();
+TOKEN getNextToken();
 
 //Get the string name of current token.
-CHAR * get_token_name(TOKEN tok);
+CHAR * getTokenName(TOKEN tok);
 
 TokenInfo const* get_token_info(TOKEN tok);
 #endif

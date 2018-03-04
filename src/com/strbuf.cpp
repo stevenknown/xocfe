@@ -25,7 +25,7 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 @*/
-#ifdef WIN32
+#ifdef _ON_WINDOWS_
 #include <time.h>
 #else
 #include <time.h>
@@ -45,17 +45,17 @@ namespace xcom {
 
 void StrBuf::strcat(UINT l, CHAR const* format, va_list args)
 {
-    UINT sl = ::strlen(buf);
+    size_t sl = ::strlen(buf);
     if (buflen - sl <= l) {
         CHAR * oldbuf = buf;
         buflen += l + 1;
         buf = (CHAR*)malloc(buflen);
-        memcpy(buf, oldbuf, sl);
+        ::memcpy(buf, oldbuf, sl);
         free(oldbuf);
     }
     UINT k = VSNPRINTF(buf + sl, l + 1, format, args);
     ASSERT0(k == l);
-    UNUSED(k);
+    DUMMYUSE(k);
 }
 
 
@@ -76,7 +76,7 @@ void StrBuf::vstrcat(CHAR const* format, va_list args)
 {
     va_list org_args;
     va_copy(org_args, args);
-    UINT l = VSNPRINTF(NULL, 0, format, args);    
+    UINT l = VSNPRINTF(NULL, 0, format, args);
     strcat(l, format, org_args);
     va_end(org_args);
 }
@@ -103,7 +103,7 @@ void StrBuf::vsprint(CHAR const* format, va_list args)
 }
 
 
-//The functions snprintf() and vsnprintf() do not write more than size 
+//The functions snprintf() and vsnprintf() do not write more than size
 //bytes (including the terminating null byte ('\0')).
 void StrBuf::nstrcat(UINT size, CHAR const* format, ...)
 {

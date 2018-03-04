@@ -33,12 +33,13 @@ SCOPE * g_cur_scope = NULL;
 List<SCOPE*> g_scope_list;
 UINT g_scope_count = 0;
 LAB2LINE_MAP g_lab2lineno;
+xcom::TTab<LabelInfo*> g_lab_used;
 
 static void * xmalloc(size_t size)
 {
     void * p = smpoolMalloc(size, g_pool_general_used);
     ASSERT0(p);
-    memset(p, 0, size);
+    ::memset(p, 0, size);
     return p;
 }
 
@@ -334,3 +335,14 @@ void set_map_lab2lineno(LabelInfo * li, UINT lineno)
     g_lab2lineno.set(li, lineno);
 }
 
+
+void set_lab_used(LabelInfo * li)
+{
+    g_lab_used.append(li);
+}
+
+
+bool is_lab_used(LabelInfo * li)
+{
+    return g_lab_used.find(li);
+}

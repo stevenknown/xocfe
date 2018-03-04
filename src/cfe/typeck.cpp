@@ -32,11 +32,11 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 class TYCtx {
 public:
-    //When it comes to lvalue expression of assignment, 
+    //When it comes to lvalue expression of assignment,
     //TR_ID should corresponding with IR_ID, rather than IR_LD.
     bool is_lvalue;
 
-    //Set to true if current TR_ID indicate field one of 
+    //Set to true if current TR_ID indicate field one of
     //struct/union contained.
     bool is_field;
 
@@ -155,7 +155,7 @@ static INT process_pointer_init(Decl * dcl, TypeSpec * ty, Tree ** init)
         *init = TREE_nsib(*init);
         return ST_SUCC;
     }
-    
+
     //TODO: type check
     //...
 
@@ -464,7 +464,7 @@ static UINT getCvtRank(UINT des)
         if (HAVE_FLAG(des, T_SPEC_DOUBLE)) {
             return 90;
         }
-        
+
         //long long
         //long long int
         //signed/unsiged long long int
@@ -478,7 +478,7 @@ static UINT getCvtRank(UINT des)
             HAVE_FLAG(des, T_SPEC_FLOAT)) {
             return 88;
         }
-        
+
         //long
         //long int
         //signed/unsiged long int
@@ -493,7 +493,11 @@ static UINT getCvtRank(UINT des)
         return 84;
     }
 
-    if (HAVE_FLAG(des, T_SPEC_INT) || HAVE_FLAG(des, T_SPEC_ENUM)) {
+    if (HAVE_FLAG(des, T_SPEC_INT) ||
+        HAVE_FLAG(des, T_SPEC_ENUM) ||
+        ONLY_HAVE_FLAG(des, T_SPEC_SIGNED) ||
+        ONLY_HAVE_FLAG(des, T_SPEC_UNSIGNED)) {
+        //signed/unsigned
         //int
         //signed/unsiged int
         return 85;
@@ -503,7 +507,7 @@ static UINT getCvtRank(UINT des)
         //char
         //signed/unsiged char
         return 83;
-    }   
+    }
 
     UNREACH();
     return 0;
@@ -524,9 +528,6 @@ static Decl * buildBinaryOpType(TREE_TYPE tok, Decl * l, Decl * r)
     TypeSpec * lty = DECL_spec(l);
     TypeSpec * rty = DECL_spec(r);
 
-    dump_decl(l);
-    dump_decl(r);
-
     UINT bankl = getCvtRank(TYPE_des(lty));
     UINT bankr = getCvtRank(TYPE_des(rty));
     if (bankl > bankr || tok == TR_SHIFT) {
@@ -546,7 +547,7 @@ static Decl * buildBinaryOpType(TREE_TYPE tok, Decl * l, Decl * r)
 static Decl * buildPointerType(TypeSpec * ty)
 {
     Decl * newdecl = buildTypeName(ty);
-    ASSERT0(DECL_decl_list(newdecl) && 
+    ASSERT0(DECL_decl_list(newdecl) &&
             DECL_dt(DECL_decl_list(newdecl)) == DCL_ABS_DECLARATOR);
     DECL_child(DECL_decl_list(newdecl)) = new_decl(DCL_POINTER);
     return newdecl;
@@ -559,18 +560,18 @@ static bool checkAssign(Tree * t, Decl * ld, Decl *)
     StrBuf buf(64);
     if (is_array(ld)) {
         format_declaration(buf, ld);
-        err(TREE_lineno(t), "illegal '%s', left operand must be l-value", 
+        err(TREE_lineno(t), "illegal '%s', left operand must be l-value",
             buf.buf);
         return false;
     }
-    
+
     if (IS_CONST(DECL_spec(ld))) {
         format_declaration(buf, ld);
         err(TREE_lineno(t),
             "illegal '%s', l-value specifies const object", buf.buf);
         return false;
-    }    
-    
+    }
+
     //TODO: we should check struct/union compatibility in 'ld' and 'rd'
     //Here look lchild of '=' as default type
     return true;
@@ -583,7 +584,7 @@ static void insertCvtForParams(Tree * t)
     ASSERT0(t && TREE_type(t) == TR_CALL);
 
     Decl * funcdecl = TREE_result_type(TREE_fun_exp(t));
-    
+
     ASSERT(DECL_dt(funcdecl) == DCL_TYPE_NAME, ("expect TypeSpec-NAME"));
     ASSERT0(DECL_decl_list(funcdecl));
     ASSERT(DECL_dt(DECL_decl_list(funcdecl)) == DCL_ABS_DECLARATOR,
@@ -593,13 +594,13 @@ static void insertCvtForParams(Tree * t)
     Tree * newparamlist = NULL;
     Tree * last = NULL;
     for (Tree * realp = xcom::removehead(&TREE_para_list(t));
-         realp != NULL && formalp_decl != NULL; 
+         realp != NULL && formalp_decl != NULL;
          realp = xcom::removehead(&TREE_para_list(t))) {
         if (DECL_dt(formalp_decl) == DCL_VARIABLE)  {
             ::add_next(&newparamlist, &last, realp);
             continue;
         }
-        
+
         Decl * realp_decl = TREE_result_type(realp);
         ASSERT0(realp_decl);
         if (is_double(realp_decl) && is_float(formalp_decl)) {
@@ -696,7 +697,7 @@ static bool TypeTranID(Tree * t, TYCtx * cont)
     //be used to infer type for tree node.
     TREE_result_type(t) = buildTypeName(DECL_spec(tmp_decl));
     Decl * res_ty = TREE_result_type(t);
-    
+
     //Set bit info if idenifier is bitfield.
     //Bit info stored at declarator list.
     Decl * declarator = DECL_decl_list(tmp_decl);
@@ -806,19 +807,28 @@ static INT TypeTran(Tree * t, TYCtx * cont)
             if (!TypeTranID(t, cont)) { goto FAILED; }
             break;
         case TR_IMM:
-            TREE_result_type(t) = BUILD_TYNAME(T_SPEC_INT|T_QUA_CONST);
+            if (GET_HIGH_32BIT(TREE_imm_val(t)) != 0) {
+                TREE_result_type(t) = BUILD_TYNAME(T_SPEC_LONGLONG | T_QUA_CONST);
+            } else {
+                TREE_result_type(t) = BUILD_TYNAME(T_SPEC_INT | T_QUA_CONST);
+            }
             break;
         case TR_IMMU:
-            TREE_result_type(t) = BUILD_TYNAME(
-                T_SPEC_UNSIGNED|T_SPEC_INT|T_QUA_CONST);
-            break;            
+            if (GET_HIGH_32BIT(TREE_imm_val(t)) != 0) {
+                TREE_result_type(t) = BUILD_TYNAME(
+                    T_SPEC_UNSIGNED |T_SPEC_LONGLONG | T_QUA_CONST);
+            } else {
+                TREE_result_type(t) = BUILD_TYNAME(
+                    T_SPEC_UNSIGNED | T_SPEC_INT | T_QUA_CONST);
+            }            
+            break;
         case TR_IMML:
             TREE_result_type(t) = BUILD_TYNAME(T_SPEC_LONGLONG|T_QUA_CONST);
             break;
         case TR_IMMUL:
             TREE_result_type(t) = BUILD_TYNAME(
                 T_SPEC_UNSIGNED|T_SPEC_LONGLONG|T_QUA_CONST);
-            break;            
+            break;
         case TR_FP:
         case TR_FPLD:
             TREE_result_type(t) = BUILD_TYNAME(T_SPEC_DOUBLE|T_QUA_CONST);
@@ -860,7 +870,7 @@ static INT TypeTran(Tree * t, TYCtx * cont)
                     format_declaration(buf,ld);
                     err(TREE_lineno(t),
                         "illegal '%s', left operand has type '%s'",
-                        get_token_name(TREE_token(TREE_lchild(t))), buf.buf);
+                        getTokenName(TREE_token(TREE_lchild(t))), buf.buf);
                     goto FAILED;
                 }
 
@@ -869,7 +879,7 @@ static INT TypeTran(Tree * t, TYCtx * cont)
                     format_declaration(buf,rd);
                     err(TREE_lineno(t),
                         "illegal '%s', right operand has type '%s'",
-                        get_token_name(TREE_token(TREE_rchild(t))), buf.buf);
+                        getTokenName(TREE_token(TREE_rchild(t))), buf.buf);
                     goto FAILED;
                 }
 
@@ -878,7 +888,7 @@ static INT TypeTran(Tree * t, TYCtx * cont)
                     is_union(DECL_spec(ld)) ||
                     is_union(DECL_spec(rd))) {
                     err(TREE_lineno(t), "illegal '%s' for struct/union",
-                        get_token_name(TREE_token(TREE_rchild(t))));
+                        getTokenName(TREE_token(TREE_rchild(t))));
                     goto FAILED;
                 }
                 TREE_result_type(t) = buildBinaryOpType(TREE_type(t), ld, rd);
@@ -897,14 +907,14 @@ static INT TypeTran(Tree * t, TYCtx * cont)
                     !is_pointer(ld)) {
                     err(TREE_lineno(t),
                         "can not do '%s' operation for struct/union.",
-                        get_token_name(TREE_token(t)));
+                        getTokenName(TREE_token(t)));
                     goto FAILED;
                 } else if ((is_struct(DECL_spec(rd)) ||
                             is_union(DECL_spec(rd))) &&
                            !is_pointer(rd)) {
                     err(TREE_lineno(t),
                         "can not do '%s' operation for struct/union.",
-                        get_token_name(TREE_token(t)));
+                        getTokenName(TREE_token(t)));
                     goto FAILED;
                 }
                 TREE_result_type(t) =
@@ -918,7 +928,7 @@ static INT TypeTran(Tree * t, TYCtx * cont)
                 }
                 if (ST_SUCC != TypeTran(TREE_rchild(t), cont)) {
                     goto FAILED;
-                }                
+                }
                 Decl * ld = TREE_result_type(TREE_lchild(t));
                 Decl * rd = TREE_result_type(TREE_rchild(t));
                 if (TREE_token(t) == T_ADD) { // '+'
@@ -934,7 +944,7 @@ static INT TypeTran(Tree * t, TYCtx * cont)
                         if (is_struct(ld) || is_union(rd)) {
                             err(TREE_lineno(t),
                                 "illegal '%s' for struct/union",
-                                get_token_name(TREE_token(t)));
+                                getTokenName(TREE_token(t)));
                             goto FAILED;
                         }
                     }
@@ -948,8 +958,8 @@ static INT TypeTran(Tree * t, TYCtx * cont)
                     }
 
                     if (is_array(ld) && is_integer(rd)) {
-                        //Regard array type as pointer, 
-                        //the result type is pointer. 
+                        //Regard array type as pointer,
+                        //the result type is pointer.
                         //e.g: int a[]; b=a+2; b is pointer.
                         TREE_result_type(t) = buildPointerType(DECL_spec(ld));
                     } else if (is_pointer(ld) && is_integer(rd)) {
@@ -960,8 +970,8 @@ static INT TypeTran(Tree * t, TYCtx * cont)
                         TREE_result_type(t) = buildBinaryOpType(
                             TREE_type(t), ld, rd);
                     } else {
-                        ASSERT(0, ("illegal type for '%s'", 
-                            get_token_name(TREE_token(t))));
+                        ASSERT(0, ("illegal type for '%s'",
+                            getTokenName(TREE_token(t))));
                     }
                 } else if (TREE_token(t) == T_SUB) { // '-'
                     if (!is_pointer(ld) && is_pointer(rd)) {
@@ -976,7 +986,7 @@ static INT TypeTran(Tree * t, TYCtx * cont)
                             is_union(DECL_spec(ld))) {
                             err(TREE_lineno(t),
                                 "illegal '%s' for struct/union",
-                                get_token_name(TREE_token(t)));
+                                getTokenName(TREE_token(t)));
                             goto FAILED;
                         }
                     }
@@ -986,7 +996,7 @@ static INT TypeTran(Tree * t, TYCtx * cont)
                             is_union(DECL_spec(rd))) {
                             err(TREE_lineno(t),
                                 "illegal '%s' for struct/union",
-                                get_token_name(TREE_token(t)));
+                                getTokenName(TREE_token(t)));
                             goto FAILED;
                         }
                     }
@@ -1003,12 +1013,12 @@ static INT TypeTran(Tree * t, TYCtx * cont)
                         TREE_result_type(t) = buildBinaryOpType(
                             TREE_type(t), ld, rd);
                     } else {
-                        ASSERT(0, ("illegal type for '%s'", 
-                            get_token_name(TREE_token(t))));
+                        ASSERT(0, ("illegal type for '%s'",
+                            getTokenName(TREE_token(t))));
                     }
-                } else { 
-                    ASSERT(0, ("illegal type for '%s'", 
-                           get_token_name(TREE_token(t))));                
+                } else {
+                    ASSERT(0, ("illegal type for '%s'",
+                           getTokenName(TREE_token(t))));
                 }
                 break;
             }
@@ -1026,7 +1036,7 @@ static INT TypeTran(Tree * t, TYCtx * cont)
                             TREE_type(t), ld, rd);
                     } else {
                         err(TREE_lineno(t), "illegal operation for '%s'",
-                             get_token_name(TREE_token(TREE_rchild(t))));
+                             getTokenName(TREE_token(TREE_rchild(t))));
                         goto FAILED;
                     }
                 } else {
@@ -1093,26 +1103,27 @@ static INT TypeTran(Tree * t, TYCtx * cont)
                 Decl * fd = TREE_result_type(TREE_false_part(t));
                 ASSERT0(td && fd);
                 if (is_pointer(td) && !is_pointer(fd)) {
-                    err(TREE_lineno(t), "no conversion from pointer to non-pointer");
-                    goto FAILED;
-                }
-                if (!is_pointer(td) && is_pointer(fd)) {
-                    err(TREE_lineno(t), "no conversion from non-pointer to pointer");
-                    goto FAILED;
-                }
-                if (is_array(td) && !is_array(fd)) {
+                    if (!is_imm_int(TREE_false_part(t)) ||
+                        TREE_imm_val(TREE_false_part(t)) != 0) {
+                        err(TREE_lineno(t), "no conversion from pointer to non-pointer");
+                        goto FAILED;
+                    }                    
+                } else if (!is_pointer(td) && is_pointer(fd)) {
+                    if (!is_imm_int(TREE_true_part(t)) ||
+                        TREE_imm_val(TREE_true_part(t)) != 0) {
+                        err(TREE_lineno(t), "no conversion from pointer to non-pointer");
+                        goto FAILED;
+                    }
+                } else if (is_array(td) && !is_array(fd)) {
                     err(TREE_lineno(t), "no conversion from array to non-array");
                     goto FAILED;
-                }
-                if (!is_array(td) && is_array(fd)) {
+                } else if (!is_array(td) && is_array(fd)) {
                     err(TREE_lineno(t), "no conversion from non-array to array");
                     goto FAILED;
-                }
-                if (is_struct(td) && !is_struct(fd)) {
+                } else if (is_struct(td) && !is_struct(fd)) {
                     err(TREE_lineno(t), "can not select between struct and non-struct");
                     goto FAILED;
-                }
-                if (is_union(td) && !is_union(fd)) {
+                } else if (is_union(td) && !is_union(fd)) {
                     err(TREE_lineno(t), "can not select between union and non-union");
                     goto FAILED;
                 }
@@ -1216,7 +1227,7 @@ static INT TypeTran(Tree * t, TYCtx * cont)
         case TR_NOT:  // get non-value
             {
                 if (ST_SUCC != TypeTran(TREE_lchild(t), cont)) goto FAILED;
-                
+
                 Decl * ld = TREE_result_type(TREE_lchild(t));
                 if (!is_arith(ld) && !is_pointer(ld)) {
                     StrBuf buf(64);
@@ -1344,9 +1355,8 @@ static INT TypeTran(Tree * t, TYCtx * cont)
                 if (PURE_DECL(td) == NULL) {
                     err(TREE_lineno(t),
                         "The referrence of array is not match with its declaration.");
-                }
-                if (DECL_dt(PURE_DECL(td)) == DCL_ARRAY ||
-                    DECL_dt(PURE_DECL(td)) == DCL_POINTER) {
+                } else if (DECL_dt(PURE_DECL(td)) == DCL_ARRAY ||
+                           DECL_dt(PURE_DECL(td)) == DCL_POINTER) {
                     xcom::removehead(&PURE_DECL(td));
                 }
                 TREE_result_type(t) = td;
@@ -1434,8 +1444,8 @@ FAILED:
 //'realp': real parameter
 static bool checkParam(Decl * formalp, Decl * realp)
 {
-    UNUSED(realp);
-    UNUSED(formalp);
+    DUMMYUSE(realp);
+    DUMMYUSE(formalp);
     //TODO
     return true;
 }
@@ -1521,7 +1531,6 @@ static bool checkCall(Tree * t, TYCtx * cont)
     }
 
     if (formal_param_decl != NULL || real_param != NULL) {
-        dump_decl(formal_param_decl);
         CHAR * name = NULL;
         if (TREE_type(TREE_fun_exp(t)) == TR_ID) {
             name = SYM_name(TREE_id(TREE_fun_exp(t)));
@@ -1556,18 +1565,18 @@ bool isConsistentWithPointer(Tree * t)
     ASSERT0(t);
     Decl * decl = TREE_result_type(t);
     ASSERT0(decl);
-    
+
     switch (TREE_type(t)) {
     case TR_IMM:
     case TR_IMMU:
     case TR_IMML:
     case TR_IMMUL:
-        return true;        
+        return true;
     case TR_FP:
     case TR_FPF:
     case TR_FPLD:
         return false;
-    default: break;    
+    default: break;
     }
     if (is_scalar(decl)) {
         return false;
@@ -1581,9 +1590,9 @@ static bool checkAssign(Tree * t, TYCtx * cont)
 {
     TypeCheckCore(TREE_lchild(t), cont);
     TypeCheckCore(TREE_rchild(t), cont);
-    if ((is_pointer(TREE_result_type(TREE_lchild(t))) && 
+    if ((is_pointer(TREE_result_type(TREE_lchild(t))) &&
          !isConsistentWithPointer(TREE_rchild(t))) ||
-        (is_pointer(TREE_result_type(TREE_rchild(t))) && 
+        (is_pointer(TREE_result_type(TREE_rchild(t))) &&
          !isConsistentWithPointer(TREE_lchild(t)))) {
         xcom::StrBuf bufl(64);
         xcom::StrBuf bufr(64);

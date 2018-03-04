@@ -53,7 +53,7 @@ static void * xmalloc(size_t size)
 {
     void * p = smpoolMalloc(size, g_pool_tree_used);
     ASSERT0(p);
-    memset(p, 0, size);
+    ::memset(p, 0, size);
     return p;
 }
 
@@ -72,7 +72,7 @@ static bool verify(Tree * t)
     case TR_COND:
     case TR_LABEL:
         break;
-    default: ASSERT0(TREE_token(t) != T_NUL && get_token_name(TREE_token(t)));
+    default: ASSERT0(TREE_token(t) != T_NUL && getTokenName(TREE_token(t)));
     }
 
     switch (TREE_type(t)) {
@@ -186,8 +186,8 @@ static LabelInfo * add_ref_label(CHAR * name, INT lineno)
 
     //Allocate different LabelInfo for different lines.
     li = allocCustomerLabel(g_fe_sym_tab->add(name), g_pool_general_used);
-    //li = g_labtab.append_and_retrieve(li);
-    LABEL_INFO_is_used(li) = true;
+    //li = g_labtab.append_and_retrieve(li);    
+    set_lab_used(li);
     set_map_lab2lineno(li, lineno); //ONLY for debug-info or dumping
     SCOPE_ref_label_list(sc).append_tail(li);
     return li;
@@ -488,7 +488,7 @@ void suck_tok_to(INT placeholder, ...)
 {
     va_list arg;
     TOKEN tok;
-    ASSERT0(sizeof(TOKEN) == sizeof(INT));
+    ASSERT0_DUMMYUSE(sizeof(TOKEN) == sizeof(INT));
     for (;;) {
         if (g_real_token == T_END || g_real_token == T_NUL) break;
         va_start(arg, placeholder);
@@ -518,7 +518,7 @@ Tree * id()
 
 static INT gettok()
 {
-    get_token();
+    getNextToken();
     g_real_token = g_cur_token;
     g_real_token_string = g_cur_token_string;
     g_real_line_num = g_src_line_num;
@@ -1227,11 +1227,11 @@ Tree * gen_cvt(Tree * tgt_type, Tree * src)
 
 Tree * gen_cvt(Decl const* tgt_type, Tree * src)
 {
-    ASSERT0(tgt_type && src);    
+    ASSERT0(tgt_type && src);
     Decl * dup = cp_typename(tgt_type);
     return gen_cvt(gen_typename(dup), src);
 }
-    
+
 
 //BNF:
 //cast_expression:
@@ -1257,7 +1257,12 @@ static Tree * cast_exp()
     //}
 
     if (TREE_type(p) == TR_TYPE_NAME) {
-        t = gen_cvt(p, cast_exp());
+        Tree * srcexp = cast_exp();
+        if (srcexp == NULL) {
+            err(g_real_line_num, "cast expression cannot be NULL");
+            goto FAILED;
+        }
+        t = gen_cvt(p, srcexp);
         if (TREE_cast_exp(t) == NULL) {
             err(g_real_line_num, "cast expression cannot be NULL");
             goto FAILED;
@@ -1300,7 +1305,7 @@ static Tree * multiplicative_exp()
         t = p;
     }
     return t ;
-    
+
 FAILED:
     prt2C("error in multiplicative_exp()");
     return t;
@@ -1333,7 +1338,7 @@ static Tree * additive_exp()
         t = p;
     }
     return t ;
-    
+
 FAILED:
     prt2C("error in additive_exp()");
     return t;
@@ -2437,7 +2442,7 @@ static Tree * dispatch()
 //Initialize pool for parser.
 void initParser()
 {
-    init_key_word_tab();
+    initKeyWordTab();
     g_pool_general_used = smpoolCreate(256, MEM_COMM);
     g_pool_tree_used = smpoolCreate(128, MEM_COMM);
     g_pool_st_used = smpoolCreate(64, MEM_COMM);
@@ -2508,7 +2513,7 @@ INT Parser()
     //
     //enum_constant:
     //     id
-    ASSERT0(g_hsrc != NULL);
+    ASSERT0(g_hsrc);
     gettok(); //Get first token.
 
     //Create outermost scope for top region.
@@ -2529,4 +2534,3 @@ INT Parser()
         }
     }
 }
- 

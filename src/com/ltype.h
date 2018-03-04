@@ -58,15 +58,15 @@ author: Su Zhenyu
     #include "malloc.h"
     #define ALLOCA    _alloca
     #define SNPRINTF _snprintf
-    #define VSNPRINTF _vsnprintf 
+    #define VSNPRINTF _vsnprintf
     #define RESTRICT __restrict
 
     //Use POSIX name "unlink" instead of ISO C++ conformat name "_unlink".
     #define UNLINK   _unlink
-#else    
+#else
     //Default is linux version
     #include "unistd.h" //for UNLINK declaration
-    #define ALLOCA    alloca 
+    #define ALLOCA    alloca
     #define SNPRINTF snprintf
     #define VSNPRINTF vsnprintf
     #define RESTRICT __restrict__
@@ -79,7 +79,7 @@ author: Su Zhenyu
 #include "string.h"
 #include "memory.h"
 
-//These types may be defined, but we need to override them.
+//Primitive types may have been defined, override them.
 #undef STATUS
 #undef BYTE
 #undef CHAR
@@ -124,6 +124,14 @@ author: Su Zhenyu
 #undef ASSERT0
 #undef ASSERTL0
 
+// This macro is needed to prevent the clang static analyzer from generating
+// false-positive reports in ASSERT() macros.
+#ifdef __clang__
+#define CLANG_ANALYZER_NORETURN __attribute__((analyzer_noreturn))
+#else
+#define CLANG_ANALYZER_NORETURN
+#endif
+
 #ifdef _DEBUG_
     #ifdef __cplusplus
     #define EXTERN_C extern "C"
@@ -131,8 +139,8 @@ author: Su Zhenyu
     #define EXTERN_C extern
     #endif
     #include "stdio.h"
-    EXTERN_C INT m518087(CHAR const* info, ...);
-    EXTERN_C INT m022138(CHAR const* filename, INT line);
+    EXTERN_C INT m518087(CHAR const* info, ...) CLANG_ANALYZER_NORETURN;
+    EXTERN_C INT m022138(CHAR const* filename, INT line) CLANG_ANALYZER_NORETURN;
 
     #define ASSERT(a, b)  \
         ((a) ? 0 : (m022138(__FILE__, __LINE__), m518087 b))
@@ -187,7 +195,7 @@ author: Su Zhenyu
 #define GET_HIGH_32BIT(l)        (((l)>>32)&0xffffFFFF)
 
 //True if type is unsigned.
-#define IS_UNSIGN_TY(type)       ((type)(((type)0) - 1) > 0) 
+#define IS_UNSIGN_TY(type)       ((type)(((type)0) - 1) > 0)
 
 #define IN //input
 #define OUT //output

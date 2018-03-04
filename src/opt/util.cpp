@@ -96,10 +96,49 @@ void initdump(CHAR const* f, bool is_del)
     }
     g_tfile = fopen(f, "a+");
     if (g_tfile == NULL) {
-        fprintf(stdout,
-                "can not open dump file %s, errno:%d, errstring:\'%s\'",
-                f, errno, strerror(errno));
+        fprintf(stderr,
+            "\ncan not open dump file %s, errno:%d, errstring:\'%s\'\n",
+            f, errno, strerror(errno));
     }
+}
+
+
+//Print string with indent chars.
+void prt(CHAR const* format, ...)
+{
+    if (g_tfile == NULL || format == NULL) { return; }
+
+    StrBuf buf(64);
+    va_list arg;
+    va_start(arg, format);
+    buf.vstrcat(format, arg);
+
+    //Print leading \n.
+    size_t i = 0;
+    while (i < buf.strlen()) {
+        if (buf.buf[i] == '\n') {
+            if (g_prt_carriage_return_for_dot) {
+                //Print terminate lines that are left justified in DOT file.
+                fprintf(g_tfile, "\\l");
+            } else {
+                fprintf(g_tfile, "\n");
+            }
+        } else {
+            break;
+        }
+        i++;
+    }
+
+    if (i == buf.strlen()) {
+        fflush(g_tfile);
+        va_end(arg);
+        return;
+    }
+
+    fprintf(g_tfile, "%s", buf.buf + i);
+    fflush(g_tfile);
+    va_end(arg);
+    return;
 }
 
 
@@ -112,7 +151,8 @@ void note(CHAR const* format, ...)
     va_list arg;
     va_start(arg, format);
     buf.vstrcat(format, arg);
-    
+
+    //Print leading \n.
     size_t i = 0;
     while (i < buf.strlen()) {
         if (buf.buf[i] == '\n') {
@@ -134,12 +174,12 @@ void note(CHAR const* format, ...)
 
     if (i == buf.strlen()) {
         fflush(g_tfile);
-        goto FIN;
+        va_end(arg);
+        return;
     }
 
     fprintf(g_tfile, "%s", buf.buf + i);
     fflush(g_tfile);
-FIN:    
     va_end(arg);
     return;
 }
@@ -154,7 +194,7 @@ void * tlloc(LONG size)
     }
     void * p = smpoolMalloc(size, g_pool_tmp_used);
     if (p == NULL) return NULL;
-    memset(p, 0, size);
+    ::memset(p, 0, size);
     return p;
 }
 
@@ -170,7 +210,6 @@ void tfree()
 
 void dumpIndent(FILE * h, UINT indent)
 {
-    ASSERT0(indent < 10000);
     for (; indent > 0; indent--) {
         fprintf(h, "%c", g_indent_chars);
     }

@@ -35,7 +35,7 @@ static void * xmalloc(size_t size)
 {
     void * p = smpoolMalloc(size, g_pool_tree_used);
     if (p == NULL) return 0;
-    memset(p,0,size);
+    ::memset(p,0,size);
     return p;
 }
 
@@ -79,7 +79,7 @@ void dump_trees(Tree * t)
 
 void dump_tree(Tree * t)
 {
-    UNUSED(t);
+    DUMMYUSE(t);
 #ifdef _DEBUG_
     if (t == NULL || g_tfile == NULL) { return; }
     UINT dn = 2;
@@ -477,7 +477,7 @@ void dump_tree(Tree * t)
                 fprintf(g_tfile, " '%s'", SYM_name(TL_chars(tl)));
                 break;
             default:
-                fprintf(g_tfile, " %s", get_token_name(TL_tok(tl)));
+                fprintf(g_tfile, " %s", getTokenName(TL_tok(tl)));
             }
         }
         break;
@@ -487,4 +487,31 @@ void dump_tree(Tree * t)
     }
     fflush(g_tfile);
 #endif
+}
+
+
+bool is_imm_int(Tree * t)
+{
+    switch(TREE_type(t)) {
+    case TR_IMM:
+    case TR_IMML:
+    case TR_IMMU:
+    case TR_IMMUL:
+        return true;
+    default:;
+    }
+    return false;
+}
+
+
+bool is_imm_fp(Tree * t)
+{
+    switch (TREE_type(t)) {
+    case TR_FP:
+    case TR_FPF:
+    case TR_FPLD:
+        return true;
+    default:;
+    }
+    return false;
 }

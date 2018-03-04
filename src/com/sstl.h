@@ -48,7 +48,7 @@ public:
 template <class T>
 void * operator new(size_t size, xcom::allocator<T> * pool)
 {
-    UNUSED(pool);
+    DUMMYUSE(pool);
     return ::operator new(size);
 }
 
@@ -56,7 +56,7 @@ void * operator new(size_t size, xcom::allocator<T> * pool)
 template <class T>
 void operator delete(void * ptr, xcom::allocator<T> * pool)
 {
-    UNUSED(pool);
+    DUMMYUSE(pool);
     ::operator delete(ptr);
 }
 
@@ -158,7 +158,7 @@ inline void add_next(IN OUT T ** pheader, IN OUT T ** last, IN T * t)
         while (t->next != NULL) { t = t->next; }
         *last = t;
     } else {
-        ASSERT0(last != NULL && *last != NULL && (*last)->next == NULL);
+        ASSERT(last && *last && (*last)->next == NULL, ("must be the last"));
         (*last)->next = t;
         t->prev = *last;
         while (t->next != NULL) { t = t->next; }
@@ -186,6 +186,57 @@ inline void remove(T ** pheader, T * t)
         t->next->prev = t->prev;
     }
     t->next = t->prev = NULL;
+}
+
+
+//Swap t1 t2 in list.
+template <class T>
+inline void swap(T ** pheader, T * t1, T * t2)
+{
+    ASSERT0(pheader);
+    T * t1p = t1->prev;
+    T * t1n = t1->next;
+    T * t2p = t2->prev;
+    T * t2n = t2->next;
+
+    if (t2 == t1n) {
+        t2->next = t1;
+    } else {
+        t2->next = t1n;
+    }
+    if (t2 == t1p) {
+        t2->prev = t1;
+    } else {
+        t2->prev = t1p;
+    }
+    if (t1 == t2n) {
+        t1->next = t2;
+    } else {
+        t1->next = t2n;
+    }
+    if (t1 == t2p) {
+        t1->prev = t2;
+    } else {
+        t1->prev = t2p;
+    }
+
+    if (t1p != NULL  && t1p != t2) {
+        t1p->next = t2;
+    }
+    if (t1n != NULL && t1n != t2) {
+        t1n->prev = t2;
+    }
+    if (t2p != NULL && t2p != t1) {
+        t2p->next = t1;
+    }
+    if (t2n != NULL && t2n != t1) {
+        t2n->prev = t1;
+    }
+    if (*pheader == t1) {
+        *pheader = t2;
+    } else if (*pheader == t2) {
+        *pheader = t1;
+    }
 }
 
 
@@ -237,6 +288,17 @@ inline T * removehead(T ** pheader)
         (*pheader)->prev = NULL;
     }
     t->next = t->prev = NULL;
+    return t;
+}
+
+
+template <class T>
+inline T * removehead_single_list(T ** pheader)
+{
+    if (pheader == NULL || *pheader == NULL) return NULL;
+    T * t = *pheader;
+    *pheader = t->next;
+    t->next = NULL;
     return t;
 }
 
@@ -409,7 +471,10 @@ public:
     T value;
 
 public:
-    C()
+    C() { init(); }
+    COPY_CONSTRUCTOR(C<T>);
+
+    void init()
     {
         prev = next = NULL;
         value = T(0); //The default value of container.
@@ -427,7 +492,11 @@ public:
     SC<T> * next;
     T value;
 
-    SC()
+public:
+    SC() { init(); }
+    COPY_CONSTRUCTOR(SC<T>);
+
+    void init()
     {
         next = NULL;
         value = T(0);
@@ -471,7 +540,7 @@ public:
     void clean()
     { m_tail = NULL; }
 
-    //True if invoke memset when user query free element.
+    //True if invoke ::memset when user query free element.
     void set_clean(bool is_clean)
     { m_is_clean = (BYTE)is_clean; }
 
@@ -499,11 +568,11 @@ public:
         if (m_tail != NULL) {
             ASSERT0(t->next == NULL);
             m_tail->next = NULL;
-            m_is_clean ? memset(t, 0, sizeof(T)) : t->prev = NULL;
+            m_is_clean ? ::memset(t, 0, sizeof(T)) : t->prev = NULL;
         } else {
             ASSERT0(t->prev == NULL && t->next == NULL);
             if (m_is_clean) {
-                memset(t, 0, sizeof(T));
+                ::memset(t, 0, sizeof(T));
             }
         }
         return t;
@@ -1511,7 +1580,7 @@ protected:
     }
 
     //Find the last element, and return the CONTAINER.
-    //This is a cost operation. Use it carefully.
+    //This is a costly operation. Use it carefully.
     inline SC<T> * get_tail() const
     {
         SC<T> * c = m_head.next;
@@ -1564,6 +1633,19 @@ public:
     }
 
     void append_head(IN SC<T> * c) { insert_after(c, &m_head); }
+
+    //Find the last element, and add 'c' after it.
+    //This is a costly operation. Use it carefully.
+    void append_tail(IN SC<T> * c)
+    {
+        SC<T> * cur = m_head.next;
+        SC<T> * prev = &m_head;
+        while (cur != &m_head) {
+            cur = cur->next;
+            prev = cur;
+        }
+        insert_after(c, prev);
+    }
 
     void copy(IN SListCore<T> & src, SC<T> ** free_list, SMemPool * pool)
     {
@@ -1746,6 +1828,8 @@ public:
 //
 //    Usage:SMemPool * pool = smpoolCreate(sizeof(SC<T>) * n, MEM_CONST_SIZE);
 //          SList<T> list(pool);
+//          SList<T> * list2 = smpoolMalloc();
+//          list2->init(pool);
 //          ...
 //          smpoolDelete(pool);
 template <class T> class SList : public SListCore<T> {
@@ -1767,6 +1851,12 @@ public:
         //Note: Before going to the destructor, even if the containers have
         //been allocated in memory pool, you should invoke clean() to
         //free all of them back to a free list to reuse them.
+    }
+
+    void init(SMemPool * pool)
+    {
+        SListCore<T>::init();
+        set_pool(pool);
     }
 
     void set_pool(SMemPool * pool)
@@ -1987,9 +2077,7 @@ public:
             m_head = m_tail = NULL;
             m_elem_count = 0;
         }
-
-        ASSERT0(m_head == m_tail && m_head == NULL &&
-                 m_elem_count == 0);
+        ASSERT0(m_head == m_tail && m_head == NULL && m_elem_count == 0);
     }
 
     UINT count_mem() const
@@ -1997,7 +2085,7 @@ public:
         UINT count = sizeof(m_elem_count);
         count += sizeof(m_head);
         count += sizeof(m_tail);
-        //Do not count SC, they belong to input pool.
+        //Do not count SC, they has been involved in pool.
         return count;
     }
 
@@ -2556,7 +2644,7 @@ public:
             init(n);
         }
         if (n > 0) {
-            memcpy(m_vec, vec.m_vec, sizeof(T) * n);
+            ::memcpy(m_vec, vec.m_vec, sizeof(T) * n);
         }
         m_last_idx = vec.m_last_idx;
     }
@@ -2613,7 +2701,7 @@ public:
             ASSERT(m_vec == NULL, ("vector should be NULL if size is zero."));
             m_vec = (T*)::malloc(sizeof(T) * num_of_elem);
             ASSERT0(m_vec);
-            memset(m_vec, 0, sizeof(T) * num_of_elem);
+            ::memset(m_vec, 0, sizeof(T) * num_of_elem);
             m_elem_num = num_of_elem;
             return;
         }
@@ -2621,8 +2709,8 @@ public:
         ASSERT0(num_of_elem > (UINT)m_elem_num);
         T * tmp = (T*)::malloc(num_of_elem * sizeof(T));
         ASSERT0(tmp);
-        memcpy(tmp, m_vec, m_elem_num * sizeof(T));
-        memset(((CHAR*)tmp) + m_elem_num * sizeof(T), 0,
+        ::memcpy(tmp, m_vec, m_elem_num * sizeof(T));
+        ::memset(((CHAR*)tmp) + m_elem_num * sizeof(T), 0,
                (num_of_elem - m_elem_num)* sizeof(T));
         ::free(m_vec);
         m_vec = tmp;
@@ -2844,7 +2932,7 @@ public:
     void clean()
     {
         ASSERT(s1.m_is_init, ("SimpleVec not yet initialized."));
-        memset(m_vec, 0, sizeof(T) * SVEC_elem_num(this));
+        ::memset(m_vec, 0, sizeof(T) * SVEC_elem_num(this));
     }
 
     UINT count_mem() const { return SVEC_elem_num(this) + sizeof(Vector<T>); }
@@ -2878,7 +2966,7 @@ public:
                    ("SimpleVec should be NULL if size is zero."));
             m_vec = (T*)::malloc(sizeof(T) * size);
             ASSERT0(m_vec);
-            memset(m_vec, 0, sizeof(T) * size);
+            ::memset(m_vec, 0, sizeof(T) * size);
             SVEC_elem_num(this) = size;
             return;
         }
@@ -2886,8 +2974,8 @@ public:
         ASSERT0(size > SVEC_elem_num(this));
         T * tmp = (T*)::malloc(size * sizeof(T));
         ASSERT0(tmp);
-        memcpy(tmp, m_vec, SVEC_elem_num(this) * sizeof(T));
-        memset(((CHAR*)tmp) + SVEC_elem_num(this) * sizeof(T),
+        ::memcpy(tmp, m_vec, SVEC_elem_num(this) * sizeof(T));
+        ::memset(((CHAR*)tmp) + SVEC_elem_num(this) * sizeof(T),
                0, (size - SVEC_elem_num(this))* sizeof(T));
         ::free(m_vec);
         m_vec = tmp;
@@ -2927,8 +3015,8 @@ public:
 //      of dynamic object and the virtual function pointers.
 #define HC_val(c)            (c)->val
 #define HC_vec_idx(c)        (c)->vec_idx
-#define HC_next(c)            (c)->next
-#define HC_prev(c)            (c)->prev
+#define HC_next(c)           (c)->next
+#define HC_prev(c)           (c)->prev
 template <class T> struct HC {
     HC<T> * prev;
     HC<T> * next;
@@ -2937,7 +3025,7 @@ template <class T> struct HC {
 };
 
 #define HB_member(hm)        (hm).hash_member
-#define HB_count(hm)        (hm).hash_member_count
+#define HB_count(hm)         (hm).hash_member_count
 class HashBucket {
 public:
     void * hash_member; //hash member list
@@ -2999,8 +3087,8 @@ public:
 
     UINT get_hash_value(OBJTY v, UINT bucket_size) const
     {
-        ASSERT(sizeof(OBJTY) == sizeof(CHAR*),
-               ("exception will taken place in type-cast"));
+        ASSERT_DUMMYUSE(sizeof(OBJTY) == sizeof(CHAR*),
+            ("exception will taken place in type-cast"));
         return get_hash_value((CHAR const*)v, bucket_size);
     }
 
@@ -3009,8 +3097,8 @@ public:
 
     bool compare(CHAR const* s, OBJTY val) const
     {
-        ASSERT(sizeof(OBJTY) == sizeof(CHAR const*),
-               ("exception will taken place in type-cast"));
+        ASSERT_DUMMYUSE(sizeof(OBJTY) == sizeof(CHAR const*),
+            ("exception will taken place in type-cast"));
         return (strcmp(s,  (CHAR const*)val) == 0);
     }
 };
@@ -3051,7 +3139,7 @@ protected:
         if (c == NULL) {
             c = (HC<T>*)smpoolMallocConstSize(sizeof(HC<T>), m_free_list_pool);
             ASSERT0(c);
-            memset(c, 0, sizeof(HC<T>));
+            ::memset(c, 0, sizeof(HC<T>));
         }
         return c;
     }
@@ -3122,7 +3210,7 @@ protected:
     virtual T create(OBJTY v)
     {
         ASSERT(0, ("Inherited class need to implement"));
-        UNUSED(v);
+        DUMMYUSE(v);
         return T(0);
     }
 public:
@@ -3224,7 +3312,7 @@ public:
     void clean()
     {
         if (m_bucket == NULL) return;
-        memset(m_bucket, 0, sizeof(HashBucket) * m_bucket_size);
+        ::memset(m_bucket, 0, sizeof(HashBucket) * m_bucket_size);
         m_elem_count = 0;
         m_elem_vector.clean();
     }
@@ -3342,7 +3430,7 @@ public:
     {
         if (m_bucket != NULL || bsize == 0) { return; }
         m_bucket = (HashBucket*)::malloc(sizeof(HashBucket) * bsize);
-        memset(m_bucket, 0, sizeof(HashBucket) * bsize);
+        ::memset(m_bucket, 0, sizeof(HashBucket) * bsize);
         m_bucket_size = bsize;
         m_elem_count = 0;
         m_free_list_pool = smpoolCreate(sizeof(HC<T>) * 4, MEM_CONST_SIZE);
@@ -3440,7 +3528,7 @@ public:
 
         HashBucket * new_bucket =
             (HashBucket*)::malloc(sizeof(HashBucket) * bsize);
-        memset(new_bucket, 0, sizeof(HashBucket) * bsize);
+        ::memset(new_bucket, 0, sizeof(HashBucket) * bsize);
         if (m_elem_count == 0) {
             ::free(m_bucket);
             m_bucket = new_bucket;
@@ -3476,7 +3564,7 @@ public:
             bool doit = insert_t((HC<T>**)&HB_member(m_bucket[hashv]),
                                  &elemhc, t);
             ASSERT0(!doit);
-            UNUSED(doit); //to avoid -Werror=unused-variable.
+            DUMMYUSE(doit); //to avoid -Werror=unused-variable.
 
             HC_vec_idx(elemhc) = (UINT)i;
 
@@ -3607,6 +3695,7 @@ template <class T> class CompareKeyBase {
 public:
     bool is_less(T t1, T t2) const { return t1 < t2; }
     bool is_equ(T t1, T t2) const { return t1 == t2; }
+    T createKey(T t) { return t; }
 };
 
 template <class T, class Ttgt, class CompareKey = CompareKeyBase<T> >
@@ -3623,7 +3712,7 @@ protected:
     {
         RBTNType * p = (RBTNType*)smpoolMallocConstSize(sizeof(RBTNType), m_pool);
         ASSERT0(p);
-        memset(p, 0, sizeof(RBTNType));
+        ::memset(p, 0, sizeof(RBTNType));
         return p;
     }
 
@@ -3636,7 +3725,7 @@ protected:
             x->lchild = NULL;
             x->rchild = NULL;
         }
-        x->key = t;
+        x->key = m_ck.createKey(t);
         x->color = c;
         return x;
     }
@@ -3754,7 +3843,7 @@ public:
 
     void init()
     {
-        ASSERT0(m_pool == NULL);
+        if (m_pool != NULL) { return; }
         m_pool = smpoolCreate(sizeof(RBTNType) * 4, MEM_CONST_SIZE);
         m_root = NULL;
         m_num_of_tn = 0;
@@ -4111,7 +4200,7 @@ template <class Tsrc, class Ttgt>
 class TMapIter2 : public SList<RBTNode<Tsrc, Ttgt>*> {
 public:
     typedef RBTNode<Tsrc, Ttgt>* Container;
-    
+
 public:
     TMapIter2(SMemPool * pool) : SList<RBTNode<Tsrc, Ttgt>*>(pool)
     { ASSERT0(pool); }
@@ -4153,21 +4242,23 @@ public:
 
     //Alway set new mapping even if it has done.
     //This function will enforce mapping between t and mapped.
-    void setAlways(Tsrc t, Ttgt mapped)
+    Tsrc setAlways(Tsrc t, Ttgt mapped)
     {
         RBTNType * z = BaseType::insert(t, NULL);
         ASSERT0(z);
         z->mapped = mapped;
+        return z->key; //key may be different with t.
     }
 
     //Establishing mapping in between 't' and 'mapped'.
-    void set(Tsrc t, Ttgt mapped)
+    Tsrc set(Tsrc t, Ttgt mapped)
     {
         bool find = false;
         RBTNType * z = BaseType::insert(t, &find);
         ASSERT0(z);
         ASSERT(!find, ("already mapped"));
         z->mapped = mapped;
+        return z->key; //key may be different with t.
     }
 
     //Get mapped element of 't'. Set find to true if t is already be mapped.
@@ -4241,17 +4332,18 @@ public:
 
     //Add element into table.
     //Note: the element in the table must be unqiue.
-    void append(T t)
+    T append(T t)
     {
         ASSERT0(t != T(0));
         #ifdef _DEBUG_
-        bool find = false;
-        T mapped = BaseTMap::get(t, &find);
-        if (find) {
-            ASSERT0(mapped == t);
-        }
+        //Mapped element may not same with 't'.
+        //bool find = false;        
+        //T mapped = BaseTMap::get(t, &find);
+        //if (find) {           
+        //    ASSERT0(mapped == t);
+        //}
         #endif
-        BaseTMap::setAlways(t, t);
+        return BaseTMap::setAlways(t, t);
     }
 
     //Add element into table, if it is exist, return the exist one.
@@ -4265,8 +4357,7 @@ public:
             return mapped;
         }
 
-        BaseTMap::setAlways(t, t);
-        return t;
+        return BaseTMap::setAlways(t, t);        
     }
 
     void remove(T t)

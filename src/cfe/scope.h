@@ -131,6 +131,8 @@ public:
 
     bool is_equ(LabelInfo * t1, LabelInfo * t2) const
     { return isSameLabel(t1, t2); }
+
+    LabelInfo * createKey(LabelInfo * t) { return t; }
 };
 typedef TTab<LabelInfo*, Compare_Lab> LabelTab;
 
@@ -149,7 +151,8 @@ void dump_scope_tree(SCOPE * s, INT indent);
 void destroy_scope_list();
 UINT map_lab2lineno(LabelInfo * li);
 void set_map_lab2lineno(LabelInfo * li, UINT lineno);
-
+void set_lab_used(LabelInfo * li);
+bool is_lab_used(LabelInfo * li);
 
 //Export Variables
 extern SCOPE * g_cur_scope;

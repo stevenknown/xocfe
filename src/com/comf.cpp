@@ -31,7 +31,7 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 author: Su Zhenyu
 @*/
-#ifdef WIN32
+#ifdef _ON_WINDOWS_
 #include <time.h>
 #else
 #include <time.h>
@@ -471,7 +471,7 @@ LONG xstrstr(CHAR const* src, CHAR const* par, INT i)
         }
         if (*p == 0) {
             if (i == 0) {
-                return s - src;
+                return (LONG)(s - src);
             }
             i--;
         }
@@ -498,8 +498,8 @@ UINT xsplit(CHAR const* str, OUT Vector<CHAR*> & ret, CHAR const* sep)
     for (; *end != 0;) {
         if (*end != *sep) { len++; end++; continue; }
 
-        CHAR * substr = (CHAR*)malloc(len + 1);
-        memcpy(substr, start, len);
+        CHAR * substr = (CHAR*)::malloc(len + 1);
+        ::memcpy(substr, start, len);
         substr[len] = 0;
         ret.set(num, substr);
         num++;
@@ -508,8 +508,8 @@ UINT xsplit(CHAR const* str, OUT Vector<CHAR*> & ret, CHAR const* sep)
         start = end;
     }
 
-    CHAR * substr = (CHAR*)malloc(len + 1);
-    memcpy(substr, start, len);
+    CHAR * substr = (CHAR*)::malloc(len + 1);
+    ::memcpy(substr, start, len);
     substr[len] = 0;
     ret.set(num, substr);
     num++;
@@ -527,7 +527,7 @@ void xstrcpy(CHAR * tgt, CHAR const* src, size_t size)
     if (l >= size) {
         l = size - 1;
     }
-    memcpy(tgt, src, l);
+    ::memcpy(tgt, src, l);
     tgt[l] = 0;
 }
 
@@ -701,10 +701,10 @@ LONG revlong(LONG d)
 //Convert floating point string into binary words.
 void af2i(IN CHAR * f, OUT BYTE * buf, UINT buflen, bool is_double)
 {
-    UNUSED(is_double);
-    UNUSED(buflen);
-    UNUSED(buf);
-    UNUSED(f);
+    DUMMYUSE(is_double);
+    DUMMYUSE(buflen);
+    DUMMYUSE(buf);
+    DUMMYUSE(f);
     ASSERT0(f && buf);
     ASSERT(0, ("TODO"));
 }
@@ -809,9 +809,9 @@ CHAR * getfilepath(CHAR const* n, OUT CHAR * buf, UINT bufl)
         return NULL;
     }
 
-    UNUSED(bufl);
+    DUMMYUSE(bufl);
     ASSERT0(i < (INT)bufl);
-    memcpy(buf, n, i);
+    ::memcpy(buf, n, i);
     buf[i] = 0;
     return buf;
 }
@@ -853,7 +853,7 @@ void strshift(IN OUT CHAR * string, INT ofst)
 //e.g: Given /xx/yy/zz.foo, return zz.
 CHAR * getfilename(CHAR const* path, OUT CHAR * buf, UINT bufl)
 {
-    UNUSED(bufl);
+    DUMMYUSE(bufl);
     if (path == NULL) { return NULL; }
     INT l = (INT)strlen(path);
     INT i = l;
@@ -876,7 +876,7 @@ CHAR * getfilename(CHAR const* path, OUT CHAR * buf, UINT bufl)
 
     UINT len = end - start;
     if (len > 0) {
-        memcpy(buf, path + start, len);
+        ::memcpy(buf, path + start, len);
     }
     buf[len] = 0;
     return buf;
@@ -894,10 +894,10 @@ CHAR * getfilesuffix(CHAR const* n, OUT CHAR * buf, UINT bufl)
     while (n[i] != '.' && i >= 0) {
         i--;
     }
-    UNUSED(bufl);
+    DUMMYUSE(bufl);
     if (i < 0) { return NULL; }
     ASSERT0((UINT)(l - i -1) < bufl);
-    memcpy(buf, n + i + 1, l - i -1);
+    ::memcpy(buf, n + i + 1, l - i -1);
     buf[l - i -1] = 0;
     return buf;
 }
@@ -931,7 +931,7 @@ void extractLeftMostSubString(CHAR * tgt, CHAR const* string, CHAR separator)
     }
 
     size_t l = p - string;
-    memcpy(tgt, string, l);
+    ::memcpy(tgt, string, l);
     tgt[l] = 0;
 }
 
@@ -1089,7 +1089,7 @@ float getclockend(LONG start)
 //Get current micro-second.
 ULONGLONG getusec()
 {
-#ifdef WIN32
+#ifdef _ON_WINDOWS_
     time_t timer;
     timer = time(&timer);
 
@@ -1244,10 +1244,10 @@ static bool is_exist_mark(CHAR const* format)
 
 
 //Parse string that starts with '%'.
-static bool percent(CHAR * buf, 
-                    UINT buflen, 
+static bool percent(CHAR * buf,
+                    UINT buflen,
                     IN OUT UINT * bufpos,
-                    IN OUT CHAR const** format, 
+                    IN OUT CHAR const** format,
                     va_list stack_start)
 {
     //The info related to %, e.g:'%d', can not longer than 255.
@@ -1385,7 +1385,7 @@ LETTER:
     if (is_align_left) {
         if (tpos + *bufpos >= buflen) goto OVER;
         if (tpos < format_size) {
-            memcpy(buf + *bufpos, sbuf, tpos);
+            ::memcpy(buf + *bufpos, sbuf, tpos);
             *bufpos += tpos;
             for (UINT i = 0; i < format_size - tpos; i++) {
                 if (!prtchar(buf, buflen, bufpos, ' ')) {
@@ -1393,7 +1393,7 @@ LETTER:
                 }
             }
         }else{
-            memcpy(buf + *bufpos, sbuf, tpos);
+            ::memcpy(buf + *bufpos, sbuf, tpos);
             *bufpos += tpos;
         }
         goto FIN;
@@ -1406,10 +1406,10 @@ LETTER:
                     goto OVER;
                 }
             }
-            memcpy(buf + *bufpos, sbuf, tpos);
+            ::memcpy(buf + *bufpos, sbuf, tpos);
             *bufpos += tpos;
         } else {
-            memcpy(buf + *bufpos, sbuf, tpos);
+            ::memcpy(buf + *bufpos, sbuf, tpos);
             *bufpos += tpos;
         }
         goto FIN;
@@ -1421,15 +1421,15 @@ LETTER:
                     goto OVER;
                 }
             }
-            memcpy(buf + *bufpos, sbuf, tpos);
+            ::memcpy(buf + *bufpos, sbuf, tpos);
             *bufpos += tpos;
         } else {
-            memcpy(buf + *bufpos, sbuf, tpos);
+            ::memcpy(buf + *bufpos, sbuf, tpos);
             *bufpos += tpos;
         }
         goto FIN;
     }
-    memcpy(buf + *bufpos, sbuf, tpos);
+    ::memcpy(buf + *bufpos, sbuf, tpos);
     *bufpos += tpos;
 FIN:
     *format = format_pos;

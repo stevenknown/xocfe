@@ -158,16 +158,16 @@ protected:
         }
     }
     #else
-    //dump_helper for Bit2NodeT.    
+    //dump_helper for Bit2NodeT.
     void dump_helper(FILE * h, B2NType * mn, UINT indent) const
     {
         ASSERT0(mn);
-        
-        TMapIter<UINT, B2NType*> ti;        
-        Stack<B2NType*> mn_stack;        
+
+        TMapIter<UINT, B2NType*> ti;
+        Stack<B2NType*> mn_stack;
         Stack<UINT> indent_stack;
         Stack<UINT> id_stack;
-        
+
         mn_stack.push(mn);
         id_stack.push(0);
         indent_stack.push(indent);
@@ -180,12 +180,12 @@ protected:
             dump_helper_set(h, mn2->set, ind, id);
 
             B2NType * nextmn = NULL;
-            for (UINT id = mn2->next.get_first(ti, &nextmn);
-                 id != 0; id = mn2->next.get_next(ti, &nextmn)) {
+            for (UINT id2 = mn2->next.get_first(ti, &nextmn);
+                 id2 != 0; id2 = mn2->next.get_next(ti, &nextmn)) {
                 ASSERT0(nextmn);
                 mn_stack.push(nextmn);
                 indent_stack.push(ind + 2);
-                id_stack.push(id);
+                id_stack.push(id2);
             }
         }
     }
@@ -274,7 +274,7 @@ public:
 
     inline void checkAndGrow(B2NType * mn)
     {
-        UNUSED(mn);
+        DUMMYUSE(mn);
 
         #ifdef _BIT2NODE_IN_HASH_
         //This class use HMap to hash SBitSetCore.

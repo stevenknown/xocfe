@@ -57,7 +57,7 @@ class X2V_MAP {
         ASSERT(m_is_init == true, ("List not yet initialized."));
         void * p = smpoolMalloc(size, m_pool);
         if (!p) return NULL;
-        memset(p,0,size);
+        ::memset(p,0,size);
         return p;
     }
 
@@ -203,9 +203,9 @@ void Lineq::set_param(RMat * m, INT rhs_idx)
 //'m': system of inequalities
 //'idx_of_eq': index of inequality
 INT Lineq::compareConstIterm(
-        RMat const& m, 
+        RMat const& m,
         UINT rhs_idx,
-        INT idx_of_eq, 
+        INT idx_of_eq,
         Rational v)
 {
     ASSERT(m_is_init == true, ("not yet initialize."));
@@ -281,9 +281,9 @@ INT Lineq::compareConstIterm(RMat const& m, UINT rhs_idx,
 //
 //'chlst': list of convex hulls which must be with the same dimension.
 void Lineq::ConvexHullUnionAndIntersect(
-        OUT RMat & res, 
+        OUT RMat & res,
         IN List<RMat*> & chlst,
-        UINT rhs_idx, 
+        UINT rhs_idx,
         bool is_intersect)
 {
     if (chlst.get_elem_count() == 0) {
@@ -826,11 +826,11 @@ void Lineq::initVarConstraint(
 //'vc': variable constrains.
 //'is_int_sol': true if the solution must be integral.
 //'is_unique_sol': true if there is unique solution. */
-bool Lineq::has_solution(RMat const& leq, 
+bool Lineq::has_solution(RMat const& leq,
                          RMat const& eq,
-                         IN OUT RMat & vc, 
+                         IN OUT RMat & vc,
                          UINT rhs_idx,
-                         bool is_int_sol, 
+                         bool is_int_sol,
                          bool is_unique_sol)
 {
     //TODO: Use Farkas Lemma: Ax¡Üb has solution <=> find y,
@@ -1092,10 +1092,10 @@ bool Lineq::calcBound(IN OUT List<RMat*> & limits)
 //'last_var': the last variable index to be moved.
 //'first_sym_idx': the index of the first symbol at RHS.
 //'last_sym_idx': the index of the last symbol at RHS. */
-void Lineq::move2cstsym(IN OUT RMat & ieq, 
-                        UINT rhs_idx, 
+void Lineq::move2cstsym(IN OUT RMat & ieq,
+                        UINT rhs_idx,
                         UINT first_var,
-                        UINT last_var, 
+                        UINT last_var,
                         OUT UINT * first_sym_idx,
                         OUT UINT * last_sym_idx)
 {
@@ -1125,12 +1125,12 @@ void Lineq::move2cstsym(IN OUT RMat & ieq,
 //'p': each row indicates polynomial
 //'sub_var': index of variable to substitute.
 void Lineq::substituteAndExpand(
-        IN OUT RMat & coeff, 
+        IN OUT RMat & coeff,
         UINT rhs_idx,
-        RMat const& p, 
+        RMat const& p,
         UINT sub_var)
 {
-    UNUSED(rhs_idx);
+    DUMMYUSE(rhs_idx);
     ASSERT0(coeff.get_col_size() == p.get_col_size() && sub_var < rhs_idx);
     RMat tp;
     for (UINT i = 0; i < p.get_row_size(); i++) {
@@ -1173,10 +1173,10 @@ void Lineq::substituteAndExpand(
 //NOTICE:
 //    The column 'rhs_idx' does not belong to constant symbols.
 //    e.g: i < 10 + j + k, the first symbol is j, then 'first_sym' is 0.
-void Lineq::move2var(IN OUT RMat & ieq, 
-                     UINT rhs_idx, 
+void Lineq::move2var(IN OUT RMat & ieq,
+                     UINT rhs_idx,
                      UINT first_sym,
-                     UINT last_sym, 
+                     UINT last_sym,
                      OUT UINT * first_var_idx,
                      OUT UINT * last_var_idx)
 {
@@ -1285,9 +1285,9 @@ void Lineq::dumps_var_bound(UINT u)
 //Ehrhart Polynomial.
 void Lineq::EhartPoly(OUT RMat & res, IN RMat & a, UINT rhs_idx)
 {
-    UNUSED(rhs_idx);
-    UNUSED(a);
-    UNUSED(res);
+    DUMMYUSE(rhs_idx);
+    DUMMYUSE(a);
+    DUMMYUSE(res);
     UNREACH();
 }
 
@@ -1331,11 +1331,11 @@ INT Lineq::selectLeadingColumn(
 //      1 0 0 0 3  2 -4 -1 6
 //    =>
 //      1 0 0 2 3  0  4  3 10
-void Lineq::combine(OUT INTMat & res, 
+void Lineq::combine(OUT INTMat & res,
                     INTMat const& coeff,
-                    UINT r1, 
-                    UINT r2, 
-                    UINT lc, 
+                    UINT r1,
+                    UINT r2,
+                    UINT lc,
                     UINT pos)
 {
     if (r1 == r2) return;
@@ -1446,9 +1446,9 @@ bool Lineq::omit(INTMat const& coeff,
 //
 //'raylimit': is the maximum allowed ray.
 bool Lineq::convertConstraint2Ray(
-        OUT INTMat & gmat, 
+        OUT INTMat & gmat,
         INTMat const& cs,
-        UINT rhs_idx, 
+        UINT rhs_idx,
         UINT raylimit)
 {
     if (cs.size() == 0) return false;
@@ -1612,11 +1612,11 @@ bool Lineq::convertConstraint2Ray(
 //=>
 //  1 0 0 2 3  0  4  3 10
 void Lineq::combineRays(
-        OUT INTMat & res, 
+        OUT INTMat & res,
         IN OUT INTMat & coeff,
-        UINT r1, 
-        UINT r2, 
-        UINT lc, 
+        UINT r1,
+        UINT r2,
+        UINT lc,
         UINT pos)
 {
     if (r1 == r2) return;
@@ -1706,11 +1706,11 @@ void Lineq::removeRedRow(
 //        -x+1>=0
 //'cslimit': is the maximum allowed constraints.
 bool Lineq::convertRay2Constraint(
-        INTMat const& gmat, 
-        OUT INTMat & cs, 
+        INTMat const& gmat,
+        OUT INTMat & cs,
         UINT cslimit)
 {
-    UNUSED(cslimit);
+    DUMMYUSE(cslimit);
     if (gmat.size() == 0) {
         cs.clean();
         return false;
@@ -1865,7 +1865,7 @@ bool Lineq::convertRay2Constraint(
 //Then a - b = (L1 ¡É (P1'-P2')) ¡È ((L1-L2) ¡É (P1' ¡É P2')).
 void Lineq::PolyDiff(OUT RMat & res, IN RMat & a, IN RMat & b, UINT rhs_idx)
 {
-    UNUSED(rhs_idx);
+    DUMMYUSE(rhs_idx);
     if (a.size() == 0) { res.clean(); return; }
     if (b.size() == 0) { res.copy(a); return; }
     ASSERT0(a.is_homo(b));
@@ -1875,9 +1875,9 @@ void Lineq::PolyDiff(OUT RMat & res, IN RMat & a, IN RMat & b, UINT rhs_idx)
 
 void Lineq::PolyImage(OUT RMat & res, IN RMat & a, UINT rhs_idx)
 {
-    UNUSED(res);
-    UNUSED(a);
-    UNUSED(rhs_idx);
+    DUMMYUSE(res);
+    DUMMYUSE(a);
+    DUMMYUSE(rhs_idx);
     UNREACH();
 }
 //END Lineq

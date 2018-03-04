@@ -272,4 +272,6 @@ extern Tree * allocTreeNode(TREE_TYPE tnt, INT lineno);
 extern void dump_tree(Tree * t);
 extern void dump_trees(Tree * t);
 extern INT is_indirect_tree_node(Tree * t);
+extern bool is_imm_int(Tree * t);
+extern bool is_imm_fp(Tree * t);
 #endif

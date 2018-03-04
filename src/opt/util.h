@@ -36,106 +36,58 @@ author: Su Zhenyu
 
 namespace xoc {
 
-//Singler timer, show const string before timer start.
+//Timer, show const string before timer start and end.
 //e.g:
-//    START_TIMER("My Pass");
+//    START_TIMER(t, "My Pass");
 //    Run mypass();
-//    END_TIMER();
-#define START_TIMER(s)              \
-    LONG _start_time_count_ = 0;    \
-    if (g_show_comp_time) {         \
-        _start_time_count_ = getclockstart(); \
-        prt2C("\n==-- %s Time:", (s));    \
+//    END_TIMER(t, "My Pass");
+#define START_TIMER(_timer_, s)                      \
+    LONG _timer_ = 0;                                \
+    if (g_show_comp_time) {                          \
+        _timer_ = getclockstart();                   \
+        prt2C("\n==-- START %s", (s));               \
+    }
+#define END_TIMER(_timer_, s)                        \
+    if (g_show_comp_time) {                          \
+        prt2C("\n==-- END %s", s);                   \
+        prt2C(" Time:%fsec", getclockend(_timer_));  \
     }
 
-#define END_TIMER()                 \
-    if (g_show_comp_time) {         \
-        prt2C("%fsec", getclockend(_start_time_count_)); \
-    }
 
-
-//Single timer, show const string after timer finish.
+//Timer, show format string before timer start and end.
 //e.g:
-//    START_TIMER_AFTER();
+//    START_TIMER(t, ("My Pass Name:%s", getPassName()));
 //    Run mypass();
-//    END_TIMER_AFTER("My Pass");
-#define START_TIMER_AFTER()         \
-    LONG _start_time_count_ = 0;    \
-    if (g_show_comp_time) {         \
-        _start_time_count_ = getclockstart(); \
+//    END_TIMER(t, ("My Pass Name:%s", getPassName()));
+#define START_TIMER_FMT(_timer_, s)                  \
+    LONG _timer_ = 0;                                \
+    if (g_show_comp_time) {                          \
+        _timer_ = getclockstart();                   \
+        prt2C("\n==-- START ");                      \
+        prt2C s;                                     \
     }
-
-#define END_TIMER_AFTER(s)          \
-    if (g_show_comp_time) {         \
-        prt2C("\n==-- %s Time:%fsec", \
-              (s), getclockend(_start_time_count_)); \
-    }
-
-
-//Single timer, show format string before timer finish.
-//e.g:
-//    START_TIMER(("My Pass Name%s", getPassName()));
-//    Run mypass();
-//    END_TIMER_FMT();
-#define START_TIMER_FMT(s)          \
-    LONG _start_time_count_ = 0;    \
-    if (g_show_comp_time) {         \
-        _start_time_count_ = getclockstart(); \
-        prt2C("\n==-- ");          \
-        prt2C s;                   \
-        prt2C(" Time:");           \
-    }
-
-#define END_TIMER_FMT()            \
-    if (g_show_comp_time) { prt2C("%fsec", getclockend(_start_time_count_)); }
-
-
-//Single timer, show format string after timer finish.
-//e.g:
-//    START_TIMER_AFTER();
-//    Run mypass();
-//    END_TIMER_FMT_AFTER(("My Pass Name%s", getPassName()));
-#define START_TIMER_FMT_AFTER()     \
-    LONG _start_time_count_ = 0;    \
-    if (g_show_comp_time) {         \
-        _start_time_count_ = getclockstart();    \
-    }
-
-#define END_TIMER_FMT_AFTER(s)     \
-    if (g_show_comp_time) {        \
-        prt2C("\n==-- ");          \
-        prt2C s;                   \
-        prt2C(" Time:%fsec", getclockend(_start_time_count_)); \
-    }
-
-
-//Define multiple const string timers,
-//and show const string before timer start.
-//e.g:
-//    START_TIMERS("My Pass", local_timer);
-//    Run mypass();
-//    END_TIMERS(local_timer);
-#define START_TIMERS(s, _timer_timer_)  \
-    LONG _timer_timer_ = 0;             \
-    if (g_show_comp_time) {             \
-        _timer_timer_ = getclockstart();\
-        prt2C("\n==-- %s Time:", (s));  \
-    }
-
-#define END_TIMERS(_timer_timer_)       \
-    if (g_show_comp_time) {             \
-        prt2C("%fsec", getclockend(_timer_timer_)); \
+#define END_TIMER_FMT(_timer_, s)                    \
+    if (g_show_comp_time) {                          \
+        prt2C("\n==-- END ");                        \
+        prt2C s;                                     \
+        prt2C(" Time:%fsec", getclockend(_timer_)); \
     }
 
 
 #define NIL_START  100000
-template <class T, class Ttgt>
-void dump_rbt(RBT<T, Ttgt> & rbt,
-              CHAR const* name = NULL,
-              UINT nil_count = NIL_START)
+#define DUMP_INDENT_NUM 4
+
+//e.g:
+//CHAR * dumpTN(SYM* key, SYM* mapped) { return SYM_name(key); }
+//dump_rbt((RBT<SYM*, SYM*, xoc::CompareSymTab>&)map, NULL, 1000, dumpTN);
+template <class T, class Ttgt, class CompareKey>
+void dump_rbt(RBT<T, Ttgt, CompareKey> & rbt,
+    CHAR const* name = NULL,
+    UINT nil_count = NIL_START, 
+    CHAR const* (*dumpTN)(T, Ttgt) = NULL)
 {
     typedef RBTNode<T, Ttgt> TN;
-    Vector<TN*> nilvec;
+    xcom::Vector<TN*> nilvec;
     if (name == NULL) {
         name = "graph_rbt.vcg";
     }
@@ -178,7 +130,7 @@ void dump_rbt(RBT<T, Ttgt> & rbt,
               "edge.color: darkgreen\n");
 
     //Print node
-    List<TN*> lst;
+    xcom::List<TN*> lst;
     TN const* root = rbt.get_root();
     if (root != NULL) {
         lst.append_tail(const_cast<TN*>(root));
@@ -204,61 +156,77 @@ void dump_rbt(RBT<T, Ttgt> & rbt,
 
         if (x->color == RBRED) {
             //red
-            fprintf(hvcg,
-                "\nnode: { title:\"%u\" label:\"%u\" shape:circle "
-                "color:red fontname:\"courB\" textcolor:white}",
-                key, key);
+            if (dumpTN != NULL) {
+                fprintf(hvcg,
+                    "\nnode: { title:\"%u\" label:\"%s\" shape:circle "
+                    "color:red fontname:\"courB\" textcolor:white}",
+                    (UINT)key, dumpTN(x->key, x->mapped));
+            } else {
+                fprintf(hvcg,
+                    "\nnode: { title:\"%u\" label:\"%u\" shape:circle "
+                    "color:red fontname:\"courB\" textcolor:white}",
+                    (UINT)key, (UINT)key);
+            }
         } else {
             if (is_nil) {
-                ASSERT0(key >= NIL_START);
+                ASSERT0(((UINT)key) >= NIL_START);
                 //nil
                 fprintf(hvcg,
                     "\nnode: { title:\"%u\" label:\"%u\" shape:box "
                     "color:black fontname:\"courB\" textcolor:black}",
-                    key, 0);
+                    (UINT)key, 0);
             } else {
                 //black
-                fprintf(hvcg,
-                    "\nnode: { title:\"%u\" label:\"%u\" shape:circle "
-                    "color:black fontname:\"courB\" textcolor:white}",
-                    key, key);
+                if (dumpTN != NULL) {
+                    fprintf(hvcg,
+                        "\nnode: { title:\"%u\" label:\"%s\" shape:circle "
+                        "color:black fontname:\"courB\" textcolor:white}",
+                        (UINT)key, dumpTN(x->key, x->mapped));
+                } else {
+                    fprintf(hvcg,
+                        "\nnode: { title:\"%u\" label:\"%u\" shape:circle "
+                        "color:black fontname:\"courB\" textcolor:white}",
+                        (UINT)key, (UINT)key);
+                }
             }
         }
 
         if (x->rchild != NULL) {
             lst.append_tail(x->rchild);
             fprintf(hvcg,
-                    "\nedge: { sourcename:\"%u\" targetname:\"%u\" }",
-                    key, x->rchild->key);
+                "\nedge: { sourcename:\"%u\" targetname:\"%u\" }",
+                (UINT)key, (UINT)x->rchild->key);
         } else if (!is_nil) {
             TN * nil = new TN();
-            nil->key = nil_count++;
+            nil->key = (T)nil_count;
+            nil_count++;
             nil->color = RBBLACK;
             nilvec.set(nilcc, nil);
             nilcc++;
             lst.append_tail(nil);
 
             fprintf(hvcg,
-                    "\nedge: { sourcename:\"%u\" targetname:\"%u\" }",
-                    key, nil->key);
+                "\nedge: { sourcename:\"%u\" targetname:\"%u\" }",
+                (UINT)key, (UINT)nil->key);
         }
 
         if (x->lchild != NULL) {
             lst.append_tail(x->lchild);
             fprintf(hvcg,
-                    "\nedge: { sourcename:\"%u\" targetname:\"%u\" }",
-                    key, x->lchild->key);
+                "\nedge: { sourcename:\"%u\" targetname:\"%u\" }",
+                (UINT)key, (UINT)x->lchild->key);
         } else if (!is_nil) {
             TN * nil = new TN();
-            nil->key = nil_count++;
+            nil->key = (T)nil_count;
+            nil_count++;
             nil->color = RBBLACK;
             nilvec.set(nilcc, nil);
             nilcc++;
             lst.append_tail(nil);
 
             fprintf(hvcg,
-                    "\nedge: { sourcename:\"%u\" targetname:\"%u\" }",
-                    key, nil->key);
+                "\nedge: { sourcename:\"%u\" targetname:\"%u\" }",
+                (UINT)key, (UINT)nil->key);
         }
     }
     for (INT i = 0; i <= nilvec.get_last_idx(); i++) {
@@ -299,9 +267,12 @@ void * tlloc(LONG size);
 //Free whole temporary memory pool.
 void tfree();
 
-//Dump formatted string to g_tfile.
+//Helper function to dump formatted string to g_tfile.
 //This function indents blank space indicated by g_indent.
 void note(CHAR const* format, ...);
+
+//Helper function to dump formatted string to g_tfile without indent.
+void prt(CHAR const* format, ...);
 
 } //namespace xoc
 #endif

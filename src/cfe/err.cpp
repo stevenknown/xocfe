@@ -34,7 +34,7 @@ static void * xmalloc(size_t size)
 {
     void * p = smpoolMalloc(size, g_pool_general_used);
     if (p == NULL) return NULL;
-    memset(p, 0, size);
+    ::memset(p, 0, size);
     return p;
 }
 
@@ -68,13 +68,13 @@ void warn(INT line_num, CHAR * msg, ...)
 
     WARN_MSG * p = NULL;
     StrBuf sbuf(64);
-    
+
     va_list arg;
     va_start(arg, msg);
     sbuf.vsprint(msg, arg);
     p = (WARN_MSG*)xmalloc(sizeof(WARN_MSG));
     p->msg = (CHAR*)xmalloc(sbuf.strlen() + 1);
-    memcpy(p->msg, sbuf.buf, sbuf.strlen() + 1);
+    ::memcpy(p->msg, sbuf.buf, sbuf.strlen() + 1);
     p->lineno = line_num;
     g_warn_msg_list.append_tail(p);
     va_end(arg);
@@ -88,13 +88,13 @@ void err(INT line_num, CHAR * msg, ...)
 
     ERR_MSG * p = NULL;
     StrBuf sbuf(64);
-    
+
     va_list arg;
     va_start(arg, msg);
     sbuf.vsprint(msg, arg);
     p = (ERR_MSG*)xmalloc(sizeof(ERR_MSG));
     p->msg = (CHAR*)xmalloc(sbuf.strlen() + 1);
-    memcpy(p->msg, sbuf.buf, sbuf.strlen() + 1);
+    ::memcpy(p->msg, sbuf.buf, sbuf.strlen() + 1);
     p->lineno = line_num;
     g_err_msg_list.append_tail(p);
     va_end(arg);

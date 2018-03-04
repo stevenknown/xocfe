@@ -34,7 +34,7 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #endif
 
 //Define machine word/half-word/byte/bit size
-#ifndef BIT_PER_BYTE    
+#ifndef BIT_PER_BYTE
 #define BIT_PER_BYTE         8
 #endif
 

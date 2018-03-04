@@ -61,7 +61,7 @@ INT g_real_line_num;
 
 //Make sure following Tokens or Keywords is consistent with
 //declarations of TOKEN enumeration declared in lex.h.
-//CAVEAT: The order of tokens must be consistent 
+//CAVEAT: The order of tokens must be consistent
 //with declarations order in lex.h.
 static TokenInfo g_token_info[] =
 {
@@ -253,7 +253,7 @@ static UINT g_keyword_num = sizeof(g_keyword_info)/sizeof(g_keyword_info[0]);
 
 //This function read a line from source code buffer.
 //Return status, which could be ST_SUCC or ST_ERR.
-static INT get_line()
+static INT getLine()
 {
     //Initializing or realloc offset table.
     if (g_ofst_tab == NULL) {
@@ -284,8 +284,8 @@ static INT get_line()
             ASSERT0(g_hsrc != NULL);
             INT dw = fread(g_file_buf, 1, MAX_BUF_LINE, g_hsrc);
             if (dw == 0) {
-                if (!is_some_chars_in_cur_line) {                    
-                    //Some characters had been put into 'g_cur_line', but the 
+                if (!is_some_chars_in_cur_line) {
+                    //Some characters had been put into 'g_cur_line', but the
                     //last character of 'g_file_buf' is not '0xD,0xA', so we
                     //should to get there. But there is nothing more can
                     //be read from file, so 'dw' is zero.
@@ -294,7 +294,7 @@ static INT get_line()
                     //TODO:Considering this specified case, we can not return
                     //'FEOF' directly , and we should process the last
                     //characters in 'g_cur_line' correctly.
-                    
+
                     goto FEOF;
                 } else {
                     goto FIN;
@@ -352,8 +352,8 @@ static INT get_line()
                 g_src_line_num++;
                 goto FIN;
             } else if(g_file_buf[g_file_buf_pos] == 0xd && g_is_dos) {
-                //0xd is the last charactor in 'g_file_buf',so 0xa is 
-                //should be recognized in get_token() in order to the 
+                //0xd is the last charactor in 'g_file_buf',so 0xa is
+                //should be recognized in getNextToken() in order to the
                 //lex parsing correctly.
                 is_0xd_recog = 1;
                 if (g_use_newline_char) {
@@ -379,7 +379,7 @@ static INT get_line()
             g_cur_src_ofst++;
         }
     }
-    
+
 FIN:
     ASSERT0((g_src_line_num + 1) < OFST_TAB_LINE_SIZE);
     g_ofst_tab[g_src_line_num + 1] = g_cur_src_ofst;
@@ -400,16 +400,16 @@ FEOF:
 }
 
 
-class STR2TOKEN : public HMap<CHAR const*, TOKEN, HashFuncString2> {
+class String2Token : public HMap<CHAR const*, TOKEN, HashFuncString2> {
 public:
-    STR2TOKEN(UINT bsize) : HMap<CHAR const*, TOKEN, HashFuncString2>(bsize) {}
-    virtual ~STR2TOKEN() {}
+    String2Token(UINT bsize) : HMap<CHAR const*, TOKEN, HashFuncString2>(bsize) {}
+    virtual ~String2Token() {}
 };
 
-STR2TOKEN g_str2token(0);
+String2Token g_str2token(0);
 
 //This is the first function you should invoke before start lex scanning.
-void init_key_word_tab()
+void initKeyWordTab()
 {
     g_str2token.init(64); //Must be power of 2 since we use HashFuncString2.
     for (UINT i = 0; i < g_keyword_num; i++) {
@@ -419,7 +419,7 @@ void init_key_word_tab()
 }
 
 
-static TOKEN get_key_word(CHAR const* s)
+static TOKEN getKeyWord(CHAR const* s)
 {
     if (s == NULL) return T_NUL;
     return g_str2token.get(s);
@@ -428,12 +428,12 @@ static TOKEN get_key_word(CHAR const* s)
 
 //Get a charactor from g_cur_line.
 //If it meets the EOF, the return value will be -1.
-static CHAR get_next_char()
+static CHAR getNextChar()
 {
     CHAR res = '0';
     INT st = 0;
     if (g_cur_line == NULL) {
-        if ((st = get_line()) == ST_SUCC) {
+        if ((st = getLine()) == ST_SUCC) {
             res = g_cur_line[g_cur_line_pos];
             g_cur_line_pos++;
         } else if(st == ST_EOF) {
@@ -443,7 +443,7 @@ static CHAR get_next_char()
         res = g_cur_line[g_cur_line_pos];
         g_cur_line_pos++;
     } else {
-        st = get_line();
+        st = getLine();
         if (st == ST_SUCC) {
             do {
                 res = g_cur_line[g_cur_line_pos];
@@ -451,7 +451,7 @@ static CHAR get_next_char()
                 if (g_cur_line_num != 0) {
                     break;
                 }
-                st = get_line();
+                st = getLine();
             } while (st == ST_SUCC);
         } else if (st == ST_EOF) {
               res = ST_EOF;
@@ -473,13 +473,13 @@ static CHAR get_next_char()
 //the function return.
 static TOKEN t_num()
 {
-    CHAR c = get_next_char();
+    CHAR c = getNextChar();
     CHAR b_is_fp = 0;
     TOKEN t = T_NUL;
     if (g_cur_char == '0' && (c == 'x' || c == 'X')) {
         //hex
         g_cur_token_string[g_cur_token_string_pos++] = c;
-        while (xisdigithex(c = get_next_char())) {
+        while (xisdigithex(c = getNextChar())) {
             g_cur_token_string[g_cur_token_string_pos++] = c;
         }
         g_cur_token_string[g_cur_token_string_pos] = 0;
@@ -495,11 +495,11 @@ static TOKEN t_num()
         }
         g_cur_token_string[g_cur_token_string_pos++] = c;
         if (b_is_fp) { //there is already present '.'
-           while (xisdigit(c = get_next_char())) {
+           while (xisdigit(c = getNextChar())) {
                g_cur_token_string[g_cur_token_string_pos++] = c;
            }
         } else {
-            while (xisdigit(c = get_next_char()) || c == '.') {
+            while (xisdigit(c = getNextChar()) || c == '.') {
                if (c == '.') {
                    if (!b_is_fp){
                        b_is_fp=1;
@@ -525,27 +525,27 @@ FIN:
         //t is long integer.
         if (t == T_IMM) {
             t = T_IMML;
-            g_cur_char = get_next_char();
+            g_cur_char = getNextChar();
             if (g_cur_char == 'L' || g_cur_char == 'l') {
                 //e.g: 1000LL
-                g_cur_char = get_next_char();
+                g_cur_char = getNextChar();
                 if (g_cur_char == 'U' || g_cur_char == 'u') {
                     //e.g: 1000LLU
-                    g_cur_char = get_next_char();
+                    g_cur_char = getNextChar();
                 }
             } else if (g_cur_char == 'U' || g_cur_char == 'u') {
                 //e.g: 1000LU
-                g_cur_char = get_next_char();
+                g_cur_char = getNextChar();
                 t = T_IMMUL;
             }
         } else if (t == T_FP) {
             //If suffixed by the letter l or L, it has type long double.
-            g_cur_char = get_next_char();
+            g_cur_char = getNextChar();
             t = T_FPLD;
         }
     } else if (g_cur_char == 'U' || g_cur_char == 'u') {
         //imm is unsigned.
-        g_cur_char = get_next_char();
+        g_cur_char = getNextChar();
         t = T_IMMU;
     } else if (g_cur_char == 'F' || g_cur_char == 'f') {
         //e.g: 1.0F, float
@@ -554,7 +554,7 @@ FIN:
                 g_cur_char);
         } else {
             ASSERT0(t == T_FP);
-            g_cur_char = get_next_char();
+            g_cur_char = getNextChar();
             t = T_FPF;
         }
     }
@@ -567,43 +567,43 @@ FIN:
 //the function return.
 static TOKEN t_string()
 {
-    CHAR c = get_next_char();
+    CHAR c = getNextChar();
     while (c != '"') {
         if (c == '\\') {
             //c is escape char.
-            c = get_next_char();
+            c = getNextChar();
             if (c == 'n' ) {
                 //newline, 0xa
                 g_cur_token_string[g_cur_token_string_pos++] = '\n';
-                c = get_next_char();
+                c = getNextChar();
             } else if (c == 't') {
                 //horizontal tab
                 g_cur_token_string[g_cur_token_string_pos++] = '\t';
-                c = get_next_char();
+                c = getNextChar();
             } else if (c == 'b') {
                 //backspace
                 g_cur_token_string[g_cur_token_string_pos++] = '\b';
-                c = get_next_char();
+                c = getNextChar();
             } else if (c == 'r') {
                 //carriage return, 0xd
                 g_cur_token_string[g_cur_token_string_pos++] = '\r';
-                c = get_next_char();
+                c = getNextChar();
             } else if (c == 'f') {
                 //form feed
                 g_cur_token_string[g_cur_token_string_pos++] = '\f';
-                c = get_next_char();
+                c = getNextChar();
             } else if (c == '\\') {
                 //backslash
                 g_cur_token_string[g_cur_token_string_pos++] = '\\';
-                c = get_next_char();
+                c = getNextChar();
             } else if (c == '\'') {
                 //single quote
                 g_cur_token_string[g_cur_token_string_pos++] = '\'';
-                c = get_next_char();
+                c = getNextChar();
             } else if (c == '"') {
                 //double quote
                 g_cur_token_string[g_cur_token_string_pos++] = '"';
-                c = get_next_char();
+                c = getNextChar();
             } else if (c >= '0' && c <= '9') {
                 //Finally, the escape \ddd consists of the backslash followed
                 //by
@@ -615,7 +615,7 @@ static TOKEN t_string()
                 while ((c >= '0' && c <= '7') && n < 3) {
                     g_cur_token_string[g_cur_token_string_pos++] = c;
                     n++;
-                    c = get_next_char();
+                    c = getNextChar();
                 }
                 g_cur_token_string[g_cur_token_string_pos] = 0;
                 g_cur_token_string_pos -= n;
@@ -630,13 +630,13 @@ static TOKEN t_string()
                 bool only_allow_two_hex = false;
                 if (c == 'x' || c == 'X') {
                     only_allow_two_hex = true;
-                    c = get_next_char();
+                    c = getNextChar();
                 }
                 UINT n = 0;
                 while (xisdigithex(c)) {
                     g_cur_token_string[g_cur_token_string_pos++] = c;
                     n++;
-                    c = get_next_char();
+                    c = getNextChar();
                 }
                 if (n > 2 && only_allow_two_hex) {
                     err(g_real_line_num, "constant too big, only permit two hex digits");
@@ -644,14 +644,14 @@ static TOKEN t_string()
             } else {
                 g_cur_token_string[g_cur_token_string_pos++] = '\\';
                 g_cur_token_string[g_cur_token_string_pos++] = c;
-                c = get_next_char();
+                c = getNextChar();
             }
         } else {
             g_cur_token_string[g_cur_token_string_pos++] = c;
-            c = get_next_char();
+            c = getNextChar();
         }
     }
-    g_cur_char = get_next_char();
+    g_cur_char = getNextChar();
     g_cur_token_string[g_cur_token_string_pos] = 0;
     return T_STRING;
 }
@@ -662,39 +662,39 @@ static TOKEN t_string()
 //the function return.
 static TOKEN t_char_list()
 {
-    CHAR c = get_next_char();
+    CHAR c = getNextChar();
     while (c != '\'') {
         if (c == '\\') {
             //c is escape char.
-            c = get_next_char();
+            c = getNextChar();
             if (c == 'n' ) {
                 //newline, 0xa
                 g_cur_token_string[g_cur_token_string_pos++] = '\n';
-                c = get_next_char();
+                c = getNextChar();
             } else if (c == 't') {
                 //horizontal tab
                 g_cur_token_string[g_cur_token_string_pos++] = '\t';
-                c = get_next_char();
+                c = getNextChar();
             } else if (c == 'b') {
                 //backspace
                 g_cur_token_string[g_cur_token_string_pos++] = '\b';
-                c = get_next_char();
+                c = getNextChar();
             } else if (c == 'r') {
                 //carriage return, 0xd
                 g_cur_token_string[g_cur_token_string_pos++] = '\r';
-                c = get_next_char();
+                c = getNextChar();
             } else if (c == 'f') {
                 //form feed
                 g_cur_token_string[g_cur_token_string_pos++] = '\f';
-                c = get_next_char();
+                c = getNextChar();
             } else if (c == '\\') {
                 //backslash
                 g_cur_token_string[g_cur_token_string_pos++] = '\\';
-                c = get_next_char();
+                c = getNextChar();
             } else if (c == '\'') {
                 //single quote
                 g_cur_token_string[g_cur_token_string_pos++] = '\'';
-                c = get_next_char();
+                c = getNextChar();
             } else if (c >= '0' && c <= '9') {
                 //Finally, the escape \ddd consists of the backslash followed
                 //by
@@ -706,14 +706,14 @@ static TOKEN t_char_list()
                 while ((c >= '0' && c <= '7') && n < 3) {
                     g_cur_token_string[g_cur_token_string_pos++] = c;
                     n++;
-                    c = get_next_char();
+                    c = getNextChar();
                 }
                 g_cur_token_string[g_cur_token_string_pos] = 0;
                 g_cur_token_string_pos -= n;
-                
+
                 //long type truncated to char type.
                 CHAR o = (CHAR)xatoll(&g_cur_token_string[
-                    g_cur_token_string_pos], true);                
+                    g_cur_token_string_pos], true);
                 g_cur_token_string[g_cur_token_string_pos++] = o;
             } else if (c == 'x' || c == 'X' || (c >= 'a' && c <= 'f') ||
                        (c >= 'A' && c <= 'Z')) {
@@ -721,13 +721,13 @@ static TOKEN t_char_list()
                 bool only_allow_two_hex = false;
                 if (c == 'x' || c == 'X') {
                     only_allow_two_hex = true;
-                    c = get_next_char();
+                    c = getNextChar();
                 }
                 UINT n = 0;
                 while (xisdigithex(c)) {
                     g_cur_token_string[g_cur_token_string_pos++] = c;
                     n++;
-                    c = get_next_char();
+                    c = getNextChar();
                 }
                 if (n > 2 && only_allow_two_hex) {
                     err(g_real_line_num, "constant too big, only permit two hex digits");
@@ -735,14 +735,14 @@ static TOKEN t_char_list()
             } else {
                 g_cur_token_string[g_cur_token_string_pos++] = '\\';
                 g_cur_token_string[g_cur_token_string_pos++] = c;
-                c = get_next_char();
+                c = getNextChar();
             }
         } else {
             g_cur_token_string[g_cur_token_string_pos++] = c;
-            c = get_next_char();
+            c = getNextChar();
         }
     }
-    g_cur_char = get_next_char();
+    g_cur_char = getNextChar();
     g_cur_token_string[g_cur_token_string_pos] = 0;
     return T_CHAR_LIST;
 }
@@ -753,14 +753,14 @@ static TOKEN t_char_list()
 //the function return.
 static TOKEN t_id()
 {
-    CHAR c = get_next_char();
+    CHAR c = getNextChar();
     while (xisalpha(c) || c == '_' || xisdigit(c)) {
         g_cur_token_string[g_cur_token_string_pos++] = c;
-        c = get_next_char();
+        c = getNextChar();
     }
     g_cur_char = c;
     g_cur_token_string[g_cur_token_string_pos] = 0;
-    TOKEN tok = get_key_word(g_cur_token_string);
+    TOKEN tok = getKeyWord(g_cur_token_string);
     if (tok != T_NUL) {
         return tok;
     }
@@ -775,22 +775,22 @@ static TOKEN t_solidus()
 {
     TOKEN t = T_NUL;
     INT st = 0;
-    CHAR c = get_next_char();
+    CHAR c = getNextChar();
     if (c == '=') { // /=
         t = T_DIVEQU;
         g_cur_token_string[g_cur_token_string_pos++] = '/';
         g_cur_token_string[g_cur_token_string_pos++] = c;
         g_cur_token_string[g_cur_token_string_pos] = 0;
-        g_cur_char = get_next_char();
+        g_cur_char = getNextChar();
     } else if (c == '/') { //single comment line
-        if((st = get_line()) == ST_SUCC){
+        if((st = getLine()) == ST_SUCC){
             g_cur_char = g_cur_line[g_cur_line_pos];
             g_cur_line_pos++;
             if (g_cur_char == '/'){ // another single comment line
                 t = t_solidus();
                 goto FIN;
             } else {
-                t = get_token();
+                t = getNextToken();
                 goto FIN;
              }
         } else if (st == ST_EOF) {
@@ -799,17 +799,17 @@ static TOKEN t_solidus()
         }
     } else if (c == '*') {//multi comment line
         UINT cur_line_num = g_src_line_num;
-        c = get_next_char();
+        c = getNextChar();
         CHAR c1 = 0;
         for (;;) {
             cur_line_num = g_src_line_num;
-            c1 = get_next_char();
+            c1 = getNextChar();
             if (c == '*' && c1 == '/') {
                 if (g_src_line_num == cur_line_num) {
                     //We meet the multipul comment terminated token '*/',
                     //so change the parsing state to normal.
-                    g_cur_char = get_next_char();
-                    t = get_token();
+                    g_cur_char = getNextChar();
+                    t = getNextToken();
                     goto FIN;
                 } else {
                     c = c1;
@@ -842,16 +842,16 @@ TOKEN t_dot()
     CHAR c = 0;
     TOKEN t;
     g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
-    c = get_next_char();
+    c = getNextChar();
     if (c == '.') {
         // token string is ..
         g_cur_token_string[g_cur_token_string_pos++] = c;
-        c = get_next_char();
+        c = getNextChar();
         if (c == '.') {
             // token string is ...
             g_cur_token_string[g_cur_token_string_pos++] = c;
             t = T_DOTDOTDOT;
-            c = get_next_char();
+            c = getNextChar();
         } else {
             //Here '..' is a invalid token
             t = T_NUL;
@@ -866,7 +866,7 @@ TOKEN t_dot()
 }
 
 
-CHAR * get_token_name(TOKEN tok)
+CHAR * getTokenName(TOKEN tok)
 {
     return TOKEN_INFO_name(&g_token_info[tok]);
 }
@@ -880,7 +880,7 @@ TokenInfo const* get_token_info(TOKEN tok)
 
 
 //Get current token.
-TOKEN get_token()
+TOKEN getNextToken()
 {
     TOKEN token;
     if (g_cur_token == T_END) {
@@ -891,7 +891,7 @@ TOKEN get_token()
     g_cur_token_string[0] = 0;
     if (g_cur_char == 0) {
         while (g_cur_char == 0) {
-            g_cur_char = get_next_char();
+            g_cur_char = getNextChar();
             if (g_cur_char == ST_EOF) {
                 token = T_END;
                 goto FIN;
@@ -910,91 +910,91 @@ TOKEN get_token()
             token = T_NEWLINE;
             g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
             g_cur_token_string[g_cur_token_string_pos] = 0;
-            g_cur_char = get_next_char();
+            g_cur_char = getNextChar();
         } else  {
-            g_cur_char = get_next_char();
-            token = get_token();
+            g_cur_char = getNextChar();
+            token = getNextToken();
         }
         break;
     case '\t':
-        while ((g_cur_char = get_next_char()) == '\t') { }
-        token = get_token();
+        while ((g_cur_char = getNextChar()) == '\t') { }
+        token = getNextToken();
         break;
     case ' ':
-        while((g_cur_char = get_next_char())==' ') { }
-        token = get_token();
+        while((g_cur_char = getNextChar())==' ') { }
+        token = getNextToken();
         break;
     case '@':
         token = T_AT;
         g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
         g_cur_token_string[g_cur_token_string_pos] = 0;
-        g_cur_char = get_next_char();
+        g_cur_char = getNextChar();
         break;
     case ';':
         token = T_SEMI;
         g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
         g_cur_token_string[g_cur_token_string_pos] = 0;
-        g_cur_char = get_next_char();
+        g_cur_char = getNextChar();
         break;
     case ',':
         token = T_COMMA;
         g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
         g_cur_token_string[g_cur_token_string_pos] = 0;
-        g_cur_char=get_next_char();
+        g_cur_char=getNextChar();
         break;
     case '{':
         token = T_LLPAREN;
         g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
         g_cur_token_string[g_cur_token_string_pos] = 0;
-        g_cur_char = get_next_char();
+        g_cur_char = getNextChar();
         break;
     case '}':
         token = T_RLPAREN;
         g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
         g_cur_token_string[g_cur_token_string_pos] = 0;
-        g_cur_char = get_next_char();
+        g_cur_char = getNextChar();
         break;
     case '[':
         token = T_LSPAREN;
         g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
         g_cur_token_string[g_cur_token_string_pos] = 0;
-        g_cur_char = get_next_char();
+        g_cur_char = getNextChar();
         break;
     case ']':
         token = T_RSPAREN;
         g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
         g_cur_token_string[g_cur_token_string_pos] = 0;
-        g_cur_char = get_next_char();
+        g_cur_char = getNextChar();
         break;
     case '(':
         token = T_LPAREN;
         g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
         g_cur_token_string[g_cur_token_string_pos] = 0;
-        g_cur_char = get_next_char();
+        g_cur_char = getNextChar();
         break;
     case ')':
         token = T_RPAREN;
         g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
         g_cur_token_string[g_cur_token_string_pos] = 0;
-        g_cur_char = get_next_char();
+        g_cur_char = getNextChar();
         break;
     case '~':
         token = T_REV;
         g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
         g_cur_token_string[g_cur_token_string_pos] = 0;
-        g_cur_char = get_next_char();
+        g_cur_char = getNextChar();
         break;
     case '?':
         token = T_QUES_MARK;
         g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
         g_cur_token_string[g_cur_token_string_pos] = 0;
-        g_cur_char = get_next_char();
+        g_cur_char = getNextChar();
         break;
     case '#':
         token = T_SHARP;
         g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
         g_cur_token_string[g_cur_token_string_pos] = 0;
-        g_cur_char = get_next_char();
+        g_cur_char = getNextChar();
         break;
     default:
         if (g_cur_char == '"') { //string
@@ -1021,148 +1021,148 @@ TOKEN get_token()
             token = t_num();
         } else if(g_cur_char == '-') {
             g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
-            g_cur_char = get_next_char();
+            g_cur_char = getNextChar();
             if (g_cur_char == '=') { //'-='
                 token = T_SUBEQU;
                 g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
                 g_cur_token_string[g_cur_token_string_pos] = 0;
-                g_cur_char = get_next_char();
+                g_cur_char = getNextChar();
             } else if(g_cur_char == '>') { //'->'
                 token = T_ARROW;
                 g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
                 g_cur_token_string[g_cur_token_string_pos] = 0;
-                g_cur_char = get_next_char();
+                g_cur_char = getNextChar();
             } else if (g_cur_char == '-') { //'--'
                 token = T_SUBSUB;
                 g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
                 g_cur_token_string[g_cur_token_string_pos] = 0;
-                g_cur_char = get_next_char();
+                g_cur_char = getNextChar();
             } else { //'-'
                 token = T_SUB;
                 g_cur_token_string[g_cur_token_string_pos] = 0;
             }
         } else if (g_cur_char == '+') {
             g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
-            g_cur_char = get_next_char();
+            g_cur_char = getNextChar();
             if (g_cur_char == '=') { //'+='
                 token = T_ADDEQU;
                 g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
                 g_cur_token_string[g_cur_token_string_pos] = 0;
-                g_cur_char = get_next_char();
+                g_cur_char = getNextChar();
             } else if (g_cur_char == '+') { //'++'
                 token = T_ADDADD;
                 g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
                 g_cur_token_string[g_cur_token_string_pos] = 0;
-                g_cur_char = get_next_char();
+                g_cur_char = getNextChar();
             } else { //'+'
                 token = T_ADD;
                 g_cur_token_string[g_cur_token_string_pos] = 0;
             }
         } else if(g_cur_char == '%') {
             g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
-            g_cur_char = get_next_char();
+            g_cur_char = getNextChar();
             if(g_cur_char == '='){ //'%='
                 token = T_REMEQU;
                 g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
                 g_cur_token_string[g_cur_token_string_pos] = 0;
-                g_cur_char = get_next_char();
+                g_cur_char = getNextChar();
             } else { //'%'
                 token = T_MOD;
                 g_cur_token_string[g_cur_token_string_pos] = 0;
             }
         } else if (g_cur_char == '^') {
             g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
-            g_cur_char = get_next_char();
+            g_cur_char = getNextChar();
             if (g_cur_char == '=') { //'^='
                 token = T_XOREQU;
                 g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
                 g_cur_token_string[g_cur_token_string_pos] = 0;
-                g_cur_char = get_next_char();
+                g_cur_char = getNextChar();
             } else { //'^'
                 token = T_XOR;
                 g_cur_token_string[g_cur_token_string_pos] = 0;
             }
         } else if (g_cur_char == '=') {
             g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
-            g_cur_char = get_next_char();
+            g_cur_char = getNextChar();
             if (g_cur_char == '=') { //'=='
                 token = T_EQU;
                 g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
                 g_cur_token_string[g_cur_token_string_pos] = 0;
-                g_cur_char = get_next_char();
+                g_cur_char = getNextChar();
             } else { //'='
                 token = T_ASSIGN;
                 g_cur_token_string[g_cur_token_string_pos] = 0;
             }
         } else if (g_cur_char == '*') {
             g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
-            g_cur_char = get_next_char();
+            g_cur_char = getNextChar();
             if (g_cur_char == '=') { //'*='
                 token = T_MULEQU;
                 g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
                 g_cur_token_string[g_cur_token_string_pos] = 0;
-                g_cur_char = get_next_char();
+                g_cur_char = getNextChar();
             } else { //'*'
                 token = T_ASTERISK;
                 g_cur_token_string[g_cur_token_string_pos] = 0;
             }
         } else if (g_cur_char == '&') {
             g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
-            g_cur_char = get_next_char();
+            g_cur_char = getNextChar();
             if (g_cur_char == '&') { //'&&'
                 token = T_AND;
                 g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
                 g_cur_token_string[g_cur_token_string_pos] = 0;
-                g_cur_char = get_next_char();
+                g_cur_char = getNextChar();
             } else if (g_cur_char == '=') { //&=
                 token = T_BITANDEQU;
                 g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
                 g_cur_token_string[g_cur_token_string_pos] = 0;
-                g_cur_char = get_next_char();
+                g_cur_char = getNextChar();
             } else { //'&'
                 token = T_BITAND;
                 g_cur_token_string[g_cur_token_string_pos] = 0;
             }
         } else if (g_cur_char == '|') {
             g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
-            g_cur_char = get_next_char();
+            g_cur_char = getNextChar();
             if (g_cur_char == '|') { //'||'
                 token = T_OR;
                 g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
                 g_cur_token_string[g_cur_token_string_pos] = 0;
-                g_cur_char = get_next_char();
+                g_cur_char = getNextChar();
             } else if (g_cur_char == '=') { //|=
                 token = T_BITOREQU;
                 g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
                 g_cur_token_string[g_cur_token_string_pos] = 0;
-                g_cur_char = get_next_char();
+                g_cur_char = getNextChar();
             } else {  // '|'
                 token = T_BITOR;
                 g_cur_token_string[g_cur_token_string_pos] = 0;
             }
         } else if (g_cur_char == ':') {
             g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
-            g_cur_char = get_next_char();
+            g_cur_char = getNextChar();
             if (g_cur_char == ':') { //'::'
                 token = T_DCOLON;
                 g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
                 g_cur_token_string[g_cur_token_string_pos] = 0;
-                g_cur_char = get_next_char();
+                g_cur_char = getNextChar();
             } else { //':'
                 token = T_COLON;
                 g_cur_token_string[g_cur_token_string_pos] = 0;
             }
         } else if (g_cur_char == '>') {
             g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
-            g_cur_char = get_next_char();
+            g_cur_char = getNextChar();
             if (g_cur_char == '>') {
                 g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
-                g_cur_char = get_next_char();
+                g_cur_char = getNextChar();
                 if (g_cur_char == '=') { // >>=
                     token = T_RSHIFTEQU;
                     g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
                     g_cur_token_string[g_cur_token_string_pos] = 0;
-                    g_cur_char = get_next_char();
+                    g_cur_char = getNextChar();
                 } else { // >>
                     token = T_RSHIFT;
                     g_cur_token_string[g_cur_token_string_pos] = 0;
@@ -1171,22 +1171,22 @@ TOKEN get_token()
                 token =    T_NOLESSTHAN;
                 g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
                 g_cur_token_string[g_cur_token_string_pos] = 0;
-                g_cur_char = get_next_char();
+                g_cur_char = getNextChar();
             } else { //'>'
                 token = T_MORETHAN;
                 g_cur_token_string[g_cur_token_string_pos] = 0;
             }
         } else if (g_cur_char == '<') {
             g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
-            g_cur_char = get_next_char();
+            g_cur_char = getNextChar();
             if (g_cur_char == '<') {
                 g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
-                g_cur_char = get_next_char();
+                g_cur_char = getNextChar();
                 if (g_cur_char == '=') { // <<=
                     token = T_LSHIFTEQU;
                     g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
                     g_cur_token_string[g_cur_token_string_pos] = 0;
-                    g_cur_char = get_next_char();
+                    g_cur_char = getNextChar();
                 } else { // <<
                     token = T_LSHIFT;
                     g_cur_token_string[g_cur_token_string_pos] = 0;
@@ -1195,19 +1195,19 @@ TOKEN get_token()
                 token =    T_NOMORETHAN;
                 g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
                 g_cur_token_string[g_cur_token_string_pos] = 0;
-                g_cur_char = get_next_char();
+                g_cur_char = getNextChar();
             } else {  // '<'
                 token = T_LESSTHAN;
                 g_cur_token_string[g_cur_token_string_pos] = 0;
             }
         } else if (g_cur_char == '!') {
             g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
-            g_cur_char = get_next_char();
+            g_cur_char = getNextChar();
             if (g_cur_char == '=') {// '!='
                 token =    T_NOEQU;
                 g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
                 g_cur_token_string[g_cur_token_string_pos] = 0;
-                g_cur_char = get_next_char();
+                g_cur_char = getNextChar();
             } else { // '!'
                 token = T_NOT;
                 g_cur_token_string[g_cur_token_string_pos] = 0;
@@ -1234,7 +1234,7 @@ FIN:
 //Only for test.
 void test_lex()
 {
-    get_token();
+    getNextToken();
     while (g_cur_token != T_END) {
         if (g_cur_token == T_NUL) {
             printf("ERROR in line:%u\n\t", g_src_line_num);
@@ -1247,7 +1247,7 @@ void test_lex()
             g_cur_token_string,
             g_token_info[g_cur_token].name,
             g_src_line_num);
-        get_token();
+        getNextToken();
     }
     printf("\n\n\n");
 }

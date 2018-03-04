@@ -34,6 +34,7 @@ namespace xcom {
 #ifdef _DEBUG_
 #define DEBUG_SEG
 #endif
+
 #define BITS_PER_SEG    512
 
 class BitSet;
@@ -230,7 +231,7 @@ public:
     ~SBitSetCore()
     {
         //should call clean() before destruction,
-        //otherwise it will incur SegMgr claimed.
+        //otherwise it will incur SegMgr assertion.
     }
 
     void bunion(SBitSetCore<BitsPerSeg> const& src,
@@ -292,6 +293,7 @@ public:
     INT get_last(TSEGIter ** cur) const;
     INT get_next(UINT elem, TSEGIter ** cur) const;
 
+    void init() { segs.init(); }
     void intersect(SBitSetCore<BitsPerSeg> const& src,
                    SegMgr<BitsPerSeg> * sm,
                    TSEGIter ** free_list);
@@ -762,7 +764,7 @@ protected:
             (SBitSetCore<BitsPerSeg>*)smpoolMallocConstSize(
                 sizeof(SBitSetCore<BitsPerSeg>), m_sbitsetcore_pool);
         ASSERT(p, ("malloc failed"));
-        memset(p, 0, sizeof(SBitSetCore<BitsPerSeg>));
+        ::memset(p, 0, sizeof(SBitSetCore<BitsPerSeg>));
         return p;
     }
 
@@ -773,7 +775,7 @@ protected:
             (DBitSetCore<BitsPerSeg>*)smpoolMallocConstSize(
                 sizeof(DBitSetCore<BitsPerSeg>), m_dbitsetcore_pool);
         ASSERT(p, ("malloc failed"));
-        memset(p, 0, sizeof(DBitSetCore<BitsPerSeg>));
+        ::memset(p, 0, sizeof(DBitSetCore<BitsPerSeg>));
         return p;
     }
 public:

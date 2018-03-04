@@ -397,7 +397,7 @@ public:
 //Exported Functions
 Decl * addToUserTypeList(UserTypeList ** ut_list , Decl * decl);
 
-UINT computeArraySize(Decl * decl);
+UINT computeArraySize(TypeSpec const* spec, Decl * decl);
 Decl * cp_type_name(Decl const* src);
 
 
@@ -423,7 +423,6 @@ bool declaration();
 bool declaration_list();
 void dump_decl(Decl const* dcl);
 void dump_decl(Decl const* dcl, StrBuf & buf);
-void dump_type(TypeSpec * ty, bool is_ptr);
 
 Decl * expand_user_type(Decl * ut);
 
@@ -436,7 +435,7 @@ INT format_decl_spec(StrBuf & buf, TypeSpec const* ty, bool is_ptr);
 INT format_parameter_list(StrBuf & buf, Decl const* decl);
 INT format_user_type_spec(StrBuf & buf, TypeSpec const* ty);
 INT format_user_type_spec(StrBuf & buf, Decl const* ut);
-INT format_declarator(StrBuf & buf, Decl const* decl);
+INT format_declarator(StrBuf & buf, TypeSpec const* ty, Decl const* decl);
 INT format_declaration(StrBuf & buf, Decl const* decl);
 
 //Dump Decl-Tree style type-info
@@ -444,12 +443,13 @@ INT format_dcrl(Decl const* decl, INT indent);
 INT format_parameter_list(Decl const* decl, INT indent);
 INT format_user_type_spec(TypeSpec const* ty, INT indent);
 INT format_user_type_spec(Decl const* ut, INT indent);
-INT format_declarator(IN Decl const* decl, INT indent);
+INT format_declarator(IN Decl const* decl, TypeSpec const* ty, INT indent);
 INT format_declaration(IN Decl const* decl, INT indent);
 Decl * factor_user_type(Decl * decl);
 Enum * find_enum(EnumList * elst , Enum * e);
 bool findEnumConst(CHAR const* name, OUT Enum ** e, OUT INT * idx);
 
+bool is_extern(Decl const*dcl);
 bool is_decl_exist_in_outer_scope(CHAR const* name, OUT Decl ** dcl);
 bool is_decl_equal(Decl const* d1, Decl const* d2);
 bool is_abs_declaraotr(Decl const* declarator);
@@ -490,21 +490,21 @@ bool is_struct_exist_in_outer_scope(CHAR const* tag, OUT Struct ** s);
 bool is_enum_id_exist_in_outer_scope(CHAR const* cl, OUT Enum ** e);
 
 //Return true if enum-value existed in current scope.
-bool is_enum_exist(EnumList const* e_list, 
+bool is_enum_exist(EnumList const* e_list,
                    CHAR const* e_name,
-                   OUT Enum ** e, 
+                   OUT Enum ** e,
                    OUT INT * idx);
 bool is_user_type_exist(
-            UserTypeList const* ut_list, 
-            CHAR const* ut_name, 
+            UserTypeList const* ut_list,
+            CHAR const* ut_name,
             Decl ** ut);
 bool is_struct_type_exist(
             List<Struct*> const& struct_list,
             CHAR const* tag,
             OUT Struct ** s);
 bool is_union_type_exist(
-            List<Union*> const& u_list, 
-            CHAR const* tag, 
+            List<Union*> const& u_list,
+            CHAR const* tag,
             OUT Union ** s);
 bool is_union(TypeSpec const* type);
 bool is_union(Decl const* decl);
@@ -512,11 +512,13 @@ bool is_struct(TypeSpec const* type);
 bool is_struct(Decl const* decl);
 bool is_bitfield(Decl const* decl);
 
+Decl const* gen_type_name(TypeSpec * ty);
+Decl const* get_return_type(Decl const* dcl);
 CHAR const* get_decl_name(Decl * dcl);
 SYM * get_decl_sym(Decl const* dcl);
 Decl const* get_pure_declarator(Decl const* decl);
 Decl * get_parameter_list(
-        Decl * dcl, 
+        Decl * dcl,
         OUT Decl ** fun_dclor = NULL);
 Decl const* get_decl_id(Decl const* dcl);
 Decl * get_decl_in_scope(CHAR const* name, SCOPE const* scope);
@@ -525,14 +527,14 @@ INT get_enum_const_val(Enum const* e, INT idx);
 UINT getSimplyTypeSize(TypeSpec const* ty);
 ULONG getComplexTypeSize(Decl const* decl);
 UINT get_decl_size(Decl const* decl);
-UINT get_pointer_base_size(Decl * decl);
+UINT get_pointer_base_size(Decl const* decl);
 Decl const* get_pointer_decl(Decl const* decl);
 Decl * get_array_decl(Decl * decl);
 ULONG get_array_elemnum_to_dim(Decl * arr, UINT dim);
 ULONG get_array_elem_bytesize(Decl * arr);
-Decl * get_pointer_base_decl(Decl * decl, TypeSpec ** ty);
+Decl * get_pointer_base_decl(Decl const* decl, TypeSpec ** ty);
 TypeSpec * get_pure_type_spec(TypeSpec * type);
-UINT getDeclaratorSize(Decl const* d);
+UINT getDeclaratorSize(TypeSpec const* spec, Decl const* d);
 CHAR const* get_enum_const_name(Enum const* e, INT idx);
 UINT get_struct_field_ofst(Struct * st, CHAR * name);
 
