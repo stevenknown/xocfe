@@ -25,13 +25,14 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 @*/
+#include "cfe_targ_const_info.h"
+
 #include "../com/xcominc.h"
 #include "../opt/util.h"
 #include "../opt/symtab.h"
 using namespace xoc;
 
 #include "../opt/label.h"
-#include "cfe_targ_const_info.h"
 #include "errno.h"
 #include "cfexport.h"
 #include "err.h"

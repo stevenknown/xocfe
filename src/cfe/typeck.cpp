@@ -509,7 +509,7 @@ static UINT getCvtRank(UINT des)
         return 83;
     }
 
-    UNREACH();
+    UNREACHABLE();
     return 0;
 }
 

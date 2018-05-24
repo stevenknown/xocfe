@@ -175,7 +175,7 @@ static bool compute_binary_op(Tree * t)
             l = (l != r);
             pushv(l);
             break;
-        default: UNREACH();
+        default: UNREACHABLE();
         }
         break;
     case TR_RELATION: // < > >= <=
@@ -196,7 +196,7 @@ static bool compute_binary_op(Tree * t)
             l = (l <= r);
             pushv(l);
             break;
-        default: UNREACH();
+        default: UNREACHABLE();
         }
         break;
     case TR_SHIFT:   // >> <<
@@ -209,7 +209,7 @@ static bool compute_binary_op(Tree * t)
             l = (l << r);
             pushv(l);
             break;
-        default: UNREACH();
+        default: UNREACHABLE();
         }
         break;
     case TR_ADDITIVE: // '+' '-'
@@ -222,7 +222,7 @@ static bool compute_binary_op(Tree * t)
             l = (l - r);
             pushv(l);
             break;
-        default: UNREACH();
+        default: UNREACHABLE();
         }
         break;
     case TR_MULTI:    // '*' '/' '%'
@@ -241,7 +241,7 @@ static bool compute_binary_op(Tree * t)
             pushv(l);
             if (r == 0) { warn(TREE_lineno(t), "divisor is zero"); }
             break;
-        default: UNREACH();
+        default: UNREACHABLE();
         }
         break;
     default:

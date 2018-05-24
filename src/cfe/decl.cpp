@@ -624,7 +624,7 @@ bool is_unique_decl(Decl const* decl_list, Decl const* decl)
 bool is_declaration(Decl * decl)
 {
     if (DECL_is_fun_def(decl)) {
-        UNREACH();
+        UNREACHABLE();
     }
     return false;
 }
@@ -1685,66 +1685,63 @@ static Decl * direct_abstract_declarator(TypeSpec * qua)
         }
         DECL_is_paren(dcl) = 1;
         break;
-    case T_ID: //identifier
-        {
-            SYM * sym = g_fe_sym_tab->add(g_real_token_string);
-            add_to_symtab_list(&SCOPE_sym_tab_list(g_cur_scope), sym);
-            dcl = new_decl(DCL_ID);
-            DECL_id(dcl) = id();
-            DECL_qua(dcl) = qua;
-            match(T_ID);
-        }
+    case T_ID: { //identifier
+        SYM * sym = g_fe_sym_tab->add(g_real_token_string);
+        add_to_symtab_list(&SCOPE_sym_tab_list(g_cur_scope), sym);
+        dcl = new_decl(DCL_ID);
+        DECL_id(dcl) = id();
+        DECL_qua(dcl) = qua;
+        match(T_ID);
         break;
+    }
     default:;
     }
 
     switch (g_real_token) {
-    case T_LSPAREN: //outer level operator is ARRAY
-        {
-            Tree * t = NULL;
-            while (g_real_token == T_LSPAREN) {
-                match(T_LSPAREN);
-                Decl * ndcl2 = new_decl(DCL_ARRAY);
-                t = conditional_exp();
-                if (match(T_RSPAREN) != ST_SUCC) {
-                    err(g_real_line_num, "miss ']'");
-                    goto FAILED;
-                }
-                DECL_array_dim_exp(ndcl2) = t;
-
-                //'id' should be the last one in declarator-list.
-                insertbefore_one(&dcl, dcl, ndcl2);
-            }
-        }
-        break;
-    case T_LPAREN:
-        {
-            //current level operator is function-pointer/function-definition
-            //Parameter list.
-            match(T_LPAREN);
-            ndcl = new_decl(DCL_FUN);
-            //DECL_fun_base(ndcl) = dcl;
-            enter_sub_scope(true);
-
-            //Check if param declaration is void, such as: foo(void).
-            Decl * param_decl = parameter_type_list();
-
-            if (cnt_list(param_decl) == 1 &&
-                is_void(param_decl) &&
-                is_scalar(param_decl)) {
-                ;
-            } else {
-                DECL_fun_para_list(ndcl) = param_decl;
-            }
-
-            return_to_parent_scope();
-            insertbefore_one(&dcl, dcl, ndcl);
-            if (match(T_RPAREN) != ST_SUCC) {
-                err(g_real_line_num, "miss ')'");
+    case T_LSPAREN: { //outer level operator is ARRAY
+        Tree * t = NULL;
+        while (g_real_token == T_LSPAREN) {
+            match(T_LSPAREN);
+            Decl * ndcl2 = new_decl(DCL_ARRAY);
+            t = conditional_exp();
+            if (match(T_RSPAREN) != ST_SUCC) {
+                err(g_real_line_num, "miss ']'");
                 goto FAILED;
             }
+            DECL_array_dim_exp(ndcl2) = t;
+
+            //'id' should be the last one in declarator-list.
+            insertbefore_one(&dcl, dcl, ndcl2);
         }
         break;
+    }
+    case T_LPAREN: {
+        //current level operator is function-pointer/function-definition
+        //Parameter list.
+        match(T_LPAREN);
+        ndcl = new_decl(DCL_FUN);
+        //DECL_fun_base(ndcl) = dcl;
+        enter_sub_scope(true);
+
+        //Check if param declaration is void, such as: foo(void).
+        Decl * param_decl = parameter_type_list();
+
+        if (cnt_list(param_decl) == 1 &&
+            is_void(param_decl) &&
+            is_scalar(param_decl)) {
+            ;
+        } else {
+            DECL_fun_para_list(ndcl) = param_decl;
+        }
+
+        return_to_parent_scope();
+        insertbefore_one(&dcl, dcl, ndcl);
+        if (match(T_RPAREN) != ST_SUCC) {
+            err(g_real_line_num, "miss ')'");
+            goto FAILED;
+        }
+        break;
+    }
     default:;
     }
     return dcl;
@@ -2009,7 +2006,7 @@ Decl const* get_declarator(Decl const* decl)
         return decl;
     default: ASSERT(0, ("Not a declarator"));
     }
-    UNREACH();
+    UNREACHABLE();
     return NULL;
 }
 
@@ -2613,7 +2610,7 @@ Decl * trans_to_pointer(Decl * decl, bool is_append)
 Enum * find_enum(EnumList * elst , Enum * e)
 {
     if (elst == NULL || e == NULL) { return NULL; }
-    EnumList *    p = elst;
+    EnumList * p = elst;
     while (p != NULL) {
         if (ENUM_LIST_enum(p) == e) {
             return e;
@@ -2802,7 +2799,7 @@ bool is_struct_type_exist(
 {
     if (tag == NULL) { return false; }
 
-    C<Struct*> * ct;
+    xcom::C<Struct*> * ct;
     for (Struct * st = struct_list.get_head(&ct);
          ct != NULL; st = struct_list.get_next(&ct)) {
         SYM * sym = STRUCT_tag(st);
@@ -2825,7 +2822,7 @@ bool is_union_type_exist(
 {
     if (tag == NULL) { return false; }
 
-    C<Union*> * ct;
+    xcom::C<Union*> * ct;
     for (Union * st = u_list.get_head(&ct);
          st != NULL; st = u_list.get_next(&ct)) {
         SYM * sym = UNION_tag(st);
@@ -2957,7 +2954,7 @@ UINT computeScalarTypeBitSize(UINT des)
     case T_SPEC_FLOAT|T_SPEC_LONGLONG:
         bitsize = BYTE_PER_FLOAT * BIT_PER_BYTE;
         break;
-    default: UNREACH();
+    default: UNREACHABLE();
     }
     return bitsize;
 }
@@ -3640,7 +3637,7 @@ static INT format_dcrl_reverse(
             LONGLONG v = DECL_array_dim(decl);
             if (ty != NULL && IS_EXTERN(ty) && v == 0) {
                 //Set extern array to own one elemement at least.
-                UNREACH(); //should be handled in declaration()
+                UNREACHABLE(); //should be handled in declaration()
             }
             //CHAR * p = buf + strlen(buf);
             buf.strcat("[%lld]", v);

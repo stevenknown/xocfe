@@ -19,6 +19,7 @@ com/bs.o \
 com/ltype.o
 
 OPT_OBJS +=\
+com/symtab.o \
 opt/label.o \
 opt/util.o
 

@@ -78,6 +78,16 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define GENERAL_REGISTER_SIZE (BYTE_PER_POINTER)
 #endif
 
+//Define signed and unsigned integer type on host machine.
+#define INT8                 CHAR
+#define UINT8                UCHAR
+#define INT16                SHORT
+#define UINT16               USHORT
+#define INT32                INT
+#define UINT32               UINT
+#define INT64                LONGLONG
+#define UINT64               ULONGLONG
+
 //Host integer and float point type.
 //e.g: Build XOCC on x8664, HOST_INT should be 64bit.
 //Or build XOCC on ARM, HOST_INT should be 32bit,

@@ -239,7 +239,7 @@ void dump_scope(SCOPE * s, UINT flag)
         g_indent++;
         note("\n");
 
-        C<Struct*> * ct;
+        xcom::C<Struct*> * ct;
         for (Struct * st = SCOPE_struct_list(s).get_head(&ct);
              st != NULL; st = SCOPE_struct_list(s).get_next(&ct)) {
             buf.clean();
@@ -256,7 +256,7 @@ void dump_scope(SCOPE * s, UINT flag)
         g_indent++;
         note("\n");
 
-        C<Union*> * ct;
+        xcom::C<Union*> * ct;
         for (Union * st = SCOPE_union_list(s).get_head(&ct);
              st != NULL; st = SCOPE_union_list(s).get_next(&ct)) {
             buf.clean();
