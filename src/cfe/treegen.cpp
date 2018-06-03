@@ -186,7 +186,7 @@ static LabelInfo * add_ref_label(CHAR * name, INT lineno)
 
     //Allocate different LabelInfo for different lines.
     li = allocCustomerLabel(g_fe_sym_tab->add(name), g_pool_general_used);
-    //li = g_labtab.append_and_retrieve(li);    
+    //li = g_labtab.append_and_retrieve(li);
     set_lab_used(li);
     set_map_lab2lineno(li, lineno); //ONLY for debug-info or dumping
     SCOPE_ref_label_list(sc).append_tail(li);
@@ -1290,10 +1290,10 @@ static Tree * multiplicative_exp()
         setParent(p,TREE_lchild(p));
             // a*b*c  =>
             //             *
-            //            / \
-            //           *   c
-            //          / \
-            //         a   b
+            //           /  |
+            //           *  c
+            //          / | 
+            //         a  b
         match(g_real_token);
         TREE_rchild(p) = cast_exp();
         setParent(p,TREE_rchild(p));
@@ -1323,10 +1323,10 @@ static Tree * additive_exp()
         setParent(p, TREE_lchild(p));
            //  a+b-c  =>
            //              -
-           //             / \
-           //            +   c
-           //           / \
-           //          a   b
+           //             / |
+           //            +  c
+           //           / |
+           //          a  b
         match(g_real_token);
         TREE_rchild(p) = multiplicative_exp();
         setParent(p, TREE_rchild(p));
@@ -1356,10 +1356,10 @@ static Tree * shift_exp()
         setParent(p,TREE_lchild(p));
            //  a<<b<<c  =>
            //              <<
-           //             /  \
-           //            <<   c
-           //           /  \
-           //          a    b
+           //             /  |
+           //            <<  c
+           //           /  |
+           //          a   b
         match(g_real_token);
         TREE_rchild(p) = additive_exp();
         setParent(p,TREE_rchild(p));
@@ -1390,10 +1390,10 @@ static Tree * relational_exp()
         setParent(p,TREE_lchild(p));
            //  a<b<c   =>
            //              <
-           //             / \
-           //            <   c
-           //           / \
-           //          a   b
+           //             / |
+           //            <  c
+           //           / |
+           //          a  b
         match(g_real_token);
         TREE_rchild(p) = shift_exp();
         setParent(p,TREE_rchild(p));
@@ -1422,10 +1422,10 @@ static Tree * equality_exp()
         setParent(p, TREE_lchild(p));
            //  a==b!=c   =>
            //              !=
-           //             /  \
-           //            ==   c
-           //           /  \
-           //          a    b
+           //             /  |
+           //            ==  c
+           //           /  |
+           //          a   b
         match(g_real_token);
         TREE_rchild(p) = relational_exp();
         setParent(p, TREE_rchild(p));
@@ -1453,10 +1453,10 @@ static Tree * AND_exp()
         TREE_lchild(p) = t;
         setParent(p, TREE_lchild(p));
            //  a&b&c   =>  &
-           //             / \
-           //            &   c
-           //           / \
-           //          a   b
+           //             / |
+           //            &  c
+           //           / |
+           //          a  b
         match(T_BITAND);
         TREE_rchild(p) = equality_exp();
         setParent(p,TREE_rchild(p));
@@ -1484,10 +1484,10 @@ static Tree * exclusive_OR_exp()
         TREE_lchild(p) = t;
         setParent(p,TREE_lchild(p));
            //  a^b^c   =>  ^
-           //             / \
-           //            ^   c
-           //           / \
-           //          a   b
+           //             / |
+           //            ^  c
+           //           / |
+           //          a  b
         match(T_XOR);
         TREE_rchild(p) = AND_exp();
         setParent(p,TREE_rchild(p));
@@ -1515,10 +1515,10 @@ static Tree * inclusive_OR_exp()
         TREE_lchild(p) = t;
         setParent(p,TREE_lchild(p));
         //  a|b|c   =>  |
-        //             / \
-        //            |   c
-        //           / \
-        //          a   b
+        //             / |
+        //            |  c
+        //           / |
+        //          a  b
         match(T_BITOR);
         TREE_rchild(p) = exclusive_OR_exp();
         setParent(p,TREE_rchild(p));
@@ -1547,10 +1547,10 @@ static Tree * logical_AND_exp()
         setParent(p,TREE_lchild(p));
         //a && b && c =>
         //              &&
-        //             /  \
-        //            &&   c
-        //           /  \
-        //           a   b
+        //             /  |
+        //            &&  c
+        //           /  |
+        //           a  b
         match(T_AND);
         TREE_rchild(p) = inclusive_OR_exp();
         setParent(p,TREE_rchild(p));
@@ -1578,9 +1578,9 @@ static Tree * logical_OR_exp()
         TREE_lchild(p) = t;
         setParent(p,TREE_lchild(p));
         //  a||b||c  =>  ||
-        //              /  \
-        //             ||   c
-        //            /  \
+        //              /  |
+        //             ||  c
+        //            /  |
         //           a   b
         match(T_OR);
         TREE_rchild(p) = logical_AND_exp();

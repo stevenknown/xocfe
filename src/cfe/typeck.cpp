@@ -820,7 +820,7 @@ static INT TypeTran(Tree * t, TYCtx * cont)
             } else {
                 TREE_result_type(t) = BUILD_TYNAME(
                     T_SPEC_UNSIGNED | T_SPEC_INT | T_QUA_CONST);
-            }            
+            }
             break;
         case TR_IMML:
             TREE_result_type(t) = BUILD_TYNAME(T_SPEC_LONGLONG|T_QUA_CONST);
@@ -1107,7 +1107,7 @@ static INT TypeTran(Tree * t, TYCtx * cont)
                         TREE_imm_val(TREE_false_part(t)) != 0) {
                         err(TREE_lineno(t), "no conversion from pointer to non-pointer");
                         goto FAILED;
-                    }                    
+                    }
                 } else if (!is_pointer(td) && is_pointer(fd)) {
                     if (!is_imm_int(TREE_true_part(t)) ||
                         TREE_imm_val(TREE_true_part(t)) != 0) {

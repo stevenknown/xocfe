@@ -323,16 +323,16 @@ Decl const* get_return_type(Decl const* dcl)
     ASSERT0(DECL_dt(dcl) == DCL_DECLARATION);
     Decl const* retty = gen_type_name(DECL_spec(dcl));
     Decl const* tylst = get_pure_declarator(dcl);
-    
+
     ASSERT(DECL_dt(tylst) == DCL_ID,
         ("'id' should be declarator-list-head. Illegal function declaration"));
     Decl * func_type = DECL_next(tylst);
     ASSERT(DECL_dt(func_type) == DCL_FUN, ("must be function type"));
-    Decl * return_type = DECL_next(func_type);    
+    Decl * return_type = DECL_next(func_type);
     if (return_type == NULL) {
         return retty;
     }
-    
+
     PURE_DECL(retty) = cp_decl_begin_at(return_type);
     return retty;
 }
@@ -557,9 +557,9 @@ static bool is_indirection(Decl const* dcl)
 }
 
 
-bool is_extern(Decl const*dcl) 
-{ 
-    return IS_EXTERN(DECL_spec(dcl)); 
+bool is_extern(Decl const*dcl)
+{
+    return IS_EXTERN(DECL_spec(dcl));
 }
 
 
@@ -2891,7 +2891,7 @@ UINT computeArraySize(TypeSpec const* spec, Decl const* decl)
             } else {
                 err(g_src_line_num, "size of %dth dimension can not be zero", dim);
                 return 0;
-            }            
+            }
         }
 
         if (num == 0) {
@@ -3563,8 +3563,8 @@ INT format_parameter_list(StrBuf & buf, Decl const* decl)
 
 
 static INT format_dcrl_reverse(
-        StrBuf & buf, 
-        TypeSpec const* ty, 
+        StrBuf & buf,
+        TypeSpec const* ty,
         Decl const* decl)
 {
     if (decl == NULL) { return ST_SUCC; }
@@ -3901,7 +3901,7 @@ INT format_declaration(Decl const* decl, INT indent)
         fprintf(g_tfile, "SPECIFIER:%s", sbuf.buf);
 
         fprintf(g_tfile, "\n");
-        format_declarator(dcl, DECL_spec(decl), 
+        format_declarator(dcl, DECL_spec(decl),
             indent + DECL_FMT_INDENT_INTERVAL);
         fflush(g_tfile);
         return ST_SUCC;
@@ -3914,7 +3914,7 @@ INT format_declaration(Decl const* decl, INT indent)
     } else if (DECL_dt(decl) == DCL_POINTER ||
                DECL_dt(decl) == DCL_ARRAY ||
                DECL_dt(decl) == DCL_FUN ||
-               DECL_dt(decl) == DCL_ID) {        
+               DECL_dt(decl) == DCL_ID) {
         fprintf(g_tfile, "%s ", g_dcl_name[DECL_dt(decl)]);
         format_declarator(decl, NULL, indent + DECL_FMT_INDENT_INTERVAL);
     } else if (DECL_dt(decl) == DCL_VARIABLE) {
@@ -4600,8 +4600,8 @@ bool declaration()
     Decl * dcl = NULL;
     UINT lineno = g_real_line_num;
 
-    TypeSpec * type_spec = declaration_spec();    
-    if (type_spec == NULL) { return false; }    
+    TypeSpec * type_spec = declaration_spec();
+    if (type_spec == NULL) { return false; }
 
     TypeSpec * qualifier = new_type();
     extract_qualifier(type_spec, qualifier);
