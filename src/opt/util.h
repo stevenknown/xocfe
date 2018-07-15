@@ -93,7 +93,7 @@ void dump_rbt(RBT<T, Ttgt, CompareKey> & rbt,
     }
     UNLINK(name);
     FILE * hvcg = fopen(name, "a+");
-    ASSERT(hvcg, ("%s create failed!!!", name));
+    ASSERTN(hvcg, ("%s create failed!!!", name));
     fprintf(hvcg, "graph: {"
               "title: \"Tree\"\n"
               "shrink:  15\n"
@@ -244,7 +244,7 @@ extern INT g_indent; //Only for dump.
 extern bool g_prt_carriage_return_for_dot; //Only for dump.
 
 void dumpIndent(FILE * h, UINT indent);
-void dumpIntVector(Vector<UINT> & v);
+void dumpIntVector(Vector<UINT> const& v);
 
 //Get temporary memory pool handler.
 SMemPool * get_tmp_pool();

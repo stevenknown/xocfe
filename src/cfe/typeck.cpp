@@ -76,7 +76,7 @@ static INT process_array_init(Decl * dcl, TypeSpec * ty, Tree ** init)
     if (DECL_dt(dcl) == DCL_ID) {
         dcl = DECL_next(dcl);
     }
-    ASSERT(DECL_dt(dcl) == DCL_ARRAY, ("ONLY can be DCL_ARRAY"));
+    ASSERTN(DECL_dt(dcl) == DCL_ARRAY, ("ONLY can be DCL_ARRAY"));
     ULONGLONG dim = DECL_array_dim(dcl), count = 0;
 
     Decl * head = dcl, * tail = NULL;
@@ -168,7 +168,7 @@ static INT process_struct_init(TypeSpec * ty, Tree ** init)
 {
     INT st = ST_SUCC;
     Struct * s = TYPE_struct_type(ty);
-    ASSERT(IS_STRUCT(ty), ("ONLY must be struct type-spec"));
+    ASSERTN(IS_STRUCT(ty), ("ONLY must be struct type-spec"));
     if (!STRUCT_is_complete(s)) {
         err(g_real_line_num, "uses incomplete struct %s",
             SYM_name(STRUCT_tag(s)));
@@ -201,7 +201,7 @@ static INT process_union_init(TypeSpec * ty, Tree ** init)
 {
     INT st = ST_SUCC;
     Union * s = TYPE_union_type(ty);
-    ASSERT(IS_UNION(ty), ("ONLY must be union type-spec"));
+    ASSERTN(IS_UNION(ty), ("ONLY must be union type-spec"));
     if (!UNION_is_complete(s)) {
         err(g_real_line_num, "uses incomplete union %s",
             SYM_name((UNION_tag(s))));
@@ -247,13 +247,13 @@ INT process_init(Decl * decl)
     Tree * init = NULL;
     INT st = ST_SUCC;
     if (decl == NULL) { return ST_SUCC; }
-    ASSERT(DECL_dt(decl) == DCL_DECLARATION, ("ONLY can be DCRLARATION"));
+    ASSERTN(DECL_dt(decl) == DCL_DECLARATION, ("ONLY can be DCRLARATION"));
 
     dcl = DECL_decl_list(decl);//get DCRLARATOR
     ty = DECL_spec(decl);//get TypeSpec-SPEC
-    ASSERT(dcl && ty, ("DCLARATION must have a "
+    ASSERTN(dcl && ty, ("DCLARATION must have a "
                         "DECRLARATOR node and TypeSpec node"));
-    ASSERT(DECL_dt(dcl) == DCL_DECLARATOR, ("ONLY can be DECLARATOR"));
+    ASSERTN(DECL_dt(dcl) == DCL_DECLARATOR, ("ONLY can be DECLARATOR"));
     if (!DECL_is_init(dcl)) { return ST_SUCC; }
 
     init = DECL_init_tree(dcl);
@@ -298,13 +298,13 @@ INT process_init(Decl * decl, Tree ** init)
     INT st = ST_SUCC;
     if (decl == NULL) { return ST_SUCC; }
 
-    ASSERT(DECL_dt(decl) == DCL_DECLARATION, ("ONLY can be DCRLARATION"));
+    ASSERTN(DECL_dt(decl) == DCL_DECLARATION, ("ONLY can be DCRLARATION"));
 
     dcl = DECL_decl_list(decl); //get DCRLARATOR
     ty = DECL_spec(decl); //get TypeSpec-SPEC
-    ASSERT((dcl && ty),
+    ASSERTN((dcl && ty),
         ("DCLARATION must have a DCRLARATOR node and TypeSpec node"));
-    ASSERT((*init) != NULL, ("'init' initialization tree cannot be NULL"));
+    ASSERTN((*init) != NULL, ("'init' initialization tree cannot be NULL"));
 
     if (is_array(dcl)) {
         st = process_array_init(dcl, ty, init);
@@ -360,7 +360,7 @@ static Decl * buildTypeName(TypeSpec * ty)
 static TypeSpec * buildBaseTypeSpec(INT des)
 {
     if (!is_simple_base_type(des)) {
-        ASSERT(0,("expect base type"));
+        ASSERTN(0,("expect base type"));
         return NULL;
     }
 
@@ -444,7 +444,7 @@ static TypeSpec * buildBaseTypeSpec(INT des)
             return g_enum_type;
         }
     }
-    ASSERT(0,("TODO"));
+    ASSERTN(0,("TODO"));
     return NULL;
 }
 
@@ -585,9 +585,9 @@ static void insertCvtForParams(Tree * t)
 
     Decl * funcdecl = TREE_result_type(TREE_fun_exp(t));
 
-    ASSERT(DECL_dt(funcdecl) == DCL_TYPE_NAME, ("expect TypeSpec-NAME"));
+    ASSERTN(DECL_dt(funcdecl) == DCL_TYPE_NAME, ("expect TypeSpec-NAME"));
     ASSERT0(DECL_decl_list(funcdecl));
-    ASSERT(DECL_dt(DECL_decl_list(funcdecl)) == DCL_ABS_DECLARATOR,
+    ASSERTN(DECL_dt(DECL_decl_list(funcdecl)) == DCL_ABS_DECLARATOR,
            ("expect abs-declarator"));
 
     Decl const* formalp_decl = get_parameter_list(funcdecl);
@@ -627,7 +627,7 @@ static bool TypeTranID(Tree * t, TYCtx * cont)
 
         //Get the struct/union type base.
         Decl * base = TREE_result_type(cont->base_tree_node);
-        ASSERT(base, ("should be struct/union type"));
+        ASSERTN(base, ("should be struct/union type"));
         if (is_struct(base)) {
             Struct * s = TYPE_struct_type(DECL_spec(base));
             //Search for matched field.
@@ -740,7 +740,7 @@ static bool TypeTranID(Tree * t, TYCtx * cont)
     }
 
     Decl * dcl_list = const_cast<Decl*>(get_pure_declarator(tmp_decl));
-    ASSERT(DECL_dt(dcl_list) == DCL_ID,
+    ASSERTN(DECL_dt(dcl_list) == DCL_ID,
            ("'id' should be declarator-list-head. Illegal declaration"));
 
     //neglect the first DCL_ID node, we only need the rest.
@@ -970,7 +970,7 @@ static INT TypeTran(Tree * t, TYCtx * cont)
                         TREE_result_type(t) = buildBinaryOpType(
                             TREE_type(t), ld, rd);
                     } else {
-                        ASSERT(0, ("illegal type for '%s'",
+                        ASSERTN(0, ("illegal type for '%s'",
                             getTokenName(TREE_token(t))));
                     }
                 } else if (TREE_token(t) == T_SUB) { // '-'
@@ -1013,11 +1013,11 @@ static INT TypeTran(Tree * t, TYCtx * cont)
                         TREE_result_type(t) = buildBinaryOpType(
                             TREE_type(t), ld, rd);
                     } else {
-                        ASSERT(0, ("illegal type for '%s'",
+                        ASSERTN(0, ("illegal type for '%s'",
                             getTokenName(TREE_token(t))));
                     }
                 } else {
-                    ASSERT(0, ("illegal type for '%s'",
+                    ASSERTN(0, ("illegal type for '%s'",
                            getTokenName(TREE_token(t))));
                 }
                 break;
@@ -1139,7 +1139,7 @@ static INT TypeTran(Tree * t, TYCtx * cont)
                 if (IS_USER_TYPE_REF(DECL_spec(type_name))) {
                     //Expand the combined type here.
                     type_name = expand_user_type(type_name);
-                    ASSERT(is_valid_type_name(type_name),
+                    ASSERTN(is_valid_type_name(type_name),
                             ("Illegal expanding user-type"));
                 }
 
@@ -1148,7 +1148,7 @@ static INT TypeTran(Tree * t, TYCtx * cont)
             break;
         case TR_TYPE_NAME: //user defined type or C standard type
             //TR_TYPE_NAME node should be process by its parent node directly.
-            ASSERT(0, ("Should not be arrival"));
+            ASSERTN(0, ("Should not be arrival"));
             break;
         case TR_LDA:   // &a get address of 'a'
             {
@@ -1173,7 +1173,7 @@ static INT TypeTran(Tree * t, TYCtx * cont)
                 }
                 Decl * td = cp_type_name(ld);
                 ld = PURE_DECL(td);
-                ASSERT(ld, ("lchild must be pointer type"));
+                ASSERTN(ld, ("lchild must be pointer type"));
                 if (DECL_dt(ld) == DCL_POINTER ||
                     DECL_dt(ld) == DCL_ARRAY) {
                     //In C, base of array only needs address, so the DEREF
@@ -1308,9 +1308,9 @@ static INT TypeTran(Tree * t, TYCtx * cont)
                 }
                 insertCvtForParams(t);
                 Decl * ld = TREE_result_type(TREE_fun_exp(t));
-                ASSERT(DECL_dt(ld) == DCL_TYPE_NAME, ("expect TypeSpec-NAME"));
+                ASSERTN(DECL_dt(ld) == DCL_TYPE_NAME, ("expect TypeSpec-NAME"));
                 ASSERT0(DECL_decl_list(ld));
-                ASSERT(DECL_dt(DECL_decl_list(ld)) == DCL_ABS_DECLARATOR,
+                ASSERTN(DECL_dt(DECL_decl_list(ld)) == DCL_ABS_DECLARATOR,
                        ("expect abs-declarator"));
 
                 //Return value type is the CALL node type.
@@ -1326,7 +1326,7 @@ static INT TypeTran(Tree * t, TYCtx * cont)
                     pure = DECL_next(DECL_next(pure));
                 }
 
-                ASSERT(pure == NULL || DECL_dt(pure) != DCL_FUN,
+                ASSERTN(pure == NULL || DECL_dt(pure) != DCL_FUN,
                        ("Illegal dcl list"));
 
                 TREE_result_type(t) = buildTypeName(ty);
@@ -1369,7 +1369,7 @@ static INT TypeTran(Tree * t, TYCtx * cont)
                     goto FAILED;
                 }
                 ld = TREE_result_type(TREE_base_region(t));
-                ASSERT(TREE_type(TREE_field(t)) == TR_ID,
+                ASSERTN(TREE_type(TREE_field(t)) == TR_ID,
                         ("illegal TR_DMEM node!!"));
                 if (!IS_STRUCT(DECL_spec(ld)) && !IS_UNION(DECL_spec(ld))) {
                     err(TREE_lineno(t),
@@ -1401,7 +1401,7 @@ static INT TypeTran(Tree * t, TYCtx * cont)
                 if (ST_SUCC != TypeTran(TREE_base_region(t), cont)) goto FAILED;
                 ld = TREE_result_type(TREE_base_region(t));
 
-                ASSERT(TREE_type(TREE_field(t)) == TR_ID,
+                ASSERTN(TREE_type(TREE_field(t)) == TR_ID,
                         ("illegal TR_INDMEM node!!"));
                 if (!IS_STRUCT(DECL_spec(ld)) && !IS_UNION(DECL_spec(ld))) {
                     err(TREE_lineno(t),
@@ -1429,7 +1429,7 @@ static INT TypeTran(Tree * t, TYCtx * cont)
                 break;
             }
         case TR_PRAGMA:    break;
-        default: ASSERT(0,("unknown tree type:%d",TREE_type(t)));
+        default: ASSERTN(0,("unknown tree type:%d",TREE_type(t)));
         }
         t = TREE_nsib(t);
     }
@@ -1522,7 +1522,7 @@ static bool checkCall(Tree * t, TYCtx * cont)
 
             if (formal_param_decl &&
                 DECL_dt(formal_param_decl) == DCL_VARIABLE) {
-                ASSERT(!DECL_next(formal_param_decl),
+                ASSERTN(!DECL_next(formal_param_decl),
                        ("DCL_VARIABLE must be last formal-parameter"));
                 formal_param_decl = NULL;
                 real_param = NULL;
@@ -1720,7 +1720,7 @@ static INT TypeCheckCore(Tree * t, TYCtx * cont)
         case TR_INDMEM:    // a->b
         case TR_PRAGMA:
             break;
-        default: ASSERT(0, ("unknown tree type:%d", TREE_type(t)));
+        default: ASSERTN(0, ("unknown tree type:%d", TREE_type(t)));
         }
     }
     return ST_SUCC;

@@ -482,7 +482,7 @@ void dump_tree(Tree * t)
         }
         break;
     default:
-        ASSERT(0, ("unknown tree type:%d",TREE_type(t)));
+        ASSERTN(0, ("unknown tree type:%d",TREE_type(t)));
         return;
     }
     fflush(g_tfile);

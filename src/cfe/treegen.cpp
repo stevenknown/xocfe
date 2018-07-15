@@ -129,7 +129,7 @@ static bool verify(Tree * t)
     case TR_PRAGMA:
     case TR_SIZEOF:
         break;
-    default: ASSERT(0, ("unknown tree type:%d", TREE_type(t)));
+    default: ASSERTN(0, ("unknown tree type:%d", TREE_type(t)));
     } //end switch
     return true;
 }
@@ -1292,7 +1292,7 @@ static Tree * multiplicative_exp()
             //             *
             //           /  |
             //           *  c
-            //          / | 
+            //          / |
             //         a  b
         match(g_real_token);
         TREE_rchild(p) = cast_exp();
@@ -2478,7 +2478,7 @@ void finiParser()
 //Start to parse a file.
 INT Parser()
 {
-    ASSERT(g_hsrc && g_fe_sym_tab, ("must initialize them"));
+    ASSERTN(g_hsrc && g_fe_sym_tab, ("must initialize them"));
     //base_type_spec:   one of
     //    type-name void char short int long float double signed
     //    unsigned struct union auto register extern static typedef const

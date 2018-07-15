@@ -232,7 +232,7 @@ void dumpIndent(FILE * h, UINT indent)
 }
 
 
-void dumpIntVector(Vector<UINT> & v)
+void dumpIntVector(Vector<UINT> const& v)
 {
     if (g_tfile == NULL) return;
     fprintf(g_tfile, "\n");

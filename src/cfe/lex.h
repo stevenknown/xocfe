@@ -184,6 +184,7 @@ public:
 
 
 #define MAX_BUF_LINE            4096
+#define MAX_OFST_BUF_LEN        1024
 #define OFST_TAB_LINE_SIZE      (g_ofst_tab_byte_size / sizeof(LONG))
 
 //Exported Variables

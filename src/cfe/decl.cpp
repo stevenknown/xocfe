@@ -324,10 +324,10 @@ Decl const* get_return_type(Decl const* dcl)
     Decl const* retty = gen_type_name(DECL_spec(dcl));
     Decl const* tylst = get_pure_declarator(dcl);
 
-    ASSERT(DECL_dt(tylst) == DCL_ID,
+    ASSERTN(DECL_dt(tylst) == DCL_ID,
         ("'id' should be declarator-list-head. Illegal function declaration"));
     Decl * func_type = DECL_next(tylst);
-    ASSERT(DECL_dt(func_type) == DCL_FUN, ("must be function type"));
+    ASSERTN(DECL_dt(func_type) == DCL_FUN, ("must be function type"));
     Decl * return_type = DECL_next(func_type);
     if (return_type == NULL) {
         return retty;
@@ -359,7 +359,7 @@ SYM * get_decl_sym(Decl const* dcl)
 //Return true if dcl declared with 'inline'.
 bool is_inline(Decl const* dcl)
 {
-    ASSERT(DECL_dt(dcl) == DCL_DECLARATION, ("need declaration"));
+    ASSERTN(DECL_dt(dcl) == DCL_DECLARATION, ("need declaration"));
     TypeSpec const* ty = DECL_spec(dcl);
     ASSERT0(ty);
     if (IS_INLINE(ty)) {
@@ -372,7 +372,7 @@ bool is_inline(Decl const* dcl)
 //Return true if dcl declared with 'const'.
 bool is_constant(Decl const* dcl)
 {
-    ASSERT(DECL_dt(dcl) == DCL_DECLARATION, ("need declaration"));
+    ASSERTN(DECL_dt(dcl) == DCL_DECLARATION, ("need declaration"));
     TypeSpec const* ty = DECL_spec(dcl);
     ASSERT0(ty);
     if (IS_CONST(ty)) {
@@ -385,12 +385,12 @@ bool is_constant(Decl const* dcl)
 //Return true if dcl has initial value.
 bool is_initialized(Decl const* dcl)
 {
-    ASSERT(dcl && (DECL_dt(dcl) == DCL_DECLARATION ||
+    ASSERTN(dcl && (DECL_dt(dcl) == DCL_DECLARATION ||
                    DECL_dt(dcl) == DCL_DECLARATOR),
            ("need declaration"));
     if (DECL_dt(dcl) == DCL_DECLARATION) {
         dcl = DECL_decl_list(dcl); //get DCRLARATOR
-        ASSERT(DECL_dt(dcl) == DCL_DECLARATOR ||
+        ASSERTN(DECL_dt(dcl) == DCL_DECLARATOR ||
             DECL_dt(dcl) == DCL_ABS_DECLARATOR, ("need declaration"));
     }
     if (DECL_is_init(dcl)) {
@@ -402,7 +402,7 @@ bool is_initialized(Decl const* dcl)
 
 bool is_volatile(Decl const* dcl)
 {
-    ASSERT(DECL_dt(dcl) == DCL_DECLARATION, ("need declaration"));
+    ASSERTN(DECL_dt(dcl) == DCL_DECLARATION, ("need declaration"));
     TypeSpec const* ty = DECL_spec(dcl);
     ASSERT0(ty);
     if (IS_VOLATILE(ty)) {
@@ -414,7 +414,7 @@ bool is_volatile(Decl const* dcl)
 
 bool is_restrict(Decl const* dcl)
 {
-    ASSERT(DECL_dt(dcl) == DCL_DECLARATION, ("need declaration"));
+    ASSERTN(DECL_dt(dcl) == DCL_DECLARATION, ("need declaration"));
     if (is_pointer(dcl)) {
         Decl const* x = get_pointer_decl(dcl);
         ASSERT0(x);
@@ -429,9 +429,9 @@ bool is_restrict(Decl const* dcl)
 
 bool is_global_variable(Decl const* dcl)
 {
-    ASSERT(DECL_dt(dcl) == DCL_DECLARATION, ("need declaration"));
+    ASSERTN(DECL_dt(dcl) == DCL_DECLARATION, ("need declaration"));
     SCOPE const* sc = DECL_decl_scope(dcl);
-    ASSERT(sc, ("variable must be allocated within a scope."));
+    ASSERTN(sc, ("variable must be allocated within a scope."));
     if (SCOPE_level(sc) == GLOBAL_SCOPE) {
         return true;
     }
@@ -444,8 +444,8 @@ bool is_global_variable(Decl const* dcl)
 
 bool is_static(Decl const* dcl)
 {
-    ASSERT(DECL_dt(dcl) == DCL_DECLARATION, ("need declaration"));
-    ASSERT(DECL_spec(dcl), ("miss specify type"));
+    ASSERTN(DECL_dt(dcl) == DCL_DECLARATION, ("need declaration"));
+    ASSERTN(DECL_spec(dcl), ("miss specify type"));
     if (IS_STATIC(DECL_spec(dcl))) {
         return true;
     }
@@ -455,9 +455,9 @@ bool is_static(Decl const* dcl)
 
 bool is_local_variable(Decl const* dcl)
 {
-    ASSERT(DECL_dt(dcl)==DCL_DECLARATION, ("need declaration"));
+    ASSERTN(DECL_dt(dcl)==DCL_DECLARATION, ("need declaration"));
     SCOPE const* sc = DECL_decl_scope(dcl);
-    ASSERT(sc, ("variable must be allocated within a scope."));
+    ASSERTN(sc, ("variable must be allocated within a scope."));
     if (SCOPE_level(sc) >= FUNCTION_SCOPE && !is_static(dcl)) {
         return true;
     }
@@ -548,7 +548,7 @@ static bool is_indirection(Decl const* dcl)
                 DECL_dt(dcl) == DCL_DECLARATOR ||
                 DECL_dt(dcl) == DCL_ABS_DECLARATOR ||
                 DECL_dt(dcl) == DCL_TYPE_NAME) {
-               ASSERT(0, ("\nunsuitable Decl type locate here in is_indirection()\n"));
+               ASSERTN(0, ("\nunsuitable Decl type locate here in is_indirection()\n"));
             }
         }
         dcl = DECL_next(dcl);
@@ -1937,7 +1937,7 @@ static Decl * struct_declarator(TypeSpec * qua)
         Tree * t = NULL;
         if (is_indirection(dclr)) {
             SYM * s = get_decl_sym(dclr);
-            ASSERT(s != NULL, ("member name cannot be NULL"));
+            ASSERTN(s != NULL, ("member name cannot be NULL"));
             err(g_real_line_num,
                 "'%s' : pointer type cannot assign bit length", SYM_name(s));
             goto FAILED;
@@ -1991,7 +1991,7 @@ Decl const* get_declarator(Decl const* decl)
     switch (DECL_dt(decl)) {
     case DCL_TYPE_NAME:
         decl = DECL_decl_list(decl);
-        ASSERT(decl == NULL ||
+        ASSERTN(decl == NULL ||
                DECL_dt(decl) == DCL_ABS_DECLARATOR,
                ("must be DCL_ABS_DECLARATOR in TYPE_NAME"));
         return decl;
@@ -2004,7 +2004,7 @@ Decl const* get_declarator(Decl const* decl)
                 DECL_dt(decl) == DCL_DECLARATOR ||
                 DECL_dt(decl) == DCL_ABS_DECLARATOR);
         return decl;
-    default: ASSERT(0, ("Not a declarator"));
+    default: ASSERTN(0, ("Not a declarator"));
     }
     UNREACHABLE();
     return NULL;
@@ -2031,14 +2031,14 @@ Decl const* get_pure_declarator(Decl const* decl)
     case DCL_ID:
         break;
     case DCL_VARIABLE:
-        ASSERT(0, ("can not in declaration"));
+        ASSERTN(0, ("can not in declaration"));
         break;
     case DCL_TYPE_NAME:
         decl = DECL_decl_list(decl);
         if (decl == NULL) {
             return NULL;
         }
-        ASSERT(DECL_dt(decl) == DCL_ABS_DECLARATOR,
+        ASSERTN(DECL_dt(decl) == DCL_ABS_DECLARATOR,
                ("must be DCL_ABS_DECLARATOR in TYPE_NAME"));
         decl = DECL_child(decl);
         break;
@@ -2057,7 +2057,7 @@ Decl const* get_pure_declarator(Decl const* decl)
     case DCL_ABS_DECLARATOR:
         decl = DECL_child(decl);
         break;
-    default: ASSERT(0, ("unknown Decl"));
+    default: ASSERTN(0, ("unknown Decl"));
     }
     return decl;
 }
@@ -2530,7 +2530,7 @@ static void refine_func(Decl * func)
     Tree * t = SCOPE_stmt_list(scope);
     if (t != NULL) {
         t = refine_tree_list(t);
-        ASSERT(TREE_parent(t) == NULL, ("parent node of Tree is NULL"));
+        ASSERTN(TREE_parent(t) == NULL, ("parent node of Tree is NULL"));
         SCOPE_stmt_list(scope) = t;
     }
 }
@@ -2546,9 +2546,9 @@ static void refine_func(Decl * func)
 //    e.g: ID->ARRAY->ARRAY => ID->POINTER->ARRAY->ARRAY
 Decl * trans_to_pointer(Decl * decl, bool is_append)
 {
-    ASSERT(DECL_dt(decl) == DCL_DECLARATION,
+    ASSERTN(DECL_dt(decl) == DCL_DECLARATION,
             ("only DCRLARATION is valid"));
-    ASSERT(!is_pointer(decl), ("only DCRLARATION is valid"));
+    ASSERTN(!is_pointer(decl), ("only DCRLARATION is valid"));
     Decl * pure = const_cast<Decl*>(get_pure_declarator(decl));
     Decl * p = pure;
     Decl * new_pure = NULL;
@@ -2595,13 +2595,13 @@ Decl * trans_to_pointer(Decl * decl, bool is_append)
         case DCL_DECLARATION: //declaration
         case DCL_ABS_DECLARATOR: //abstract declarator
         default:
-            ASSERT(0, ("unexpected Decl type over here"));
+            ASSERTN(0, ("unexpected Decl type over here"));
         }
         pure = DECL_next(pure);
     }
 
     PURE_DECL(decl) = new_pure;
-    ASSERT(is_pointer(decl), ("transform failed!"));
+    ASSERTN(is_pointer(decl), ("transform failed!"));
     return decl;
 }
 
@@ -2906,7 +2906,7 @@ UINT computeArraySize(TypeSpec const* spec, Decl const* decl)
     }
 
     //Note host's UINT may be longer than target machine.
-    ASSERT(computeConstBitLen(num) <= BYTE_PER_INT * BIT_PER_BYTE,
+    ASSERTN(computeConstBitLen(num) <= BYTE_PER_INT * BIT_PER_BYTE,
            ("too large array"));
     return num;
 }
@@ -2963,7 +2963,7 @@ UINT computeScalarTypeBitSize(UINT des)
 //Return byte size of a group of bit fields that consisted of integer type.
 UINT computeBitFieldByteSize(Decl const** dcl)
 {
-    ASSERT(is_integer(*dcl), ("must be handled in struct_declarator()"));
+    ASSERTN(is_integer(*dcl), ("must be handled in struct_declarator()"));
 
     ASSERT0(DECL_spec(*dcl));
 
@@ -3105,13 +3105,13 @@ ULONG getComplexTypeSize(Decl const* decl)
     if (DECL_dt(decl) == DCL_DECLARATION ||
        DECL_dt(decl) == DCL_TYPE_NAME) {
         d = get_pure_declarator(decl);
-        ASSERT(d != NULL, ("composing type expected decl-spec"));
+        ASSERTN(d != NULL, ("composing type expected decl-spec"));
     } else {
         err(g_src_line_num, "expected declaration or type-name");
         return 0;
     }
 
-    ASSERT(spec, ("composing type expected specifier"));
+    ASSERTN(spec, ("composing type expected specifier"));
     ULONG declor_size = getDeclaratorSize(spec, d);
     if (is_array(d)) {
         ULONG s = getSimplyTypeSize(spec);
@@ -3141,7 +3141,7 @@ UINT get_decl_size(Decl const* decl)
     if (DECL_dt(decl) == DCL_DECLARATION ||
         DECL_dt(decl) == DCL_TYPE_NAME) {
         d = DECL_decl_list(decl); //get declarator
-        ASSERT(d && (DECL_dt(d) == DCL_DECLARATOR ||
+        ASSERTN(d && (DECL_dt(d) == DCL_DECLARATOR ||
                      DECL_dt(d) == DCL_ABS_DECLARATOR),
                ("illegal declarator"));
         if (is_complex_type(d)) {
@@ -3150,7 +3150,7 @@ UINT get_decl_size(Decl const* decl)
             return getSimplyTypeSize(spec);
         }
     } else {
-        ASSERT(0, ("unexpected declaration"));
+        ASSERTN(0, ("unexpected declaration"));
     }
     return 0;
 }
@@ -3176,10 +3176,10 @@ UINT getDeclaratorSize(TypeSpec const* spec, Decl const* d)
 //return DCL_ARRAY(20).
 Decl * get_array_decl(Decl * decl)
 {
-    ASSERT(DECL_dt(decl) == DCL_TYPE_NAME ||
+    ASSERTN(DECL_dt(decl) == DCL_TYPE_NAME ||
            DECL_dt(decl) == DCL_DECLARATION ,
            ("expect DCRLARATION"));
-    ASSERT(is_array(decl), ("expect pointer type"));
+    ASSERTN(is_array(decl), ("expect pointer type"));
     Decl * x = const_cast<Decl*>(get_pure_declarator(decl));
     while (x != NULL) {
         switch (DECL_dt(x)) {
@@ -3192,7 +3192,7 @@ Decl * get_array_decl(Decl * decl)
         case DCL_VARIABLE:
             break;
         default:
-            ASSERT(DECL_dt(x) != DCL_DECLARATION &&
+            ASSERTN(DECL_dt(x) != DCL_DECLARATION &&
                    DECL_dt(x) != DCL_DECLARATOR &&
                    DECL_dt(x) != DCL_ABS_DECLARATOR &&
                    DECL_dt(x) != DCL_TYPE_NAME,
@@ -3211,10 +3211,10 @@ Decl * get_array_decl(Decl * decl)
 //return DCL_POINTER.
 Decl const* get_pointer_decl(Decl const* decl)
 {
-    ASSERT(DECL_dt(decl) == DCL_TYPE_NAME ||
+    ASSERTN(DECL_dt(decl) == DCL_TYPE_NAME ||
            DECL_dt(decl) == DCL_DECLARATION ,
            ("expect DCRLARATION"));
-    ASSERT(is_pointer(decl), ("expect pointer type"));
+    ASSERTN(is_pointer(decl), ("expect pointer type"));
     Decl const* x = get_pure_declarator(decl);
     while (x != NULL) {
         switch (DECL_dt(x)) {
@@ -3234,7 +3234,7 @@ Decl const* get_pointer_decl(Decl const* decl)
         case DCL_VARIABLE:
             break;
         default:
-            ASSERT(DECL_dt(x) != DCL_DECLARATION &&
+            ASSERTN(DECL_dt(x) != DCL_DECLARATION &&
                    DECL_dt(x) != DCL_DECLARATOR &&
                    DECL_dt(x) != DCL_ABS_DECLARATOR &&
                    DECL_dt(x) != DCL_TYPE_NAME,
@@ -3250,9 +3250,9 @@ Decl const* get_pointer_decl(Decl const* decl)
 //Get base type of POINTER.
 Decl * get_pointer_base_decl(Decl const* decl, TypeSpec ** ty)
 {
-    ASSERT(DECL_dt(decl) == DCL_TYPE_NAME || DECL_dt(decl) == DCL_DECLARATION,
+    ASSERTN(DECL_dt(decl) == DCL_TYPE_NAME || DECL_dt(decl) == DCL_DECLARATION,
         ("expect DCRLARATION"));
-    ASSERT(is_pointer(decl), ("expect pointer type"));
+    ASSERTN(is_pointer(decl), ("expect pointer type"));
 
     *ty = DECL_spec(decl);
 
@@ -3260,14 +3260,14 @@ Decl * get_pointer_base_decl(Decl const* decl, TypeSpec ** ty)
 
     if (DECL_dt(d) == DCL_ID) {
         d = DECL_next(d);
-        ASSERT(DECL_dt(d) == DCL_POINTER || DECL_dt(d) == DCL_FUN,
+        ASSERTN(DECL_dt(d) == DCL_POINTER || DECL_dt(d) == DCL_FUN,
             ("expect pointer declarator"));
         return DECL_next(d); //get Decl that is the heel of '*'
     } else if (DECL_dt(d) == DCL_POINTER || DECL_dt(d) == DCL_FUN) {
         return DECL_next(d); //get Decl that is the heel of '*'
     }
 
-    ASSERT(0, ("it is not a pointer type"));
+    ASSERTN(0, ("it is not a pointer type"));
     return NULL;
 }
 
@@ -3289,7 +3289,7 @@ UINT get_pointer_base_size(Decl const* decl)
         }
 
         UINT s = getSimplyTypeSize(ty);
-        ASSERT(s != 0, ("simply type size cannot be zero"));
+        ASSERTN(s != 0, ("simply type size cannot be zero"));
         return s;
     }
 
@@ -3298,7 +3298,7 @@ UINT get_pointer_base_size(Decl const* decl)
     if (!is_pointer(d)) {
         s = getSimplyTypeSize(ty);
     }
-    ASSERT(e != 0, ("declarator size cannot be zero"));
+    ASSERTN(e != 0, ("declarator size cannot be zero"));
     return e * s;
 }
 
@@ -3643,7 +3643,7 @@ static INT format_dcrl_reverse(
             buf.strcat("[%lld]", v);
             break;
         }
-    default: ASSERT(0, ("unknown Decl type"));
+    default: ASSERTN(0, ("unknown Decl type"));
     }
     return ST_SUCC;
 }
@@ -3662,7 +3662,7 @@ INT format_declarator(StrBuf & buf, TypeSpec const* ty, Decl const* decl)
         decl = DECL_child(decl);
     }
     if (decl != NULL) {
-        ASSERT((DECL_dt(decl) == DCL_ARRAY ||
+        ASSERTN((DECL_dt(decl) == DCL_ARRAY ||
             DECL_dt(decl) == DCL_POINTER ||
             DECL_dt(decl) == DCL_FUN     ||
             DECL_dt(decl) == DCL_ID      ||
@@ -3718,7 +3718,7 @@ INT format_declaration(StrBuf & buf, Decl const* decl)
     } else if (DECL_dt(decl) == DCL_VARIABLE) {
         buf.strcat("...");
     } else {
-        ASSERT(0, ("Unkonwn Decl type"));
+        ASSERTN(0, ("Unkonwn Decl type"));
     }
     return ST_ERR;
 }
@@ -3823,7 +3823,7 @@ INT format_dcrl(Decl const* decl, INT indent)
             break;
         }
     default:
-        ASSERT(0, ("unknown Decl type"));
+        ASSERTN(0, ("unknown Decl type"));
     }
     return ST_SUCC;
 }
@@ -3845,7 +3845,7 @@ INT format_declarator(Decl const* decl, TypeSpec const* ty, INT indent)
     }
 
     if (decl != NULL) {
-        ASSERT((DECL_dt(decl) == DCL_ARRAY ||
+        ASSERTN((DECL_dt(decl) == DCL_ARRAY ||
             DECL_dt(decl) == DCL_POINTER ||
             DECL_dt(decl) == DCL_FUN     ||
             DECL_dt(decl) == DCL_ID      ||
@@ -3920,7 +3920,7 @@ INT format_declaration(Decl const* decl, INT indent)
     } else if (DECL_dt(decl) == DCL_VARIABLE) {
         fprintf(g_tfile, "... ");
     } else {
-        ASSERT(0, ("Unkonwn Decl type"));
+        ASSERTN(0, ("Unkonwn Decl type"));
     }
     fflush(g_tfile);
     return ST_ERR;
@@ -3996,7 +3996,7 @@ bool is_struct(TypeSpec const* type)
 
 bool is_struct(Decl const* decl)
 {
-    ASSERT(decl &&
+    ASSERTN(decl &&
            (DECL_dt(decl) == DCL_TYPE_NAME ||
             DECL_dt(decl) == DCL_DECLARATION),
            ("need TypeSpec-NAME or DCRLARATION"));
@@ -4013,7 +4013,7 @@ bool is_union(TypeSpec const* type)
 
 bool is_union(Decl const* decl)
 {
-    ASSERT(decl &&
+    ASSERTN(decl &&
             (DECL_dt(decl) == DCL_TYPE_NAME ||
              DECL_dt(decl) == DCL_DECLARATION),
             ("need TypeSpec-NAME or DCRLARATION"));
@@ -4024,7 +4024,7 @@ bool is_union(Decl const* decl)
 //Is float-point.
 bool is_fp(Decl const* dcl)
 {
-    ASSERT(dcl &&
+    ASSERTN(dcl &&
            (DECL_dt(dcl) == DCL_TYPE_NAME ||
             DECL_dt(dcl) == DCL_DECLARATION),
            ("expect type-name or dcrlaration"));
@@ -4035,7 +4035,7 @@ bool is_fp(Decl const* dcl)
 //Is single decision float-point.
 bool is_float(Decl const* dcl)
 {
-    ASSERT(dcl &&
+    ASSERTN(dcl &&
            (DECL_dt(dcl) == DCL_TYPE_NAME ||
             DECL_dt(dcl) == DCL_DECLARATION),
            ("expect type-name or dcrlaration"));
@@ -4046,7 +4046,7 @@ bool is_float(Decl const* dcl)
 //Is double decision float-point.
 bool is_double(Decl const* dcl)
 {
-    ASSERT(dcl &&
+    ASSERTN(dcl &&
            (DECL_dt(dcl) == DCL_TYPE_NAME ||
             DECL_dt(dcl) == DCL_DECLARATION),
            ("expect type-name or dcrlaration"));
@@ -4064,7 +4064,7 @@ bool is_fp(TypeSpec const* ty)
 //Is integer
 bool is_integer(Decl const* dcl)
 {
-    ASSERT(DECL_dt(dcl) == DCL_TYPE_NAME ||
+    ASSERTN(DECL_dt(dcl) == DCL_TYPE_NAME ||
            DECL_dt(dcl) == DCL_DECLARATION,
            ("expect type-name or dcrlaration"));
     return is_integer(DECL_spec(dcl));
@@ -4088,7 +4088,7 @@ bool is_integer(TypeSpec const* ty)
 //Return true for arithmetic type which include integer and float.
 bool is_arith(Decl const* dcl)
 {
-    ASSERT(DECL_dt(dcl) == DCL_TYPE_NAME || DECL_dt(dcl) == DCL_DECLARATION,
+    ASSERTN(DECL_dt(dcl) == DCL_TYPE_NAME || DECL_dt(dcl) == DCL_DECLARATION,
            ("expect type-name or dcrlaration"));
     TypeSpec * ty = DECL_spec(dcl);
     return is_scalar(dcl) && (is_integer(ty) || is_fp(ty));
@@ -4139,7 +4139,7 @@ bool is_fun_decl(Decl const* dcl)
         case DCL_VARIABLE:
             break;
         default:
-            ASSERT(DECL_dt(dcl) != DCL_DECLARATION &&
+            ASSERTN(DECL_dt(dcl) != DCL_DECLARATION &&
                     DECL_dt(dcl) != DCL_DECLARATOR &&
                     DECL_dt(dcl) != DCL_ABS_DECLARATOR &&
                     DECL_dt(dcl) != DCL_TYPE_NAME,
@@ -4184,7 +4184,7 @@ bool is_fun_pointer(Decl const* dcl)
         case DCL_VARIABLE:
             break;
         default:
-            ASSERT(DECL_dt(dcl) != DCL_DECLARATION &&
+            ASSERTN(DECL_dt(dcl) != DCL_DECLARATION &&
                    DECL_dt(dcl) != DCL_DECLARATOR &&
                    DECL_dt(dcl) != DCL_ABS_DECLARATOR &&
                    DECL_dt(dcl) != DCL_TYPE_NAME,
@@ -4223,7 +4223,7 @@ bool is_pointer(Decl const* dcl)
         case DCL_VARIABLE:
             break;
         default:
-            ASSERT(DECL_dt(dcl) != DCL_DECLARATION &&
+            ASSERTN(DECL_dt(dcl) != DCL_DECLARATION &&
                    DECL_dt(dcl) != DCL_DECLARATOR &&
                    DECL_dt(dcl) != DCL_ABS_DECLARATOR &&
                    DECL_dt(dcl) != DCL_TYPE_NAME,
@@ -4251,7 +4251,7 @@ bool is_array(Decl const* dcl)
         case DCL_VARIABLE:
             break;
         default:
-            ASSERT(DECL_dt(dcl) != DCL_DECLARATION &&
+            ASSERTN(DECL_dt(dcl) != DCL_DECLARATION &&
                    DECL_dt(dcl) != DCL_DECLARATOR &&
                    DECL_dt(dcl) != DCL_ABS_DECLARATOR &&
                    DECL_dt(dcl) != DCL_TYPE_NAME,
@@ -4267,7 +4267,7 @@ bool is_array(Decl const* dcl)
 //Create a new type-name, and ONLY copy declaration info list and type-spec.
 Decl * cp_type_name(Decl const* src)
 {
-    ASSERT(DECL_dt(src) == DCL_TYPE_NAME, ("cp_type_name"));
+    ASSERTN(DECL_dt(src) == DCL_TYPE_NAME, ("cp_type_name"));
     Decl * dest = new_decl(DCL_TYPE_NAME);
     DECL_decl_list(dest) = cp_decl(DECL_decl_list(src));
     PURE_DECL(dest) = NULL;
@@ -4298,7 +4298,7 @@ UINT get_struct_field_ofst(Struct * st, CHAR * name)
         ofst += (UINT)ceil_align(size, STRUCT_align(st));
         decl = DECL_next(decl);
     }
-    ASSERT(0, ("Unknown struct field"));
+    ASSERTN(0, ("Unknown struct field"));
     return 0;
 }
 
@@ -4413,7 +4413,7 @@ static bool func_def(Decl * declaration)
     //dump_scope(DECL_fun_body(declaration), 0xfffFFFF);
 
     DECL_is_fun_def(declaration) = true;
-    ASSERT(SCOPE_level(g_cur_scope) == GLOBAL_SCOPE,
+    ASSERTN(SCOPE_level(g_cur_scope) == GLOBAL_SCOPE,
             ("Funtion declaration should in global scope"));
 
     refine_func(declaration);
@@ -4513,8 +4513,8 @@ Decl * factor_user_type(Decl * decl)
         return new_declaration(new_spec, new_declor, g_cur_scope);
     }
 
-    ASSERT(DECL_decl_list(decl), ("miss declarator"));
-    ASSERT(DECL_dt(cur_declor) == DCL_ID ||
+    ASSERTN(DECL_decl_list(decl), ("miss declarator"));
+    ASSERTN(DECL_dt(cur_declor) == DCL_ID ||
             DECL_dt(DECL_decl_list(decl)) == DCL_ABS_DECLARATOR,
         ("either decl is abstract declarator or miss typedef/variable name."));
 

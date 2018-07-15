@@ -257,15 +257,15 @@ static INT getLine()
 {
     //Initializing or realloc offset table.
     if (g_ofst_tab == NULL) {
-        g_ofst_tab_byte_size = MAX_BUF_LEN * sizeof(LONG);
+        g_ofst_tab_byte_size = MAX_OFST_BUF_LEN * sizeof(LONG);
         g_ofst_tab = (LONG*)::malloc(g_ofst_tab_byte_size);
         ::memset(g_ofst_tab, 0, g_ofst_tab_byte_size);
     } else if (OFST_TAB_LINE_SIZE < (g_src_line_num + 10)) {
         g_ofst_tab = (LONG*)::realloc(g_ofst_tab, g_ofst_tab_byte_size +
-            MAX_BUF_LEN * sizeof(LONG));
+            MAX_OFST_BUF_LEN * sizeof(LONG));
         ::memset(((BYTE*)g_ofst_tab) + g_ofst_tab_byte_size,
-            0, MAX_BUF_LEN * sizeof(LONG));
-        g_ofst_tab_byte_size += MAX_BUF_LEN * sizeof(LONG);
+            0, MAX_OFST_BUF_LEN * sizeof(LONG));
+        g_ofst_tab_byte_size += MAX_OFST_BUF_LEN * sizeof(LONG);
     }
 
     UINT pos = 0;
