@@ -282,7 +282,7 @@ static INT getLine()
         //Read MAX_BUF_LINE characters from src file.
         if (g_file_buf_pos >= g_last_read_num) {
             ASSERT0(g_hsrc != NULL);
-            INT dw = fread(g_file_buf, 1, MAX_BUF_LINE, g_hsrc);
+            INT dw = (INT)fread(g_file_buf, 1, MAX_BUF_LINE, g_hsrc);
             if (dw == 0) {
                 if (!is_some_chars_in_cur_line) {
                     //Some characters had been put into 'g_cur_line', but the
@@ -384,7 +384,7 @@ FIN:
     ASSERT0((g_src_line_num + 1) < OFST_TAB_LINE_SIZE);
     g_ofst_tab[g_src_line_num + 1] = g_cur_src_ofst;
     g_cur_line[pos] = 0;
-    g_cur_line_num = strlen(g_cur_line);
+    g_cur_line_num = (INT)strlen(g_cur_line);
     g_cur_line_pos = 0;
     return ST_SUCC;
 

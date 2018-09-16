@@ -813,12 +813,12 @@ static Tree * primary_exp(IN OUT UINT * st)
             //Concatenate string.
             for (; g_real_token == T_STRING; match(T_STRING)) {
                 if (tbuf == NULL) {
-                    tbuflen = strlen(SYM_name(sym)) +
-                              strlen(g_real_token_string) + 1;
+                    tbuflen = (UINT)strlen(SYM_name(sym)) +
+                              (UINT)strlen(g_real_token_string) + 1;
                     tbuf = (CHAR*)malloc(tbuflen);
                     sprintf(tbuf, "%s%s", SYM_name(sym), g_real_token_string);
                 } else {
-                    tbuflen += strlen(g_real_token_string);
+                    tbuflen += (UINT)strlen(g_real_token_string);
                     CHAR * ttbuf = (CHAR*)malloc(tbuflen);
                     sprintf(ttbuf, "%s%s", tbuf, g_real_token_string);
                     free(tbuf);
