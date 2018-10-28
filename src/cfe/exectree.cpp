@@ -298,7 +298,11 @@ static bool compute_conditional_exp(IN Tree * t)
                 err(TREE_lineno(t), "'%s' undefined");
                 return false;
             }
-            pushv(get_decl_size(dcl));
+            err(TREE_lineno(t), "expected constant expression");
+            return false;
+
+            //TODO: infer the constant value of ID.
+            //pushv(get_decl_size(dcl));
         }
         break;
     case TR_COND:

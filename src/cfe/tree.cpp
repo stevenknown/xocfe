@@ -468,16 +468,16 @@ void dump_tree(Tree * t)
              tl != NULL; tl = TL_next(tl)) {
             switch (TL_tok(tl)) {
             case T_ID:
-                fprintf(g_tfile, " %s", SYM_name(TL_id_name(tl)));
+                prt(" %s", SYM_name(TL_id_name(tl)));
                 break;
             case T_STRING:
-                fprintf(g_tfile, " \"%s\"", SYM_name(TL_str(tl)));
+                prt(" \"%s\"", SYM_name(TL_str(tl)));
                 break;
             case T_CHAR_LIST:
-                fprintf(g_tfile, " '%s'", SYM_name(TL_chars(tl)));
+                prt(" '%s'", SYM_name(TL_chars(tl)));
                 break;
             default:
-                fprintf(g_tfile, " %s", getTokenName(TL_tok(tl)));
+                prt(" %s", getTokenName(TL_tok(tl)));
             }
         }
         break;

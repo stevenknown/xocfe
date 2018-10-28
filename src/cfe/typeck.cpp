@@ -1132,17 +1132,15 @@ static INT TypeTran(Tree * t, TYCtx * cont)
             break;
         case TR_CVT: //type convertion
             {
-                if (ST_SUCC != TypeTran(TREE_cast_exp(t), cont)) goto FAILED;
+                if (ST_SUCC != TypeTran(TREE_cast_exp(t), cont)) { goto FAILED; }
 
                 Decl * type_name = TREE_type_name(TREE_cvt_type(t));
-
                 if (IS_USER_TYPE_REF(DECL_spec(type_name))) {
                     //Expand the combined type here.
                     type_name = expand_user_type(type_name);
                     ASSERTN(is_valid_type_name(type_name),
                             ("Illegal expanding user-type"));
                 }
-
                 TREE_result_type(t) = type_name;
             }
             break;
@@ -1284,6 +1282,16 @@ static INT TypeTran(Tree * t, TYCtx * cont)
                     err(TREE_lineno(t), "miss expression after sizeof");
                     break;
                 }
+                if (TREE_type(kid) == TR_TYPE_NAME) {
+                    Decl * type_name = TREE_type_name(kid);
+                    if (IS_USER_TYPE_REF(DECL_spec(type_name))) {
+                        //Expand the combined type here.
+                        type_name = expand_user_type(type_name);
+                        ASSERTN(is_valid_type_name(type_name),
+                                ("Illegal expanding user-type"));
+                        TREE_type_name(kid) = type_name;
+                    }
+                }
                 INT size;
                 if (TREE_type(kid) == TR_TYPE_NAME) {
                     ASSERT0(TREE_type_name(kid));
@@ -1293,6 +1301,7 @@ static INT TypeTran(Tree * t, TYCtx * cont)
                     ASSERT0(TREE_result_type(kid));
                     size = get_decl_size(TREE_result_type(kid));
                 }
+                ASSERT0(size != 0);
                 TREE_type(t) = TR_IMMU;
                 TREE_imm_val(t) = size;
                 if (ST_SUCC != TypeTran(t, cont)) { goto FAILED; }

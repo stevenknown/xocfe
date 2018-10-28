@@ -2399,11 +2399,8 @@ FAILED:
 void dump_decl(Decl const* dcl, StrBuf & buf)
 {
     if (g_tfile == NULL) { return; }
-
     format_declaration(buf, dcl);
-
-    fflush(g_tfile);
-    fprintf(g_tfile, "\n%s\n", buf.buf);
+    note("\n%s\n", buf.buf);
     fflush(g_tfile);
 }
 
@@ -2530,7 +2527,9 @@ static void refine_func(Decl * func)
     Tree * t = SCOPE_stmt_list(scope);
     if (t != NULL) {
         t = refine_tree_list(t);
-        ASSERTN(TREE_parent(t) == NULL, ("parent node of Tree is NULL"));
+        if (g_err_msg_list.get_elem_count() == 0) {
+            ASSERTN(TREE_parent(t) == NULL, ("parent node of Tree is NULL"));
+        }
         SCOPE_stmt_list(scope) = t;
     }
 }
@@ -3070,12 +3069,12 @@ bool is_complex_type(Decl const* dcl)
 UINT getSimplyTypeSize(TypeSpec const* spec)
 {
     if (spec == NULL) { return 0; }
+    if (HAVE_FLAG(TYPE_des(spec), T_SPEC_LONGLONG)) return BYTE_PER_LONGLONG;
     if (HAVE_FLAG(TYPE_des(spec), T_SPEC_VOID)) return BYTE_PER_CHAR;
     if (HAVE_FLAG(TYPE_des(spec), T_SPEC_CHAR)) return BYTE_PER_CHAR;
     if (HAVE_FLAG(TYPE_des(spec), T_SPEC_BOOL)) return BYTE_PER_CHAR;
     if (HAVE_FLAG(TYPE_des(spec), T_SPEC_SHORT)) return BYTE_PER_SHORT;
     if (HAVE_FLAG(TYPE_des(spec), T_SPEC_INT)) return BYTE_PER_INT;
-    if (HAVE_FLAG(TYPE_des(spec), T_SPEC_LONGLONG)) return BYTE_PER_LONGLONG;
     if (HAVE_FLAG(TYPE_des(spec), T_SPEC_LONG)) return BYTE_PER_LONG;
     if (HAVE_FLAG(TYPE_des(spec), T_SPEC_FLOAT)) return BYTE_PER_FLOAT;
     if (HAVE_FLAG(TYPE_des(spec), T_SPEC_DOUBLE)) return BYTE_PER_DOUBLE;
@@ -3728,7 +3727,7 @@ INT format_declaration(StrBuf & buf, Decl const* decl)
 //Print indent blank.
 static void pd(INT indent)
 {
-    while (indent-- > 0) { fprintf(g_tfile, " "); }
+    while (indent-- > 0) { prt(" "); }
 }
 
 
@@ -3738,7 +3737,7 @@ INT format_parameter_list(Decl const* decl, INT indent)
     while (decl != NULL) {
         format_declaration(decl, indent);
         decl = DECL_next(decl);
-        if (decl != NULL) fprintf(g_tfile, ", \n");
+        if (decl != NULL) prt(", \n");
     }
     return ST_SUCC;
 }
@@ -3754,18 +3753,18 @@ INT format_dcrl(Decl const* decl, INT indent)
         {
             TypeSpec * quan = DECL_qua(decl);
             if (quan != NULL) {
-                if (IS_CONST(quan)) fprintf(g_tfile, "const ");
-                if (IS_VOLATILE(quan)) fprintf(g_tfile, "volatile ");
-                if (IS_RESTRICT(quan)) fprintf(g_tfile, "restrict ");
+                if (IS_CONST(quan)) prt("const ");
+                if (IS_VOLATILE(quan)) prt("volatile ");
+                if (IS_RESTRICT(quan)) prt("restrict ");
             }
             if (DECL_next(decl) != NULL) {
                 if (DECL_dt(DECL_next(decl)) != DCL_FUN) {
-                    fprintf(g_tfile, "POINTER");
-                    fprintf(g_tfile, " -> ");
+                    prt("POINTER");
+                    prt(" -> ");
                 }
                 format_dcrl(DECL_next(decl), indent);
             } else {
-                fprintf(g_tfile, "POINTER");
+                prt("POINTER");
             }
         }
         break;
@@ -3775,48 +3774,48 @@ INT format_dcrl(Decl const* decl, INT indent)
             TypeSpec * quan = DECL_qua(decl);
             if (quan != NULL) {
                 ASSERT0(!IS_RESTRICT(quan));
-                if (IS_CONST(quan)) fprintf(g_tfile, "const ");
-                if (IS_VOLATILE(quan)) fprintf(g_tfile, "volatile ");
+                if (IS_CONST(quan)) prt("const ");
+                if (IS_VOLATILE(quan)) prt("volatile ");
             }
-            fprintf(g_tfile, "ID:'%s'", SYM_name(TREE_id(t)));
-            if (DECL_next(decl) != NULL) { fprintf(g_tfile, " -> ");    }
+            prt("ID:'%s'", SYM_name(TREE_id(t)));
+            if (DECL_next(decl) != NULL) { prt(" -> ");    }
             format_dcrl(DECL_next(decl), indent);
         }
         break;
     case DCL_FUN:
         if (DECL_prev(decl) != NULL &&
             DECL_dt(DECL_prev(decl)) == DCL_POINTER) {
-            fprintf(g_tfile, "FUN_POINTER");
+            prt("FUN_POINTER");
         } else {
-            fprintf(g_tfile, "FUN_DECL");
+            prt("FUN_DECL");
         }
 
         if (DECL_fun_para_list(decl) == NULL) {
-            fprintf(g_tfile, ",PARAM:()\n");
+            prt(",PARAM:()\n");
         } else {
-            fprintf(g_tfile, ",PARAM:(");
+            prt(",PARAM:(");
             format_parameter_list(DECL_fun_para_list(decl),
                                   indent + DECL_FMT_INDENT_INTERVAL);
-            fprintf(g_tfile, ")\n");
+            prt(")\n");
         }
         pd(indent);
         if (DECL_next(decl) != NULL) {
-            fprintf(g_tfile, " RET_VAL_DCL_TYPE:");
+            prt(" RET_VAL_DCL_TYPE:");
         }
         format_dcrl(DECL_next(decl), indent);
         break;
     case DCL_ARRAY:
         {
-            fprintf(g_tfile, "ARRAY");
+            prt("ARRAY");
             //bound of each dimensions should be computed while
             //the DECLARATION parsed.
             LONGLONG v = DECL_array_dim(decl);
-            fprintf(g_tfile, "[%lld]", v);
-            if (DECL_next(decl) != NULL) { fprintf(g_tfile, " -> ");    }
+            prt("[%lld]", v);
+            if (DECL_next(decl) != NULL) { prt(" -> ");    }
             if (DECL_is_paren(decl)) {
-                //fprintf(g_tfile, "(");
+                //prt("(");
                 format_dcrl(DECL_next(decl), indent);
-                //fprintf(g_tfile, ")");
+                //prt(")");
             } else {
                 format_dcrl(DECL_next(decl), indent);
             }
@@ -3836,11 +3835,11 @@ INT format_declarator(Decl const* decl, TypeSpec const* ty, INT indent)
     pd(indent);
     if (DECL_dt(decl) == DCL_ABS_DECLARATOR||
         DECL_dt(decl) == DCL_DECLARATOR) {
-        fprintf(g_tfile, "%s", g_dcl_name[DECL_dt(decl)]);
+        prt("%s", g_dcl_name[DECL_dt(decl)]);
         if (DECL_bit_len(decl)) {
-            fprintf(g_tfile, ",bitfield:%d", DECL_bit_len(decl));
+            prt(",bitfield:%d", DECL_bit_len(decl));
         }
-        fprintf(g_tfile, "\n");
+        note("\n");
         decl = DECL_child(decl);
     }
 
@@ -3883,24 +3882,24 @@ INT format_user_type_spec(Decl const* ut, INT indent)
 INT format_declaration(Decl const* decl, INT indent)
 {
     if (decl == NULL || g_tfile == NULL) return ST_SUCC;
-    fprintf(g_tfile, "\n");
+    note("\n");
     pd(indent);
     StrBuf sbuf(128);
     if (DECL_dt(decl) == DCL_DECLARATION || DECL_dt(decl) == DCL_TYPE_NAME) {
         TypeSpec * ty = DECL_spec(decl);
         Decl * dcl = DECL_decl_list(decl);
-        fprintf(g_tfile, "%s", g_dcl_name[DECL_dt(decl)]);
+        prt("%s", g_dcl_name[DECL_dt(decl)]);
         #ifdef _DEBUG_
-        fprintf(g_tfile, "(uid:%d)", DECL_uid(decl));
+        prt("(uid:%d)", DECL_uid(decl));
         #endif
-        fprintf(g_tfile, "(line:%d)", DECL_lineno(decl));
-        fprintf(g_tfile, "\n");
+        prt("(line:%d)", DECL_lineno(decl));
+        note("\n");
 
         format_decl_spec(sbuf, ty, is_pointer(decl));
         pd(indent + DECL_FMT_INDENT_INTERVAL);
-        fprintf(g_tfile, "SPECIFIER:%s", sbuf.buf);
+        prt("SPECIFIER:%s", sbuf.buf);
 
-        fprintf(g_tfile, "\n");
+        note("\n");
         format_declarator(dcl, DECL_spec(decl),
             indent + DECL_FMT_INDENT_INTERVAL);
         fflush(g_tfile);
@@ -3908,17 +3907,17 @@ INT format_declaration(Decl const* decl, INT indent)
     } else if (DECL_dt(decl) == DCL_DECLARATOR ||
                DECL_dt(decl) == DCL_ABS_DECLARATOR) {
         Decl * dcl = DECL_decl_list(decl);
-        fprintf(g_tfile, "%s", g_dcl_name[DECL_dt(decl)]);
-        fprintf(g_tfile, "\n");
+        prt("%s", g_dcl_name[DECL_dt(decl)]);
+        note("\n");
         format_declarator(dcl, NULL, indent + DECL_FMT_INDENT_INTERVAL);
     } else if (DECL_dt(decl) == DCL_POINTER ||
                DECL_dt(decl) == DCL_ARRAY ||
                DECL_dt(decl) == DCL_FUN ||
                DECL_dt(decl) == DCL_ID) {
-        fprintf(g_tfile, "%s ", g_dcl_name[DECL_dt(decl)]);
+        prt("%s ", g_dcl_name[DECL_dt(decl)]);
         format_declarator(decl, NULL, indent + DECL_FMT_INDENT_INTERVAL);
     } else if (DECL_dt(decl) == DCL_VARIABLE) {
-        fprintf(g_tfile, "... ");
+        prt("... ");
     } else {
         ASSERTN(0, ("Unkonwn Decl type"));
     }

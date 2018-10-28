@@ -263,26 +263,26 @@ void dump_st_stack()
     for (CELL * c = g_cell_stack.get_head(); c; c = g_cell_stack.get_next()) {
         switch (CELL_type(c)) {
         case st_ID:
-            fprintf(g_tfile, "%s ", SYM_name((SYM*)CELL_val(c)));
+            prt("%s ", SYM_name((SYM*)CELL_val(c)));
             break;
         case st_IMM:
-            fprintf(g_tfile, "%d ", (INT)CELL_val(c));
+            prt("%d ", (INT)CELL_val(c));
             break;
         case st_IMML:
-            fprintf(g_tfile, "%lld ", (LONGLONG)CELL_val(c));
+            prt("%lld ", (LONGLONG)CELL_val(c));
             break;
         case st_FP:
-            fprintf(g_tfile, "%s ", SYM_name((SYM*)CELL_val(c)));
+            prt("%s ", SYM_name((SYM*)CELL_val(c)));
             break;
         case st_STRING:
-            fprintf(g_tfile, "\"%s\" ", SYM_name((SYM*)CELL_val(c)));
+            prt("\"%s\" ", SYM_name((SYM*)CELL_val(c)));
             break;
         case st_CHAR_LIST:
-            fprintf(g_tfile, "'%s' ", SYM_name((SYM*)CELL_val(c)));
+            prt("'%s' ", SYM_name((SYM*)CELL_val(c)));
             break;
         default:
-            fprintf(g_tfile, "%s ", g_st_info[CELL_type(c)].name);
+            prt("%s ", g_st_info[CELL_type(c)].name);
         } //end switch
     }
-    fprintf(g_tfile, "\n");
+    note("\n");
 }

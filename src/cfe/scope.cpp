@@ -141,12 +141,12 @@ SCOPE * get_last_sub_scope(SCOPE * s)
 //Dump scope in a cascade of tree.
 void dump_scope_tree(SCOPE * s, INT indent)
 {
-    if (g_tfile == NULL) return;
+    if (g_tfile == NULL) { return; }
     if (s == NULL) return;
-    fprintf(g_tfile, "\n");
+    note("\n");
     INT i = indent;
-    while (i-- > 0) { fprintf(g_tfile, "    "); }
-    fprintf(g_tfile, "SCOPE(%d),level(%d)", SCOPE_id(s), SCOPE_level(s));
+    while (i-- > 0) { prt("    "); }
+    prt("SCOPE(%d),level(%d)", SCOPE_id(s), SCOPE_level(s));
     fflush(g_tfile);
     dump_scope_tree(SCOPE_sub(s), indent+1);
     dump_scope_tree(SCOPE_nsibling(s), indent);
@@ -156,7 +156,7 @@ void dump_scope_tree(SCOPE * s, INT indent)
 //Recusively dump SCOPE information, include symbol, label, type info, and trees.
 void dump_scope(SCOPE * s, UINT flag)
 {
-    if (g_tfile == NULL) return;
+    if (g_tfile == NULL) { return; }
     StrBuf buf(64);
     note("\nSCOPE(id:%d, level:%d)", SCOPE_id(s), SCOPE_level(s));
     g_indent++;

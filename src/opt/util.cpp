@@ -35,7 +35,6 @@ author: Su Zhenyu
 #include "commoninc.h"
 #include "errno.h"
 #include "util.h"
-using namespace xoc;
 
 namespace xoc {
 
@@ -120,9 +119,9 @@ void initdump(CHAR const* f, bool is_del)
 
 
 //Print string with indent chars.
-void prt(CHAR const* format, ...)
+bool prt(CHAR const* format, ...)
 {
-    if (g_tfile == NULL || format == NULL) { return; }
+    if (g_tfile == NULL || format == NULL) { return false; }
 
     StrBuf buf(64);
     va_list arg;
@@ -148,13 +147,13 @@ void prt(CHAR const* format, ...)
     if (i == buf.strlen()) {
         fflush(g_tfile);
         va_end(arg);
-        return;
+        return true;
     }
 
     fprintf(g_tfile, "%s", buf.buf + i);
     fflush(g_tfile);
     va_end(arg);
-    return;
+    return true;
 }
 
 
@@ -234,14 +233,14 @@ void dumpIndent(FILE * h, UINT indent)
 
 void dumpIntVector(Vector<UINT> const& v)
 {
-    if (g_tfile == NULL) return;
-    fprintf(g_tfile, "\n");
+    if (g_tfile == NULL) { return; }
+    note("\n");
     for (INT i = 0; i <= v.get_last_idx(); i++) {
         UINT x = v.get(i);
         if (x == 0) {
-            fprintf(g_tfile, "0,");
+            prt("0,");
         } else {
-            fprintf(g_tfile, "0x%x,", x);
+            prt("0x%x,", x);
         }
     }
     fflush(g_tfile);
