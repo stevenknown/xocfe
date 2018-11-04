@@ -527,19 +527,16 @@ static Decl * buildBinaryOpType(TREE_TYPE tok, Decl * l, Decl * r)
 {
     TypeSpec * lty = DECL_spec(l);
     TypeSpec * rty = DECL_spec(r);
-
     UINT bankl = getCvtRank(TYPE_des(lty));
     UINT bankr = getCvtRank(TYPE_des(rty));
     if (bankl > bankr || tok == TR_SHIFT) {
         return l;
     }
-
     if (bankl == bankr) {
         if (IS_TYPE(lty, T_SPEC_UNSIGNED)) {
             return l;
         }
     }
-
     return r;
 }
 
