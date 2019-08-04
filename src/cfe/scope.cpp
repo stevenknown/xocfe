@@ -96,7 +96,7 @@ SCOPE * enter_sub_scope(bool is_tmp_sc)
 
     //Add 'sc' as sub scope followed the most right one of subscope list.
     //e.g: first_sub_scope -> second_sub_scope -> ...
-    add_next(&SCOPE_sub(g_cur_scope), sc);
+    xcom::add_next(&SCOPE_sub(g_cur_scope), sc);
     g_cur_scope = sc;
     return g_cur_scope;
 }
@@ -106,7 +106,7 @@ SCOPE * return_to_parent_scope()
 {
     SCOPE * parent = SCOPE_parent(g_cur_scope);
     if (SCOPE_is_tmp_sc(g_cur_scope)) {
-        remove(&SCOPE_sub(parent), g_cur_scope);
+        xcom::remove(&SCOPE_sub(parent), g_cur_scope);
     }
     g_cur_scope = parent;
     return g_cur_scope;

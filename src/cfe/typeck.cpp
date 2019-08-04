@@ -594,7 +594,7 @@ static void insertCvtForParams(Tree * t)
          realp != NULL && formalp_decl != NULL;
          realp = xcom::removehead(&TREE_para_list(t))) {
         if (DECL_dt(formalp_decl) == DCL_VARIABLE)  {
-            ::add_next(&newparamlist, &last, realp);
+            xcom::add_next(&newparamlist, &last, realp);
             continue;
         }
 
@@ -842,7 +842,7 @@ static INT TypeTran(Tree * t, TYCtx * cont)
                 Decl * d = new_decl(DCL_ARRAY);
                 ASSERT0(TREE_string_val(t));
                 DECL_array_dim(d) = strlen(SYM_name(TREE_string_val(t))) + 1;
-                add_next(&PURE_DECL(tn), d);
+                xcom::add_next(&PURE_DECL(tn), d);
                 TREE_result_type(t) = tn;
                 break;
             }
@@ -1177,7 +1177,7 @@ static INT TypeTran(Tree * t, TYCtx * cont)
                     //
                     //The value is needed if there is not an ARRAY operator,
                     //e.g: a = *p, should generate a=LD(LD(p)).
-                    remove(&PURE_DECL(td), ld);
+                    xcom::remove(&PURE_DECL(td), ld);
                 } else if (DECL_dt(ld) == DCL_FUN) {
                     //ACCEPT
                 } else {

@@ -716,7 +716,7 @@ static Tree * param_list()
                 g_real_token_string);
             return t;
         }
-        add_next(&t, &last, nt);
+        xcom::add_next(&t, &last, nt);
     }
     return t;
 }
@@ -1658,7 +1658,7 @@ Tree * exp_list()
     while (g_real_token == T_COMMA) {
         match(T_COMMA);
         Tree * nt = exp();
-        add_next(&t, &last, nt);
+        xcom::add_next(&t, &last, nt);
         last = get_last(nt);
     }
     return t;
@@ -1771,7 +1771,7 @@ static Tree * sharp_start_stmt()
             break;
         default: break;
         }
-        add_next(&TREE_pragma_tok_lst(t), &last, tl);
+        xcom::add_next(&TREE_pragma_tok_lst(t), &last, tl);
         if (match(g_real_token) == ST_ERR) {
             break;
         }
@@ -2157,7 +2157,7 @@ SCOPE * compound_stmt(Decl * para_list)
         }
 
         DECL_is_formal_para(declaration) = true;
-        add_next(&SCOPE_decl_list(cur_scope), &lastdcl, declaration);
+        xcom::add_next(&SCOPE_decl_list(cur_scope), &lastdcl, declaration);
         DECL_decl_scope(declaration) = cur_scope;
         DECL_formal_param_pos(declaration) = pos;
 
@@ -2193,11 +2193,11 @@ SCOPE * compound_stmt(Decl * para_list)
         ASSERT0(verify(t));
 
         if (last == NULL) {
-            last = get_last(SCOPE_stmt_list(cur_scope));
+            last = xcom::get_last(SCOPE_stmt_list(cur_scope));
         }
-        add_next(&SCOPE_stmt_list(cur_scope), &last, t);
+        xcom::add_next(&SCOPE_stmt_list(cur_scope), &last, t);
 
-        last = get_last(t);
+        last = xcom::get_last(t);
 
         if ((cerr != (INT)g_err_msg_list.get_elem_count()) ||
             (cerr > 0 && t == NULL)) {

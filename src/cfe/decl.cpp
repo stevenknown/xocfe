@@ -230,7 +230,7 @@ Decl * cp_decl_begin_at(Decl const* header)
     Decl * newl = NULL, * p;
     while (header != NULL) {
         p = cp_decl(header);
-        add_next(&newl, p);
+        xcom::add_next(&newl, p);
         header = DECL_next(header);
     }
     return newl;
@@ -857,7 +857,7 @@ static Decl * struct_declaration()
             DECL_lineno(declaration) = g_real_line_num;
         }
 
-        add_next(&SCOPE_decl_list(g_cur_scope), declaration);
+        xcom::add_next(&SCOPE_decl_list(g_cur_scope), declaration);
         DECL_decl_scope(declaration) = g_cur_scope;
     }
 
@@ -1220,7 +1220,7 @@ static EnumValueList * enumerator_list()
         match(T_COMMA);
         nevl = enumrator();
         if (nevl == NULL) { break; }
-        add_next(&evl, &last, nevl);
+        xcom::add_next(&evl, &last, nevl);
         last = nevl;
     }
     return evl;
@@ -1638,7 +1638,7 @@ static Decl * parameter_type_list()
         if (t == NULL) {
             goto FIN;
         }
-        add_next(&declaration, t);
+        xcom::add_next(&declaration, t);
         if (g_real_token == T_COMMA) {
             match(T_COMMA);
         } else if (g_real_token == T_RPAREN ||
@@ -1652,7 +1652,7 @@ static Decl * parameter_type_list()
         if (g_real_token == T_DOTDOTDOT) {
             match(T_DOTDOTDOT);
             t = new_decl(DCL_VARIABLE);
-            add_next(&declaration, t);
+            xcom::add_next(&declaration, t);
             break;
         }
     }
@@ -1867,7 +1867,7 @@ static Tree * initializer_list(TypeSpec * qua)
         Tree * nt = initializer(qua);
         if (nt == NULL) { break; }
 
-        add_next(&t, &last, nt);
+        xcom::add_next(&t, &last, nt);
 
         last = get_last(nt);
     }
@@ -1972,7 +1972,7 @@ static Decl * struct_declarator_list(TypeSpec * qua)
     while (g_real_token == T_COMMA) {
         match(T_COMMA);
         ndclr = struct_declarator(qua);
-        add_next(&dclr, ndclr);
+        xcom::add_next(&dclr, ndclr);
     }
 
     return dclr;
@@ -2205,7 +2205,7 @@ static Decl * init_declarator_list(TypeSpec * qua)
     while (g_real_token == T_COMMA) {
         match(T_COMMA);
         Decl * ndclr = init_declarator(qua);
-        add_next(&dclr, ndclr);
+        xcom::add_next(&dclr, ndclr);
     }
     return dclr;
 }
@@ -2335,7 +2335,7 @@ static Decl * pointer(TypeSpec ** qua)
             SET_FLAG(TYPE_des(DECL_qua(dcl)), T_QUA_RESTRICT);
             REMOVE_FLAG(TYPE_des(new_qua), T_QUA_RESTRICT);
         }
-        add_next(&ndcl, dcl);
+        xcom::add_next(&ndcl, dcl);
     }
     quan_spec(new_qua); //match qualifier for followed ID.
     *qua = new_qua;
@@ -2564,7 +2564,7 @@ Decl * trans_to_pointer(Decl * decl, bool is_append)
                     isdo = false;
                 }
                 p = cp_decl(pure);
-                add_next(&new_pure, p);
+                xcom::add_next(&new_pure, p);
                 break;
             }
         case DCL_ARRAY: //ARRAY declarator
@@ -2572,18 +2572,18 @@ Decl * trans_to_pointer(Decl * decl, bool is_append)
                 if (is_append) {
                     is_append = false;
                     p = new_decl(DCL_POINTER);
-                    add_next(&new_pure, p);
+                    xcom::add_next(&new_pure, p);
                     isdo = false;
                 }
 
                 if (!isdo) {
                     p = cp_decl(pure);
                     DECL_is_paren(p) = 1;
-                    add_next(&new_pure, p);
+                    xcom::add_next(&new_pure, p);
                 } else {
                     count++;
                     p = new_decl(DCL_POINTER);
-                    add_next(&new_pure, p);
+                    xcom::add_next(&new_pure, p);
                 }
                 break;
             }
@@ -4275,7 +4275,7 @@ Decl * cp_type_name(Decl const* src)
     Decl * p = PURE_DECL(src), * q;
     while (p != NULL) {
         q = cp_decl(p);
-        add_next(&PURE_DECL(dest), q);
+        xcom::add_next(&PURE_DECL(dest), q);
         p = DECL_next(p);
     }
     return dest;
@@ -4397,7 +4397,7 @@ static bool func_def(Decl * declaration)
     }
 
     //Add decl to scope here to support recursive func-call.
-    add_next(&SCOPE_decl_list(g_cur_scope), declaration);
+    xcom::add_next(&SCOPE_decl_list(g_cur_scope), declaration);
 
     //At function definition mode, identifier of each parameters cannot be NULL.
     if (is_abs_declaraotr(DECL_decl_list(declaration))) {
@@ -4466,7 +4466,7 @@ Decl * expand_user_type(Decl * ut)
             tmp = DECL_next(tmp);
         }
         if (tmp != NULL) {
-            add_next(&PURE_DECL(ut), tmp);
+            xcom::add_next(&PURE_DECL(ut), tmp);
         }
         return ut;
     }
@@ -4654,7 +4654,7 @@ bool declaration()
                 }
             } else if (g_real_token == T_SEMI) {
                 //Function Declaration.
-                add_next(&SCOPE_decl_list(g_cur_scope), declaration);
+                xcom::add_next(&SCOPE_decl_list(g_cur_scope), declaration);
                 DECL_is_fun_def(declaration) = 0;
             } else {
                 err(g_real_line_num,
@@ -4669,7 +4669,7 @@ bool declaration()
                     SYM_name(get_decl_sym(declaration)));
                 goto FAILED;
             }
-            add_next(&SCOPE_decl_list(g_cur_scope), declaration);
+            xcom::add_next(&SCOPE_decl_list(g_cur_scope), declaration);
         }
 
         if (is_user_type_decl(declaration)) { //typedef declaration
