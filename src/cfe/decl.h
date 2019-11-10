@@ -472,7 +472,7 @@ bool is_simple_base_type(INT des);
 bool is_complex_type(Decl const* dcl);
 bool is_array(Decl const* dcl);
 bool is_pointer(Decl const* dcl);
-bool is_void(Decl const* dcl);
+bool is_any(Decl const* dcl);
 bool is_fun_decl(Decl const* dcl);
 bool is_fun_void_return(Decl const* dcl);
 bool is_fun_pointer(Decl const* dcl);

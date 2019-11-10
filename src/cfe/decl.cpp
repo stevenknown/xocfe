@@ -1727,7 +1727,7 @@ static Decl * direct_abstract_declarator(TypeSpec * qua)
         Decl * param_decl = parameter_type_list();
 
         if (cnt_list(param_decl) == 1 &&
-            is_void(param_decl) &&
+            is_any(param_decl) &&
             is_scalar(param_decl)) {
             ;
         } else {
@@ -2285,7 +2285,7 @@ static Decl * direct_declarator(TypeSpec * qua)
             //Check if param declaration is void, such as: foo(void).
             Decl * param_decl = parameter_type_list();
             if (cnt_list(param_decl) == 1 &&
-                is_void(param_decl) &&
+                is_any(param_decl) &&
                 is_scalar(param_decl)) {
                 ;
             } else {
@@ -4094,7 +4094,7 @@ bool is_arith(Decl const* dcl)
 }
 
 
-bool is_void(Decl const* dcl)
+bool is_any(Decl const* dcl)
 {
     return HAVE_FLAG(TYPE_des(DECL_spec(dcl)), T_SPEC_VOID);
 }

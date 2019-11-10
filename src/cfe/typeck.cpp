@@ -1592,6 +1592,25 @@ bool isConsistentWithPointer(Tree * t)
 }
 
 
+//Check lhs of assignment.
+static void checkAssignLHS(Tree * t)
+{
+    ASSERT0(t);
+    switch (TREE_type(TREE_lchild(t))) {
+    case TR_ID:
+    case TR_DEREF:
+    case TR_DMEM:
+    case TR_INDMEM:
+    case TR_ARRAY:
+        break;
+    default:
+        err(TREE_lineno(t),
+            "'%s': the left operand must be left-value",
+            TOKEN_INFO_name(get_token_info(TREE_token(t))));
+    }
+}
+
+
 static bool checkAssign(Tree * t, TYCtx * cont)
 {
     TypeCheckCore(TREE_lchild(t), cont);
@@ -1605,10 +1624,10 @@ static bool checkAssign(Tree * t, TYCtx * cont)
         format_declaration(bufl, TREE_result_type(TREE_lchild(t)));
         format_declaration(bufr, TREE_result_type(TREE_rchild(t)));
         warn(TREE_lineno(t),
-            "should not assign '%s' to '%s'",
-            bufr.buf, bufl.buf);
+             "should not assign '%s' to '%s'", bufr.buf, bufl.buf);
     }
-
+    //Check lhs of assignment.
+    checkAssignLHS(t);
     return true;
 }
 

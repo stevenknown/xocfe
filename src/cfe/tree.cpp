@@ -90,8 +90,7 @@ void dump_tree(Tree * t)
         //'='  '*='  '/='  '%='  '+='  '-='  '<<='
         //'>>='  '&='  '^='  '|='
         note("\nASSIGN(id:%u):%s <%s>",
-             TREE_uid(t),
-             TOKEN_INFO_name(get_token_info(TREE_token(t))),
+             TREE_uid(t), TOKEN_INFO_name(get_token_info(TREE_token(t))),
              sbuf.buf);
         g_indent += dn;
         dump_trees(TREE_lchild(t));
