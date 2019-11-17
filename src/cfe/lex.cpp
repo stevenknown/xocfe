@@ -771,23 +771,26 @@ static TOKEN t_id()
 //'g_cur_char' hold the current charactor right now.
 //You should assign 'g_cur_char' the next valid charactor before
 //the function return.
-static TOKEN t_solidus()
+//is_restart: record the result if lexer need to restart getNextToken().
+static TOKEN t_solidus(bool * is_restart)
 {
     TOKEN t = T_NUL;
     INT st = 0;
     CHAR c = getNextChar();
-    if (c == '=') { // /=
+    switch (c) {
+    case '=': // /=
         t = T_DIVEQU;
         g_cur_token_string[g_cur_token_string_pos++] = '/';
         g_cur_token_string[g_cur_token_string_pos++] = c;
         g_cur_token_string[g_cur_token_string_pos] = 0;
         g_cur_char = getNextChar();
-    } else if (c == '/') { //single comment line
-        if((st = getLine()) == ST_SUCC){
+        break;
+    case '/': //single comment line
+        if ((st = getLine()) == ST_SUCC) {
             g_cur_char = g_cur_line[g_cur_line_pos];
             g_cur_line_pos++;
             if (g_cur_char == '/'){ // another single comment line
-                t = t_solidus();
+                t = t_solidus(is_restart);
                 goto FIN;
             } else {
                 t = getNextToken();
@@ -797,7 +800,8 @@ static TOKEN t_solidus()
             t = T_END;
             goto FIN;
         }
-    } else if (c == '*') {//multi comment line
+        break;
+    case '*': { // multi comment line
         UINT cur_line_num = g_src_line_num;
         c = getNextChar();
         CHAR c1 = 0;
@@ -809,7 +813,14 @@ static TOKEN t_solidus()
                     //We meet the multipul comment terminated token '*/',
                     //so change the parsing state to normal.
                     g_cur_char = getNextChar();
-                    t = getNextToken();
+
+                    //CASE: recur_lex.c, Do NOT recursive call into
+                    //getNextToken() if meeting end of comments.
+                    //Avoid stack overflow.
+                    //t = getNextToken();
+                    t = T_NUL;
+                    ASSERT0(is_restart);
+                    *is_restart = true;
                     goto FIN;
                 } else {
                     c = c1;
@@ -818,16 +829,18 @@ static TOKEN t_solidus()
             } else if (c == ST_EOF || c1 == ST_EOF) {
                   t = T_END;
                 goto FIN;
-            }else{
+            } else {
                   c = c1;
             }
-        } //end while
-    } else {
+        }
+        break;
+    }
+    default:
         t = T_DIV;
         g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
         g_cur_token_string[g_cur_token_string_pos] = 0;
-        g_cur_char=c;
-    }//end elseif
+        g_cur_char = c;
+    }
 FIN:
     return t;
 }
@@ -879,29 +892,269 @@ TokenInfo const* get_token_info(TOKEN tok)
 }
 
 
+static TOKEN t_rest(bool * is_restart)
+{
+    TOKEN token = T_NUL;
+    switch (g_cur_char) {
+    case '-':
+        g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
+        g_cur_char = getNextChar();
+        switch (g_cur_char) {
+        case '=': //'-='
+            token = T_SUBEQU;
+            g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
+            g_cur_token_string[g_cur_token_string_pos] = 0;
+            g_cur_char = getNextChar();
+            break;
+        case '>': //'->'
+            token = T_ARROW;
+            g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
+            g_cur_token_string[g_cur_token_string_pos] = 0;
+            g_cur_char = getNextChar();
+            break;
+        case '-': //'--'
+            token = T_SUBSUB;
+            g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
+            g_cur_token_string[g_cur_token_string_pos] = 0;
+            g_cur_char = getNextChar();
+            break;
+        default: //'-'
+            token = T_SUB;
+            g_cur_token_string[g_cur_token_string_pos] = 0;
+        }
+        break;
+    case '+':
+        g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
+        g_cur_char = getNextChar();
+        switch (g_cur_char) {
+        case '=': //'+='
+            token = T_ADDEQU;
+            g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
+            g_cur_token_string[g_cur_token_string_pos] = 0;
+            g_cur_char = getNextChar();
+            break;
+        case '+': //'++'
+            token = T_ADDADD;
+            g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
+            g_cur_token_string[g_cur_token_string_pos] = 0;
+            g_cur_char = getNextChar();
+            break;
+        default: //'+'
+            token = T_ADD;
+            g_cur_token_string[g_cur_token_string_pos] = 0;
+        }
+        break;
+    case '%':
+        g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
+        g_cur_char = getNextChar();
+        switch (g_cur_char) {
+        case '=': //'%='
+            token = T_REMEQU;
+            g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
+            g_cur_token_string[g_cur_token_string_pos] = 0;
+            g_cur_char = getNextChar();
+            break;
+        default: //'%'
+            token = T_MOD;
+            g_cur_token_string[g_cur_token_string_pos] = 0;
+        }
+        break;
+    case '^':
+        g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
+        g_cur_char = getNextChar();
+        if (g_cur_char == '=') { //'^='
+            token = T_XOREQU;
+            g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
+            g_cur_token_string[g_cur_token_string_pos] = 0;
+            g_cur_char = getNextChar();
+        } else { //'^'
+            token = T_XOR;
+            g_cur_token_string[g_cur_token_string_pos] = 0;
+        }
+        break;
+    case '=':
+        g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
+        g_cur_char = getNextChar();
+        if (g_cur_char == '=') { //'=='
+            token = T_EQU;
+            g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
+            g_cur_token_string[g_cur_token_string_pos] = 0;
+            g_cur_char = getNextChar();
+        } else { //'='
+            token = T_ASSIGN;
+            g_cur_token_string[g_cur_token_string_pos] = 0;
+        }
+        break;
+    case '*':
+        g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
+        g_cur_char = getNextChar();
+        if (g_cur_char == '=') { //'*='
+            token = T_MULEQU;
+            g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
+            g_cur_token_string[g_cur_token_string_pos] = 0;
+            g_cur_char = getNextChar();
+        } else { //'*'
+            token = T_ASTERISK;
+            g_cur_token_string[g_cur_token_string_pos] = 0;
+        }
+        break;
+    case '&':
+        g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
+        g_cur_char = getNextChar();
+        if (g_cur_char == '&') { //'&&'
+            token = T_AND;
+            g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
+            g_cur_token_string[g_cur_token_string_pos] = 0;
+            g_cur_char = getNextChar();
+        } else if (g_cur_char == '=') { //&=
+            token = T_BITANDEQU;
+            g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
+            g_cur_token_string[g_cur_token_string_pos] = 0;
+            g_cur_char = getNextChar();
+        } else { //'&'
+            token = T_BITAND;
+            g_cur_token_string[g_cur_token_string_pos] = 0;
+        }
+        break;
+    case '|':
+        g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
+        g_cur_char = getNextChar();
+        switch (g_cur_char) {
+        case '|': //'||'
+            token = T_OR;
+            g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
+            g_cur_token_string[g_cur_token_string_pos] = 0;
+            g_cur_char = getNextChar();
+            break;
+        case '=': //|=
+            token = T_BITOREQU;
+            g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
+            g_cur_token_string[g_cur_token_string_pos] = 0;
+            g_cur_char = getNextChar();
+            break;
+        default: // '|'
+            token = T_BITOR;
+            g_cur_token_string[g_cur_token_string_pos] = 0;
+        }
+        break;
+    case ':':
+        g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
+        g_cur_char = getNextChar();
+        if (g_cur_char == ':') { //'::'
+            token = T_DCOLON;
+            g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
+            g_cur_token_string[g_cur_token_string_pos] = 0;
+            g_cur_char = getNextChar();
+        } else { //':'
+            token = T_COLON;
+            g_cur_token_string[g_cur_token_string_pos] = 0;
+        }
+        break;
+    case '>':
+        g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
+        g_cur_char = getNextChar();
+        switch (g_cur_char) {
+        case '>':
+            g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
+            g_cur_char = getNextChar();
+            if (g_cur_char == '=') { // >>=
+                token = T_RSHIFTEQU;
+                g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
+                g_cur_token_string[g_cur_token_string_pos] = 0;
+                g_cur_char = getNextChar();
+            } else { // >>
+                token = T_RSHIFT;
+                g_cur_token_string[g_cur_token_string_pos] = 0;
+            }
+            break;
+        case '=': // '>='
+            token = T_NOLESSTHAN;
+            g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
+            g_cur_token_string[g_cur_token_string_pos] = 0;
+            g_cur_char = getNextChar();
+            break;
+        default: //'>'
+            token = T_MORETHAN;
+            g_cur_token_string[g_cur_token_string_pos] = 0;
+        }
+        break;
+    case '<':
+        g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
+        g_cur_char = getNextChar();
+        switch (g_cur_char) {
+        case '<':
+            g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
+            g_cur_char = getNextChar();
+            if (g_cur_char == '=') { // <<=
+                token = T_LSHIFTEQU;
+                g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
+                g_cur_token_string[g_cur_token_string_pos] = 0;
+                g_cur_char = getNextChar();
+            } else { // <<
+                token = T_LSHIFT;
+                g_cur_token_string[g_cur_token_string_pos] = 0;
+            }
+            break;
+        case '=': // '<='
+            token = T_NOMORETHAN;
+            g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
+            g_cur_token_string[g_cur_token_string_pos] = 0;
+            g_cur_char = getNextChar();
+            break;
+        default: // '<'
+            token = T_LESSTHAN;
+            g_cur_token_string[g_cur_token_string_pos] = 0;
+        }
+        break;
+    case '!':
+        g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
+        g_cur_char = getNextChar();
+        if (g_cur_char == '=') { // '!='
+            token = T_NOEQU;
+            g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
+            g_cur_token_string[g_cur_token_string_pos] = 0;
+            g_cur_char = getNextChar();
+        } else { // '!'
+            token = T_NOT;
+            g_cur_token_string[g_cur_token_string_pos] = 0;
+        }
+        break;
+    case '/':
+        token = t_solidus(is_restart);
+        break;
+    case '.':
+        token = t_dot();
+        break;
+    /////////////////////////////////////////
+    //DO NOT ADD NEW CASES AFTER THIS LINE.//
+    /////////////////////////////////////////
+    default:
+        if (g_cur_token == T_END) {
+            //Meet file end.
+            token = T_END;
+        } else {
+            //There may be error occurred.
+            token = T_NUL;
+        }
+    } //end switch
+    return token;
+}
+
+
 //Get current token.
 TOKEN getNextToken()
-{
-    TOKEN token;
+{    
     if (g_cur_token == T_END) {
         return g_cur_token;
     }
-
+    TOKEN token = T_NUL;
     g_cur_token_string_pos = 0;
     g_cur_token_string[0] = 0;
-    if (g_cur_char == 0) {
-        while (g_cur_char == 0) {
-            g_cur_char = getNextChar();
-            if (g_cur_char == ST_EOF) {
-                token = T_END;
-                goto FIN;
-            }
-         }
-    }
-
-    switch(g_cur_char){
+    while (g_cur_char == 0) { g_cur_char = getNextChar(); }
+START:
+    switch (g_cur_char) {
     case ST_EOF:
-        token = T_END;
+        token = T_END; //Meet file end.
         break;
     case 0xa:
     case 0xd:
@@ -911,9 +1164,13 @@ TOKEN getNextToken()
             g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
             g_cur_token_string[g_cur_token_string_pos] = 0;
             g_cur_char = getNextChar();
-        } else  {
+        } else {
+            //CASE: recur_lex.c, Do NOT recursive call into
+            //getNextToken() if meeting end of source code line.
+            //Avoid stack overflow.
+            //token = getNextToken();
             g_cur_char = getNextChar();
-            token = getNextToken();
+            goto START;
         }
         break;
     case '\t':
@@ -1019,212 +1276,15 @@ TOKEN getNextToken()
         } else if (xisdigit(g_cur_char) != 0) { //imm
             g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
             token = t_num();
-        } else if(g_cur_char == '-') {
-            g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
-            g_cur_char = getNextChar();
-            if (g_cur_char == '=') { //'-='
-                token = T_SUBEQU;
-                g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
-                g_cur_token_string[g_cur_token_string_pos] = 0;
-                g_cur_char = getNextChar();
-            } else if(g_cur_char == '>') { //'->'
-                token = T_ARROW;
-                g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
-                g_cur_token_string[g_cur_token_string_pos] = 0;
-                g_cur_char = getNextChar();
-            } else if (g_cur_char == '-') { //'--'
-                token = T_SUBSUB;
-                g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
-                g_cur_token_string[g_cur_token_string_pos] = 0;
-                g_cur_char = getNextChar();
-            } else { //'-'
-                token = T_SUB;
-                g_cur_token_string[g_cur_token_string_pos] = 0;
-            }
-        } else if (g_cur_char == '+') {
-            g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
-            g_cur_char = getNextChar();
-            if (g_cur_char == '=') { //'+='
-                token = T_ADDEQU;
-                g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
-                g_cur_token_string[g_cur_token_string_pos] = 0;
-                g_cur_char = getNextChar();
-            } else if (g_cur_char == '+') { //'++'
-                token = T_ADDADD;
-                g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
-                g_cur_token_string[g_cur_token_string_pos] = 0;
-                g_cur_char = getNextChar();
-            } else { //'+'
-                token = T_ADD;
-                g_cur_token_string[g_cur_token_string_pos] = 0;
-            }
-        } else if(g_cur_char == '%') {
-            g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
-            g_cur_char = getNextChar();
-            if(g_cur_char == '='){ //'%='
-                token = T_REMEQU;
-                g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
-                g_cur_token_string[g_cur_token_string_pos] = 0;
-                g_cur_char = getNextChar();
-            } else { //'%'
-                token = T_MOD;
-                g_cur_token_string[g_cur_token_string_pos] = 0;
-            }
-        } else if (g_cur_char == '^') {
-            g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
-            g_cur_char = getNextChar();
-            if (g_cur_char == '=') { //'^='
-                token = T_XOREQU;
-                g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
-                g_cur_token_string[g_cur_token_string_pos] = 0;
-                g_cur_char = getNextChar();
-            } else { //'^'
-                token = T_XOR;
-                g_cur_token_string[g_cur_token_string_pos] = 0;
-            }
-        } else if (g_cur_char == '=') {
-            g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
-            g_cur_char = getNextChar();
-            if (g_cur_char == '=') { //'=='
-                token = T_EQU;
-                g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
-                g_cur_token_string[g_cur_token_string_pos] = 0;
-                g_cur_char = getNextChar();
-            } else { //'='
-                token = T_ASSIGN;
-                g_cur_token_string[g_cur_token_string_pos] = 0;
-            }
-        } else if (g_cur_char == '*') {
-            g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
-            g_cur_char = getNextChar();
-            if (g_cur_char == '=') { //'*='
-                token = T_MULEQU;
-                g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
-                g_cur_token_string[g_cur_token_string_pos] = 0;
-                g_cur_char = getNextChar();
-            } else { //'*'
-                token = T_ASTERISK;
-                g_cur_token_string[g_cur_token_string_pos] = 0;
-            }
-        } else if (g_cur_char == '&') {
-            g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
-            g_cur_char = getNextChar();
-            if (g_cur_char == '&') { //'&&'
-                token = T_AND;
-                g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
-                g_cur_token_string[g_cur_token_string_pos] = 0;
-                g_cur_char = getNextChar();
-            } else if (g_cur_char == '=') { //&=
-                token = T_BITANDEQU;
-                g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
-                g_cur_token_string[g_cur_token_string_pos] = 0;
-                g_cur_char = getNextChar();
-            } else { //'&'
-                token = T_BITAND;
-                g_cur_token_string[g_cur_token_string_pos] = 0;
-            }
-        } else if (g_cur_char == '|') {
-            g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
-            g_cur_char = getNextChar();
-            if (g_cur_char == '|') { //'||'
-                token = T_OR;
-                g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
-                g_cur_token_string[g_cur_token_string_pos] = 0;
-                g_cur_char = getNextChar();
-            } else if (g_cur_char == '=') { //|=
-                token = T_BITOREQU;
-                g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
-                g_cur_token_string[g_cur_token_string_pos] = 0;
-                g_cur_char = getNextChar();
-            } else {  // '|'
-                token = T_BITOR;
-                g_cur_token_string[g_cur_token_string_pos] = 0;
-            }
-        } else if (g_cur_char == ':') {
-            g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
-            g_cur_char = getNextChar();
-            if (g_cur_char == ':') { //'::'
-                token = T_DCOLON;
-                g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
-                g_cur_token_string[g_cur_token_string_pos] = 0;
-                g_cur_char = getNextChar();
-            } else { //':'
-                token = T_COLON;
-                g_cur_token_string[g_cur_token_string_pos] = 0;
-            }
-        } else if (g_cur_char == '>') {
-            g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
-            g_cur_char = getNextChar();
-            if (g_cur_char == '>') {
-                g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
-                g_cur_char = getNextChar();
-                if (g_cur_char == '=') { // >>=
-                    token = T_RSHIFTEQU;
-                    g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
-                    g_cur_token_string[g_cur_token_string_pos] = 0;
-                    g_cur_char = getNextChar();
-                } else { // >>
-                    token = T_RSHIFT;
-                    g_cur_token_string[g_cur_token_string_pos] = 0;
-                }
-            } else if (g_cur_char == '=') { // '>='
-                token =    T_NOLESSTHAN;
-                g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
-                g_cur_token_string[g_cur_token_string_pos] = 0;
-                g_cur_char = getNextChar();
-            } else { //'>'
-                token = T_MORETHAN;
-                g_cur_token_string[g_cur_token_string_pos] = 0;
-            }
-        } else if (g_cur_char == '<') {
-            g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
-            g_cur_char = getNextChar();
-            if (g_cur_char == '<') {
-                g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
-                g_cur_char = getNextChar();
-                if (g_cur_char == '=') { // <<=
-                    token = T_LSHIFTEQU;
-                    g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
-                    g_cur_token_string[g_cur_token_string_pos] = 0;
-                    g_cur_char = getNextChar();
-                } else { // <<
-                    token = T_LSHIFT;
-                    g_cur_token_string[g_cur_token_string_pos] = 0;
-                }
-            } else if (g_cur_char == '=') {// '<='
-                token =    T_NOMORETHAN;
-                g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
-                g_cur_token_string[g_cur_token_string_pos] = 0;
-                g_cur_char = getNextChar();
-            } else {  // '<'
-                token = T_LESSTHAN;
-                g_cur_token_string[g_cur_token_string_pos] = 0;
-            }
-        } else if (g_cur_char == '!') {
-            g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
-            g_cur_char = getNextChar();
-            if (g_cur_char == '=') {// '!='
-                token =    T_NOEQU;
-                g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
-                g_cur_token_string[g_cur_token_string_pos] = 0;
-                g_cur_char = getNextChar();
-            } else { // '!'
-                token = T_NOT;
-                g_cur_token_string[g_cur_token_string_pos] = 0;
-            }
-        } else if (g_cur_char == '/') {
-            token = t_solidus();
-        } else if (g_cur_char == '.') {
-            token = t_dot();
-        }
-        //Do not add anything after this line.
-        else if (g_cur_token == T_END) {
-            token = T_END;
         } else {
-            token = T_NUL;
-        }
+            bool is_restart = false;
+            token = t_rest(&is_restart);
+            if (is_restart) {
+                ASSERT0(token == T_NUL);
+                goto START;
+            }
+        } 
     } //end switch
-FIN:
     g_cur_token = token;
     return token;
 }

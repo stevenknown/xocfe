@@ -516,19 +516,20 @@ Tree * id()
 }
 
 
-static INT gettok()
+static TOKEN gettok()
 {
-    getNextToken();
-    g_real_token = g_cur_token;
+    TOKEN tok = getNextToken();
+    ASSERT0(tok == g_cur_token);
+    g_real_token = tok;
     g_real_token_string = g_cur_token_string;
     g_real_line_num = g_src_line_num;
     return g_real_token;
 }
 
 
-static INT reset_tok()
+static TOKEN reset_tok()
 {
-    TokenInfo * tki;
+    TokenInfo * tki = NULL;
     if ((tki = (TokenInfo*)remove_head_tok()) == NULL) {
         return g_real_token;
     }
@@ -543,7 +544,7 @@ static INT reset_tok()
 
 INT suck_tok()
 {
-    TokenInfo * tki;
+    TokenInfo * tki = NULL;
     if ((tki = (TokenInfo*)remove_head_tok()) == NULL) {
         gettok();
     } else {
@@ -575,10 +576,9 @@ INT match(TOKEN tok)
 //
 //'n': represent the next N token to current token.
 //    If n is 0, it will return current token.
-static TOKEN look_next_token(
-        INT n,
-        OUT CHAR ** tok_string,
-        OUT UINT * tok_line_num)
+static TOKEN look_next_token(INT n,
+                             OUT CHAR ** tok_string,
+                             OUT UINT * tok_line_num)
 {
     TOKEN tok = T_NUL;
     if (n < 0) { return T_NUL; }
