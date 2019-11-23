@@ -1143,7 +1143,7 @@ static TOKEN t_rest(bool * is_restart)
 
 //Get current token.
 TOKEN getNextToken()
-{    
+{
     if (g_cur_token == T_END) {
         return g_cur_token;
     }
@@ -1283,7 +1283,7 @@ START:
                 ASSERT0(token == T_NUL);
                 goto START;
             }
-        } 
+        }
     } //end switch
     g_cur_token = token;
     return token;
