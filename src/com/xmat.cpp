@@ -25,16 +25,10 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 @*/
-#include "ltype.h"
-#include "comf.h"
-#include "strbuf.h"
 #include "math.h"
-#include "smempool.h"
-#include "rational.h"
-#include "flty.h"
-#include "sstl.h"
-#include "matt.h"
-#include "xmat.h"
+#include "xcominc.h"
+
+//#define VARIADIC_PARAMETER_ACCESS
 
 namespace xcom {
 
@@ -238,7 +232,7 @@ static void rmat_dumpf_by_handle(void const* pbasis, FILE * h)
 {
     ASSERTN(h, ("dump file handle is NULL"));
     RMat * pthis = (RMat*)pbasis;
-    fprintf(h, "\nMATRIX(%d,%d)\n", pthis->getRowSize(), pthis->getColSize());
+    fprintf(h, "\nMATRIX(%dx%d)\n", pthis->getRowSize(), pthis->getColSize());
     for (UINT i = 0; i < pthis->getRowSize(); i++) {
         for (UINT j = 0; j < pthis->getColSize(); j++) {
             Rational rat = pthis->get(i, j);
@@ -265,9 +259,7 @@ static void rmat_dumpf_by_handle(void const* pbasis, FILE * h)
 
 static void rmat_dumpf(void const* pbasis, CHAR const* name, bool is_del)
 {
-    if (name == NULL) {
-        name = "matrix.tmp";
-    }
+    ASSERT0(name);
     if (is_del) {
         UNLINK(name);
     }
@@ -435,19 +427,20 @@ void RMat::sete(UINT num, ...)
     if (num <= 0) {
         return;
     }
-    INT * ptr = (INT*)(((BYTE*)(&num)) + sizeof(UINT));
+    va_list ptr;
+    va_start(ptr, num);
     UINT i = 0;
     UINT row = 0, col = 0;
     while (i < num) {
-        INT numer = *ptr;
+        UINT numer = (UINT)va_arg(ptr, UINT);
         set(row, col++, numer);
         if (col >= m_col_size) {
             row++;
             col = 0;
         }
         i++;
-        ptr++; //stack growing down
     }
+    va_end(ptr);
 }
 
 
@@ -505,7 +498,7 @@ void RMat::copy(INTMat const& m)
 
 
 //Return true if matrix is nonsingular, otherwise return false.
-bool RMat::inv(RMat & e)
+bool RMat::inv(OUT RMat & e) const
 {
     ASSERTN(m_is_init, ("not yet initialize."));
     bool is_nonsingular = Matrix<Rational>::inv(e);
@@ -518,7 +511,7 @@ bool RMat::inv(RMat & e)
 }
 
 
-//Reduction to a common denominator.
+//Reduce matrix elements to a common denominator.
 //Return the common denominator.
 //'row': Row to reduce
 //'col': The starting column to reduce.
@@ -526,27 +519,26 @@ UINT RMat::comden(UINT row, UINT col)
 {
     ASSERTN(m_is_init, ("not yet initialize."));
     ASSERTN(row < m_row_size, ("out of boundary"));
-
     bool is_int = true; //All elem is integer.
     INT lcm  = 1;
-    for (UINT j= col; j < m_col_size; j++) {
+    for (UINT j = col; j < m_col_size; j++) {
             Rational v = get(row, j);
             ASSERTN(v.den() > 0,
-                    ("should be converted positive in rational file"));
+                ("should be converted positive in rational file"));
             if (v.num() == 0) {
                 continue;
             }
             if (v.den() != 1) {
-                lcm = slcm(lcm, v.den());
+                lcm = xcom::slcm(lcm, v.den());
                 is_int = false;
             }
     }
     if (!is_int) {
-        for (UINT j= col; j < m_col_size; j++) {
+        for (UINT j = col; j < m_col_size; j++) {
             Rational v = get(row, j);
             if (v.den() != lcm) {
                 INT num = v.num() * (lcm / v.den());
-                ASSERTN(num < 0x7FFFffff, ("out of boundary"));
+                ASSERTN(num <= 0x7FFFffff, ("integer overflow"));
                 setr(row, j, num, lcm);
             }
         }
@@ -763,19 +755,40 @@ void INTMat::sete(UINT num, ...)
     if (num <= 0) {
         return;
     }
-    INT * ptr = (INT*) (((BYTE*)(&num)) + sizeof(UINT));
-    UINT i = 0;
+
+#ifdef VARIADIC_PARAMETER_ACCESS
+    //The following algorithm to access variadic parameter may not
+    //compatible with current stack layout and stack alignment,
+    //says the code work well on Linux with gcc4.8, but
+    //it does not work on Windows with VS2015. Therefore
+    //a better advise is to use va_arg().
+    //INT * ptr = (INT*) (((BYTE*)(&num)) + sizeof(UINT));
+    //UINT i = 0;
+    //UINT row = 0, col = 0;
+    //while (i < num) {
+    //    INT numer = *ptr;
+    //    set(row, col++, numer);
+    //    if (col >= m_col_size) {
+    //        row++;
+    //        col = 0;
+    //    }
+    //    i++;
+    //    ptr++; //stack growing down
+    //}
+#else
+    va_list ptr;
+    va_start(ptr, num);
     UINT row = 0, col = 0;
-    while (i < num) {
-        INT numer = *ptr;
+    for (UINT i = 0; i < num; i++) {
+        INT numer = va_arg(ptr, UINT);
         set(row, col++, numer);
         if (col >= m_col_size) {
             row++;
             col = 0;
         }
-        i++;
-        ptr++; //stack growing down
     }
+    va_end(ptr);
+#endif
 }
 
 
@@ -810,7 +823,7 @@ void INTMat::copy(RMat const& r)
 //Invering of Integer Matrix will be transformed to Rational
 //Matrix, and one exception will be thrown if there are some
 //element's denomiator is not '1'.
-bool INTMat::inv(OUT INTMat & e)
+bool INTMat::inv(OUT INTMat & e) const
 {
     ASSERTN(m_is_init, ("not yet initialize."));
     RMat tmp, v;
@@ -831,7 +844,7 @@ bool INTMat::inv(OUT INTMat & e)
 //Determinant of Integer Matrix will be transformed to Rational
 //Matrix, and one exception will be thrown if there are some
 //element's denomiator is not '1'.
-INT INTMat::det()
+INT INTMat::det() const
 {
     ASSERTN(m_is_init, ("not yet initialize."));
     RMat tmp;
@@ -861,7 +874,7 @@ void INTMat::genElimMat(UINT row, UINT col, OUT INTMat & elim)
 }
 
 
-void INTMat::_verify_hnf(INTMat & h)
+void INTMat::_verify_hnf(INTMat & h) const
 {
     ASSERTN(m_is_init, ("not yet initialize."));
     for (UINT i = 0; i < MIN(h.m_row_size,h.m_col_size); i++) {
@@ -892,8 +905,6 @@ void INTMat::_verify_hnf(INTMat & h)
 //    2. h(ii)>0 for all i, and
 //    3. h(ij)<=0 and |h(ij)|<|h(ii)| for j<i
 //
-//Return true if succ.
-//
 //h: hermite matrix, it is a lower triangular matrix, row convention.
 //u: unimodular matrix, so 'this' and h and u satisfied:
 //    h = 'this' * u and
@@ -902,7 +913,7 @@ void INTMat::_verify_hnf(INTMat & h)
 //NOTICE:
 //  1. 'this' uses row convention.
 //  2. 'this' may be singular.
-void INTMat::hnf(OUT INTMat & h, OUT INTMat & u)
+void INTMat::hnf(OUT INTMat & h, OUT INTMat & u) const
 {
     ASSERTN(m_is_init, ("not yet initialize."));
     u.reinit(m_col_size, m_col_size);
@@ -924,8 +935,8 @@ void INTMat::hnf(OUT INTMat & h, OUT INTMat & u)
 
                 //HNF(notes as H): H=A*U
                 h = h * elim;
-            }//end if
-        }//end for
+            }
+        }
 
         //2. Make diagonal element positive.
         if (h.get(i, i) < 0) {
@@ -1166,15 +1177,13 @@ void INTMat::dumps() const
 void INTMat::dumpf(CHAR const* name, bool is_del) const
 {
     ASSERTN(m_is_init, ("not yet initialize."));
-    if (name == NULL) {
-        name = "matrix.tmp";
-    }
+    ASSERT0(name);
     if (is_del) {
         UNLINK(name);
     }
     FILE * h = fopen(name, "a+");
     ASSERTN(h, ("%s create failed!!!", name));
-    fprintf(h, "\nMATRIX(%d,%d)\n", this->getRowSize(), this->getColSize());
+    fprintf(h, "\nMATRIX(%dx%d)\n", this->getRowSize(), this->getColSize());
     for (UINT i = 0; i < m_row_size; i++) {
         fprintf(h, "\t");
         for (UINT j = 0; j < m_col_size; j++) {
@@ -1221,7 +1230,6 @@ INTMat operator - (INTMat const& a, INTMat const& b)
 }
 
 
-
 //
 //START Float Matrix, default precision is double.
 //
@@ -1249,7 +1257,7 @@ static void flt_dumpf_by_handle(void const* pbasis, FILE * h)
 {
     ASSERTN(h, ("file handle is NULL"));
     FloatMat * pthis = (FloatMat*)pbasis;
-    fprintf(h, "\nMATRIX(%d,%d)\n", pthis->getRowSize(), pthis->getColSize());
+    fprintf(h, "\nMATRIX(%dx%d)\n", pthis->getRowSize(), pthis->getColSize());
     for (UINT i = 0; i < pthis->getRowSize(); i++) {
         fprintf(h, "\t");
         for (UINT j = 0; j < pthis->getColSize(); j++) {
@@ -1264,9 +1272,7 @@ static void flt_dumpf_by_handle(void const* pbasis, FILE * h)
 
 static void flt_dumpf(void const* pbasis, CHAR const* name, bool is_del)
 {
-    if (name == NULL) {
-        name = "matrix.tmp";
-    }
+    ASSERT0(name);
     if (is_del) {
         UNLINK(name);
     }
@@ -1423,7 +1429,7 @@ void FloatMat::destroy()
 //Set value of elements one by one.
 //'num': indicate the number of variant parameters.
 //NOTICE:
-// Pamaters after 'num' must be float/double.
+// Arguments after 'num' must be float/double.
 // e.g: sete(NUM, 2.0, 3.0...)
 void FloatMat::sete(UINT num, ...)
 {
@@ -1432,9 +1438,15 @@ void FloatMat::sete(UINT num, ...)
     if (num <= 0) {
         return;
     }
-    UINT i = 0;
     UINT row = 0, col = 0;
+#ifdef VARIADIC_PARAMETER_ACCESS
+    //The following algorithm to access variadic parameter may not
+    //compatible with current stack layout and stack alignment,
+    //says the code work well on Linux with gcc4.8, but
+    //it does not work on Windows with VS2015. Therefore
+    //a better advise is to use va_arg().
     BYTE * ptr =(BYTE*) (((BYTE*)(&num)) + sizeof(num));
+    UINT i = 0;
     while (i < num) {
         PRECISION_TYPE numer = (PRECISION_TYPE)*(double*)ptr;
         Matrix<Float>::set(row, col++, Float(numer));
@@ -1447,6 +1459,20 @@ void FloatMat::sete(UINT num, ...)
         //C++ default regard type of the parameter as double.
         ptr+=sizeof(double); //stack growing down
     }
+#else
+    va_list ptr;
+    va_start(ptr, num);
+    for (UINT i = 0; i < num; i++) {
+        //In C++ specification, FP immediate's type is regarded as 'double'.
+        PRECISION_TYPE numer = (PRECISION_TYPE)va_arg(ptr, double);
+        Matrix<Float>::set(row, col++, Float(numer));
+        if (col >= m_col_size) {
+            row++;
+            col = 0;
+        }
+    }
+    va_end(ptr);
+#endif
 }
 
 
@@ -1565,7 +1591,7 @@ static void bool_dumpf_by_handle(void const* pbasis, FILE * h)
 {
     ASSERTN(h != NULL, ("file handle is NULL"));
     BMat * pthis = (BMat*)pbasis;
-    fprintf(h, "\nMATRIX(%d,%d)\n", pthis->getRowSize(), pthis->getColSize());
+    fprintf(h, "\nMATRIX(%dx%d)\n", pthis->getRowSize(), pthis->getColSize());
     for (UINT i = 0; i < pthis->getRowSize(); i++) {
         fprintf(h, "\t");
         for (UINT j = 0; j < pthis->getColSize(); j++) {
@@ -1580,9 +1606,7 @@ static void bool_dumpf_by_handle(void const* pbasis, FILE * h)
 
 static void bool_dumpf(void const* pbasis, CHAR const* name, bool is_del)
 {
-    if (name == NULL) {
-        name = "matrix.tmp";
-    }
+    ASSERT0(name);
     if (is_del) {
         UNLINK(name);
     }
@@ -1667,9 +1691,16 @@ void BMat::sete(UINT num, ...)
     if (num <= 0) {
         return;
     }
-    UINT i = 0;
     UINT row = 0, col = 0;
+
+#ifdef VARIADIC_PARAMETER_ACCESS
+    //The following algorithm to access variadic parameter may not
+    //compatible with current stack layout and stack alignment,
+    //says the code work well on Linux with gcc4.8, but
+    //it does not work on Windows with VS2015. Therefore
+    //a better advise is to use va_arg().
     bool * ptr = (bool*)(((BYTE*)(&num)) + sizeof(num));
+    UINT i = 0;
     while (i < num) {
         set(row, col++, *ptr);
         if (col >= m_col_size) {
@@ -1677,10 +1708,22 @@ void BMat::sete(UINT num, ...)
             col = 0;
         }
         i++;
-
-        //Default regard type of the parameter as double.
         ptr++; //stack growing down
     }
+#else
+    va_list ptr;
+    va_start(ptr, num);
+    for (UINT i = 0; i < num; i++) {
+        //Note 'bool' is promoted to 'int' when passed through '...'.
+        bool numer = va_arg(ptr, int);
+        set(row, col++, numer);
+        if (col >= m_col_size) {
+            row++;
+            col = 0;
+        }
+    }
+    va_end(ptr);
+#endif
 }
 
 

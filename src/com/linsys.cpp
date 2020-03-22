@@ -84,15 +84,14 @@ public:
 
     void destroy()
     {
-        if (!m_is_init) return;
-        INT i;
-        for (i = 0; i <= m_x2pos.get_last_idx(); i++) {
+        if (!m_is_init) { return; }
+        for (INT i = 0; i <= m_x2pos.get_last_idx(); i++) {
             Vector<INT> *vec = m_x2pos.get(i);
             if (vec) {
                 vec->destroy();
             }
         }
-        for (i = 0; i <= m_x2neg.get_last_idx(); i++) {
+        for (INT i = 0; i <= m_x2neg.get_last_idx(); i++) {
             Vector<INT> * vec = m_x2neg.get(i);
             if (vec) {
                 vec->destroy();
@@ -149,6 +148,7 @@ public:
 Lineq::Lineq(RMat * m, INT rhs_idx)
 {
     m_is_init = false;
+    m_is_dump = false;
     m_rhs_idx = -1;
     m_coeff = NULL;
     init(m, rhs_idx);
@@ -202,11 +202,10 @@ void Lineq::setParam(RMat * m, INT rhs_idx)
 //
 //'m': system of inequalities
 //'idx_of_eq': index of inequality
-INT Lineq::compareConstIterm(
-        RMat const& m,
-        UINT rhs_idx,
-        INT idx_of_eq,
-        Rational v)
+INT Lineq::compareConstIterm(RMat const& m,
+                             UINT rhs_idx,
+                             INT idx_of_eq,
+                             Rational v)
 {
     ASSERTN(m_is_init == true, ("not yet initialize."));
     ASSERTN(rhs_idx < m.getColSize(), ("illegal param"));
@@ -234,7 +233,7 @@ INT Lineq::compareConstIterm(
 
 //Comparing constant term of ineqt1 and ineqt2.
 INT Lineq::compareConstIterm(RMat const& m, UINT rhs_idx,
-                           INT idx_of_eqt1, INT idx_of_eqt2)
+                             INT idx_of_eqt1, INT idx_of_eqt2)
 {
     ASSERTN(m_is_init == true, ("not yet initialize."));
     ASSERTN(rhs_idx < m.getColSize(), ("illegal param"));
@@ -280,14 +279,13 @@ INT Lineq::compareConstIterm(RMat const& m, UINT rhs_idx,
 //    Shape of resulting polyhedron by unifying is 10 <= z <= 200.
 //
 //'chlst': list of convex hulls which must be with the same dimension.
-void Lineq::ConvexHullUnionAndIntersect(
-        OUT RMat & res,
-        IN List<RMat*> & chlst,
-        UINT rhs_idx,
-        bool is_intersect)
+void Lineq::ConvexHullUnionAndIntersect(OUT RMat & res,
+                                        IN List<RMat*> & chlst,
+                                        UINT rhs_idx,
+                                        bool is_intersect)
 {
     if (chlst.get_elem_count() == 0) {
-        res.clean();
+        res.deleteAllElem();
         return;
     }
     RMat * p = chlst.get_head();
@@ -328,7 +326,7 @@ void Lineq::ConvexHullUnionAndIntersect(
     if (!lin.reduce(res, rhs_idx, is_intersect)) {
         if (is_intersect) {
             //Convex hull is empty.
-            res.clean();
+            res.deleteAllElem();
         } else {
             ASSERTN(0, ("union operation is illegal!"));
         }
@@ -341,19 +339,19 @@ void Lineq::ConvexHullUnionAndIntersect(
 //otherwise return false.
 //
 //'m': system of inequalities, and will be rewritten with new system.
-//'rhs_idx': number of column to indicate the first constant column
-//'is_intersect': If it is set to true, the reduction will perform
-//    intersection of bound of variable. Or otherwise performing
+//'rhs_idx': index of column to indicate the first constant column
+//'is_intersect': if it is set to true, the reduction will perform
+//    intersection of bound of variable. Otherwise perform
 //    the union operation.
-//    e.g: Given x < 100 and x < 200
-//        Result of intersection is x < 100, and union is x < 200.
-//
-//NOTICE:
-//    following operations performed, here assuming 'is_intersect' is true:
-//    1. Check simple bounds for inconsistencies
+//    e.g: Given: x < 100 and x < 200
+//         Result of intersection is x < 100, whereas union is x < 200.
+//NOTE:
+//    Following operations will be performed, and
+//    assume 'is_intersect' is true:
+//    1. Check simple bounds for inconsistencies.
 //        e.g: 0 <= 100 or 0 <= 0
-//    2. Delete redundant inequalities, keeping only the tighter bound.
-//        e.g: x <= 10 , x <= 20. the former is the bound.
+//    2. Delete redundant inequalities, keep only the tighter bound.
+//        e.g: x <= 10 , x <= 20. the former will be kept.
 //    3. Check for inconsistent bound.
 //        e.g: x <= 9, x >= 10, there is no solution!
 bool Lineq::reduce(IN OUT RMat & m, UINT rhs_idx, bool is_intersect)
@@ -361,25 +359,28 @@ bool Lineq::reduce(IN OUT RMat & m, UINT rhs_idx, bool is_intersect)
     ASSERTN(m_is_init == true, ("not yet initialize."));
     ASSERTN(m.size() != 0 && rhs_idx < m.getColSize(), ("illegal param"));
     removeIdenRow(m);
-    X2V_MAP x2v; //Mapping the index of eqution to corresponding variable.
-                //See following code for detailed usage.
-    //Record if one inequality should be removed.
+
+    //Map the index of eqution to corresponding variable.
+    //See following code for detailed usage.
+    X2V_MAP x2v;
+
+    //Record if some inequalities should be removed.
     Vector<bool> removed;
     bool consistency = true;
     bool someone_removed = false;
     UINT idx_of_var;
 
-    //Walking through inequations to construct the mapping.
-    //Performing reduction/relaxtion for inequlities which only involved single variable.
-    //    e.g: x <= 100, valid
-    //        x + y <= 100, invalid
+    //Walk through inequations to construct the mapping.
+    //Perform reduction/relaxtion for inequlities which
+    //only involve single variable.
+    //e.g: x <= 100, valid
+    //     x + y <= 100, invalid
     for (UINT i = 0; i < m.getRowSize(); i++) {
         INT vars = 0;
         INT single_var_idx = -1;
         removed.set(i, false); //initializing 'removed' vector.
 
-        //Go through the columns of variable only,
-        //except for the constant columns.
+        //Walk through columns of variable, except for the constant columns.
         for (UINT j = 0; j < (UINT)rhs_idx; j++) {
             if (m.get(i, j) != 0) {
                 vars++;
@@ -388,15 +389,15 @@ bool Lineq::reduce(IN OUT RMat & m, UINT rhs_idx, bool is_intersect)
         }
 
         //Checking for consistency for the inequality
-        //that without any variable.
+        //that have no any variable.
         //e.g: 0 < 1
         if (vars == 0) {
-            //It is inconsistent such as: 0 < -100, and it indicates
-            //there is no solution of original system of inequqlity.
+            //It is inconsistent, such as: 0 < -100, and it indicates
+            //there is no solution of original system.
             //Whereas one situation should be note that if there are
             //constant-symbols in inequality, we could not determined the
             //value of constant term.
-            //e.g: '0 <= -100 + M + N'. Is it consistent? What are the value of
+            //e.g: 0 <= -100 + M + N. Is it consistent? What are the value of
             //M and N?
             INT s = compareConstIterm(m, rhs_idx, i, (Rational)0);
             switch (s) {
@@ -409,7 +410,7 @@ bool Lineq::reduce(IN OUT RMat & m, UINT rhs_idx, bool is_intersect)
                 removed.set(i, true);
                 break;
             case CST_UNK: //0 <= -100 + M
-                //Do NOT remove this constrain.
+                //Do NOT remove this constraint.
                 //TODO: Check the domain of constant symbol.
                 break;
             default: UNREACHABLE();;
@@ -420,9 +421,9 @@ bool Lineq::reduce(IN OUT RMat & m, UINT rhs_idx, bool is_intersect)
         }
     }
 
-    //Computing the tightest/relaxed bound of inequalities
-    //which only involved single variable.
-    //Processing positive coefficent relationship. e.g: x <= N, x <= M
+    //Compute the tightest/relaxed bound of inequalities
+    //which only involve single variable.
+    //Processing positive coefficent relationship, e.g: x <= N, x <= M.
     for (idx_of_var = 0; idx_of_var < (UINT)rhs_idx; idx_of_var++) {
         Vector<INT> * poscoeff_eqt = x2v.get_pos_of_var(idx_of_var);
         if (poscoeff_eqt != NULL) {
@@ -459,8 +460,7 @@ bool Lineq::reduce(IN OUT RMat & m, UINT rhs_idx, bool is_intersect)
                                             idx_of_ineqt1, idx_of_ineqt2);
                     if (is_intersect) {
                         //Find minimal coeff
-                        //e.g:
-                        //    1. x <= 100
+                        //e.g:1. x <= 100
                         //    2. x <= 200
                         //The second inequlity will be marked REMOVE.
                         if (cres == CST_LT || cres == CST_EQ) {
@@ -473,8 +473,7 @@ bool Lineq::reduce(IN OUT RMat & m, UINT rhs_idx, bool is_intersect)
                         }
                     } else {
                         //Find maximal coeff
-                        //e.g:
-                        //    1. x <= 100
+                        //e.g:1. x <= 100
                         //    2. x <= 200
                         //The first inequlity will be marked REMOVE.
                         if (cres == CST_LT || cres == CST_EQ) {
@@ -495,9 +494,9 @@ bool Lineq::reduce(IN OUT RMat & m, UINT rhs_idx, bool is_intersect)
         }
         //dumps_svec((void*)&removed, D_BOOL);
 
-        //Computing the tightest/relaxed bound of inequalities
+        //Compute the tightest/relaxed bound of inequalities
         //which only involved single variable.
-        //Processing negitive coefficent relationship. e.g: -x <= W, -x <= V
+        //Processing negitive coefficent relationship, e.g: -x <= W, -x <= V.
         Vector<INT> * negcoeff_eqt = x2v.get_neg_of_var(idx_of_var);
         if (negcoeff_eqt != NULL) {
             for (INT k1 = 0; k1 < negcoeff_eqt->get_last_idx(); k1++) {
@@ -530,12 +529,11 @@ bool Lineq::reduce(IN OUT RMat & m, UINT rhs_idx, bool is_intersect)
 
                     if (is_intersect) {
                         //Find maximum coeff.
-                        //We also compared the minimal value, and the reason is
+                        //We also compare the minimal value, because
                         //that we represent 'x >= a' as '-x <= -a'
-                        //e.g:
-                        //    1. x >= 100
+                        //e.g:1. x >= 100
                         //    2. x >= 200
-                        //first inequlity was marked REMOVE.
+                        //First inequlity marked REMOVE.
                         INT cres = compareConstIterm(m, rhs_idx,
                             idx_of_eqt1, idx_of_eqt2);
                         if (cres == CST_LT || cres == CST_EQ) {
@@ -548,10 +546,9 @@ bool Lineq::reduce(IN OUT RMat & m, UINT rhs_idx, bool is_intersect)
                         }
                     } else {
                         //Find minimum coeff.
-                        //e.g:
-                        //    1. x >= 100
+                        //e.g:1. x >= 100
                         //    2. x >= 200
-                        //second inequlity was marked REMOVE.
+                        //Second inequlity was marked REMOVE.
                         INT cres = compareConstIterm(m, rhs_idx,
                             idx_of_eqt1, idx_of_eqt2);
                         if (cres == CST_LT || cres == CST_EQ) {
@@ -571,7 +568,7 @@ bool Lineq::reduce(IN OUT RMat & m, UINT rhs_idx, bool is_intersect)
         }
         //dumps_svec((void*)&removed, D_BOOL);
 
-        //Verfication for legitimate intersection of lower and upper boundary.
+        //Verification for legitimate intersection of lower and upper boundary.
         //e.g: x <= 9 , x >= 10 is inconsistency.
         if (is_intersect && poscoeff_eqt != NULL && negcoeff_eqt != NULL) {
             for (INT i = 0; i <= poscoeff_eqt->get_last_idx(); i++) {
@@ -626,7 +623,7 @@ FIN:
 
 
 //Fourier-Motzkin elimination, inequlities form as: Ax <= c
-//Return false if there are inconsistency in ineqlities.
+//Return false if there is inconsistency in ineqlities.
 //The last column is constant vector.
 //
 //'u': index of variable, index start from '0'.
@@ -658,15 +655,19 @@ bool Lineq::fme(UINT const u, OUT RMat & res, bool const darkshadow)
     ASSERTN(m_coeff != NULL && m_coeff != &res, ("illegal parameter of fme"));
     ASSERTN(m_rhs_idx != -1, ("not yet initialize."));
     if (m_coeff->size() == 0) {
-        res.clean();
+        res.deleteAllElem();
         return true;
     }
 
-    //Record the number of ineqts which coeff of variable 'u' is positive.
+    //Record the number of inequalities which
+    //coefficient of variable 'u' is positive.
+    //NOTE: memory will be freed at end of function.
     UINT * pos = (UINT*)::malloc(sizeof(UINT) * m_coeff->getRowSize());
     UINT poscount = 0;
 
-    //Record the number of ineqts which coeff of variable 'u' is negative.
+    //Record the number of inequalities which
+    //coefficient of variable 'u' is negative.
+    //NOTE: memory will be freed at end of function.
     UINT * negc = (UINT*)::malloc(sizeof(UINT) * m_coeff->getRowSize());
     UINT negcount = 0;
     if (m_rhs_idx == -1) {
@@ -680,7 +681,7 @@ bool Lineq::fme(UINT const u, OUT RMat & res, bool const darkshadow)
     //Perform two of primary operations at first.
     for (UINT i = 0; i < m_coeff->getRowSize(); i++) {
         //1.Check simple bounds for consistencies.
-        //    e.g: 0 <= -100
+        //e.g: 0 <= -100
         bool have_vars = false;
         for (UINT j = 0; j < (UINT)m_rhs_idx; j++) {
             if (m_coeff->get(i, j) != 0) {
@@ -696,11 +697,11 @@ bool Lineq::fme(UINT const u, OUT RMat & res, bool const darkshadow)
         }
 
         //1.Record index of inequalities which coefficient
-        //    of variable 'u' is nonzero for following steps.
-        //    Positive coefficient indicates that the
-        //    inequality represeting u < f(x), negtive
-        //    coefficient indicates that the inequality
-        //    represeting -u < f(x).
+        //of variable 'u' is nonzero for following steps.
+        //Positive coefficient indicates that the
+        //inequality represeting u < f(x), negtive
+        //coefficient indicates that the inequality
+        //represeting -u < f(x).
         Rational coeff = m_coeff->get(i, u);
         if (coeff != 0) {
             if (coeff > 0) {
@@ -731,8 +732,8 @@ bool Lineq::fme(UINT const u, OUT RMat & res, bool const darkshadow)
 
     //Generate new inequality to eliminate variable 'u'.
     //There may be some redundant equations.
-    if (poscount + negcount == 1) { //Only one ineqt about of 'u' that could
-                                    //not be eliminated.
+    if (poscount + negcount == 1) {
+        //Only one ineqt about of 'u' that could not be eliminated.
         UINT pi;
         if (poscount == 1) {
             pi = pos[0];
@@ -742,7 +743,8 @@ bool Lineq::fme(UINT const u, OUT RMat & res, bool const darkshadow)
         RMat row;
         tmp.innerRow(row, pi, pi);
         res.growRow(row);
-    } else if (poscount + negcount > 1) { //More than 1 ineqt about of 'u'
+    } else if (poscount + negcount > 1) {
+        //More than 1 ineqt about of 'u'
         UINT rowstart;
         if (res.size() == 0) {
             res.reinit(poscount * negcount, tmp.getColSize());
@@ -774,7 +776,7 @@ FIN:
 
 
 //Return true if there are no contradictory
-//constrains of the system of inequlities.
+//constraints of the system of inequlities.
 bool Lineq::is_consistent()
 {
     ASSERTN(m_is_init == true, ("not yet initialize."));
@@ -799,20 +801,34 @@ FIN:
 }
 
 
-void Lineq::initVarConstraint(
-        Vector<INT> const* sign,
-        IN OUT RMat & vc,
-        UINT rhs_idx)
+//Build initial constraint.
+//e.g: if 'sign' vector indicates variable coefficient
+//is not-zero, then build greater-than inequlities to
+//i>=0, j>=0, etc.
+//Note for the sake of the xcom math library rules, we represent
+//inequality relation in form of -i<=0.
+void Lineq::initVarConstraint(Vector<INT> const& sign,
+                              IN OUT RMat & vc,
+                              UINT rhs_idx)
 {
     UINT nvar = rhs_idx;
     vc.reinit(nvar, nvar + 1);
     vc.setCol(rhs_idx, Rational(0));
     for (UINT i = 0; i < nvar; i++) {
-        if ((sign != NULL && sign->get(i) >= 0) ||
-            (sign == NULL)) {
+        if (sign.get(i) > 0) {
+            //Build -i<=0 constraint.
+            //Do we really need Variable Constraints? I think YES.
+            //e.g: given inequality: -i + j <= -1, if there is no
+            //variable constraint provide, the ILP solution is UNBOUND.
+            //But as an exceptional case, we have to set the variabe with no
+            //constraints when variable is negative, whereas add variable <= 0
+            //into DomainMatrix to conform the constraint on negative variable.
+            //This is a tricky method to circumvent LP solver's demand.
+            //For now, it seems we can solve and constraints and get correct
+            //solution even if VC are unconstrained at all.
             vc.set(i, i, -1);
         } else {
-            //variable is unbound.
+            //current variable is unconstrained.
         }
     }
 }
@@ -822,13 +838,13 @@ void Lineq::initVarConstraint(
 //solution of the system of inequlities.
 //Call setParam() to set coefficient and rhs_idx.
 //
-//'coeff': coefficient matrix to constrains.
-//'vc': variable constrains.
+//'coeff': coefficient matrix to constraints.
+//'vc': variable constraints.
 //'is_int_sol': true if the solution must be integral.
-//'is_unique_sol': true if there is unique solution. */
+//'is_unique_sol': true if there exists unique solution.
 bool Lineq::has_solution(RMat const& leq,
                          RMat const& eq,
-                         IN OUT RMat & vc,
+                         RMat const& vc,
                          UINT rhs_idx,
                          bool is_int_sol,
                          bool is_unique_sol)
@@ -856,50 +872,81 @@ bool Lineq::has_solution(RMat const& leq,
     ASSERT0(vc.getRowSize() == (UINT)num_of_var &&
             vc.getColSize() == (UINT)num_of_var + 1/*CSt*/);
     RMat res;
+    Rational v;
     if (is_int_sol) {
-        MIP<RMat, Rational> mip;
+        MIP<RMat, Rational> mip(m_is_dump);
         mip.reviseTargetFunc(tgtf, eq, leq, num_of_var);
-        Rational v;
-        UINT st;
-        if ((st = mip.maxm(v, res, tgtf, vc, eq, leq,
-                           false, NULL, rhs_idx)) == IP_SUCC) {
-            //printf("maxv is %d/%d\n", v.num(), v.den());
-            //printf("solution is:\n"); res.dumpf();
+        UINT st = mip.maxm(v, res, tgtf, vc, eq, leq, false, NULL, rhs_idx);
+        if (st == IP_SUCC) {
+            //max value is 'v', solution is 'res'.
             return true;
+        } else if (st == IP_UNBOUND && !is_unique_sol) {
+            //Note if SIX solver return SIX_UNBOUND, there are two
+            //means, one is the solution is not unique, the
+            //other is there is no solution.
+            //Here we can not differentiate these two situations.
+            //Return false for conservative purpose.
+            //e.g: for {i > 0}, there is a unbound result, and infinit
+            //solution could satified the system.
+            //For {i=0,j=0,i+1<=j}, there is also a unbound result,
+            //but there is no solution for i,j to satisfied the system.
+            //
+            //return true;
         }
-        if (!is_unique_sol && st == IP_UNBOUND) {
+        st = mip.minm(v, res, tgtf, vc, eq, leq, false, NULL, rhs_idx);
+        if (st == IP_SUCC) {
+            //min value is 'v', solution is 'res'.
             return true;
-        }
-        if ((st = mip.minm(v, res, tgtf, vc, eq, leq,
-                           false, NULL, rhs_idx)) == IP_SUCC) {
-            //printf("minv is %d/%d\n", v.num(), v.den());
-            //printf("solution is:\n"); res.dumpf();
-            return true;
-        }
-        if (!is_unique_sol && st == IP_UNBOUND) {
-            return true;
+        } else if (st == IP_UNBOUND && !is_unique_sol) {
+            //Note if SIX solver return SIX_UNBOUND, there are two
+            //means, one is the solution is not unique, the
+            //other is there is no solution.
+            //Here we can not differentiate these two situations.
+            //Return false for conservative purpose.
+            //e.g: for {i > 0}, there is a unbound result, and infinit
+            //solution could satified the system.
+            //For {i=0,j=0,i+1<=j}, there is also a unbound result,
+            //but there is no solution for i,j to satisfied the system.
+            //
+            //return true;
         }
         return false;
     } else {
-        SIX<RMat, Rational> six;
+        SIX<RMat, Rational> six(0, 0xFFFFffff, m_is_dump);
         six.reviseTargetFunc(tgtf, eq, leq, num_of_var);
-        Rational v;
-        UINT st;
-        if ((st = six.maxm(v, res, tgtf, vc, eq, leq, rhs_idx)) == SIX_SUCC) {
-            //printf("maxv is %d/%d\n", v.num(), v.den());
-            //printf("solution is:\n"); res.dumpf();
+        UINT st = six.maxm(v, res, tgtf, vc, eq, leq, rhs_idx);
+        if (st == SIX_SUCC) {
+            //max value is 'v', solution is 'res'.
             return true;
+        } else if (st == SIX_UNBOUND && !is_unique_sol) {
+            //Note if SIX solver return SIX_UNBOUND, there are two
+            //means, one is the solution is not unique, the
+            //other is there is no solution.
+            //Here we can not differentiate these two situations.
+            //Return false for conservative purpose.
+            //e.g: for {i > 0}, there is a unbound result, and infinit
+            //solution could satified the system.
+            //For {i=0,j=0,i+1<=j}, there is also a unbound result,
+            //but there is no solution for i,j to satisfied the system.
+            //
+            //return true;
         }
-        if (!is_unique_sol && st == SIX_UNBOUND) {
+        st = six.minm(v, res, tgtf, vc, eq, leq, rhs_idx);
+        if (st == SIX_SUCC) {
+            //min value is 'v', solution is 'res'.
             return true;
-        }
-        if ((st=six.minm(v, res, tgtf, vc, eq, leq, rhs_idx)) == SIX_SUCC) {
-            //printf("minv is %d/%d\n", v.num(), v.den());
-            //printf("solution is:\n"); res.dumpf();
-            return true;
-        }
-        if (!is_unique_sol && st == SIX_UNBOUND) {
-            return true;
+        } else if (st == SIX_UNBOUND && !is_unique_sol) {
+            //Note if SIX solver return SIX_UNBOUND, there are two
+            //means, one is the solution is not unique, the
+            //other is there is no solution.
+            //Here we can not differentiate these two situations.
+            //Return false for conservative purpose.
+            //e.g: for {i > 0}, there is a unbound result, and infinit
+            //solution could satified the system.
+            //For {i=0,j=0,i+1<=j}, there is also a unbound result,
+            //but there is no solution for i,j to satisfied the system.
+            //
+            //return true;
         }
         return false;
     }
@@ -922,9 +969,9 @@ bool Lineq::has_solution(RMat const& leq,
 void Lineq::appendEquation(RMat const& eq)
 {
     ASSERTN(m_is_init == true, ("not yet initialize."));
-    if (eq.size() == 0) return;
+    if (eq.size() == 0) { return; }
     ASSERTN(eq.getColSize() == m_coeff->getColSize(), ("unmatch"));
-    if (eq.getRowSize() == 0) return;
+    if (eq.getRowSize() == 0) { return; }
     RMat tmp = eq;
     //if (tmp.getColSize() < m_coeff->getColSize()) {
     //    tmp.growCol(m_coeff->getColSize() - eq.getColSize());
@@ -949,8 +996,8 @@ void Lineq::formatBound(UINT u, OUT RMat & ineqt_of_u)
 {
     ASSERTN(m_is_init == true, ("not yet initialize."));
     ASSERTN(m_coeff &&
-           m_coeff->getRowSize() > 0 &&
-           m_coeff->getColSize() > 0, ("matrix is empty"));
+            m_coeff->getRowSize() > 0 &&
+            m_coeff->getColSize() > 0, ("matrix is empty"));
     ASSERTN((INT)u < m_rhs_idx, ("not a variable"));
 
     ineqt_of_u.reinit(0,0);
@@ -965,7 +1012,7 @@ void Lineq::formatBound(UINT u, OUT RMat & ineqt_of_u)
     }
 
     if (ineqt_of_u.getRowSize() == 0) {
-        //No constrains for u.
+        //No constraints for u.
         return;
     }
 
@@ -997,8 +1044,8 @@ void Lineq::formatBound(UINT u, OUT RMat & ineqt_of_u)
                     ineqt_of_u.set(i, k, -ineqt_of_u.get(i, j));
                     k++;
                 }
-            }//end for
-        }//end for
+            }
+        }
         if ((INT)u != (m_rhs_idx - 1)) {
             ineqt_of_u.deleteCol(u + 1, m_rhs_idx - 1);
         }
@@ -1048,7 +1095,7 @@ bool Lineq::calcBound(IN OUT List<RMat*> & limits)
 {
     ASSERTN(m_is_init == true, ("not yet initialized"));
     ASSERTN(m_coeff != NULL && limits.get_elem_count() == (UINT)m_rhs_idx,
-           ("unmatch coeff matrix info"));
+            ("unmatch coeff matrix info"));
 
     //Eliminating variable one by one, and inner to outer.
     INT i,j;
@@ -1125,11 +1172,10 @@ void Lineq::move2cstsym(IN OUT RMat & ieq,
 //
 //'p': each row indicates polynomial
 //'sub_var': index of variable to substitute.
-void Lineq::substituteAndExpand(
-        IN OUT RMat & coeff,
-        UINT rhs_idx,
-        RMat const& p,
-        UINT sub_var)
+void Lineq::substituteAndExpand(IN OUT RMat & coeff,
+                                UINT rhs_idx,
+                                RMat const& p,
+                                UINT sub_var)
 {
     DUMMYUSE(rhs_idx);
     ASSERT0(coeff.getColSize() == p.getColSize() && sub_var < rhs_idx);
@@ -1201,8 +1247,7 @@ void Lineq::move2var(IN OUT RMat & ieq,
 
 
 //Remove idendtical row.
-//e.g:
-//    1, 2, 3
+//e.g:1, 2, 3
 //    3, 4, 5
 //    1, 2, 3
 //    The third row will be removed.
@@ -1210,16 +1255,20 @@ void Lineq::removeIdenRow(IN OUT RMat & m)
 {
     Vector<Rational> sum;
     Vector<bool> removed;
-    UINT i;
-    for (i = 0; i < m.getRowSize(); i++) {
+    for (UINT i = 0; i < m.getRowSize(); i++) {
         Rational s = 0;
         for (UINT j = 0; j < m.getColSize(); j++) {
             s = s + m.get(i,j);
         }
         sum.set(i, s);
     }
-    for (i = 0; i < m.getRowSize(); i++) {
+    for (UINT i = 0; i < m.getRowSize(); i++) {
         if (removed.get(i)) {
+            continue;
+        }
+        if (m.is_rowequ(i, 0)) {
+            //Remove 0 <= 0.
+            removed.set(i, true);
             continue;
         }
         for (UINT j = i + 1; j < m.getRowSize(); j++) {
@@ -1236,7 +1285,7 @@ void Lineq::removeIdenRow(IN OUT RMat & m)
     INT end_of_row = -1;
     INT start_of_row = -1;
     bool doit = false;
-    for (i = 0; i < m.getRowSize(); i++) {
+    for (UINT i = 0; i < m.getRowSize(); i++) {
         if (!removed.get(i)) {
             if (start_of_row == -1) {
                 start_of_row = i;
@@ -1269,10 +1318,10 @@ void Lineq::removeIdenRow(IN OUT RMat & m)
 
 
 //Dump bound of variable 'u'.
-//Forms as
+//Forms as:
 //    'ak*xk <= const + F(x) + a0x0 + a1x1 + ... + a(k-1)x(k-1) +
 //                a(k+1)x(k+1) + ... + anxn'
-//e.g: Given inequality: x + y <= 100 + F(x), output is
+//e.g: Given inequality: x + y <= 100 + F(x), output is:
 //    x <= 100  + F(x) + (-y)
 //
 //'u': index of variable that getting start with zero.
@@ -1293,10 +1342,9 @@ void Lineq::EhartPoly(OUT RMat & res, IN RMat & a, UINT rhs_idx)
 }
 
 
-INT Lineq::selectLeadingColumn(
-        INTMat const& coeff,
-        Vector<bool> const& is_noneg,
-        UINT rhs_part)
+INT Lineq::selectLeadingColumn(INTMat const& coeff,
+                               Vector<bool> const& is_noneg,
+                               UINT rhs_part)
 {
     //The selecting criteria include static/dynamic ordering,
     //they are MaxIndex, MinIndex, MinCutoff, MaxCutoff, MixCutoff,
@@ -1322,7 +1370,7 @@ INT Lineq::selectLeadingColumn(
 }
 
 
-//Combine constrains.
+//Combine constraints.
 //'res': output constraints, and must be initialized by caller.
 //'r1, r2': row position of negative coeff
 //'lc': leading column
@@ -1339,16 +1387,16 @@ void Lineq::combine(OUT INTMat & res,
                     UINT lc,
                     UINT pos)
 {
-    if (r1 == r2) return;
+    if (r1 == r2) { return; }
     INT l1 = coeff.get(r1, lc);
     INT l2 = coeff.get(r2, lc);
-    if (l1 < 0) l1 = -l1;
-    if (l2 < 0) l2 = -l2;
+    if (l1 < 0) { l1 = -l1; }
+    if (l2 < 0) { l2 = -l2; }
     INT l = slcm(l1, l2);
     INT m1 = 1;
     INT m2 = 1;
-    if (l1 != l) m1 = l/l1;
-    if (l2 != l) m2 = l/l2;
+    if (l1 != l) { m1 = l / l1; }
+    if (l2 != l) { m2 = l / l2; }
     for (UINT i = 0; i < coeff.getColSize(); i++) {
         res.set(pos, i, coeff.get(r1, i)*m1 + coeff.get(r2, i)*m2);
     }
@@ -1446,13 +1494,12 @@ bool Lineq::omit(INTMat const& coeff,
 //   to the vector (vertex) [0.5 1] in the affine space.
 //
 //'raylimit': is the maximum allowed ray.
-bool Lineq::convertConstraint2Ray(
-        OUT INTMat & gmat,
-        INTMat const& cs,
-        UINT rhs_idx,
-        UINT raylimit)
+bool Lineq::convertConstraint2Ray(OUT INTMat & gmat,
+                                  INTMat const& cs,
+                                  UINT rhs_idx,
+                                  UINT raylimit)
 {
-    if (cs.size() == 0) return false;
+    if (cs.size() == 0) { return false; }
     INTMat coeff;
     if (!cs.is_colequ(rhs_idx, 0)) { //Inhomogeneous system.
         cs.innerColumn(coeff, 0, rhs_idx);
@@ -1488,10 +1535,10 @@ bool Lineq::convertConstraint2Ray(
     Vector<UINT> row_of_pos_coeff, row_of_neg_coeff;
     Vector<bool> rm; //record idx of rows which marked removable.
     Vector<UINT> noneg; //record idx of columns which are non-negative column.
-    Vector<bool> is_noneg; //record idx of columns which
-                            //are non-negative column.
-    Vector<UINT> combined; //record idx of rows with positive-coeff
-                            //which has been combined.
+    //Record idx of columns which are non-negative column.
+    Vector<bool> is_noneg;
+    //Record idx of rows with positive-coeff which has been combined.
+    Vector<UINT> combined;
     UINT combined_count = 0;
     UINT noneg_count = 0;
     INTMat res, tmp;
@@ -1601,7 +1648,7 @@ bool Lineq::convertConstraint2Ray(
 
 
 //Generate a new row via combining row 'r1' and 'r2' that
-//eliminating column 'lc' to be zero.
+//eliminating column 'lc' to zero.
 //
 //'res': output constraints, and must be initialized by caller.
 //'r1, r2': row position of negative coeff
@@ -1612,24 +1659,23 @@ bool Lineq::convertConstraint2Ray(
 //  1 0 0 0 3  2 -4 -1 6
 //=>
 //  1 0 0 2 3  0  4  3 10
-void Lineq::combineRays(
-        OUT INTMat & res,
-        IN OUT INTMat & coeff,
-        UINT r1,
-        UINT r2,
-        UINT lc,
-        UINT pos)
+void Lineq::combineRays(OUT INTMat & res,
+                        IN OUT INTMat & coeff,
+                        UINT r1,
+                        UINT r2,
+                        UINT lc,
+                        UINT pos)
 {
-    if (r1 == r2) return;
+    if (r1 == r2) { return; }
     INT l1 = coeff.get(r1, lc);
     INT l2 = coeff.get(r2, lc);
-    if (l1 < 0) l1 = -l1;
-    if (l2 < 0) l2 = -l2;
+    if (l1 < 0) { l1 = -l1; }
+    if (l2 < 0) { l2 = -l2; }
     INT l = slcm(l1, l2);
     INT m1 = 1;
     INT m2 = 1;
-    if (l1 != l) m1 = l/l1;
-    if (l2 != l) m2 = l/l2;
+    if (l1 != l) { m1 = l/l1; }
+    if (l2 != l) { m2 = l/l2; }
     for (UINT i = 0; i < coeff.getColSize(); i++) {
         res.set(pos, i, coeff.get(r1, i)*m1 + coeff.get(r2, i)*m2);
     }
@@ -1643,10 +1689,9 @@ void Lineq::combineRays(
 }
 
 
-void Lineq::removeRedRow(
-            IN OUT INTMat & cs,
-            INTMat const& org_cone,
-            UINT rhs_part)
+void Lineq::removeRedRow(IN OUT INTMat & cs,
+                         INTMat const& org_cone,
+                         UINT rhs_part)
 {
     UINT cs_rows = cs.getRowSize();
     UINT cs_cols = rhs_part;
@@ -1700,20 +1745,19 @@ void Lineq::removeRedRow(
 //Generate constraints according to given matrix of rays.
 //'gmat': general matrix, and must be formed as: Ax+b>=0
 //    e.g: Given matrix
-//         1 -1 0 // x-y>=0
-//        -1  0 1 //-x+1>=0
+//         1 -1  0 // x-y>=0
+//        -1  0 -1 //-x>=-1
 //      for system with x,y varible:
 //         x-y>=0
-//        -x+1>=0
+//        -x>=-1
 //'cslimit': is the maximum allowed constraints.
-bool Lineq::convertRay2Constraint(
-        INTMat const& gmat,
-        OUT INTMat & cs,
-        UINT cslimit)
+bool Lineq::convertRay2Constraint(INTMat const& gmat,
+                                  OUT INTMat & cs,
+                                  UINT cslimit)
 {
     DUMMYUSE(cslimit);
     if (gmat.size() == 0) {
-        cs.clean();
+        cs.deleteAllElem();
         return false;
     }
 
@@ -1762,7 +1806,7 @@ bool Lineq::convertRay2Constraint(
     {
         //The succession of transformation computes a
         //fundamental set of rays on 'cs'.
-        //At each step, a hyperplane or constrain is selected.
+        //At each steps, a hyperplane or constraint is selected.
         Vector<bool> is_noneg; //record idx of columns
                                //which are non-negative column.
         Vector<UINT> row_of_pos_coeff, row_of_neg_coeff;
@@ -1772,7 +1816,6 @@ bool Lineq::convertRay2Constraint(
         UINT combined_count = 0;
 
         for (;;) {
-            cs.dumpf();
             INT lc = selectLeadingColumn(cs, is_noneg, rhs_part);
             if (lc < 0) {
                 break;
@@ -1784,9 +1827,11 @@ bool Lineq::convertRay2Constraint(
             INT m = 0, n = 0;
             for (UINT i = 0; i < cs.getRowSize(); i++) {
                 if (cs.get(i, lc) < 0) {
-                    row_of_neg_coeff[m++] = i;
+                    m++;
+                    row_of_neg_coeff.set(m, i);
                 } else if (cs.get(i, lc) > 0) {
-                    row_of_pos_coeff[n++] = i;
+                    n++;
+                    row_of_pos_coeff.set(n, i);
                 }
             }
             if (n == 0) {
@@ -1817,9 +1862,8 @@ bool Lineq::convertRay2Constraint(
                     //idx of rows with positive-coeff.
                     UINT pcv = row_of_pos_coeff[pc];
                     combineRays(res, cs, ncv, pcv, lc, i++);
-                    res.dumpf();
-                    cs.dumpf();
-                    combined[combined_count++] = pcv;
+                    combined_count++;
+                    combined.set(combined_count, pcv);
                 }
 
                 //Modify conserved rays.
@@ -1836,13 +1880,12 @@ bool Lineq::convertRay2Constraint(
                 for (UINT i2 = 1; i2 < cs.getColSize(); i2++) {
                     cs.set(ncv, i2, -cs.get(ncv, 2));
                 }
-                //
+                //End modification.
             }
 
             //Add something here...
             is_noneg[lc] = true;
             cs.growRow(res, 0, res.getRowSize() - 1);
-            cs.dumpf();
             removeRedRow(cs, org_cone, rhs_part);
         }
         cs.deleteCol(rhs_part, cs.getColSize() - 1);
@@ -1867,8 +1910,14 @@ bool Lineq::convertRay2Constraint(
 void Lineq::PolyDiff(OUT RMat & res, IN RMat & a, IN RMat & b, UINT rhs_idx)
 {
     DUMMYUSE(rhs_idx);
-    if (a.size() == 0) { res.clean(); return; }
-    if (b.size() == 0) { res.copy(a); return; }
+    if (a.size() == 0) {
+        res.deleteAllElem();
+        return;
+    }
+    if (b.size() == 0) {
+        res.copy(a);
+        return;
+    }
     ASSERT0(a.is_homo(b));
 
 }

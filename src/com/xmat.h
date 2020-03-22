@@ -40,6 +40,7 @@ RMat operator + (RMat const& a, RMat const& b);
 RMat operator - (RMat const& a, RMat const& b);
 
 class RMat : public Matrix<Rational> {
+protected:
     friend RMat operator * (RMat const& a, RMat const& b);
     friend RMat operator + (RMat const& a, RMat const& b);
     friend RMat operator - (RMat const& a, RMat const& b);
@@ -66,10 +67,11 @@ public:
     void setr(UINT row, UINT col, Rational rat);
     void getr(UINT row, UINT col, FRAC_TYPE * numer, FRAC_TYPE * denom);
     Rational getr(UINT row, UINT col);
-    bool inv(RMat & e);
+    bool inv(RMat & e) const;
     void ds(RMat const& c);
     void copy(RMat const& r);
     void copy(INTMat const& r);
+    void clean() { zero(); }
     UINT comden(UINT row, UINT col); //Common denominator
     void substit(RMat const& exp,
                  UINT v,
@@ -90,7 +92,7 @@ INTMat operator - (INTMat const& a, INTMat const& b);
 class INTMat : public Matrix<INT> {
     friend class RMat;
     bool m_is_init;
-    void _verify_hnf(INTMat &h);
+    void _verify_hnf(INTMat &h) const;
     friend INTMat operator * (INTMat const& a, INTMat const& b);
     friend INTMat operator + (INTMat const& a, INTMat const& b);
     friend INTMat operator - (INTMat const& a, INTMat const& b);
@@ -101,33 +103,36 @@ public:
     INTMat(INT v);
     INTMat(UINT row, UINT col);
     ~INTMat();
-    void init();
-    void destroy();
-    bool is_init() const { return m_is_init; }
-
-    //Set entry value one by one, 'num' indicate entry number.
-    void sete(UINT num,...);
+    //Find convex hull of a set of points.
+    void cvexhull(OUT INTMat &hull);
+    INTMat & operator = (INTMat const& m);
+    void copy(RMat const& r);
+    void clean() { fzero(); }
 
     //Invering of Integer Matrix will be transformed
     //to Rational Matrix, and one exception will be thrown
     //if there are some element's denomiator is not '1'.
-    bool inv(OUT INTMat &e);
-    INT det();
+    bool inv(OUT INTMat &e) const;
+    void init();
+    bool is_init() const { return m_is_init; }
+
+    void destroy();
+    INT det() const;
+
+    //Set entry value one by one, 'num' indicate entry number.
+    void sete(UINT num,...);
 
     //Generate unimodular matrix to eliminate element.
     void genElimMat(UINT row, UINT col, OUT INTMat &elim);
 
     //Hermite Normal Form decomposition.
-    void hnf(OUT INTMat &h, OUT INTMat &u);
+    void hnf(OUT INTMat &h, OUT INTMat &u) const;
 
     //Reduce matrix by GCD operation.
     void gcd();
 
-    //Find convex hull of a set of points.
-    void cvexhull(OUT INTMat &hull);
-    INTMat & operator = (INTMat const& m);
-    void copy(RMat const& r);
-    void dumpf(CHAR const* name = NULL, bool is_del = false) const;
+    void dumpf(CHAR const* name = MATRIX_DUMP_FILE_NAME,
+               bool is_del = false) const;
     void dumps() const;
 };
 

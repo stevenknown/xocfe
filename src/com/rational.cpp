@@ -39,7 +39,6 @@ author: Su Zhenyu
 namespace xcom {
 
 #define REDUCE
-#define abs(x) ((x) >= 0 ? (x) : -(x))
 
 Rational::Rational()
 {
@@ -97,7 +96,7 @@ void Rational::reduce()
 }
 
 
-Rational Rational::rabs()
+Rational Rational::abs()
 {
     ASSERTN(m_den != 0, ("denominator is 0!"));
     Rational b(*this);
@@ -128,7 +127,7 @@ FRAC_TYPE Rational::_gcd(FRAC_TYPE x, FRAC_TYPE y)
 }
 
 
-CHAR const* Rational::format(StrBuf & buf)
+CHAR const* Rational::format(StrBuf & buf) const
 {
     if (m_den == 1) {
         buf.sprint("%d", m_num);
@@ -136,6 +135,14 @@ CHAR const* Rational::format(StrBuf & buf)
         buf.sprint("%d/%d", m_num, m_den);
     }
     return buf.buf;
+}
+
+
+void Rational::dump() const
+{
+    StrBuf buf(16);
+    format(buf);
+    fprintf(stdout, buf.buf);
 }
 
 

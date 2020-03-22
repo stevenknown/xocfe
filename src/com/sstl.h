@@ -106,6 +106,14 @@ bool in_list(T const* head, T const* p)
 
 
 template <class T>
+inline T * get_head(T * t)
+{
+    while (t != NULL && t->prev != NULL) { t = t->prev; }
+    return t;
+}
+
+
+template <class T>
 inline T * get_last(T * t)
 {
     while (t != NULL && t->next != NULL) { t = t->next; }
@@ -381,7 +389,7 @@ inline void insertbefore(T ** head, T * marker, T * t)
 
 //Insert t into list immediately that following 'marker'.
 //e.g: a->maker->b->c
-//    output is: a->maker->t->b->c
+//     output is: a->maker->t->b->c
 //Return header in 'marker' if list is empty.
 template <class T>
 inline void insertafter_one(T ** marker, T * t)
@@ -404,7 +412,7 @@ inline void insertafter_one(T ** marker, T * t)
 
 //Append t into head of list.
 //e.g: given head->a->b->c, and t1->t2.
-//    output is: t1->t2->a->b->c
+//     output is: t1->t2->a->b->c
 //This function will update the head of list.
 template <class T>
 inline void append_head(T ** head, T * t)
@@ -461,9 +469,9 @@ inline T * reverse_list(T * t)
 
 
 //Double Chain Container.
-#define C_val(c)    ((c)->value)
-#define C_next(c)   ((c)->next)
-#define C_prev(c)   ((c)->prev)
+#define C_val(c) ((c)->value)
+#define C_next(c) ((c)->next)
+#define C_prev(c) ((c)->prev)
 template <class T> class C {
 public:
     C<T> * prev;
@@ -481,12 +489,14 @@ public:
     }
 
     T val() { return value; }
+    C<T> * get_prev() const { return prev; }
+    C<T> * get_next() const { return next; }
 };
 
 
 //Single Chain Container.
-#define SC_val(c)    ((c)->value)
-#define SC_next(c)   ((c)->next)
+#define SC_val(c) ((c)->value)
+#define SC_next(c) ((c)->next)
 template <class T> class SC {
 public:
     SC<T> * next;
@@ -503,6 +513,7 @@ public:
     }
 
     T val() { return value; }
+    SC<T> * get_next() const { return next; }
 };
 
 
@@ -586,13 +597,13 @@ public:
 //NOTICE:
 //    The following operations are the key points which you should
 //    pay attention to:
-//    1.    If you REMOVE one element, its container will be collect by FREE-List.
-//        So if you need a new container, please check the FREE-List first,
-//        accordingly, you should first invoke 'get_free_list' which get free
-//        containers out from 'm_free_list'.
-//      2.    If you want to invoke APPEND, please call 'newc' first to
-//        allocate a new container memory space, record your elements in
-//        container, then APPEND it at list.
+//    1. If you REMOVE one element, its container will be collect by FREE-List.
+//    So if you need a new container, please check the FREE-List first,
+//    accordingly, you should first invoke 'get_free_list' which get free
+//    containers out from 'm_free_list'.
+//    2. If you want to invoke APPEND, please call 'newc' first to
+//    allocate a new container memory space, record your elements in
+//    container, then APPEND it at list.
 template <class T, class Allocator = allocator<T> > class List {
 protected:
     UINT m_elem_count;
@@ -970,11 +981,10 @@ public:
     //Insert 'src' before 'marker', and return the CONTAINER
     //of src head and src tail.
     //This function move all element in 'src' into current list.
-    void insert_before(
-            IN OUT List<T> & src,
-            IN C<T> * marker,
-            OUT C<T> ** list_head_ct = NULL,
-            OUT C<T> ** list_tail_ct = NULL)
+    void insert_before(IN OUT List<T> & src,
+                       IN C<T> * marker,
+                       OUT C<T> ** list_head_ct = NULL,
+                       OUT C<T> ** list_tail_ct = NULL)
     {
         if (src.m_head == NULL) { return; }
         ASSERT0(m_head && marker);
@@ -1011,11 +1021,10 @@ public:
 
     //Insert 'list' before 'marker', and return the CONTAINER
     //of list head and list tail.
-    void insert_and_copy_before(
-            List<T> const& list,
-            T marker,
-            OUT C<T> ** list_head_ct = NULL,
-            OUT C<T> ** list_tail_ct = NULL)
+    void insert_and_copy_before(List<T> const& list,
+                                T marker,
+                                OUT C<T> ** list_head_ct = NULL,
+                                OUT C<T> ** list_tail_ct = NULL)
     {
         C<T> * ct = NULL;
         find(marker, &ct);
@@ -1024,11 +1033,10 @@ public:
 
     //Insert 'list' before 'marker', and return the CONTAINER
     //of list head and list tail.
-    void insert_and_copy_before(
-            List<T> const& list,
-            IN C<T> * marker,
-            OUT C<T> ** list_head_ct = NULL,
-            OUT C<T> ** list_tail_ct = NULL)
+    void insert_and_copy_before(List<T> const& list,
+                                IN C<T> * marker,
+                                OUT C<T> ** list_head_ct = NULL,
+                                OUT C<T> ** list_tail_ct = NULL)
     {
         if (list.m_head == NULL) { return; }
         ASSERT0(marker);
@@ -1125,11 +1133,10 @@ public:
     //Insert 'src' after 'marker', and return the CONTAINER
     //of src head and src tail.
     //This function move all element in 'src' into current list.
-    void insert_after(
-            IN OUT List<T> & src,
-            IN C<T> * marker,
-            OUT C<T> ** list_head_ct = NULL,
-            OUT C<T> ** list_tail_ct = NULL)
+    void insert_after(IN OUT List<T> & src,
+                      IN C<T> * marker,
+                      OUT C<T> ** list_head_ct = NULL,
+                      OUT C<T> ** list_tail_ct = NULL)
     {
         if (src.m_head == NULL) { return; }
         ASSERT0(m_head && marker);
@@ -1166,11 +1173,10 @@ public:
 
     //Insert 'list' after 'marker', and return the CONTAINER
     //of list head and list tail.
-    void insert_and_copy_after(
-            List<T> const& list,
-            T marker,
-            OUT C<T> ** list_head_ct = NULL,
-            OUT C<T> ** list_tail_ct = NULL)
+    void insert_and_copy_after(List<T> const& list,
+                               T marker,
+                               OUT C<T> ** list_head_ct = NULL,
+                               OUT C<T> ** list_tail_ct = NULL)
     {
         C<T> * ct = NULL;
         find(marker, &ct);
@@ -1179,11 +1185,10 @@ public:
 
     //Insert 'list' after 'marker', and return the CONTAINER
     //of head and tail of members in 'list'.
-    void insert_and_copy_after(
-            List<T> const& list,
-            IN C<T> * marker,
-            OUT C<T> ** list_head_ct = NULL,
-            OUT C<T> ** list_tail_ct = NULL)
+    void insert_and_copy_after(List<T> const& list,
+                               IN C<T> * marker,
+                               OUT C<T> ** list_head_ct = NULL,
+                               OUT C<T> ** list_tail_ct = NULL)
     {
         if (list.m_head == NULL) { return; }
 
@@ -1525,6 +1530,14 @@ public:
         m_elem_count--;
         return c->val();
     }
+
+    //Set list head container.
+    //This function does not modify m_cur.
+    void set_head(C<T> * t) { m_head = t; }
+
+    //Set list tail container.
+    //This function does not modify m_cur.
+    void set_tail(C<T> * t) { m_tail = t; }
 };
 
 
@@ -1697,11 +1710,10 @@ public:
     //Insert value 't' after the 'marker'.
     //free_list: a list record free containers.
     //pool: memory pool which is used to allocate container.
-    inline SC<T> * insert_after(
-            T t,
-            IN SC<T> * marker,
-            SC<T> ** free_list,
-            SMemPool * pool)
+    inline SC<T> * insert_after(T t,
+                                IN SC<T> * marker,
+                                SC<T> ** free_list,
+                                SMemPool * pool)
     {
         ASSERT0(marker);
         #ifdef _SLOW_CHECK_
@@ -1821,7 +1833,7 @@ public:
             }
             cur = temp;
         }
-        m_head.next = head; 
+        m_head.next = head;
     }
 };
 //END SListCore
@@ -2124,11 +2136,10 @@ public:
     }
 
     //Insert 't' into list after the 'marker'.
-    inline SC<T> * insert_after(
-            T t,
-            IN SC<T> * marker,
-            SC<T> ** free_list,
-            SMemPool * pool)
+    inline SC<T> * insert_after(T t,
+                                IN SC<T> * marker,
+                                SC<T> ** free_list,
+                                SMemPool * pool)
     {
         ASSERT0(marker);
         #ifdef _SLOW_CHECK_
@@ -2549,7 +2560,6 @@ public:
 //NOTE: zero is reserved and regard it as the default NULL when we
 //determine whether an element is exist.
 //The vector grow dynamic.
-#define SVEC_init(s)        ((s)->m_is_init)
 template <class T, UINT GrowSize = 8> class Vector {
 protected:
     UINT m_elem_num:31; //The number of element in vector.
@@ -2563,19 +2573,19 @@ public:
 
     Vector()
     {
-        SVEC_init(this) = false;
+        m_is_init = false;
         init();
     }
 
     explicit Vector(INT size)
     {
-        SVEC_init(this) = false;
+        m_is_init = false;
         init();
         grow(size);
     }
 
     Vector(Vector const& vec) { copy(vec); }
-    Vector const& operator = (Vector const&);
+    Vector const& operator = (Vector const&); //DISALBE COPY-CONSTRUCTOR.
     ~Vector() { destroy(); }
 
     void append(T t)
@@ -2586,37 +2596,37 @@ public:
 
     inline void init()
     {
-        if (SVEC_init(this)) { return; }
+        if (m_is_init) { return; }
         m_elem_num = 0;
         m_vec = NULL;
         m_last_idx = -1;
-        SVEC_init(this) = true;
+        m_is_init = true;
     }
 
     inline void init(UINT size)
     {
-        if (SVEC_init(this)) { return; }
+        if (m_is_init) { return; }
         ASSERT0(size != 0);
         m_vec = (T*)::malloc(sizeof(T) * size);
         ASSERT0(m_vec);
         ::memset(m_vec, 0, sizeof(T) * size);
         m_elem_num = size;
         m_last_idx = -1;
-        SVEC_init(this) = true;
+        m_is_init = true;
     }
 
-    bool is_init() const { return SVEC_init(this); }
+    bool is_init() const { return m_is_init; }
 
     inline void destroy()
     {
-        if (!SVEC_init(this)) { return; }
+        if (!m_is_init) { return; }
         m_elem_num = 0;
         if (m_vec != NULL) {
             ::free(m_vec);
         }
         m_vec = NULL;
         m_last_idx = -1;
-        SVEC_init(this) = false;
+        m_is_init = false;
     }
 
     //The function often invoked by destructor, to speed up destruction time.
@@ -2634,6 +2644,7 @@ public:
         return (index >= (UINT)m_elem_num) ? T(0) : m_vec[index];
     }
 
+    //Return vector buffer that hold elements.
     T * get_vec() { return m_vec; }
 
     //Overloaded [] for CONST array reference create an rvalue.
@@ -2718,6 +2729,19 @@ public:
         return;
     }
 
+    //Set vector buffer that will used to hold element.
+    //vec: vector buffer pointer
+    //     Note if vec is NULL, that means reset vector buffer to be NULL.
+    //elem_num: the number of element that could store into buffer.
+    //          Note the byte size of buffer is equal to elem_num*sizeof(T).
+    void set_vec(T * vec, UINT elem_num)
+    {
+        ASSERTN(is_init(), ("VECTOR not yet initialized."));
+        ASSERT0((vec && elem_num > 0) || (vec == NULL && elem_num == 0));
+        m_vec = vec;
+        m_elem_num = elem_num;
+    }
+
     //Return the number of element the vector could hold.
     UINT get_capacity() const
     {
@@ -2785,10 +2809,11 @@ protected:
     //Always refers to free space to Vector,
     //and the first free space position is '0'
     UINT m_free_idx;
+
 public:
     VectorWithFreeIndex()
     {
-        SVEC_init(this) = false;
+        Vector<T, GrowSize>::m_is_init = false;
         init();
     }
     COPY_CONSTRUCTOR(VectorWithFreeIndex);
@@ -2882,15 +2907,15 @@ public:
 
 
 //Simply Vector.
-//
+//This is a small and lightweith vector object.
 //T: refer to element type.
 //NOTE: Zero is treated as the default NULL when we
 //determine the element existence.
-#define SVEC_elem_num(s)        ((s)->s1.m_elem_num)
+#define SVEC_elem_num(s) ((s)->s1.m_elem_num)
 template <class T, UINT GrowSize> class SimpleVec {
 protected:
     struct {
-        UINT m_elem_num:31;    //The number of element in vector.
+        UINT m_elem_num:31; //The number of element in vector.
         UINT m_is_init:1;
     } s1;
 public:
@@ -2958,7 +2983,8 @@ public:
         if (i >= SVEC_elem_num(this)) { return T(0); }
         return m_vec[i];
     }
-
+    UINT getElemNum() const { return SVEC_elem_num(this); }
+    //Return vector buffer that hold elements.
     T * get_vec() { return m_vec; }
 
     void copy(SimpleVec const& vec)
@@ -3027,6 +3053,35 @@ public:
         SVEC_elem_num(this) = size;
     }
 
+    //Overloaded [] for CONST array reference create an rvalue.
+    //Similar to 'get()', the difference between this operation
+    //and get() is [] opeartion does not allow index is greater than
+    //or equal to m_elem_num.
+    //Note this operation can not be used to create lvalue.
+    //e.g: SimpleVector<int> const v;
+    //     int ex = v[i];
+    T const operator[](UINT index) const
+    {
+        ASSERTN(is_init(), ("VECTOR not yet initialized."));
+        ASSERTN(index < SVEC_elem_num(this),
+                ("array subscript over boundary."));
+        return m_vec[index];
+    }
+
+    //Overloaded [] for non-const array reference create an lvalue.
+    //Similar to set(), the difference between this operation
+    //and set() is [] opeartion does not allow index is greater than
+    //or equal to m_elem_num.
+    //e.g: SimpleVector<int> v;
+    //     v[i] = 20;
+    inline T & operator[](UINT index)
+    {
+        ASSERTN(is_init(), ("VECTOR not yet initialized."));
+        ASSERTN(index < SVEC_elem_num(this),
+                ("array subscript over boundary."));
+        return m_vec[index];
+    }
+
     bool is_init() const { return s1.m_is_init; }
 };
 
@@ -3058,10 +3113,10 @@ public:
 //
 //    3.Use 'new'/'delete' operator to allocate/free the memory
 //      of dynamic object and the virtual function pointers.
-#define HC_val(c)            (c)->val
-#define HC_vec_idx(c)        (c)->vec_idx
-#define HC_next(c)           (c)->next
-#define HC_prev(c)           (c)->prev
+#define HC_val(c) (c)->val
+#define HC_vec_idx(c) (c)->vec_idx
+#define HC_next(c) (c)->next
+#define HC_prev(c) (c)->prev
 template <class T> struct HC {
     HC<T> * prev;
     HC<T> * next;
@@ -3069,12 +3124,12 @@ template <class T> struct HC {
     T val;
 };
 
-#define HB_member(hm)        (hm).hash_member
-#define HB_count(hm)         (hm).hash_member_count
+#define HB_member(hm) (hm).hash_member
+#define HB_count(hm) (hm).hash_member_count
 class HashBucket {
 public:
-    void * hash_member; //hash member list
-    UINT hash_member_count; //
+    void * hash_member; //hash member list.
+    UINT hash_member_count; //the number of member in list.
 };
 
 
@@ -3275,9 +3330,7 @@ public:
     //If 't' already exists, return the element immediately.
     //'find': set to true if 't' already exist.
     //
-    //NOTE:
-    //    Do NOT append 0 to table.
-    //    Maximum size of T equals sizeof(void*).
+    //NOTE: Do NOT append 0 to table. Maximum size of T equals sizeof(void*).
     T append(T t, OUT HC<T> ** hct = NULL, bool * find = NULL)
     {
         ASSERTN(m_bucket != NULL, ("Hash not yet initialized."));
@@ -3545,7 +3598,7 @@ public:
             }
             if (elemhc != NULL) {
                 m_elem_vector.set(HC_vec_idx(elemhc), T(0));
-                remove((HC<T>**)&HB_member(m_bucket[hashv]), elemhc);
+                xcom::remove((HC<T>**)&HB_member(m_bucket[hashv]), elemhc);
                 m_free_list.add_free_elem(elemhc);
                 HB_count(m_bucket[hashv])--;
                 m_elem_count--;
@@ -3878,11 +3931,7 @@ protected:
         m_root->color = RBBLACK;
     }
 public:
-    RBT()
-    {
-        m_pool = NULL;
-        init();
-    }
+    RBT() { m_pool = NULL; init(); }
     COPY_CONSTRUCTOR(RBT);
     ~RBT() { destroy(); }
 
@@ -4381,7 +4430,7 @@ public:
     {
         ASSERT0(t != T(0));
         #ifdef _DEBUG_
-        //Mapped element may not same with 't'.
+        //CASE: Mapped element may not same with 't'.
         //bool find = false;
         //T mapped = BaseTMap::get(t, &find);
         //if (find) {
@@ -4432,7 +4481,8 @@ public:
 //    typedef HMap<OPND*, OPER*, HashFuncBase<OPND*> > OPND2OPER_MAP;
 //
 //NOTICE:
-//    1. Tsrc(0) is defined as default NULL in HMap, so do not use T(0) as element.
+//    1. Tsrc(0) is defined as default NULL in HMap, so do
+//       not use T(0) as element.
 //    2. The map is implemented base on Hash, and one hash function class
 //       have been given.
 //
@@ -4571,9 +4621,9 @@ public:
         Hash<Tsrc, HF>::append(t, &elemhc, NULL);
 
         ASSERTN(elemhc != NULL,
-               ("Element does not append into hash table yet."));
+                ("Element does not append into hash table yet."));
         ASSERTN(Ttgt(0) == m_mapped_elem_table.get(HC_vec_idx(elemhc)),
-               ("Already be mapped"));
+                ("Already be mapped"));
         m_mapped_elem_table.set(HC_vec_idx(elemhc), mapped);
     }
 
@@ -4676,19 +4726,20 @@ public:
 //    1. Tsrc(0) is defined as default NULL in MMap, do not use T(0) as element.
 //
 //    2. MMap allocate memory for 'TAB_Ttgt' and return 'TAB_Ttgt *'
-//        when get(Tsrc) be invoked. DO NOT free these objects yourself.
+//       when get(Tsrc) be invoked. DO NOT free these objects yourself.
 //
 //    3. TAB_Ttgt should be pointer type.
-//        e.g: Given type of tgt's table is a class that
+//       e.g: Given type of tgt's table is a class that
 //            OP_HASH : public Hash<OPER*>,
 //            then type MMap<OPND*, OPER*, OP_HASH> is ok, but
 //            type MMap<OPND*, OPER*, OP_HASH*> is not expected.
 //
-//    4. Do not use DMap directly, please overload following functions optionally:
-//        * create hash-element container.
-//            T * create(OBJTY v)
+//    4. Do not use DMap directly, please overload following
+//       functions optionally:
+//       * create hash-element container.
+//         T * create(OBJTY v)
 //
-//        e.g: Mapping one OPND to a number of OPERs.
+//         e.g: Mapping one OPND to a number of OPERs.
 //            class OPND2OPER_MMAP : public MMap<OPND*, OPER*, OP_TAB> {
 //            public:
 //                virtual T create(OBJTY id)

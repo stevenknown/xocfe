@@ -41,12 +41,13 @@ namespace xcom {
 class Vertex;
 class Edge;
 class Graph;
+class BMat;
 
-#define EDGE_next(e)        (e)->next
-#define EDGE_prev(e)        (e)->prev
-#define EDGE_from(e)        (e)->from
-#define EDGE_to(e)          (e)->to
-#define EDGE_info(e)        (e)->info
+#define EDGE_next(e) (e)->next
+#define EDGE_prev(e) (e)->prev
+#define EDGE_from(e) (e)->from
+#define EDGE_to(e)   (e)->to
+#define EDGE_info(e) (e)->info
 class Edge {
 public:
     Edge()
@@ -66,9 +67,9 @@ public:
 
 
 //The container of EDEG.
-#define EC_next(el)        (el)->next
-#define EC_prev(el)        (el)->prev
-#define EC_edge(el)        (el)->edge
+#define EC_next(el) (el)->next
+#define EC_prev(el) (el)->prev
+#define EC_edge(el) (el)->edge
 class EdgeC {
 public:
     EdgeC()
@@ -84,14 +85,14 @@ public:
 };
 
 
-
-#define VERTEX_next(v)         (v)->next
-#define VERTEX_prev(v)         (v)->prev
-#define VERTEX_id(v)           (v)->id
-#define VERTEX_rpo(v)          (v)->rpo
-#define VERTEX_in_list(v)      (v)->in_list
-#define VERTEX_out_list(v)     (v)->out_list
-#define VERTEX_info(v)         (v)->info
+#define VERTEX_UNDEF 0
+#define VERTEX_next(v)     (v)->next
+#define VERTEX_prev(v)     (v)->prev
+#define VERTEX_id(v)       (v)->id
+#define VERTEX_rpo(v)      (v)->rpo
+#define VERTEX_in_list(v)  (v)->in_list
+#define VERTEX_out_list(v) (v)->out_list
+#define VERTEX_info(v)     (v)->info
 class Vertex {
 public:
     Vertex()
@@ -99,7 +100,7 @@ public:
         prev = next = NULL;
         in_list = out_list = NULL;
         info = NULL;
-        id = 0;
+        id = VERTEX_UNDEF;
     }
 
 public:
@@ -118,6 +119,9 @@ class EdgeHashFunc {
 public:
     UINT get_hash_value(Edge * e, UINT bs) const
     {
+        //Note this function does not guarantee hash-value is unique.
+        //This might cause much hash conflict accroding to hash
+        //element value.
         ASSERT0(isPowerOf2(bs));
         return hash32bit(MAKE_VALUE(VERTEX_id(EDGE_from(e)),
                                     VERTEX_id(EDGE_to(e)))) & (bs - 1);
@@ -252,7 +256,7 @@ protected:
             if (EC_edge(el) == e) return;
         }
         ASSERT0(last == NULL || EC_next(last) == NULL);
-        add_next(&VERTEX_out_list(vex), &last, newEdgeC(e));
+        xcom::add_next(&VERTEX_out_list(vex), &last, newEdgeC(e));
     }
 
     //Add 'e' into in-edges of 'vex'
@@ -266,7 +270,7 @@ protected:
             if (EC_edge(el) == e) { return; }
         }
         ASSERT0(last == NULL || EC_next(last) == NULL);
-        add_next(&VERTEX_in_list(vex), &last, newEdgeC(e));
+        xcom::add_next(&VERTEX_in_list(vex), &last, newEdgeC(e));
     }
 
     virtual void * cloneEdgeInfo(Edge*)
@@ -345,15 +349,16 @@ public:
         return m_vertices.append(newVertex(vid));
     }
 
-    void computeRpoNoRecursive(
-            IN OUT Vertex * root,
-            OUT List<Vertex const*> & vlst);
+    void computeRpoNoRecursive(IN OUT Vertex * root,
+                               OUT List<Vertex const*> & vlst);
     bool clone(Graph const& src);
     size_t count_mem() const;
 
-    void dump_dot(CHAR const* name = NULL) const;
-    void dump_vcg(CHAR const* name = NULL) const;
+    void dumpDOT(CHAR const* name = NULL) const;
+    void dumpVCG(CHAR const* name = NULL) const;
 
+    //Return true if graph vertex id is dense.
+    bool is_dense() const { return m_dense_vertex != NULL; }
     //Return true if 'succ' is successor of 'v'.
     bool is_succ(Vertex * v, Vertex * succ) const
     {
@@ -384,25 +389,23 @@ public:
     bool is_reachable(UINT from, UINT to) const
     {
         ASSERTN(m_ec_pool != NULL, ("not yet initialized."));
-        return is_reachable(get_vertex(from), get_vertex(to));
+        return is_reachable(getVertex(from), getVertex(to));
     }
     bool is_reachable(Vertex * from, Vertex * to) const;
-    void insertVertexBetween(
-            IN Vertex * v1,
-            IN Vertex * v2,
-            IN Vertex * newv,
-            OUT Edge ** e1 = NULL,
-            OUT Edge ** e2 = NULL,
-            bool sort = true);
-    void insertVertexBetween(
-            UINT v1,
-            UINT v2,
-            UINT newv,
-            OUT Edge ** e1 = NULL,
-            OUT Edge ** e2 = NULL,
-            bool sort = true);
+    void insertVertexBetween(IN Vertex * v1,
+                             IN Vertex * v2,
+                             IN Vertex * newv,
+                             OUT Edge ** e1 = NULL,
+                             OUT Edge ** e2 = NULL,
+                             bool sort = true);
+    void insertVertexBetween(UINT v1,
+                             UINT v2,
+                             UINT newv,
+                             OUT Edge ** e1 = NULL,
+                             OUT Edge ** e2 = NULL,
+                             bool sort = true);
     bool is_graph_entry(Vertex const* v) const
-    { return VERTEX_in_list(v) == NULL;    }
+    { return VERTEX_in_list(v) == NULL; }
 
     //Return true if vertex is exit node of graph.
     bool is_graph_exit(Vertex const* v) const
@@ -411,26 +414,26 @@ public:
     void erase();
 
     bool getNeighborList(IN OUT List<UINT> & ni_list, UINT vid) const;
-    bool get_neighbor_set(OUT DefSBitSet & niset, UINT vid) const;
-    UINT get_degree(UINT vid) const
+    bool getNeighborSet(OUT DefSBitSet & niset, UINT vid) const;
+    UINT getDegree(UINT vid) const
     {
         ASSERTN(m_ec_pool != NULL, ("not yet initialized."));
-        return get_degree(get_vertex(vid));
+        return getDegree(getVertex(vid));
     }
-    UINT get_degree(Vertex const* vex) const;
-    UINT get_in_degree(Vertex const* vex) const;
-    UINT get_out_degree(Vertex const* vex) const;
-    UINT get_vertex_num() const
+    UINT getDegree(Vertex const* vex) const;
+    UINT getInDegree(Vertex const* vex) const;
+    UINT getOutDegree(Vertex const* vex) const;
+    UINT getVertexNum() const
     {
         ASSERTN(m_ec_pool != NULL, ("not yet initialized."));
         return m_vertices.get_elem_count();
     }
-    UINT get_edge_num() const
+    UINT getEdgeNum() const
     {
         ASSERTN(m_ec_pool != NULL, ("not yet initialized."));
         return m_edges.get_elem_count();
     }
-    inline Vertex * get_vertex(UINT vid) const
+    inline Vertex * getVertex(UINT vid) const
     {
         ASSERTN(m_ec_pool != NULL, ("not yet initialized."));
         if (m_dense_vertex != NULL) {
@@ -438,8 +441,8 @@ public:
         }
         return (Vertex*)m_vertices.find((OBJTY)(size_t)vid);
     }
-    Edge * get_edge(UINT from, UINT to) const;
-    Edge * get_edge(Vertex const* from, Vertex const* to) const;
+    Edge * getEdge(UINT from, UINT to) const;
+    Edge * getEdge(Vertex const* from, Vertex const* to) const;
     Edge * get_first_edge(INT & cur) const
     {
         ASSERTN(m_ec_pool != NULL, ("not yet initialized."));
@@ -470,9 +473,13 @@ public:
     Vertex * removeVertex(UINT vid)
     {
         ASSERTN(m_ec_pool != NULL, ("not yet initialized."));
-        return removeVertex(get_vertex(vid));
+        return removeVertex(getVertex(vid));
     }
     void removeTransitiveEdge();
+    void removeTransitiveEdgeHelper(Vertex const* fromvex,
+                                    Vector<DefSBitSetCore*> * reachset_vec,
+                                    BitSet & is_visited,
+                                    DefMiscBitSetMgr & bs_mgr);
 
     bool sortInToplogOrder(OUT Vector<UINT> & vex_vec, bool is_topdown);
     void set_unique(bool is_unique)
