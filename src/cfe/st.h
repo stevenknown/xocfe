@@ -435,8 +435,8 @@ typedef enum {
 
 
 //ST_INFO
-#define ST_INFO_name(sti)    (sti)->name
-#define ST_INFO_sst(sti)    (sti)->sst
+#define ST_INFO_name(sti) (sti)->name
+#define ST_INFO_sst(sti) (sti)->sst
 class ST_INFO {
 public:
     SST sst;

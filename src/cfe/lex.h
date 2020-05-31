@@ -30,69 +30,69 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 //C language's key words.
 typedef enum _TOKEN {
-    T_NUL = 0,        // NULL
-    T_ID,            // ID = (A-Z|a-z)( A-Z|a-z|0-9 )*
-    T_IMM,            // 0~9
-    T_IMML,            // 0~9L
-    T_IMMU,            // Unsigned
+    T_NUL = 0,      // NULL
+    T_ID,           // ID = (A-Z|a-z)( A-Z|a-z|0-9 )*
+    T_IMM,          // 0~9
+    T_IMML,         // 0~9L
+    T_IMMU,         // Unsigned
     T_IMMUL,        // Unsigned Long
-    T_FP,            //double decimal e.g 3.14
-    T_FPF,            //float decimal e.g 3.14
-    T_FPLD,            //long double decimal e.g 3.14L
-    T_STRING,        // "abcd"
+    T_FP,           //double decimal e.g 3.14
+    T_FPF,          //float decimal e.g 3.14
+    T_FPLD,         //long double decimal e.g 3.14L
+    T_STRING,       // "abcd"
     T_CHAR_LIST,    // 'abcd'
     T_INTRI_FUN,    // intrinsic function call
     T_INTRI_VAL,    // intrinsic value
-    T_LLPAREN,        // {
-    T_RLPAREN,        // }
-    T_LSPAREN,        // [
-    T_RSPAREN,        // ]
-    T_ASSIGN,        // =
-    T_LPAREN,        // (
-    T_RPAREN,        // )
-    T_ADD,            // +
-    T_SUB,            // -
-    T_ASTERISK,        // *
-    T_DIV,            // /
-    T_AND,            // &&
+    T_LLPAREN,      // {
+    T_RLPAREN,      // }
+    T_LSPAREN,      // [
+    T_RSPAREN,      // ]
+    T_ASSIGN,       // =
+    T_LPAREN,       // (
+    T_RPAREN,       // )
+    T_ADD,          // +
+    T_SUB,          // -
+    T_ASTERISK,     // *
+    T_DIV,          // /
+    T_AND,          // &&
     T_BITANDEQU,    // &=
-    T_OR,            // ||
-    T_AT,            // @
-    T_BITAND,        // &
+    T_OR,           // ||
+    T_AT,           // @
+    T_BITAND,       // &
     T_BITOR,        // |
-    T_BITOREQU,        // |=
-    T_LESSTHAN,        // <
-    T_MORETHAN,        // >
-    T_RSHIFT,        // >>
+    T_BITOREQU,     // |=
+    T_LESSTHAN,     // <
+    T_MORETHAN,     // >
+    T_RSHIFT,       // >>
     T_RSHIFTEQU,    // >>=
-    T_LSHIFT,        // <<
+    T_LSHIFT,       // <<
     T_LSHIFTEQU,    // <<=
-    T_NOMORETHAN,    // <=
-    T_NOLESSTHAN,    // >=
+    T_NOMORETHAN,   // <=
+    T_NOLESSTHAN,   // >=
     T_NOEQU,        // !=
-    T_NOT,            // !
-    T_EQU,            // ==
-    T_ADDEQU,        // +=
-    T_SUBEQU,        // -=
-    T_MULEQU,        // *=
-    T_DIVEQU,        // /=
-    T_XOR,            // ^
-    T_XOREQU,        // ^=
-    T_REMEQU,        // %=
-    T_MOD,            // %
+    T_NOT,          // !
+    T_EQU,          // ==
+    T_ADDEQU,       // +=
+    T_SUBEQU,       // -=
+    T_MULEQU,       // *=
+    T_DIVEQU,       // /=
+    T_XOR,          // ^
+    T_XOREQU,       // ^=
+    T_REMEQU,       // %=
+    T_MOD,          // %
     T_COLON,        // :
-    T_DCOLON,        // ::
-    T_SEMI,            // ;
-    T_QUOT,            // "
+    T_DCOLON,       // ::
+    T_SEMI,         // ;
+    T_QUOT,         // "
     T_COMMA,        // ,
     T_UNDERLINE,    // _
     T_LANDSCAPE,    // -
-    T_REV,            // ~ reverse  e.g:a = ~a
-    T_DOT,            // .
+    T_REV,          // ~ reverse  e.g:a = ~a
+    T_DOT,          // .
     T_QUES_MARK,    // ?
     T_ARROW,        // ->
-    T_ADDADD,        // ++
-    T_SUBSUB,        // --
+    T_ADDADD,       // ++
+    T_SUBSUB,       // --
 
     //The following token is C specail.
     T_DOTDOTDOT,    // ...
@@ -151,19 +151,19 @@ typedef enum _TOKEN {
 
     //pragma
     T_SHARP,        // #
-    T_PRAGMA,        // pragma
+    T_PRAGMA,       // pragma
 
-    T_NEWLINE,        // \n
+    T_NEWLINE,      // \n
     ////////////////////////////////////
     //DO NOT ADD Enum AFTER THIS LINE.//
     ////////////////////////////////////
-    T_END,            // end of file
+    T_END,          // end of file
 } TOKEN;
 
 
-#define TOKEN_INFO_name(ti)     (ti)->name
-#define TOKEN_INFO_token(ti)    (ti)->tok
-#define TOKEN_INFO_lineno(ti)   (ti)->u1.lineno
+#define TOKEN_INFO_name(ti) (ti)->name
+#define TOKEN_INFO_token(ti) (ti)->tok
+#define TOKEN_INFO_lineno(ti) (ti)->u1.lineno
 class TokenInfo {
 public:
     TOKEN tok;
@@ -174,8 +174,8 @@ public:
 };
 
 
-#define KEYWORD_INFO_name(ti)    (ti)->name
-#define KEYWORD_INFO_token(ti)    (ti)->tok
+#define KEYWORD_INFO_name(ti) (ti)->name
+#define KEYWORD_INFO_token(ti) (ti)->tok
 class KeywordInfo {
 public:
     TOKEN tok;
@@ -183,9 +183,9 @@ public:
 };
 
 
-#define MAX_BUF_LINE            4096
-#define MAX_OFST_BUF_LEN        1024
-#define OFST_TAB_LINE_SIZE      (g_ofst_tab_byte_size / sizeof(LONG))
+#define MAX_BUF_LINE 4096
+#define MAX_OFST_BUF_LEN 1024
+#define OFST_TAB_LINE_SIZE (g_ofst_tab_byte_size / sizeof(LONG))
 
 //Exported Variables
 extern UINT g_src_line_num; //line number of src file

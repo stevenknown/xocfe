@@ -43,7 +43,8 @@ void show_err()
 {
     if (g_err_msg_list.get_elem_count() == 0) return;
     fprintf(stdout,"\n");
-    for (ERR_MSG * e = g_err_msg_list.get_head(); e; e = g_err_msg_list.get_next()) {
+    for (ERR_MSG * e = g_err_msg_list.get_head();
+         e != NULL; e = g_err_msg_list.get_next()) {
         fprintf(stdout, "\nerror(%d):%s", ERR_MSG_lineno(e), ERR_MSG_msg(e));
     }
     fprintf(stdout,"\n");
@@ -54,8 +55,10 @@ void show_warn()
 {
     if (g_warn_msg_list.get_elem_count() == 0) return;
     fprintf(stdout,"\n");
-    for (WARN_MSG * e = g_warn_msg_list.get_head(); e; e = g_warn_msg_list.get_next()) {
-        fprintf(stdout, "\nwarning(%d):%s", WARN_MSG_lineno(e), WARN_MSG_msg(e));
+    for (WARN_MSG * e = g_warn_msg_list.get_head();
+         e != NULL; e = g_warn_msg_list.get_next()) {
+        fprintf(stdout, "\nwarning(%d):%s",
+                WARN_MSG_lineno(e), WARN_MSG_msg(e));
     }
     fprintf(stdout,"\n");
 }

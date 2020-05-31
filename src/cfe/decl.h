@@ -32,14 +32,14 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 class SCOPE;
 
-#define EVAL_LIST_val(el)           ((el)->val)
-#define EVAL_LIST_name(el)          ((el)->str)
-#define EVAL_LIST_next(el)          ((el)->next)
-#define EVAL_LIST_prev(el)          ((el)->prev)
+#define EVAL_LIST_val(el) ((el)->val)
+#define EVAL_LIST_name(el) ((el)->str)
+#define EVAL_LIST_next(el) ((el)->next)
+#define EVAL_LIST_prev(el) ((el)->prev)
 class EnumValueList {
 public:
     INT val;
-    SYM    * str;
+    SYM * str;
     EnumValueList * next;
     EnumValueList * prev;
 };
@@ -47,8 +47,8 @@ public:
 
 //Enum
 //Record Enum info, and field 'name' reserved its character description.
-#define ENUM_name(e)               ((e)->name)
-#define ENUM_vallist(e)            ((e)->pevlist)
+#define ENUM_name(e) ((e)->name)
+#define ENUM_vallist(e) ((e)->pevlist)
 class Enum {
 public:
     INT val;
@@ -58,9 +58,9 @@ public:
 
 
 //EnumList
-#define ENUM_LIST_enum(el)         ((el)->e)
-#define ENUM_LIST_next(el)         ((el)->next)
-#define ENUM_LIST_prev(el)         ((el)->prev)
+#define ENUM_LIST_enum(el) ((el)->e)
+#define ENUM_LIST_next(el) ((el)->next)
+#define ENUM_LIST_prev(el) ((el)->prev)
 class EnumList {
 public:
     EnumList * next;
@@ -70,9 +70,9 @@ public:
 
 
 //UserTypeList record user defined type with 'typedef'
-#define USER_TYPE_LIST_utype(utl)   ((utl)->ut)
-#define USER_TYPE_LIST_next(utl)    ((utl)->next)
-#define USER_TYPE_LIST_prev(utl)    ((utl)->prev)
+#define USER_TYPE_LIST_utype(utl) ((utl)->ut)
+#define USER_TYPE_LIST_next(utl) ((utl)->next)
+#define USER_TYPE_LIST_prev(utl) ((utl)->prev)
 class UserTypeList {
 public:
     UserTypeList * next;
@@ -81,112 +81,125 @@ public:
 };
 
 
-//Struct
-#define STRUCT_decl_list(s)   ((s)->m_decl_list)
-#define STRUCT_tag(s)         ((s)->tag)
-#define STRUCT_is_complete(s) ((s)->is_complete)
-#define STRUCT_align(s)       ((s)->align)
-class Struct {
+//Aggregation
+#define AGGR_decl_list(s) ((s)->m_decl_list)
+#define AGGR_is_complete(s) ((s)->is_complete)
+#define AGGR_tag(s) ((s)->tag)
+#define AGGR_align(s) ((s)->align)
+#define AGGR_scope(s) ((s)->scope)
+class Aggr {
 public:
+    bool is_complete;
     Decl * m_decl_list;
     SYM * tag;
-    bool is_complete;
     UINT align;
+    SCOPE * scope;
+};
+
+
+//Struct
+#define STRUCT_decl_list(s) ((s)->m_decl_list)
+#define STRUCT_tag(s) ((s)->tag)
+#define STRUCT_is_complete(s) ((s)->is_complete)
+#define STRUCT_align(s) ((s)->align)
+#define STRUCT_scope(s) ((s)->scope)
+class Struct : public Aggr {
+public:
 };
 
 
 //Union
-#define UNION_decl_list(s)    ((s)->m_decl_list)
-#define UNION_tag(s)          ((s)->tag)
-#define UNION_is_complete(s)  ((s)->is_complete)
-#define UNION_align(s)        ((s)->align)
-class Union {
+#define UNION_decl_list(s) ((s)->m_decl_list)
+#define UNION_tag(s) ((s)->tag)
+#define UNION_is_complete(s) ((s)->is_complete)
+#define UNION_align(s) ((s)->align)
+#define UNION_scope(s) ((s)->scope)
+class Union : public Aggr {
 public:
-    Decl * m_decl_list;
-    SYM * tag;
-    bool is_complete;
-    UINT align;
 };
 
 
 //Qualifier
-#define T_QUA_CONST           (0x1)
-#define T_QUA_VOLATILE        (0x2)
-#define T_QUA_RESTRICT        (0x4)
+#define T_QUA_CONST (0x1)
+#define T_QUA_VOLATILE (0x2)
+#define T_QUA_RESTRICT (0x4)
 
 //Specifier
-#define T_SPEC_VOID           (0x8)
-#define T_SPEC_CHAR           (0x10)
-#define T_SPEC_SHORT          (0x20)
-#define T_SPEC_INT            (0x40)
-#define T_SPEC_LONG           (0x80)
-#define T_SPEC_FLOAT          (0x100)
-#define T_SPEC_DOUBLE         (0x200)
-#define T_SPEC_SIGNED         (0x400)
-#define T_SPEC_UNSIGNED       (0x800)
-#define T_SPEC_STRUCT         (0x1000)
-#define T_SPEC_UNION          (0x2000)
-#define T_SPEC_ENUM           (0x4000)
-#define T_SPEC_USER_TYPE      (0x8000)
-#define T_SPEC_LONGLONG       (0x10000)
-#define T_SPEC_BOOL           (0x20000)
+#define T_SPEC_VOID (0x8)
+#define T_SPEC_CHAR (0x10)
+#define T_SPEC_SHORT (0x20)
+#define T_SPEC_INT (0x40)
+#define T_SPEC_LONG (0x80)
+#define T_SPEC_FLOAT (0x100)
+#define T_SPEC_DOUBLE (0x200)
+#define T_SPEC_SIGNED (0x400)
+#define T_SPEC_UNSIGNED (0x800)
+#define T_SPEC_STRUCT (0x1000)
+#define T_SPEC_UNION (0x2000)
+#define T_SPEC_ENUM (0x4000)
+#define T_SPEC_USER_TYPE (0x8000)
+#define T_SPEC_LONGLONG (0x10000)
+#define T_SPEC_BOOL (0x20000)
 
 //Storage type
-#define T_STOR_AUTO           (0x40000)
-#define T_STOR_REG            (0x80000)
-#define T_STOR_STATIC         (0x100000)
-#define T_STOR_EXTERN         (0x200000)
-#define T_STOR_TYPEDEF        (0x400000)
-#define T_STOR_INLINE         (0x800000)
+#define T_STOR_AUTO (0x40000)
+#define T_STOR_REG (0x80000)
+#define T_STOR_STATIC (0x100000)
+#define T_STOR_EXTERN (0x200000)
+#define T_STOR_TYPEDEF (0x400000)
+#define T_STOR_INLINE (0x800000)
 
 
-#define MAX_TYPE_FLD          3
-#define TYPE_des(t)           ((t)->m_descriptor)
-#define TYPE_parent(t)        ((t)->m_sub_field[0])
-#define TYPE_next(t)          ((t)->m_sub_field[1])
-#define TYPE_prev(t)          ((t)->m_sub_field[2])
-#define TYPE_user_type(t)     ((t)->u1.m_user_type) //user type define
-#define TYPE_enum_type(t)     ((t)->u1.m_enum_type) //enum type define
-#define TYPE_struct_type(t)   ((t)->u1.m_struct_type) //struct type define
-#define TYPE_union_type(t)    ((t)->u1.m_union_type) //union type define
+#define MAX_TYPE_FLD 3
+#define TYPE_des(t) ((t)->m_descriptor)
+#define TYPE_parent(t) ((t)->m_sub_field[0])
+#define TYPE_next(t) ((t)->m_sub_field[1])
+#define TYPE_prev(t) ((t)->m_sub_field[2])
+#define TYPE_user_type(t) ((t)->u1.m_user_type) //user type define
+#define TYPE_enum_type(t) ((t)->u1.m_enum_type) //enum type define
+//struct type define
+#define TYPE_struct_type(t) ((t)->u1.m_struct_type)
+//union type define
+#define TYPE_union_type(t) ((t)->u1.m_union_type)
+#define TYPE_aggr_type(t) ((t)->u1.m_aggr_type)
 
-#define IS_CONST(t)           HAVE_FLAG(TYPE_des(t), T_QUA_CONST)
-#define IS_VOLATILE(t)        HAVE_FLAG(TYPE_des(t), T_QUA_VOLATILE)
-#define IS_RESTRICT(t)        HAVE_FLAG(TYPE_des(t), T_QUA_RESTRICT)
-#define IS_STRUCT(t)          HAVE_FLAG(TYPE_des(t), T_SPEC_STRUCT)
-#define IS_UNION(t)           HAVE_FLAG(TYPE_des(t), T_SPEC_UNION)
-#define IS_TYPE(t,T)          HAVE_FLAG(TYPE_des(t), T)
-#define IS_TYPED(des,T)       HAVE_FLAG((des), T)
-#define IS_REG(t)             HAVE_FLAG(TYPE_des(t), T_STOR_REG)
-#define IS_STATIC(t)          HAVE_FLAG(TYPE_des(t), T_STOR_STATIC)
-#define IS_EXTERN(t)          HAVE_FLAG(TYPE_des(t), T_STOR_EXTERN)
-#define IS_INLINE(t)          HAVE_FLAG(TYPE_des(t), T_STOR_INLINE)
-#define IS_ENUM_TYPE(t)       HAVE_FLAG(TYPE_des(t), T_SPEC_ENUM)
-#define IS_DOUBLE(t)          HAVE_FLAG(t, T_SPEC_DOUBLE)
-#define IS_FLOAT(t)           HAVE_FLAG(t, T_SPEC_FLOAT)
+#define IS_CONST(t) HAVE_FLAG(TYPE_des(t), T_QUA_CONST)
+#define IS_VOLATILE(t) HAVE_FLAG(TYPE_des(t), T_QUA_VOLATILE)
+#define IS_RESTRICT(t) HAVE_FLAG(TYPE_des(t), T_QUA_RESTRICT)
+#define IS_AGGR(t) (IS_STRUCT(t) || IS_UNION(t))
+#define IS_STRUCT(t) HAVE_FLAG(TYPE_des(t), T_SPEC_STRUCT)
+#define IS_UNION(t) HAVE_FLAG(TYPE_des(t), T_SPEC_UNION)
+#define IS_TYPE(t,T) HAVE_FLAG(TYPE_des(t), T)
+#define IS_TYPED(des,T) HAVE_FLAG((des), T)
+#define IS_REG(t) HAVE_FLAG(TYPE_des(t), T_STOR_REG)
+#define IS_STATIC(t) HAVE_FLAG(TYPE_des(t), T_STOR_STATIC)
+#define IS_EXTERN(t) HAVE_FLAG(TYPE_des(t), T_STOR_EXTERN)
+#define IS_INLINE(t) HAVE_FLAG(TYPE_des(t), T_STOR_INLINE)
+#define IS_ENUM_TYPE(t) HAVE_FLAG(TYPE_des(t), T_SPEC_ENUM)
+#define IS_DOUBLE(t) HAVE_FLAG(t, T_SPEC_DOUBLE)
+#define IS_FLOAT(t) HAVE_FLAG(t, T_SPEC_FLOAT)
 
 //The type specifier represent a variable or type-name via user type.
-#define IS_USER_TYPE_REF(t)   HAVE_FLAG(TYPE_des(t), T_SPEC_USER_TYPE)
+#define IS_USER_TYPE_REF(t) HAVE_FLAG(TYPE_des(t), T_SPEC_USER_TYPE)
 
 //The declaration defined a user type via 'typedef' operator.
-#define IS_TYPEDEF(t)         HAVE_FLAG(TYPE_des(t), T_STOR_TYPEDEF)
+#define IS_TYPEDEF(t) HAVE_FLAG(TYPE_des(t), T_STOR_TYPEDEF)
 
 //This class represent memory location modifier, basic and user defined type,
 //such as: const, volatile, void, char, short, int, long, longlong, float,
-//  double, bool, signed, unsigned, struct, union, enum-specifier,
-//  typedef-name, auto, register, static, extern, typedef. */
+//double, bool, signed, unsigned, struct, union, enum-specifier,
+//typedef-name, auto, register, static, extern, typedef.
 class TypeSpec {
 public:
     ULONG m_descriptor;
-
     union {
         TypeSpec * m_decl_list; //record struct or union body
         Decl * m_user_type; //record user defined type
         Enum * m_enum_type; //enumerator type
-        Struct * m_struct_type; //structure type
+        Struct * m_struct_type; //struct type
         Union * m_union_type; //union type
+        Aggr * m_aggr_type; //aggregation type
     } u1;
-
     TypeSpec * m_sub_field[MAX_TYPE_FLD];
 public:
     TypeSpec() { clean(); }
@@ -218,15 +231,15 @@ public:
 //Define type of Decl.
 typedef enum {
     DCL_NULL = 0,
-    DCL_ARRAY,          //array declarator
-    DCL_POINTER,        //pointer declarator
-    DCL_FUN,            //function declarator
-    DCL_ID,             //identifier
-    DCL_VARIABLE,       //variable length parameter, e.g: ...
-    DCL_TYPE_NAME,      //if current decl is TYPE_NAME,  it descript a
-                        //abstract type spec
-    DCL_DECLARATOR,     //declarator
-    DCL_DECLARATION,    //declaration
+    DCL_ARRAY, //array declarator
+    DCL_POINTER, //pointer declarator
+    DCL_FUN, //function declarator
+    DCL_ID, //identifier
+    DCL_VARIABLE, //variable length parameter, e.g: ...
+    DCL_TYPE_NAME, //if current decl is TYPE_NAME,  it descript a
+                   //abstract type spec
+    DCL_DECLARATOR, //declarator
+    DCL_DECLARATION, //declaration
     DCL_ABS_DECLARATOR, //abstract declarator
 } DCL;
 
@@ -314,31 +327,32 @@ public:
 };
 
 #ifdef _DEBUG_
-#define DECL_uid(d)              (d)->id
+#define DECL_uid(d) (d)->id
 #endif
-#define DECL_dt(d)               (d)->decl_type
-#define DECL_next(d)             (d)->next
-#define DECL_prev(d)             (d)->prev
-#define DECL_is_paren(d)         (d)->is_paren
-#define DECL_is_bit_field(d)     (d)->is_bit_field
-#define DECL_is_sub_field(d)     (d)->is_sub_field
-#define DECL_is_formal_para(d)   (d)->is_formal_para //ONLY used in DCL_DECLARATION
-#define DECL_is_fun_def(d)       (d)->is_fun_def //ONLY used in DCL_DECLARATION
-#define DECL_is_init(d)          (d)->is_init //ONLY used in DCL_DECLARATOR
-#define DECL_fieldno(d)          (d)->fieldno
-#define DECL_align(d)            (d)->align
-#define DECL_base_type_spec(d)   (d)->base_type_spec
+//ONLY used in DCL_DECLARATION
+#define DECL_is_formal_para(d) (d)->is_formal_para
+#define DECL_dt(d) (d)->decl_type
+#define DECL_next(d) (d)->next
+#define DECL_prev(d) (d)->prev
+#define DECL_is_paren(d) (d)->is_paren
+#define DECL_is_bit_field(d) (d)->is_bit_field
+#define DECL_is_sub_field(d) (d)->is_sub_field
+#define DECL_is_fun_def(d) (d)->is_fun_def //ONLY used in DCL_DECLARATION
+#define DECL_is_init(d) (d)->is_init //ONLY used in DCL_DECLARATOR
+#define DECL_fieldno(d) (d)->fieldno
+#define DECL_align(d) (d)->align
+#define DECL_base_type_spec(d) (d)->base_type_spec
 
 //If current 'decl' is DCL_DECLARATION, so it must has
 //'declaration specifier' and 'declarator list'.
 //Specifier describe the basic type such as int, char, struct/union.
 //Declarator describe the compound type such as pointer, array, function, etc.
-#define DECL_spec(d)             (d)->u0.specifier
-#define DECL_decl_list(d)        (d)->u0.declarator_list
-#define DECL_decl_scope(d)       (d)->u0.scope
+#define DECL_spec(d) (d)->u0.specifier
+#define DECL_decl_list(d) (d)->u0.declarator_list
+#define DECL_decl_scope(d) (d)->u0.scope
 
 //If current 'decl' is a function define, the followed member record its body.
-#define DECL_fun_body(d)         (d)->u2.fun_body
+#define DECL_fun_body(d) (d)->u2.fun_body
 
 //Record the formal parameter position if Decl is a parameter.
 #define DECL_formal_param_pos(d) (d)->u1.formal_param_pos
@@ -347,17 +361,17 @@ public:
 //If current 'decl' is DCL_POINTER or DCL_ID, the
 //followed member record its quanlifier specicfier.
 //qualifier include const, volatile, restrict.
-#define DECL_qua(d)              (d)->qualifier
+#define DECL_qua(d) (d)->qualifier
 
 //Line number
-#define DECL_lineno(d)           (d)->lineno
+#define DECL_lineno(d) (d)->lineno
 
 //If current 'decl' is a DCL_DECLARATOR, the followed member
 //record it initializing tree
-#define DECL_init_tree(d)        (d)->u2.init
+#define DECL_init_tree(d) (d)->u2.init
 
 //If current 'decl' is DCL_ID , the followed member record it
-#define DECL_id(d)               (d)->u1.id
+#define DECL_id(d) (d)->u1.id
 
 //If current 'decl' is DCL_ARRAY, the followed members record its
 //base and index value/expression, which may be NULL.
@@ -367,28 +381,28 @@ public:
 //and the actually dimension value will be calculated after parsing array type
 //finished, and compute_array_dim() will be invoked to compute the integer value.
 //Meanwile, DECL_array_dim() is avaiable.
-#define DECL_array_dim(d)        (d)->u1.u12.u121.dimval
-#define DECL_array_dim_exp(d)    (d)->u1.u12.u121.dimexp
+#define DECL_array_dim(d) (d)->u1.u12.u121.dimval
+#define DECL_array_dim_exp(d) (d)->u1.u12.u121.dimexp
 
 //If current 'decl' is DCL_FUN, the followed members record its
 //base and parameter list declaration, which may be NULL
-//#define DECL_fun_base(d)       (d)->u1.u13.fbase
-#define DECL_fun_para_list(d)    (d)->u1.u13.para_list
+//#define DECL_fun_base(d) (d)->u1.u13.fbase
+#define DECL_fun_para_list(d) (d)->u1.u13.para_list
 
 //Record content if current 'decl' is DCL_DECLARATOR or DCL_ABS_DECLARATOR
-#define DECL_child(d)            (d)->child
+#define DECL_child(d) (d)->child
 
 //Bit field ONLY used in DCL_DECLARATOR, and record in decl.cpp
 //checking in typeck.cpp
 //It will not be zero if current decl record a bit field
-#define DECL_bit_len(d)          (d)->u1.u16.bit_len
-//#define DECL_bit_exp(d)        (d)->u1.u16.bit_exp
+#define DECL_bit_len(d) (d)->u1.u16.bit_len
+//#define DECL_bit_exp(d) (d)->u1.u16.bit_exp
 
-//'d' must be TypeSpec-NAME ,get pure declarator list
+//'d' must be TypeSpec-NAME, get pure declarator list
 //The macro without validation check, plz call
 //get_pure_declarator if you want to check.
-#define PURE_DECL(d)             DECL_child(DECL_decl_list(d))
-#define MAX_ARRAY_INDX           0xfffffff
+#define PURE_DECL(d) DECL_child(DECL_decl_list(d))
+#define MAX_ARRAY_INDX 0xfffffff
 //END Decl
 
 //Format Decl to dump
@@ -455,6 +469,8 @@ bool is_decl_equal(Decl const* d1, Decl const* d2);
 bool is_abs_declaraotr(Decl const* declarator);
 bool is_user_type_decl(Decl const* dcl);
 bool is_user_type_ref(Decl const* dcl);
+//Return true if aggregation definition is complete.
+bool is_aggr_complete(TypeSpec const* type);
 bool is_struct_complete(TypeSpec const* type_spec);
 bool is_union_complete(TypeSpec const* type_spec);
 bool is_local_variable(Decl const* dcl);
@@ -484,9 +500,31 @@ bool is_fp(Decl const* dcl);
 bool is_fp(TypeSpec const* ty);
 bool is_float(Decl const* dcl);
 bool is_double(Decl const* dcl);
-bool is_union_exist_in_outer_scope(CHAR const* tag, OUT Union ** s);
+bool is_union_exist_in_outer_scope(SCOPE * scope,
+                                   CHAR const* tag,
+                                   OUT Union ** s);
+//Return true if the union typed declaration have already existed in both
+//current and all of outer scopes.
+bool is_union_exist_in_outer_scope(SCOPE * scope,
+                                   SYM const* tag,
+                                   OUT Union ** s);
 bool is_struct_type_exist_in_cur_scope(CHAR const* tag, OUT Struct ** s);
-bool is_struct_exist_in_outer_scope(CHAR const* tag, OUT Struct ** s);
+//Return true if the struct typed declaration have already existed in both
+//current and all of outer scopes.
+bool is_aggr_exist_in_outer_scope(SCOPE * scope,
+                                  SYM const* tag,
+                                  TypeSpec const* spec,
+                                  OUT Aggr ** s);
+bool is_aggr_exist_in_outer_scope(SCOPE * scope,
+                                  CHAR const* tag,
+                                  TypeSpec const* spec,
+                                  OUT Aggr ** s);
+bool is_struct_exist_in_outer_scope(SCOPE * scope,
+                                    SYM const* tag,
+                                    OUT Struct ** s);
+bool is_struct_exist_in_outer_scope(SCOPE * scope,
+                                    CHAR const* tag,
+                                    OUT Struct ** s);
 bool is_enum_id_exist_in_outer_scope(CHAR const* cl, OUT Enum ** e);
 
 //Return true if enum-value existed in current scope.
@@ -498,28 +536,34 @@ bool is_user_type_exist(
             UserTypeList const* ut_list,
             CHAR const* ut_name,
             Decl ** ut);
-bool is_struct_type_exist(
-            List<Struct*> const& struct_list,
-            CHAR const* tag,
-            OUT Struct ** s);
-bool is_union_type_exist(
-            List<Union*> const& u_list,
-            CHAR const* tag,
-            OUT Union ** s);
+bool is_struct_type_exist(List<Struct*> const& struct_list,
+                          SYM const* tag,
+                          OUT Struct ** s);
+bool is_struct_type_exist(List<Struct*> const& struct_list,
+                          CHAR const* tag,
+                          OUT Struct ** s);
+bool is_union_type_exist(List<Union*> const& u_list,
+                         CHAR const* tag,
+                         OUT Union ** s);
+//Seach Union list accroding to the 'tag' of union-type.
+bool is_union_type_exist(List<Union*> const& u_list,
+                         SYM const* tag,
+                         OUT Union ** u);
+bool is_aggr(TypeSpec const* type);
+bool is_aggr(Decl const* decl);
 bool is_union(TypeSpec const* type);
 bool is_union(Decl const* decl);
 bool is_struct(TypeSpec const* type);
 bool is_struct(Decl const* decl);
 bool is_bitfield(Decl const* decl);
 
+CHAR const* get_aggr_type_name(TypeSpec const* type);
 Decl const* gen_type_name(TypeSpec * ty);
 Decl const* get_return_type(Decl const* dcl);
 CHAR const* get_decl_name(Decl * dcl);
 SYM * get_decl_sym(Decl const* dcl);
 Decl const* get_pure_declarator(Decl const* decl);
-Decl * get_parameter_list(
-        Decl * dcl,
-        OUT Decl ** fun_dclor = NULL);
+Decl * get_parameter_list(Decl * dcl, OUT Decl ** fun_dclor = NULL);
 Decl const* get_decl_id(Decl const* dcl);
 Decl * get_decl_in_scope(CHAR const* name, SCOPE const* scope);
 Tree * get_decl_id_tree(Decl const* dcl);

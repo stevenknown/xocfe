@@ -274,16 +274,20 @@ bool is_in_first_set_of_declarator()
 {
     if (g_real_token == T_ID) {
         Decl * ut = NULL;
-        Struct * s;
-        Union * u;
+        Struct * s = NULL;
+        Union * u = NULL;
         if (is_user_type_exist_in_outer_scope(g_real_token_string, &ut) ||
-            is_struct_exist_in_outer_scope(g_real_token_string, &s) ||
-            is_union_exist_in_outer_scope(g_real_token_string, &u)) {
+            is_struct_exist_in_outer_scope(g_cur_scope,
+                g_real_token_string, &s) ||
+            is_union_exist_in_outer_scope(g_cur_scope,
+                g_real_token_string, &u)) {
             return true;
         }
-    } else if (is_c_type_spec(g_real_token) ||
-             is_c_type_quan(g_real_token) ||
-             is_c_stor_spec(g_real_token)) {
+        return false;
+    }
+    if (is_c_type_spec(g_real_token) ||
+        is_c_type_quan(g_real_token) ||
+        is_c_stor_spec(g_real_token)) {
         return true;
     }
     return false;
@@ -1771,7 +1775,7 @@ static Tree * sharp_start_stmt()
             break;
         default: break;
         }
-        xcom::add_next(&TREE_pragma_tok_lst(t), &last, tl);
+        xcom::add_next(&TREE_pragma_token_lst(t), &last, tl);
         if (match(g_real_token) == ST_ERR) {
             break;
         }
@@ -1961,7 +1965,7 @@ Tree * for_stmt()
     //C89 specified init-variable declared in init-field of FOR is belong
     //to function level scope.
     if (g_enable_C99_declaration) {
-        enter_sub_scope(false);
+        push_scope(false);
     }
     if (!declaration_list()) {
         //initializing expression
@@ -1996,13 +2000,13 @@ Tree * for_stmt()
     setParent(t, TREE_for_body(t));
     popst();
     if (g_enable_C99_declaration) {
-        return_to_parent_scope();
+        pop_scope();
     }
 
     return t;
 FAILED:
     if (g_enable_C99_declaration) {
-        return_to_parent_scope();
+        pop_scope();
     }
     prt2C("error in for_stmt()");
     return t;
@@ -2128,7 +2132,7 @@ SCOPE * compound_stmt(Decl * para_list)
     Tree * last;
     INT cerr = 0;
     //enter a new sub-scope region
-    SCOPE * cur_scope = enter_sub_scope(false);
+    SCOPE * cur_scope = push_scope(false);
 
     //Append parameters to declaration list of function body scope.
     Decl * lastdcl = get_last(SCOPE_decl_list(cur_scope));
@@ -2217,11 +2221,11 @@ SCOPE * compound_stmt(Decl * para_list)
     }
 
     //back to outer region
-    return_to_parent_scope();
+    pop_scope();
     return s;
 FAILED:
     match(T_RLPAREN);
-    return_to_parent_scope();
+    pop_scope();
     return s;
 }
 

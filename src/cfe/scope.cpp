@@ -87,7 +87,7 @@ SYM * add_to_symtab_list(SYM_LIST ** sym_list , SYM * sym)
 //'is_tmp_sc': true if the new scope is used for temprary.
 //And it will be removed from the sub-scope-list while return to
 //the parent.
-SCOPE * enter_sub_scope(bool is_tmp_sc)
+SCOPE * push_scope(bool is_tmp_sc)
 {
     SCOPE * sc = new_scope();
     SCOPE_level(sc) = SCOPE_level(g_cur_scope) + 1;
@@ -102,7 +102,7 @@ SCOPE * enter_sub_scope(bool is_tmp_sc)
 }
 
 
-SCOPE * return_to_parent_scope()
+SCOPE * pop_scope()
 {
     SCOPE * parent = SCOPE_parent(g_cur_scope);
     if (SCOPE_is_tmp_sc(g_cur_scope)) {
@@ -159,26 +159,26 @@ void dump_scope(SCOPE * s, UINT flag)
     if (g_tfile == NULL) { return; }
     StrBuf buf(64);
     note("\nSCOPE(id:%d, level:%d)", SCOPE_id(s), SCOPE_level(s));
-    g_indent++;
+    g_indent += 2;
 
     //symbols
     SYM_LIST * sym_list = SCOPE_sym_tab_list(s);
     if (sym_list != NULL) {
         note("\nSYMBAL:");
-        g_indent++;
+        g_indent += 2;
         note("\n");
         while (sym_list != NULL) {
             note("%s\n", SYM_name(SYM_LIST_sym(sym_list)));
             sym_list = SYM_LIST_next(sym_list);
         }
-        g_indent--;
+        g_indent -= 2;
     }
 
     //all of defined customer label in code
     LabelInfo * li = SCOPE_label_list(s).get_head();
     if (li != NULL) {
         note("\nDEFINED LABEL:");
-        g_indent++;
+        g_indent += 2;
         note("\n");
         for (; li != NULL; li = SCOPE_label_list(s).get_next()) {
             ASSERT0(map_lab2lineno(li) != 0);
@@ -186,28 +186,28 @@ void dump_scope(SCOPE * s, UINT flag)
                  SYM_name(LABEL_INFO_name(li)),
                  map_lab2lineno(li));
         }
-        g_indent--;
+        g_indent -= 2;
     }
 
     //refered customer label in code
     li = SCOPE_ref_label_list(s).get_head();
     if (li != NULL) {
         note("\nREFED LABEL:");
-        g_indent++;
+        g_indent += 2;
         note("\n");
         for (; li != NULL; li = SCOPE_ref_label_list(s).get_next()) {
             note("%s (use in line:%d)\n",
                  SYM_name(LABEL_INFO_name(li)),
                  map_lab2lineno(li));
         }
-        g_indent--;
+        g_indent -= 2;
     }
 
     //enums
     EnumList * el = SCOPE_enum_list(s);
     if (el != NULL) {
         note("\nENUM List:");
-        g_indent++;
+        g_indent += 2;
         note("\n");
         while (el != NULL) {
             buf.clean();
@@ -215,14 +215,14 @@ void dump_scope(SCOPE * s, UINT flag)
             note("%s\n", buf.buf);
             el = ENUM_LIST_next(el);
         }
-        g_indent--;
+        g_indent -= 2;
     }
 
     //user defined type, by 'typedef'
     UserTypeList * utl = SCOPE_user_type_list(s);
     if (utl != NULL) {
         note("\nUSER Type:");
-        g_indent++;
+        g_indent += 2;
         note("\n");
         while (utl != NULL) {
             buf.clean();
@@ -230,13 +230,13 @@ void dump_scope(SCOPE * s, UINT flag)
             note("%s\n", buf.buf);
             utl = USER_TYPE_LIST_next(utl);
         }
-        g_indent--;
+        g_indent -= 2;
     }
 
     //structs
     if (SCOPE_struct_list(s).get_elem_count() != 0) {
         note("\nSTRUCT:");
-        g_indent++;
+        g_indent += 2;
         note("\n");
 
         xcom::C<Struct*> * ct;
@@ -247,13 +247,13 @@ void dump_scope(SCOPE * s, UINT flag)
             note("%s\n", buf.buf);
         }
 
-        g_indent--;
+        g_indent -= 2;
     }
 
     //unions
     if (SCOPE_union_list(s).get_elem_count() != 0) {
         note("\nUNION:");
-        g_indent++;
+        g_indent += 2;
         note("\n");
 
         xcom::C<Union*> * ct;
@@ -264,7 +264,7 @@ void dump_scope(SCOPE * s, UINT flag)
             note("%s\n", buf.buf);
         }
 
-        g_indent--;
+        g_indent -= 2;
     }
 
     //declarations
@@ -272,7 +272,7 @@ void dump_scope(SCOPE * s, UINT flag)
     if (dcl != NULL) {
         note("\nDECLARATIONS:");
         note("\n");
-        g_indent++;
+        g_indent += 2;
         while (dcl != NULL) {
             buf.clean();
             format_declaration(buf, dcl);
@@ -297,7 +297,7 @@ void dump_scope(SCOPE * s, UINT flag)
             note("\n");
             dcl = DECL_next(dcl);
         }
-        g_indent--;
+        g_indent -= 2;
     }
     fflush(g_tfile);
 
@@ -305,13 +305,13 @@ void dump_scope(SCOPE * s, UINT flag)
         Tree * t = SCOPE_stmt_list(s);
         if (t != NULL) {
             note("\nSTATEMENT:");
-            g_indent++;
+            g_indent += 2;
             note("\n");
             dump_trees(t);
-            g_indent--;
+            g_indent -= 2;
         }
     }
-    g_indent--;
+    g_indent -= 2;
 }
 
 

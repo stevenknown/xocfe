@@ -463,7 +463,7 @@ void dump_tree(Tree * t)
         break;
     case TR_PRAGMA:
         note("\nPRAGMA(id:%u)", TREE_uid(t));
-        for (TokenList * tl = TREE_pragma_tok_lst(t);
+        for (TokenList * tl = TREE_pragma_token_lst(t);
              tl != NULL; tl = TL_next(tl)) {
             switch (TL_tok(tl)) {
             case T_ID:
