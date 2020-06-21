@@ -1457,7 +1457,9 @@ static INT TypeTran(Tree * t, TYCtx * cont)
                 cp_decl_begin_at(PURE_DECL(rd));
             break;
         }
-        case TR_PRAGMA: break;
+        case TR_PRAGMA:
+        case TR_PREP:
+            break;
         default: ASSERTN(0, ("unknown tree type:%d", TREE_type(t)));
         }
         t = TREE_nsib(t);
@@ -1767,6 +1769,7 @@ static INT TypeCheckCore(Tree * t, TYCtx * cont)
         case TR_DMEM:      // a.b
         case TR_INDMEM:    // a->b
         case TR_PRAGMA:
+        case TR_PREP:
             break;
         default: ASSERTN(0, ("unknown tree type:%d", TREE_type(t)));
         }

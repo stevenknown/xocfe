@@ -97,28 +97,27 @@ void dump_tree(Tree * t)
         dump_trees(TREE_rchild(t));
         g_indent -= dn;
         break;
-    case TR_ID:
-        {
-            CHAR * name = SYM_name(TREE_id(t));
-            if (TREE_id_decl(t) != NULL) {
-                sbuf.strcat("-- ");
-                if (DECL_is_sub_field(TREE_id_decl(t))) {
-                    TypeSpec * ty = DECL_base_type_spec(TREE_id_decl(t));
-                    format_decl_spec(sbuf, ty, is_pointer(TREE_id_decl(t)));
-                    note("\n%s(id:%u) base-type:%s",
-                         name, TREE_uid(t), sbuf.buf);
-                } else {
-                    SCOPE * s = DECL_decl_scope(TREE_id_decl(t));
-                    format_declaration(sbuf, get_decl_in_scope(name, s));
-                    note("\nID(id:%u):'%s' SCOPE:%d Decl:%s",
-                         TREE_uid(t), name, SCOPE_level(s), sbuf.buf);
-                }
+    case TR_ID: {
+        CHAR * name = SYM_name(TREE_id(t));
+        if (TREE_id_decl(t) != NULL) {
+            sbuf.strcat("-- ");
+            if (DECL_is_sub_field(TREE_id_decl(t))) {
+                TypeSpec * ty = DECL_base_type_spec(TREE_id_decl(t));
+                format_decl_spec(sbuf, ty, is_pointer(TREE_id_decl(t)));
+                note("\n%s(id:%u) base-type:%s",
+                     name, TREE_uid(t), sbuf.buf);
             } else {
-                note("\nreferred ID(id:%d):'%s' <%s>",
-                     TREE_uid(t), name, sbuf.buf);
+                SCOPE * s = DECL_decl_scope(TREE_id_decl(t));
+                format_declaration(sbuf, get_decl_in_scope(name, s));
+                note("\nID(id:%u):'%s' SCOPE:%d Decl:%s",
+                     TREE_uid(t), name, SCOPE_level(s), sbuf.buf);
             }
-            break;
+        } else {
+            note("\nreferred ID(id:%d):'%s' <%s>",
+                 TREE_uid(t), name, sbuf.buf);
         }
+        break;
+    }
     case TR_IMM:
         #ifdef _VC6_
         note("\nIMM(id:%u):%d (0x%x) <%s>",
@@ -179,15 +178,14 @@ void dump_tree(Tree * t)
              SYM_name(TREE_fp_str_val(t)),
              sbuf.buf);
         break;
-    case TR_ENUM_CONST:
-        {
-            INT v = get_enum_const_val(TREE_enum(t), TREE_enum_val_idx(t));
-            CHAR const* s = get_enum_const_name(
-                TREE_enum(t), TREE_enum_val_idx(t));
-            note("\nENUM_CONST(id:%u):%s %d <%s>",
-                 TREE_uid(t), s, v, sbuf.buf);
-            break;
-        }
+    case TR_ENUM_CONST: {
+        INT v = get_enum_const_val(TREE_enum(t), TREE_enum_val_idx(t));
+        CHAR const* s = get_enum_const_name(
+            TREE_enum(t), TREE_enum_val_idx(t));
+        note("\nENUM_CONST(id:%u):%s %d <%s>",
+             TREE_uid(t), s, v, sbuf.buf);
+        break;
+    }
     case TR_STRING:
         note("\nSTRING(id:%u):%s <%s>",
              TREE_uid(t), SYM_name(TREE_string_val(t)), sbuf.buf);
@@ -463,8 +461,25 @@ void dump_tree(Tree * t)
         break;
     case TR_PRAGMA:
         note("\nPRAGMA(id:%u)", TREE_uid(t));
-        for (TokenList * tl = TREE_pragma_token_lst(t);
-             tl != NULL; tl = TL_next(tl)) {
+        for (TokenList * tl = TREE_token_lst(t); tl != NULL; tl = TL_next(tl)) {
+            switch (TL_tok(tl)) {
+            case T_ID:
+                prt(" %s", SYM_name(TL_id_name(tl)));
+                break;
+            case T_STRING:
+                prt(" \"%s\"", SYM_name(TL_str(tl)));
+                break;
+            case T_CHAR_LIST:
+                prt(" '%s'", SYM_name(TL_chars(tl)));
+                break;
+            default:
+                prt(" %s", getTokenName(TL_tok(tl)));
+            }
+        }
+        break;
+    case TR_PREP:
+        note("\nPREP(id:%u)", TREE_uid(t));
+        for (TokenList * tl = TREE_token_lst(t); tl != NULL; tl = TL_next(tl)) {
             switch (TL_tok(tl)) {
             case T_ID:
                 prt(" %s", SYM_name(TL_id_name(tl)));

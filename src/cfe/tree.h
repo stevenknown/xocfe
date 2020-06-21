@@ -97,6 +97,7 @@ typedef enum _TREE_TYPE {
     TR_SCOPE,           // record a scope
     TR_EXP_SCOPE,       // record a scope which only permit expression-list.
     TR_PRAGMA,          // pragma
+    TR_PREP,            // preprocessor output info
 } TREE_TYPE;
 
 
@@ -135,7 +136,7 @@ public:
 #define TREE_psib(tn) ((tn)->prev) //prev sibling
 #define TREE_rchild(tn) ((tn)->pfld[0]) //rchild of the tree
 #define TREE_lchild(tn) ((tn)->pfld[1]) //lchild of the tree
-#define TREE_pragma_token_lst(tn) ((tn)->u1.token_list) //Pragma
+#define TREE_token_lst(tn) ((tn)->u1.token_list) //Pragma
 
 //If (determiannt) { then-stmt-list } else { else-stmt-list }
 #define TREE_if_det(tn) ((tn)->pfld[0])  //determinant of if-stmt

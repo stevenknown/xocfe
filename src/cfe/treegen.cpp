@@ -128,6 +128,7 @@ static bool verify(Tree * t)
     case TR_CALL:
     case TR_PRAGMA:
     case TR_SIZEOF:
+    case TR_PREP:
         break;
     default: ASSERTN(0, ("unknown tree type:%d", TREE_type(t)));
     } //end switch
@@ -1747,18 +1748,28 @@ static Tree * jump_stmt()
 
 static Tree * sharp_start_stmt()
 {
-    Tree * t = NEWTN(TR_PRAGMA);
-    TREE_token(t) = g_real_token;
+    Tree * t = NULL;
     ASSERT0(g_real_token == T_SHARP);
     match(T_SHARP);
-    if (g_real_token != T_PRAGMA) {
+    switch (g_real_token) {
+    case T_PRAGMA:
+        t = NEWTN(TR_PRAGMA);
+        TREE_token(t) = g_real_token;
+        match(T_PRAGMA);
+        break;
+    case T_IMM:
+        t = NEWTN(TR_PREP);
+        TREE_token(t) = g_real_token;
+        match(T_IMM);
+        break;
+    default:
         err(g_real_line_num,
             "illegal use '#', its followed keyword should be 'pragma'");
         return NULL;
     }
-    match(T_PRAGMA);
 
     TokenList * last = NULL;
+    //Match token till NEWLINE.
     g_enable_newline_token = true;
     while (g_real_token != T_NEWLINE && g_real_token != T_NUL) {
         TokenList * tl = (TokenList*)xmalloc(sizeof(TokenList));
@@ -1775,11 +1786,12 @@ static Tree * sharp_start_stmt()
             break;
         default: break;
         }
-        xcom::add_next(&TREE_pragma_token_lst(t), &last, tl);
+        xcom::add_next(&TREE_token_lst(t), &last, tl);
         if (match(g_real_token) == ST_ERR) {
             break;
         }
     }
+
     g_enable_newline_token = false;
     if (g_real_token == T_NEWLINE) {
         match(T_NEWLINE);
@@ -2427,6 +2439,9 @@ static Tree * dispatch()
     case T_VOLATILE:
     case T_ENUM:
         declaration();
+        break;
+    case T_SHARP:
+        t = sharp_start_stmt();
         break;
     case T_END:      // end of file
         return ST_SUCC;
