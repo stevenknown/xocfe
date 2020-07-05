@@ -223,7 +223,7 @@ static void append_c_head(size_t v)
 static void append_tok_tail(TOKEN tok, CHAR * tokname, INT lineno)
 {
     TokenInfo * tki = (TokenInfo*)xmalloc(sizeof(TokenInfo));
-    SYM * s = g_fe_sym_tab->add(tokname);
+    Sym * s = g_fe_sym_tab->add(tokname);
     TOKEN_INFO_name(tki) = SYM_name(s);
     TOKEN_INFO_token(tki) = tok;
     TOKEN_INFO_lineno(tki) = lineno;
@@ -236,7 +236,7 @@ static void append_tok_tail(TOKEN tok, CHAR * tokname, INT lineno)
 static void append_tok_head(TOKEN tok, CHAR * tokname, INT lineno)
 {
     TokenInfo * tki = (TokenInfo*)xmalloc(sizeof(TokenInfo));
-    SYM * s = g_fe_sym_tab->add(tokname);
+    Sym * s = g_fe_sym_tab->add(tokname);
     TOKEN_INFO_name(tki) = SYM_name(s);
     TOKEN_INFO_token(tki) = tok;
     TOKEN_INFO_lineno(tki) = lineno;
@@ -515,7 +515,7 @@ Tree * id()
 {
     Tree * t = NEWTN(TR_ID);
     TREE_token(t) = g_real_token;
-    SYM * sym = g_fe_sym_tab->add(g_real_token_string);
+    Sym * sym = g_fe_sym_tab->add(g_real_token_string);
     TREE_id(t) = sym;
     return t;
 }
@@ -812,7 +812,7 @@ static Tree * primary_exp(IN OUT UINT * st)
             TREE_token(t) = g_real_token;
             CHAR * tbuf = NULL;
             UINT tbuflen = 0;
-            SYM * sym = g_fe_sym_tab->add(g_real_token_string);
+            Sym * sym = g_fe_sym_tab->add(g_real_token_string);
             match(T_STRING);
 
             //Concatenate string.
@@ -2180,7 +2180,7 @@ SCOPE * compound_stmt(Decl * para_list)
         lastdcl = declaration;
 
         //Append parameter list to symbol list of function body scope.
-        SYM * sym = get_decl_sym(declaration);
+        Sym * sym = get_decl_sym(declaration);
         if (add_to_symtab_list(&SCOPE_sym_tab_list(cur_scope), sym)) {
             err(g_real_line_num, "'%s' already defined",
                 g_real_token_string);

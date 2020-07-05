@@ -263,7 +263,7 @@ void dump_st_stack()
     for (CELL * c = g_cell_stack.get_head(); c; c = g_cell_stack.get_next()) {
         switch (CELL_type(c)) {
         case st_ID:
-            prt("%s ", SYM_name((SYM*)CELL_val(c)));
+            prt("%s ", SYM_name((Sym*)CELL_val(c)));
             break;
         case st_IMM:
             prt("%d ", (INT)CELL_val(c));
@@ -272,13 +272,13 @@ void dump_st_stack()
             prt("%lld ", (LONGLONG)CELL_val(c));
             break;
         case st_FP:
-            prt("%s ", SYM_name((SYM*)CELL_val(c)));
+            prt("%s ", SYM_name((Sym*)CELL_val(c)));
             break;
         case st_STRING:
-            prt("\"%s\" ", SYM_name((SYM*)CELL_val(c)));
+            prt("\"%s\" ", SYM_name((Sym*)CELL_val(c)));
             break;
         case st_CHAR_LIST:
-            prt("'%s' ", SYM_name((SYM*)CELL_val(c)));
+            prt("'%s' ", SYM_name((Sym*)CELL_val(c)));
             break;
         default:
             prt("%s ", g_st_info[CELL_type(c)].name);

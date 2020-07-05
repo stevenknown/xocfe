@@ -113,9 +113,9 @@ public:
     TokenList * next;
     TOKEN token;
     union {
-        SYM * id_name;
-        SYM * chars;
-        SYM * string;
+        Sym * id_name;
+        Sym * chars;
+        Sym * string;
     } u1;
 };
 
@@ -244,11 +244,11 @@ public:
             INT indx;
         } u11; //record a enum constant
         struct {
-            SYM * id; //record a id in SymTab
+            Sym * id; //record a id in SymTab
             Decl * id_decl; //record a legal declaration
         } u12;
-        SYM * sval; //record a string in SymTab
-        SYM * lab_name; //record a label name in SymTab
+        Sym * sval; //record a string in SymTab
+        Sym * lab_name; //record a label name in SymTab
         HOST_INT ival; //record a integer value
         LabelInfo * lab_info; //record a label info defined in function level
         INT  case_value; //record a constant value of jump-case table

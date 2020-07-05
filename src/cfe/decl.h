@@ -39,7 +39,7 @@ class SCOPE;
 class EnumValueList {
 public:
     INT val;
-    SYM * str;
+    Sym * str;
     EnumValueList * next;
     EnumValueList * prev;
 };
@@ -52,7 +52,7 @@ public:
 class Enum {
 public:
     INT val;
-    SYM * name;
+    Sym * name;
     EnumValueList * pevlist;
 };
 
@@ -91,7 +91,7 @@ class Aggr {
 public:
     bool is_complete;
     Decl * m_decl_list;
-    SYM * tag;
+    Sym * tag;
     UINT align;
     SCOPE * scope;
 };
@@ -506,13 +506,13 @@ bool is_union_exist_in_outer_scope(SCOPE * scope,
 //Return true if the union typed declaration have already existed in both
 //current and all of outer scopes.
 bool is_union_exist_in_outer_scope(SCOPE * scope,
-                                   SYM const* tag,
+                                   Sym const* tag,
                                    OUT Union ** s);
 bool is_struct_type_exist_in_cur_scope(CHAR const* tag, OUT Struct ** s);
 //Return true if the struct typed declaration have already existed in both
 //current and all of outer scopes.
 bool is_aggr_exist_in_outer_scope(SCOPE * scope,
-                                  SYM const* tag,
+                                  Sym const* tag,
                                   TypeSpec const* spec,
                                   OUT Aggr ** s);
 bool is_aggr_exist_in_outer_scope(SCOPE * scope,
@@ -520,7 +520,7 @@ bool is_aggr_exist_in_outer_scope(SCOPE * scope,
                                   TypeSpec const* spec,
                                   OUT Aggr ** s);
 bool is_struct_exist_in_outer_scope(SCOPE * scope,
-                                    SYM const* tag,
+                                    Sym const* tag,
                                     OUT Struct ** s);
 bool is_struct_exist_in_outer_scope(SCOPE * scope,
                                     CHAR const* tag,
@@ -537,7 +537,7 @@ bool is_user_type_exist(
             CHAR const* ut_name,
             Decl ** ut);
 bool is_struct_type_exist(List<Struct*> const& struct_list,
-                          SYM const* tag,
+                          Sym const* tag,
                           OUT Struct ** s);
 bool is_struct_type_exist(List<Struct*> const& struct_list,
                           CHAR const* tag,
@@ -547,7 +547,7 @@ bool is_union_type_exist(List<Union*> const& u_list,
                          OUT Union ** s);
 //Seach Union list accroding to the 'tag' of union-type.
 bool is_union_type_exist(List<Union*> const& u_list,
-                         SYM const* tag,
+                         Sym const* tag,
                          OUT Union ** u);
 bool is_aggr(TypeSpec const* type);
 bool is_aggr(Decl const* decl);
@@ -561,7 +561,7 @@ CHAR const* get_aggr_type_name(TypeSpec const* type);
 Decl const* gen_type_name(TypeSpec * ty);
 Decl const* get_return_type(Decl const* dcl);
 CHAR const* get_decl_name(Decl * dcl);
-SYM * get_decl_sym(Decl const* dcl);
+Sym * get_decl_sym(Decl const* dcl);
 Decl const* get_pure_declarator(Decl const* decl);
 Decl * get_parameter_list(Decl * dcl, OUT Decl ** fun_dclor = NULL);
 Decl const* get_decl_id(Decl const* dcl);

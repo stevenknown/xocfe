@@ -39,7 +39,7 @@ class SYM_LIST {
 public:
     SYM_LIST * next;
     SYM_LIST * prev;
-    SYM * sym;
+    Sym * sym;
 };
 #define SYM_LIST_sym(syml) (syml)->sym
 #define SYM_LIST_next(syml) (syml)->next
@@ -159,6 +159,6 @@ extern SCOPE * g_cur_scope;
 extern LabelTab g_labtab;
 
 //Export Functions
-SYM * add_to_symtab_list(SYM_LIST ** sym_list , SYM * sym);
+Sym * add_to_symtab_list(SYM_LIST ** sym_list , Sym * sym);
 #endif
 

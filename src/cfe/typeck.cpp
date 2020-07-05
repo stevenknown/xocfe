@@ -613,7 +613,7 @@ static void insertCvtForParams(Tree * t)
 
 
 static bool findAndRefillStructUnionField(Decl * base,
-                                          SYM const* field_name,
+                                          Sym const* field_name,
                                           Decl ** field_decl,
                                           INT lineno)
 {
@@ -649,7 +649,7 @@ static bool findAndRefillStructUnionField(Decl * base,
     }
 
     while (field_list != NULL) {
-        SYM * sym = get_decl_sym(field_list);
+        Sym * sym = get_decl_sym(field_list);
         if (sym == field_name) {
             *field_decl = field_list;
             break;
@@ -1414,7 +1414,7 @@ static INT TypeTran(Tree * t, TYCtx * cont)
             cont->is_field = false;
 
             if (is_pointer(ld)) {
-                SYM * sym = get_decl_sym(TREE_id_decl(TREE_field(t)));
+                Sym * sym = get_decl_sym(TREE_id_decl(TREE_field(t)));
                 err(TREE_lineno(t),
                     "'.%s' : left operand points to"
                     " 'struct' type, should use '->'",
@@ -1446,7 +1446,7 @@ static INT TypeTran(Tree * t, TYCtx * cont)
             cont->is_field = false;
 
             if (!is_pointer(ld)) {
-                SYM * sym = get_decl_sym(TREE_id_decl(TREE_field(t)));
+                Sym * sym = get_decl_sym(TREE_id_decl(TREE_field(t)));
                 err(TREE_lineno(t),
                     "'->%s' : left operand has 'struct' type, use '.'",
                     SYM_name(sym));

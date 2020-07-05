@@ -277,7 +277,7 @@ Decl * new_var_decl(IN SCOPE * scope, IN CHAR * name)
 
     //Make Tree node.
     Tree * tree = allocTreeNode(TR_ID, 0);
-    SYM * sym = g_fe_sym_tab->add(name);
+    Sym * sym = g_fe_sym_tab->add(name);
     TREE_id(tree) = sym;
 
     //Make DCL_DECLARATOR.
@@ -340,13 +340,13 @@ Decl const* get_return_type(Decl const* dcl)
 
 CHAR const* get_decl_name(Decl * dcl)
 {
-    SYM * sym = get_decl_sym(dcl);
+    Sym * sym = get_decl_sym(dcl);
     if (sym == NULL) { return NULL; }
     return SYM_name(sym);
 }
 
 
-SYM * get_decl_sym(Decl const* dcl)
+Sym * get_decl_sym(Decl const* dcl)
 {
     dcl = get_decl_id(dcl);
     if (dcl != NULL) {
@@ -472,7 +472,7 @@ bool is_abs_declaraotr(Decl const* declarator)
     declarator = get_pure_declarator(declarator);
     if (declarator == NULL) { return true; }
 
-    SYM const* id = get_decl_sym(declarator);
+    Sym const* id = get_decl_sym(declarator);
     if (id == NULL) { return true; }
 
     return false;
@@ -584,7 +584,7 @@ bool is_decl_exist_in_outer_scope(CHAR const* name, OUT Decl ** dcl)
         while (dcl_list != NULL) {//declaration list
             dr = dcl_list;
             dcl_list = DECL_next(dcl_list);
-            SYM * sym = get_decl_sym(dr);
+            Sym * sym = get_decl_sym(dr);
             if (sym == NULL) {
                 continue;
             }
@@ -652,7 +652,7 @@ Decl * get_decl_in_scope(CHAR const* name, SCOPE const* scope)
     while (dcl_list != NULL) { //declaration list
         dr = dcl_list;
         dcl_list = DECL_next(dcl_list);
-        SYM const* sym = get_decl_sym(dr);
+        Sym const* sym = get_decl_sym(dr);
 
         if (sym == NULL) { continue; }
 
@@ -1282,7 +1282,7 @@ static TypeSpec * enum_spec(TypeSpec * ty)
 
     if (g_real_token == T_ID) {
         //Parse enum name. Note that the name is optional.
-        SYM * sym = g_fe_sym_tab->add(g_real_token_string);
+        Sym * sym = g_fe_sym_tab->add(g_real_token_string);
         TYPE_enum_type(ty) = new_enum();
         ENUM_name(TYPE_enum_type(ty)) = sym;
         match(T_ID);
@@ -1303,7 +1303,7 @@ static TypeSpec * enum_spec(TypeSpec * ty)
 
         //Check enum name if it is given. The name is optional.
         Enum * e = NULL;
-        SYM * enumname = ENUM_name(TYPE_enum_type(ty));
+        Sym * enumname = ENUM_name(TYPE_enum_type(ty));
         if (enumname != NULL &&
             is_enum_id_exist_in_outer_scope(SYM_name(enumname), &e)) {
             err(g_real_line_num, "'%s' : enum type redefinition",
@@ -1720,7 +1720,7 @@ static Decl * direct_abstract_declarator(TypeSpec * qua)
         DECL_is_paren(dcl) = 1;
         break;
     case T_ID: { //identifier
-        SYM * sym = g_fe_sym_tab->add(g_real_token_string);
+        Sym * sym = g_fe_sym_tab->add(g_real_token_string);
         add_to_symtab_list(&SCOPE_sym_tab_list(g_cur_scope), sym);
         dcl = new_decl(DCL_ID);
         DECL_id(dcl) = id();
@@ -1968,7 +1968,7 @@ static Decl * struct_declarator(TypeSpec * qua)
         //Bit field
         Tree * t = NULL;
         if (is_indirection(dclr)) {
-            SYM * s = get_decl_sym(dclr);
+            Sym * s = get_decl_sym(dclr);
             ASSERTN(s != NULL, ("member name cannot be NULL"));
             err(g_real_line_num,
                 "'%s' : pointer type cannot assign bit length", SYM_name(s));
@@ -2276,7 +2276,7 @@ static Decl * direct_declarator(TypeSpec * qua)
         is_paren = 1;
         break;
     case T_ID: { //identifier
-        SYM * sym = g_fe_sym_tab->add(g_real_token_string);
+        Sym * sym = g_fe_sym_tab->add(g_real_token_string);
         add_to_symtab_list(&SCOPE_sym_tab_list(g_cur_scope), sym);
         dcl = new_decl(DCL_ID);
         DECL_id(dcl) = id();
@@ -2722,7 +2722,7 @@ bool is_aggr_exist_in_outer_scope(SCOPE * scope,
 
 
 bool is_aggr_exist_in_outer_scope(SCOPE * scope,
-                                  SYM const* tag,
+                                  Sym const* tag,
                                   TypeSpec const* spec,
                                   OUT Aggr ** s)
 {
@@ -2755,7 +2755,7 @@ bool is_struct_exist_in_outer_scope(SCOPE * scope,
 //Return true if the struct typed declaration have already existed in both
 //current and all of outer scopes.
 bool is_struct_exist_in_outer_scope(SCOPE * scope,
-                                    SYM const* tag,
+                                    Sym const* tag,
                                     OUT Struct ** s)
 {
     ASSERT0(scope);
@@ -2790,7 +2790,7 @@ bool is_union_exist_in_outer_scope(SCOPE * scope,
 //Return true if the union typed declaration have already existed in both
 //current and all of outer scopes.
 bool is_union_exist_in_outer_scope(SCOPE * scope,
-                                   SYM const* tag,
+                                   Sym const* tag,
                                    OUT Union ** s)
 {
     SCOPE * sc = scope;
@@ -2880,7 +2880,7 @@ bool is_user_type_exist(UserTypeList const* ut_list,
 
 
 bool is_struct_type_exist(List<Struct*> const& struct_list,
-                          SYM const* tag,
+                          Sym const* tag,
                           OUT Struct ** s)
 {
     if (tag == NULL) { return false; }
@@ -2904,7 +2904,7 @@ bool is_struct_type_exist(List<Struct*> const& struct_list,
     xcom::C<Struct*> * ct;
     for (Struct * st = struct_list.get_head(&ct);
          ct != NULL; st = struct_list.get_next(&ct)) {
-        SYM const* sym = STRUCT_tag(st);
+        Sym const* sym = STRUCT_tag(st);
         if (sym == NULL) { continue; }
         if (::strcmp(SYM_name(sym), tag) == 0) {
             *s = st;
@@ -2924,7 +2924,7 @@ bool is_union_type_exist(List<Union*> const& u_list,
     xcom::C<Union*> * ct;
     for (Union * st = u_list.get_head(&ct);
          st != NULL; st = u_list.get_next(&ct)) {
-        SYM const* sym = UNION_tag(st);
+        Sym const* sym = UNION_tag(st);
         if (sym == NULL) { continue; }
         if (::strcmp(SYM_name(sym), tag) == 0) {
             *u = st;
@@ -2937,7 +2937,7 @@ bool is_union_type_exist(List<Union*> const& u_list,
 
 //Seach Union list accroding to the 'tag' of union-type.
 bool is_union_type_exist(List<Union*> const& u_list,
-                         SYM const* tag,
+                         Sym const* tag,
                          OUT Union ** u)
 {
     if (tag == NULL) { return false; }
@@ -4437,7 +4437,7 @@ UINT get_struct_field_ofst(Struct * st, CHAR * name)
     UINT ofst = 0;
     UINT size = 0;
     while (decl != NULL) {
-        SYM * sym = get_decl_sym(decl);
+        Sym * sym = get_decl_sym(decl);
         if (strcmp(name, SYM_name(sym)) == 0) {
             return ofst;
         }
@@ -4479,7 +4479,7 @@ static bool check_struct_union_complete(Decl * decl)
 {
     TypeSpec * type_spec = DECL_spec(decl);
     if (is_struct(type_spec) || is_union(type_spec)) {
-        SYM * sym = get_decl_sym(decl);
+        Sym * sym = get_decl_sym(decl);
         CHAR const* name = SYM_name(sym);
         if (!is_pointer(decl)) {
             bool e = false; //claim error

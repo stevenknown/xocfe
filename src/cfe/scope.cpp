@@ -56,7 +56,7 @@ SCOPE * new_scope()
 //Be usually used in scope process.
 //Return NULL if this function do not find 'sym' in 'sym_list', and
 //'sym' will be appended  into list, otherwise return 'sym'.
-SYM * add_to_symtab_list(SYM_LIST ** sym_list , SYM * sym)
+Sym * add_to_symtab_list(SYM_LIST ** sym_list , Sym * sym)
 {
     if (sym_list == NULL || sym == NULL) {
         return NULL;
