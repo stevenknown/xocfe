@@ -37,80 +37,89 @@ author: Su Zhenyu
 namespace xcom {
 
 #define MAGIC_METHOD
+#define VERTEX_UNDEF 0
+#define RPO_INTERVAL 5
+#define RPO_INIT_VAL 0
+#define RPO_UNDEF -1
 
 class Vertex;
 class Edge;
+class EdgeC;
 class Graph;
 class BMat;
 
-#define EDGE_next(e) (e)->next
-#define EDGE_prev(e) (e)->prev
-#define EDGE_from(e) (e)->from
-#define EDGE_to(e)   (e)->to
-#define EDGE_info(e) (e)->info
+#define EDGE_next(e) ((e)->next)
+#define EDGE_prev(e) ((e)->prev)
+#define EDGE_from(e) ((e)->_from)
+#define EDGE_to(e) ((e)->_to)
+#define EDGE_info(e) ((e)->_info)
 class Edge {
-public:
-    Edge()
-    {
-        prev = next = NULL;
-        from = to = NULL;
-        info = NULL;
-    }
-
 public:
     Edge * prev; //used by FreeList and EdgeHash
     Edge * next; //used by FreeList and EdgeHash
-    Vertex * from;
-    Vertex * to;
-    void * info;
+    Vertex * _from;
+    Vertex * _to;
+    void * _info;
+public:
+    void copyEdgeInfo(Edge const* src) { EDGE_info(this) = src->info(); }
+
+    void init()
+    { prev = NULL, next = NULL, _from = NULL, _to = NULL, _info = NULL; }
+    void * info() const { return EDGE_info(this); }
+
+    Vertex * from() const { return EDGE_from(this); }
+    Vertex * to() const { return EDGE_to(this); }
 };
 
 
-//The container of EDEG.
-#define EC_next(el) (el)->next
-#define EC_prev(el) (el)->prev
-#define EC_edge(el) (el)->edge
-class EdgeC {
-public:
-    EdgeC()
-    {
-        next = prev = NULL;
-        edge = NULL;
-    }
-
-public:
-    EdgeC * next;
-    EdgeC * prev;
-    Edge * edge;
-};
-
-
-#define VERTEX_UNDEF 0
-#define VERTEX_next(v)     (v)->next
-#define VERTEX_prev(v)     (v)->prev
-#define VERTEX_id(v)       (v)->id
-#define VERTEX_rpo(v)      (v)->rpo
-#define VERTEX_in_list(v)  (v)->in_list
-#define VERTEX_out_list(v) (v)->out_list
-#define VERTEX_info(v)     (v)->info
+#define VERTEX_next(v) ((v)->next)
+#define VERTEX_prev(v) ((v)->prev)
+#define VERTEX_id(v) ((v)->_id)
+#define VERTEX_rpo(v) ((v)->_rpo)
+#define VERTEX_in_list(v) ((v)->in_list)
+#define VERTEX_out_list(v) ((v)->out_list)
+#define VERTEX_info(v) ((v)->_info)
 class Vertex {
-public:
-    Vertex()
-    {
-        prev = next = NULL;
-        in_list = out_list = NULL;
-        info = NULL;
-        id = VERTEX_UNDEF;
-    }
-
 public:
     Vertex * prev; //used by FreeList and HASH
     Vertex * next; //used by FreeList and HASH
     EdgeC * in_list; //incoming edge list
     EdgeC * out_list;//outgoing edge list
-    UINT id;
-    UINT rpo;
-    void * info;
+    UINT _id;
+    INT _rpo;
+    void * _info;
+public:
+    void init()
+    { prev = NULL, next = NULL, in_list = NULL, out_list = NULL,
+      _id = VERTEX_UNDEF, _rpo = RPO_UNDEF, _info = NULL; }
+    UINT id() const { return VERTEX_id(this); }    
+
+    EdgeC * getOutList() const { return VERTEX_out_list(this); }
+    EdgeC * getInList() const { return VERTEX_in_list(this); }
+
+    INT rpo() const { return VERTEX_rpo(this); }
+};
+
+
+//The container of EDEG.
+#define EC_next(el) ((el)->next)
+#define EC_prev(el) ((el)->prev)
+#define EC_edge(el) ((el)->edge)
+class EdgeC {
+public:
+    EdgeC * next;
+    EdgeC * prev;
+    Edge * edge;
+public:
+    void init() { next = NULL, prev = NULL, edge = NULL; }
+
+    Vertex * getTo() const { return EDGE_to(EC_edge(this)); }
+    UINT getToId() const { return VERTEX_id(EDGE_to(EC_edge(this))); }
+    Vertex * getFrom() const { return EDGE_from(EC_edge(this)); }
+    UINT getFromId() const { return VERTEX_id(EDGE_from(EC_edge(this))); }
+    EdgeC * get_next() const { return EC_next(this); }
+    EdgeC * get_prev() const { return EC_prev(this); }
+    Edge * getEdge() const { return EC_edge(this); }
 };
 
 
@@ -190,12 +199,12 @@ public:
 
 
 class VertexHash : public Hash<Vertex*, VertexHashFunc> {
+    COPY_CONSTRUCTOR(VertexHash);
 protected:
     SMemPool * m_ec_pool;
 public:
     VertexHash(UINT bsize = 64) : Hash<Vertex*, VertexHashFunc>(bsize)
     { m_ec_pool = smpoolCreate(sizeof(Vertex) * 4, MEM_CONST_SIZE); }
-    COPY_CONSTRUCTOR(VertexHash);
     virtual ~VertexHash() { smpoolDelete(m_ec_pool); }
 
     virtual Vertex * create(OBJTY v)
@@ -285,6 +294,7 @@ protected:
             sizeof(Vertex), m_vertex_pool);
         ASSERT0(vex);
         ::memset(vex, 0, sizeof(Vertex));
+        vex->init();
         return vex;
     }
 
@@ -305,6 +315,7 @@ protected:
             e = (Edge*)smpoolMallocConstSize(sizeof(Edge), m_edge_pool);
             ::memset(e, 0, sizeof(Edge));
         }
+        e->init();
         EDGE_from(e) = from;
         EDGE_to(e) = to;
         addInList(to, e);
@@ -322,6 +333,7 @@ protected:
             el = (EdgeC*)smpoolMallocConstSize(sizeof(EdgeC), m_ec_pool);
             ::memset(el, 0, sizeof(EdgeC));
         }
+        el->init();
         EC_edge(el) = e;
         return el;
     }
@@ -351,7 +363,8 @@ public:
 
     void computeRpoNoRecursive(IN OUT Vertex * root,
                                OUT List<Vertex const*> & vlst);
-    bool clone(Graph const& src);
+    bool clone(Graph const& src, bool clone_edge_info, bool clone_vex_info);
+    //Count memory usage for current object.
     size_t count_mem() const;
 
     void dumpDOT(CHAR const* name = NULL) const;
@@ -374,7 +387,7 @@ public:
     bool is_pred(Vertex * v, Vertex * pred) const
     {
         for (EdgeC * e = VERTEX_in_list(v); e != NULL; e = EC_next(e)) {
-            if (EDGE_from(EC_edge(e)) == pred) {
+            if (e->getFrom() == pred) {
                 return true;
             }
         }
@@ -410,6 +423,14 @@ public:
     //Return true if vertex is exit node of graph.
     bool is_graph_exit(Vertex const* v) const
     { return VERTEX_out_list(v) == NULL; }
+    //Return true if In-Degree of 'vex' equal to 'num'.
+    bool isInDegreeEqualTo(Vertex const* vex, UINT num) const;
+    //Return true if Out-Degree of 'vex' equal to 'num'.
+    bool isOutDegreeEqualTo(Vertex const* vex, UINT num) const;
+    //Return true if rpo is available to assign to a new vertex.
+    //And the rpo is not repeated with other vertex.
+    static bool isValidRPO(INT rpo)
+    { return rpo >= 0 && (rpo % RPO_INTERVAL) != 0; }
 
     void erase();
 
@@ -481,7 +502,7 @@ public:
                                     BitSet & is_visited,
                                     DefMiscBitSetMgr & bs_mgr);
 
-    bool sortInToplogOrder(OUT Vector<UINT> & vex_vec, bool is_topdown);
+    bool sortInTopologOrder(OUT Vector<Vertex*> & vex_vec);
     void set_unique(bool is_unique)
     {
         ASSERTN(m_ec_pool != NULL, ("not yet initialized."));
@@ -505,6 +526,10 @@ public:
             m_dense_vertex = NULL;
         }
     }
+
+    //Return true if find an order of RPO for 'v'
+    //that less than order of 'ref'.
+    static bool tryFindLessRpo(Vertex * v, Vertex const* ref);
 };
 
 
@@ -531,10 +556,10 @@ public:
     DGraph(DGraph const& g);
     DGraph const& operator = (DGraph const&);
 
-    bool clone(DGraph const& g)
+    bool clone(DGraph const& g, bool clone_edge_info, bool clone_vex_info)
     {
         m_bs_mgr = g.m_bs_mgr;
-        return Graph::clone(g);
+        return Graph::clone(g, clone_edge_info, clone_vex_info);
     }
     bool cloneDomAndPdom(DGraph const& src);
     bool computeDom3(List<Vertex const*> const* vlst, BitSet const* uni);
@@ -547,6 +572,7 @@ public:
     bool computeIdom();
     bool computeIdom2(List<Vertex const*> const& vlst);
     bool computeIpdom();
+    //Count memory usage for current object.
     size_t count_mem() const;
 
     void dump_dom(FILE * h, bool dump_dom_tree = true);

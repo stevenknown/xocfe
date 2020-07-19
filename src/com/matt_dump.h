@@ -25,41 +25,37 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 @*/
-#ifndef _ERR_H_
-#define _ERR_H_
+#ifndef __MATT_DUMP_H__
+#define __MATT_DUMP_H__
 
-//record each error msg
-class WARN_MSG {
-public:
-    CHAR * msg;
-    INT lineno;
-};
-#define WARN_MSG_msg(e) (e)->msg
-#define WARN_MSG_lineno(e) (e)->lineno
+namespace xcom {
 
+//This file defines dump functions for element in Matrix.
+//For convenient dump of element that do not have default dump().
 
-//record each error msg
-class ERR_MSG {
-public:
-    CHAR * msg;
-    INT lineno;
-};
-#define ERR_MSG_msg(e) (e)->msg
-#define ERR_MSG_lineno(e) (e)->lineno
+inline void dumpElem(BIRational const& t)
+{
+    printf("\n");
+    t.dump();
+}
 
-#define TOO_MANY_ERR 10
-#define ERR_SHOW 1
-#define WARN_SHOW 2
+inline void dumpElem(Rational const& t)
+{
+    printf("\n");
+    t.dump();
+}
+
+inline void dumpElem(Float const& t)
+{
+    printf("\n");
+    t.dump();
+}
+
+inline void dumpElem(INT const& t)
+{
+    printf("\n%d", t);
+}
+
+} //namespace xcom
+
 #endif
-
-
-//Exported Variables
-extern List<ERR_MSG*> g_err_msg_list;
-extern List<WARN_MSG*> g_warn_msg_list;
-
-//Exported Functions
-void warn(INT line_num, CHAR * msg, ...);
-void err(INT line_num, CHAR * msg, ...);
-void show_err();
-void show_warn();
-INT is_too_many_err();

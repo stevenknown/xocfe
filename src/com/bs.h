@@ -116,7 +116,7 @@ public:
     void clean();
 
     //Count total memory the bitset allocated.
-    UINT count_mem() const { return get_byte_size() + sizeof(BitSet); }
+    size_t count_mem() const { return get_byte_size() + sizeof(BitSet); }
 
     //Complement set of s = univers - s.
     void complement(BitSet const& univers);
@@ -206,6 +206,9 @@ public:
     //Return true if there is no element ONE in bitset.
     bool is_empty() const;
 
+    //Set each byte in BitSet to 'val'.
+    void set(BYTE val) { ::memset(m_ptr, val, m_size); }
+
     //Reverse each bit.
     //e.g: 1001 to 0110
     //'last_bit_pos': start at 0, e.g:given '101', last bit pos is 2.
@@ -215,9 +218,9 @@ public:
 
 //Read Only BitSet.
 class ROBitSet : public BitSet {
+    COPY_CONSTRUCTOR(ROBitSet);
 public:
     ROBitSet(BYTE const* vec, UINT veclen) : BitSet(0) { init(vec, veclen); }
-    COPY_CONSTRUCTOR(ROBitSet);
     ~ROBitSet() { m_ptr = NULL; m_size = 0; }
 
     void init(BYTE const* vec, UINT veclen)
@@ -226,7 +229,8 @@ public:
         m_ptr = const_cast<BYTE*>(vec);
     }
 
-    UINT count_mem() const { return get_byte_size(); }
+    //Count memory usage for current object.
+    size_t count_mem() const { return get_byte_size(); }
 
     //Dump bit value and position.
     void dump(CHAR const* name = NULL, bool is_del = false,
@@ -257,6 +261,7 @@ public:
 
 
 class BitSetMgr {
+    COPY_CONSTRUCTOR(BitSetMgr);
 protected:
     SMemPool * m_pool;
     List<BitSet*> m_bs_list;
@@ -278,7 +283,6 @@ public:
         m_pool = NULL;
         init();
     }
-    COPY_CONSTRUCTOR(BitSetMgr);
     ~BitSetMgr() { destroy(); }
 
 
@@ -334,7 +338,9 @@ public:
         destroy();
         init();
     }
-    UINT count_mem(FILE * h = NULL);
+
+    //Count memory usage for current object.    
+    size_t count_mem(FILE * h = NULL);
 
     inline void free(IN BitSet * bs) //free bs for next use.
     {
@@ -409,9 +415,10 @@ public:
         Vector<T>::copy(vec);
         m_bs.copy(vec.m_bs);
     }
-
-    UINT count_mem() const { return m_bs.count_mem() + Vector<T>::count_mem(); }
-    inline void clean()
+    //Count memory usage for current object.
+    size_t count_mem() const
+    { return m_bs.count_mem() + Vector<T>::count_mem(); }
+    void clean()
     {
         ASSERTN(Vector<T>::m_is_init, ("VECTOR not yet initialized."));
         Vector<T>::clean();
@@ -500,6 +507,7 @@ public:
 //START BSVecMgr
 //
 template <class T> class BSVecMgr {
+    COPY_CONSTRUCTOR(BSVecMgr);
 protected:
     SList<BSVec<T>*> m_bs_list;
     SList<BSVec<T>*> m_free_list;
@@ -511,7 +519,6 @@ public:
         m_pool = NULL;
         init();
     }
-    COPY_CONSTRUCTOR(BSVecMgr);
     ~BSVecMgr(){ destroy(); }
 
     inline void init()
@@ -546,7 +553,7 @@ public:
         List<UINT> lst;
         for (BSVec<T> const* bs = m_bs_list.get_head();
              bs != m_bs_list.end(); bs = m_bs_list.get_next()) {
-            UINT c = bs->count_mem();
+            size_t c = bs->count_mem();
             C<UINT> * ct;
             UINT n = lst.get_elem_count();
             lst.get_head(&ct);
@@ -603,7 +610,7 @@ public:
         destroy();
         init();
     }
-
+    //Count memory usage for current object.
     size_t count_mem()
     {
         size_t count = smpoolGetPoolSize(m_pool);

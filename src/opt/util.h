@@ -41,45 +41,42 @@ namespace xoc {
 //    START_TIMER(t, "My Pass");
 //    Run mypass();
 //    END_TIMER(t, "My Pass");
-#define START_TIMER(_timer_, s)                      \
-    LONG _timer_ = 0;                                \
-    if (g_show_time) {                          \
-        _timer_ = getclockstart();                   \
-        prt2C("\n==-- START %s", (s));               \
+#define START_TIMER(_timer_, s) \
+    LONG _timer_ = 0; \
+    if (g_show_time) { \
+        _timer_ = getclockstart(); \
+        prt2C("\n==-- START %s", (s)); \
     }
-#define END_TIMER(_timer_, s)                        \
-    if (g_show_time) {                          \
-        prt2C("\n==-- END %s", s);                   \
-        prt2C(" Time:%fsec", getclockend(_timer_));  \
-    }
-
-
-//Timer, show format string before timer start and end.
-//e.g:
-//    START_TIMER(t, ("My Pass Name:%s", getPassName()));
-//    Run mypass();
-//    END_TIMER(t, ("My Pass Name:%s", getPassName()));
-#define START_TIMER_FMT(_timer_, s)                  \
-    LONG _timer_ = 0;                                \
-    if (g_show_time) {                          \
-        _timer_ = getclockstart();                   \
-        prt2C("\n==-- START ");                      \
-        prt2C s;                                     \
-    }
-#define END_TIMER_FMT(_timer_, s)                    \
-    if (g_show_time) {                          \
-        prt2C("\n==-- END ");                        \
-        prt2C s;                                     \
+#define END_TIMER(_timer_, s) \
+    if (g_show_time) { \
+        prt2C("\n==-- END %s", s); \
         prt2C(" Time:%fsec", getclockend(_timer_)); \
     }
 
 
-#define NIL_START  100000
+//Timer, show format string before timer start and end.
+//e.g:START_TIMER(t, ("My Pass Name:%s", getPassName()));
+//    Run mypass();
+//    END_TIMER(t, ("My Pass Name:%s", getPassName()));
+#define START_TIMER_FMT(_timer_, s) \
+    LONG _timer_ = 0; \
+    if (g_show_time) { \
+        _timer_ = getclockstart(); \
+        prt2C("\n==-- START "); \
+        prt2C s; \
+    }
+#define END_TIMER_FMT(_timer_, s) \
+    if (g_show_time) { \
+        prt2C("\n==-- END "); \
+        prt2C s; \
+        prt2C(" Time:%fsec", getclockend(_timer_)); \
+    }
+#define NIL_START 100000
 #define DUMP_INDENT_NUM 4
 
 //e.g:
-//CHAR * dumpTN(SYM* key, SYM* mapped) { return SYM_name(key); }
-//dump_rbt((RBT<SYM*, SYM*, xoc::CompareSymTab>&)map, NULL, 1000, dumpTN);
+//CHAR * dumpTN(Sym* key, Sym* mapped) { return SYM_name(key); }
+//dump_rbt((RBT<Sym*, Sym*, xoc::CompareSymTab>&)map, NULL, 1000, dumpTN);
 template <class T, class Ttgt, class CompareKey>
 void dump_rbt(RBT<T, Ttgt, CompareKey> & rbt,
               CHAR const* name = NULL,
@@ -284,6 +281,10 @@ void tfree();
 //Helper function to dump formatted string to g_tfile.
 //This function indents blank space indicated by g_indent.
 void note(CHAR const* format, ...);
+
+//Print string with indent chars.
+//h: file handler.
+void note(FILE * h, CHAR const* format, ...);
 
 //Helper function to dump formatted string to g_tfile without indent.
 bool prt(CHAR const* format, ...);

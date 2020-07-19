@@ -32,6 +32,7 @@ namespace xcom {
 
 class INTMat;
 class RMat;
+class BIRMat;
 class FloatMat;
 
 ///Rational
@@ -45,6 +46,7 @@ protected:
     friend RMat operator + (RMat const& a, RMat const& b);
     friend RMat operator - (RMat const& a, RMat const& b);
     friend class INTMat;
+    friend class BIRMat;
     bool m_is_init;
 
     void _init_hook();
@@ -91,6 +93,7 @@ INTMat operator - (INTMat const& a, INTMat const& b);
 
 class INTMat : public Matrix<INT> {
     friend class RMat;
+    friend class BIRMat;
     bool m_is_init;
     void _verify_hnf(INTMat &h) const;
     friend INTMat operator * (INTMat const& a, INTMat const& b);
