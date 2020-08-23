@@ -287,12 +287,12 @@ void dump_tree(Tree * t)
     case TR_GOTO:
         note("\nGOTO(id:%u):%s",
             TREE_uid(t),
-            SYM_name(LABEL_INFO_name(TREE_lab_info(t))));
+            SYM_name(LABELINFO_name(TREE_lab_info(t))));
         break;
     case TR_LABEL:
         note("\nLABEL(id:%u):%s",
             TREE_uid(t),
-            SYM_name(LABEL_INFO_name(TREE_lab_info(t))));
+            SYM_name(LABELINFO_name(TREE_lab_info(t))));
         break;
     case TR_CASE:
         note("\nCASE(id:%u):%d",

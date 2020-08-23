@@ -156,7 +156,7 @@ static LabelInfo * add_label(CHAR * name, INT lineno)
 
     for (li = SCOPE_label_list(sc).get_head();
          li != NULL; li = SCOPE_label_list(sc).get_next()) {
-        if (strcmp(SYM_name(LABEL_INFO_name(li)), name) == 0) {
+        if (strcmp(SYM_name(LABELINFO_name(li)), name) == 0) {
             err(g_real_line_num, "label : '%s' already defined",name);
             return NULL;
         }

@@ -183,7 +183,7 @@ void dump_scope(SCOPE * s, UINT flag)
         for (; li != NULL; li = SCOPE_label_list(s).get_next()) {
             ASSERT0(map_lab2lineno(li) != 0);
             note("%s (def in line:%d)\n",
-                 SYM_name(LABEL_INFO_name(li)),
+                 SYM_name(LABELINFO_name(li)),
                  map_lab2lineno(li));
         }
         g_indent -= 2;
@@ -197,7 +197,7 @@ void dump_scope(SCOPE * s, UINT flag)
         note("\n");
         for (; li != NULL; li = SCOPE_ref_label_list(s).get_next()) {
             note("%s (use in line:%d)\n",
-                 SYM_name(LABEL_INFO_name(li)),
+                 SYM_name(LABELINFO_name(li)),
                  map_lab2lineno(li));
         }
         g_indent -= 2;

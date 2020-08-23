@@ -1760,7 +1760,7 @@ static Decl * direct_abstract_declarator(TypeSpec * qua)
         //Check if param declaration is void, such as: foo(void).
         Decl * param_decl = parameter_type_list();
 
-        if (cnt_list(param_decl) == 1 &&
+        if (xcom::cnt_list(param_decl) == 1 &&
             is_any(param_decl) &&
             is_scalar(param_decl)) {
             ;
@@ -1769,7 +1769,7 @@ static Decl * direct_abstract_declarator(TypeSpec * qua)
         }
 
         pop_scope();
-        insertbefore_one(&dcl, dcl, ndcl);
+        xcom::insertbefore_one(&dcl, dcl, ndcl);
         if (match(T_RPAREN) != ST_SUCC) {
             err(g_real_line_num, "miss ')'");
             return dcl;
@@ -2315,7 +2315,7 @@ static Decl * direct_declarator(TypeSpec * qua)
 
         //Check if param declaration is void, such as: foo(void).
         Decl * param_decl = parameter_type_list();
-        if (cnt_list(param_decl) == 1 &&
+        if (xcom::cnt_list(param_decl) == 1 &&
             is_any(param_decl) &&
             is_scalar(param_decl)) {
             ;
@@ -2325,7 +2325,7 @@ static Decl * direct_declarator(TypeSpec * qua)
 
         pop_scope();
         DECL_is_paren(ndcl) = is_paren;
-        insertbefore_one(&dcl, dcl, ndcl);
+        xcom::insertbefore_one(&dcl, dcl, ndcl);
         if (match(T_RPAREN) != ST_SUCC) {
             err(g_real_line_num, "miss ')'");
             goto FAILED;
@@ -2399,11 +2399,11 @@ static INT label_ck(SCOPE * s)
     LabelInfo * lref = SCOPE_ref_label_list(s).get_head();
     LabelInfo * lj = NULL;
     while (lref != NULL) {
-        CHAR * name = SYM_name(LABEL_INFO_name(lref));
+        CHAR * name = SYM_name(LABELINFO_name(lref));
         ASSERT0(name);
         LabelInfo * li = SCOPE_label_list(s).get_head();
         for (; li != NULL; li = SCOPE_label_list(s).get_next()) {
-            if (strcmp(SYM_name(LABEL_INFO_name(li)), name) == 0) {
+            if (strcmp(SYM_name(LABELINFO_name(li)), name) == 0) {
                 set_lab_used(li);
                 break;
             }
@@ -2418,7 +2418,7 @@ static INT label_ck(SCOPE * s)
     lj = SCOPE_label_list(s).get_head();
     for (; lj != NULL; lj = SCOPE_label_list(s).get_next()) {
         if (!is_lab_used(lj)) {
-            warn(0, "'%s' unreferenced label", SYM_name(LABEL_INFO_name(lj)));
+            warn(0, "'%s' unreferenced label", SYM_name(LABELINFO_name(lj)));
         }
     }
     return ST_SUCC;
