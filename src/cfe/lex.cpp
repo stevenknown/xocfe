@@ -27,6 +27,7 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 @*/
 #include "../com/xcominc.h"
 #include "err.h"
+#include "cfecom.h"
 #include "cfecommacro.h"
 #include "lex.h"
 
@@ -57,6 +58,7 @@ bool g_enable_newline_token = false; //Set true to regard '\n' as token.
 //If true, recognize the true and false token.
 bool g_enable_true_false_token = true;
 FILE * g_hsrc = NULL;
+xoc::LogMgr * g_logmgr = NULL;
 INT g_real_line_num;
 
 //Make sure following Tokens or Keywords is consistent with

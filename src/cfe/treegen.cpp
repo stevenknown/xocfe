@@ -571,7 +571,8 @@ INT match(TOKEN tok)
         return ST_ERR;
     }
     if (g_dump_token) {
-        note("LINE:%10d, TOKEN:%s\n", g_real_line_num, g_real_token_string);
+        note(g_logmgr, "LINE:%10d, TOKEN:%s\n",
+             g_real_line_num, g_real_token_string);
     }
     return ST_SUCC;
 }
@@ -2491,6 +2492,13 @@ void finiParser()
         fclose(g_hsrc);
         g_hsrc = NULL;
     }
+}
+
+
+void setLogMgr(LogMgr * logmgr)
+{
+    ASSERT0(g_logmgr == NULL);
+    g_logmgr = logmgr;
 }
 
 

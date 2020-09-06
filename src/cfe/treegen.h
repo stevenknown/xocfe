@@ -65,6 +65,7 @@ bool look_forward_token(INT num, ...);
 INT match(TOKEN tok);
 
 void setParent(Tree * parent, Tree * child);
+void setLogMgr(LogMgr * lm);
 INT suck_tok();
 void suck_tok_to(INT placeholder, ...);
 #endif

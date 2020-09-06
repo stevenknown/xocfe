@@ -79,8 +79,7 @@ bool processCmdLine(INT argc, CHAR * argv[])
         if (argv[i][0] == '-') {
             CHAR const* cmdstr = &argv[i][1];
             if (!strcmp(cmdstr, "dump")) {
-                CHAR * n = process_d(argc, argv, i);
-                initdump(n, true);
+                CHAR * n = process_d(argc, argv, i);      
             } else {
                 return false;
             }
@@ -130,7 +129,6 @@ INT main(INT argc, CHAR * argv[])
             g_err_msg_list.get_elem_count(),
             g_warn_msg_list.get_elem_count());
     finiParser();
-    finidump();
     return 0;
 }
 

@@ -25,6 +25,6 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 @*/
-#define ST_ERR      1 //Status if error occur.
-#define ST_SUCC     0 //Status if successful.
-#define ST_EOF      2 //Status meet End-Of-File.
+#define ST_ERR 1 //Status if error occur.
+#define ST_SUCC 0 //Status if successful.
+#define ST_EOF 2 //Status meet End-Of-File.

@@ -28,6 +28,7 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "cfe_targ_const_info.h"
 
 #include "../com/xcominc.h"
+#include "../opt/logmgr.h"
 #include "../opt/util.h"
 #include "../opt/symtab.h"
 using namespace xoc;

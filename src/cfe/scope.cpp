@@ -53,6 +53,22 @@ SCOPE * new_scope()
 }
 
 
+void inc_indent(UINT ind)
+{
+    if (g_logmgr != NULL)  {
+        g_logmgr->incIndent(ind);
+    }
+}
+
+
+void dec_indent(UINT ind)
+{
+    if (g_logmgr != NULL)  {
+        g_logmgr->decIndent(ind);
+    }
+}
+
+
 //Be usually used in scope process.
 //Return NULL if this function do not find 'sym' in 'sym_list', and
 //'sym' will be appended  into list, otherwise return 'sym'.
@@ -141,177 +157,176 @@ SCOPE * get_last_sub_scope(SCOPE * s)
 //Dump scope in a cascade of tree.
 void dump_scope_tree(SCOPE * s, INT indent)
 {
-    if (g_tfile == NULL) { return; }
+    if (g_logmgr == NULL) { return; }
     if (s == NULL) return;
-    note("\n");
+    note(g_logmgr, "\n");
     INT i = indent;
-    while (i-- > 0) { prt("    "); }
-    prt("SCOPE(%d),level(%d)", SCOPE_id(s), SCOPE_level(s));
-    fflush(g_tfile);
+    while (i-- > 0) { prt(g_logmgr, "    "); }
+    prt(g_logmgr, "SCOPE(%d),level(%d)", SCOPE_id(s), SCOPE_level(s));
     dump_scope_tree(SCOPE_sub(s), indent+1);
     dump_scope_tree(SCOPE_nsibling(s), indent);
 }
 
 
-//Recusively dump SCOPE information, include symbol, label, type info, and trees.
+//Recusively dump SCOPE information, include symbol,
+//label, type info, and trees.
 void dump_scope(SCOPE * s, UINT flag)
 {
-    if (g_tfile == NULL) { return; }
+    if (g_logmgr == NULL) { return; }
     StrBuf buf(64);
-    note("\nSCOPE(id:%d, level:%d)", SCOPE_id(s), SCOPE_level(s));
-    g_indent += 2;
+    note(g_logmgr, "\nSCOPE(id:%d, level:%d)", SCOPE_id(s), SCOPE_level(s));
+    g_logmgr->incIndent(2);
 
     //symbols
     SYM_LIST * sym_list = SCOPE_sym_tab_list(s);
     if (sym_list != NULL) {
-        note("\nSYMBAL:");
-        g_indent += 2;
-        note("\n");
+        note(g_logmgr, "\nSYMBAL:");
+        g_logmgr->incIndent(2);
+        note(g_logmgr, "\n");
         while (sym_list != NULL) {
-            note("%s\n", SYM_name(SYM_LIST_sym(sym_list)));
+            note(g_logmgr, "%s\n", SYM_name(SYM_LIST_sym(sym_list)));
             sym_list = SYM_LIST_next(sym_list);
         }
-        g_indent -= 2;
+        g_logmgr->decIndent(2);
     }
 
     //all of defined customer label in code
     LabelInfo * li = SCOPE_label_list(s).get_head();
     if (li != NULL) {
-        note("\nDEFINED LABEL:");
-        g_indent += 2;
-        note("\n");
+        note(g_logmgr, "\nDEFINED LABEL:");
+        g_logmgr->incIndent(2);
+        note(g_logmgr, "\n");
         for (; li != NULL; li = SCOPE_label_list(s).get_next()) {
             ASSERT0(map_lab2lineno(li) != 0);
-            note("%s (def in line:%d)\n",
+            note(g_logmgr, "%s (def in line:%d)\n",
                  SYM_name(LABELINFO_name(li)),
                  map_lab2lineno(li));
         }
-        g_indent -= 2;
+        g_logmgr->decIndent(2);
     }
 
     //refered customer label in code
     li = SCOPE_ref_label_list(s).get_head();
     if (li != NULL) {
-        note("\nREFED LABEL:");
-        g_indent += 2;
-        note("\n");
+        note(g_logmgr, "\nREFED LABEL:");
+        g_logmgr->incIndent(2);
+        note(g_logmgr, "\n");
         for (; li != NULL; li = SCOPE_ref_label_list(s).get_next()) {
-            note("%s (use in line:%d)\n",
+            note(g_logmgr, "%s (use in line:%d)\n",
                  SYM_name(LABELINFO_name(li)),
                  map_lab2lineno(li));
         }
-        g_indent -= 2;
+        g_logmgr->decIndent(2);
     }
 
     //enums
     EnumList * el = SCOPE_enum_list(s);
     if (el != NULL) {
-        note("\nENUM List:");
-        g_indent += 2;
-        note("\n");
+        note(g_logmgr, "\nENUM List:");
+        g_logmgr->incIndent(2);
+        note(g_logmgr, "\n");
         while (el != NULL) {
             buf.clean();
             format_enum_complete(buf, ENUM_LIST_enum(el));
-            note("%s\n", buf.buf);
+            note(g_logmgr, "%s\n", buf.buf);
             el = ENUM_LIST_next(el);
         }
-        g_indent -= 2;
+        g_logmgr->decIndent(2);
     }
 
     //user defined type, by 'typedef'
     UserTypeList * utl = SCOPE_user_type_list(s);
     if (utl != NULL) {
-        note("\nUSER Type:");
-        g_indent += 2;
-        note("\n");
+        note(g_logmgr, "\nUSER Type:");
+        g_logmgr->incIndent(2);
+        note(g_logmgr, "\n");
         while (utl != NULL) {
             buf.clean();
             format_user_type_spec(buf, USER_TYPE_LIST_utype(utl));
-            note("%s\n", buf.buf);
+            note(g_logmgr, "%s\n", buf.buf);
             utl = USER_TYPE_LIST_next(utl);
         }
-        g_indent -= 2;
+        g_logmgr->decIndent(2);
     }
 
     //structs
     if (SCOPE_struct_list(s).get_elem_count() != 0) {
-        note("\nSTRUCT:");
-        g_indent += 2;
-        note("\n");
+        note(g_logmgr, "\nSTRUCT:");
+        g_logmgr->incIndent(2);
+        note(g_logmgr, "\n");
 
         xcom::C<Struct*> * ct;
         for (Struct * st = SCOPE_struct_list(s).get_head(&ct);
              st != NULL; st = SCOPE_struct_list(s).get_next(&ct)) {
             buf.clean();
             format_struct_complete(buf, st);
-            note("%s\n", buf.buf);
+            note(g_logmgr, "%s\n", buf.buf);
         }
 
-        g_indent -= 2;
+        g_logmgr->decIndent(2);
     }
 
     //unions
     if (SCOPE_union_list(s).get_elem_count() != 0) {
-        note("\nUNION:");
-        g_indent += 2;
-        note("\n");
+        note(g_logmgr, "\nUNION:");
+        g_logmgr->incIndent(2);
+        note(g_logmgr, "\n");
 
         xcom::C<Union*> * ct;
         for (Union * st = SCOPE_union_list(s).get_head(&ct);
              st != NULL; st = SCOPE_union_list(s).get_next(&ct)) {
             buf.clean();
             format_union_complete(buf, st);
-            note("%s\n", buf.buf);
+            note(g_logmgr, "%s\n", buf.buf);
         }
 
-        g_indent -= 2;
+        g_logmgr->decIndent(2);
     }
 
     //declarations
     Decl * dcl = SCOPE_decl_list(s);
     if (dcl != NULL) {
-        note("\nDECLARATIONS:");
-        note("\n");
-        g_indent += 2;
+        note(g_logmgr, "\nDECLARATIONS:");
+        note(g_logmgr, "\n");
+        g_logmgr->incIndent(2);
         while (dcl != NULL) {
             buf.clean();
             format_declaration(buf, dcl);
-            note("%s", buf.buf);
+            note(g_logmgr, "%s", buf.buf);
             dump_decl(dcl);
 
             //Dump function body
             if (DECL_is_fun_def(dcl) && HAVE_FLAG(flag, DUMP_SCOPE_FUNC_BODY)) {
-                g_indent += 2;
+                g_logmgr->incIndent(2);
                 dump_scope(DECL_fun_body(dcl), flag);
-                g_indent -= 2;
+                g_logmgr->decIndent(2);
             }
 
             //Dump initializing value/expression.
             if (DECL_is_init(DECL_decl_list(dcl))) {
-                note("= ");
-                g_indent += 2;
+                note(g_logmgr, "= ");
+                g_logmgr->incIndent(2);
                 dump_tree(DECL_init_tree(DECL_decl_list(dcl)));
-                g_indent -= 2;
+                g_logmgr->decIndent(2);
             }
 
-            note("\n");
+            note(g_logmgr, "\n");
             dcl = DECL_next(dcl);
         }
-        g_indent -= 2;
+        g_logmgr->decIndent(2);
     }
-    fflush(g_tfile);
 
     if (HAVE_FLAG(flag, DUMP_SCOPE_STMT_TREE)) {
         Tree * t = SCOPE_stmt_list(s);
         if (t != NULL) {
-            note("\nSTATEMENT:");
-            g_indent += 2;
-            note("\n");
+            note(g_logmgr, "\nSTATEMENT:");
+            g_logmgr->incIndent(2);
+            note(g_logmgr, "\n");
             dump_trees(t);
-            g_indent -= 2;
+            g_logmgr->decIndent(2);
         }
     }
-    g_indent -= 2;
+    g_logmgr->decIndent(2);
 }
 
 
