@@ -63,6 +63,7 @@ Tree * exp_list();
 bool look_forward_token(INT num, ...);
 
 INT match(TOKEN tok);
+UINT mapRealLineToSrcLine(UINT realline);
 
 void setParent(Tree * parent, Tree * child);
 void setLogMgr(LogMgr * lm);

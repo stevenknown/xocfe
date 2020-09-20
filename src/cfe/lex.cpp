@@ -61,6 +61,10 @@ FILE * g_hsrc = NULL;
 xoc::LogMgr * g_logmgr = NULL;
 INT g_real_line_num;
 
+//Record the number of disgarded line, that always
+//sparking by preprecossor.
+UINT g_disgarded_line_num = 0;
+
 //Make sure following Tokens or Keywords is consistent with
 //declarations of TOKEN enumeration declared in lex.h.
 //CAVEAT: The order of tokens must be consistent
@@ -264,9 +268,9 @@ static INT getLine()
         ::memset(g_ofst_tab, 0, g_ofst_tab_byte_size);
     } else if (OFST_TAB_LINE_SIZE < (g_src_line_num + 10)) {
         g_ofst_tab = (LONG*)::realloc(g_ofst_tab, g_ofst_tab_byte_size +
-            MAX_OFST_BUF_LEN * sizeof(LONG));
+                                      MAX_OFST_BUF_LEN * sizeof(LONG));
         ::memset(((BYTE*)g_ofst_tab) + g_ofst_tab_byte_size,
-            0, MAX_OFST_BUF_LEN * sizeof(LONG));
+                 0, MAX_OFST_BUF_LEN * sizeof(LONG));
         g_ofst_tab_byte_size += MAX_OFST_BUF_LEN * sizeof(LONG);
     }
 
