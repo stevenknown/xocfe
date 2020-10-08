@@ -3019,7 +3019,7 @@ UINT computeArraySize(TypeSpec const* spec, Decl const* decl)
     }
 
     //Note host's UINT may be longer than target machine.
-    ASSERTN(computeConstBitLen(num) <= BYTE_PER_INT * BIT_PER_BYTE,
+    ASSERTN(computeMaxBitSizeForValue(num) <= BYTE_PER_INT * BIT_PER_BYTE,
             ("too large array"));
     return num;
 }

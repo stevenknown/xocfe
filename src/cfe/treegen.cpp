@@ -1862,7 +1862,7 @@ static Tree * label_stmt()
                 err(g_real_line_num, "expected constant expression");
                 return t;
             }
-            if (computeConstBitLen((TMWORD)idx) >
+            if (computeMaxBitSizeForValue((TMWORD)idx) >
                 (BYTE_PER_INT * HOST_BIT_PER_BYTE)) {
                 err(g_real_line_num, "bitsize of const is more than %dbit",
                     (sizeof(TREE_case_value(t)) * HOST_BIT_PER_BYTE));
