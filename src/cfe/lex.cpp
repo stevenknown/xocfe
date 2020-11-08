@@ -51,14 +51,14 @@ CHAR g_cur_token_string[MAX_BUF_LINE] = {0};
 CHAR * g_cur_line; //Current parsing line of src file
 UINT g_cur_line_len = 0; //The current line buf length ,than read from file buf
 TOKEN g_cur_token = T_NUL;
-LONG * g_ofst_tab = NULL; //Record offset of each line in src file
+LONG * g_ofst_tab = nullptr; //Record offset of each line in src file
 LONG g_ofst_tab_byte_size = 0; //Record byte size position of Offset Table
 bool g_enable_newline_token = false; //Set true to regard '\n' as token.
 
 //If true, recognize the true and false token.
 bool g_enable_true_false_token = true;
-FILE * g_hsrc = NULL;
-xoc::LogMgr * g_logmgr = NULL;
+FILE * g_hsrc = nullptr;
+xoc::LogMgr * g_logmgr = nullptr;
 INT g_real_line_num;
 
 //Record the number of disgarded line, that always
@@ -262,7 +262,7 @@ static UINT g_keyword_num = sizeof(g_keyword_info)/sizeof(g_keyword_info[0]);
 static INT getLine()
 {
     //Initializing or realloc offset table.
-    if (g_ofst_tab == NULL) {
+    if (g_ofst_tab == nullptr) {
         g_ofst_tab_byte_size = MAX_OFST_BUF_LEN * sizeof(LONG);
         g_ofst_tab = (LONG*)::malloc(g_ofst_tab_byte_size);
         ::memset(g_ofst_tab, 0, g_ofst_tab_byte_size);
@@ -277,17 +277,17 @@ static INT getLine()
     UINT pos = 0;
     bool is_some_chars_in_cur_line = false;
     for (;;) {
-        if (g_cur_line == NULL) {
+        if (g_cur_line == nullptr) {
             g_cur_line = (CHAR*)::malloc(MAX_BUF_LINE);
             g_cur_line_len = MAX_BUF_LINE;
-            if (g_cur_line == NULL) {
+            if (g_cur_line == nullptr) {
                 goto FAILED;
             }
         }
 
         //Read MAX_BUF_LINE characters from src file.
         if (g_file_buf_pos >= g_last_read_num) {
-            ASSERT0(g_hsrc != NULL);
+            ASSERT0(g_hsrc != nullptr);
             INT dw = (INT)fread(g_file_buf, 1, MAX_BUF_LINE, g_hsrc);
             if (dw == 0) {
                 if (!is_some_chars_in_cur_line) {
@@ -427,7 +427,7 @@ void initKeyWordTab()
 
 static TOKEN getKeyWord(CHAR const* s)
 {
-    if (s == NULL) return T_NUL;
+    if (s == nullptr) return T_NUL;
     return g_str2token.get(s);
 }
 
@@ -438,7 +438,7 @@ static CHAR getNextChar()
 {
     CHAR res = '0';
     INT st = 0;
-    if (g_cur_line == NULL) {
+    if (g_cur_line == nullptr) {
         if ((st = getLine()) == ST_SUCC) {
             res = g_cur_line[g_cur_line_pos];
             g_cur_line_pos++;

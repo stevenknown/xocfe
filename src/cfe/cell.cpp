@@ -31,9 +31,9 @@ static List<CELL*> g_cell_free_list;
 
 static void * xmalloc(size_t size)
 {
-    ASSERT0(g_pool_general_used != NULL);
+    ASSERT0(g_pool_general_used != nullptr);
     void * p = smpoolMalloc(size, g_pool_general_used);
-    if (p == NULL) return NULL;
+    if (p == nullptr) return nullptr;
     ::memset(p, 0, size);
     return p;
 }
@@ -45,7 +45,7 @@ static void * xmalloc(size_t size)
 //When you need a new CELL , invoking 'newcell()', but is not 'get_free_cell()'.
 void free_cell(CELL * c)
 {
-    if (c == NULL) {
+    if (c == nullptr) {
         return;
     }
     g_cell_free_list.append_tail(c);
@@ -60,7 +60,7 @@ CELL * get_free_cell()
         ::memset(c, 0 , sizeof(CELL));
         return c;
     }
-    return NULL;
+    return nullptr;
 }
 
 

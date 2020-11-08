@@ -120,3 +120,4 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #endif
 
 #endif
+//Avoid cpp complaint about no-newline

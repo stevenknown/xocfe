@@ -106,9 +106,9 @@ public:
 
         SCOPE_id(this) = sc++;
         SCOPE_level(this) = -1;
-        SCOPE_parent(this) = NULL;
-        SCOPE_nsibling(this) = NULL;
-        SCOPE_sub(this)  = NULL;
+        SCOPE_parent(this) = nullptr;
+        SCOPE_nsibling(this) = nullptr;
+        SCOPE_sub(this)  = nullptr;
     }
 
     void destroy()

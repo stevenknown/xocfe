@@ -49,7 +49,7 @@ static LONGLONG popv()
 {
     CELL *c = g_cell_stack.pop();
     if (!c) {
-        err(g_real_line_num, "cell value stack cannot be NULL");
+        err(g_real_line_num, "cell value stack cannot be nullptr");
         return -1;
     }
     free_cell(c);
@@ -138,7 +138,7 @@ static bool compute_unary_op(Tree * t)
 
 static bool compute_binary_op(Tree * t)
 {
-    if (t == NULL) { return false; }
+    if (t == nullptr) { return false; }
     LONGLONG r,l;
     if (!compute_conditional_exp(TREE_lchild(t))) { return false; }
     if (!compute_conditional_exp(TREE_rchild(t))) { return false; }
@@ -254,7 +254,7 @@ static bool compute_binary_op(Tree * t)
 
 static bool compute_conditional_exp(IN Tree * t)
 {
-    if (t == NULL) { return true;}
+    if (t == nullptr) { return true;}
     switch (TREE_type(t)) {
     case TR_ENUM_CONST:
         return compute_enum_const(t);
@@ -293,7 +293,7 @@ static bool compute_conditional_exp(IN Tree * t)
         return compute_sizeof(t);
     case TR_ID:
         {
-            Decl * dcl = NULL;
+            Decl * dcl = nullptr;
             if (!is_decl_exist_in_outer_scope(SYM_name(TREE_id(t)), &dcl)) {
                 err(TREE_lineno(t), "'%s' undefined");
                 return false;

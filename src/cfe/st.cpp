@@ -29,7 +29,7 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 static Stack<CELL*> g_cell_stack;
 ST_INFO g_st_info[]={
-    {st_NULL,                "NULL" },
+    {st_NULL,                "nullptr" },
 
     //non-terminal chacartor as followed
     {st_ID,                  "id" },
@@ -242,7 +242,7 @@ SST get_top_nth_st(INT n)
 INT is_sst_exist(SST sst)
 {
     for (CELL * c = g_cell_stack.get_head();
-         c != NULL; c = g_cell_stack.get_next()) {
+         c != nullptr; c = g_cell_stack.get_next()) {
         if (CELL_type(c) == sst) {
             return 1;
         }
@@ -254,7 +254,7 @@ INT is_sst_exist(SST sst)
 SST get_top_st()
 {
     CELL * c = g_cell_stack.get_top();
-    return c != NULL ? (SST)CELL_type(c) : st_NULL;
+    return c != nullptr ? (SST)CELL_type(c) : st_NULL;
 }
 
 

@@ -30,7 +30,7 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 //C language's key words.
 typedef enum _TOKEN {
-    T_NUL = 0,      // NULL
+    T_NUL = 0,      // nullptr
     T_ID,           // ID = (A-Z|a-z)( A-Z|a-z|0-9 )*
     T_IMM,          // 0~9
     T_IMML,         // 0~9L

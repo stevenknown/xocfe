@@ -29,7 +29,7 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 //The outermost scope is global region which id is 0, and the inner
 //scope scope is function body-stmt which id is 1, etc.
-SCOPE * g_cur_scope = NULL;
+SCOPE * g_cur_scope = nullptr;
 List<SCOPE*> g_scope_list;
 UINT g_scope_count = 0;
 LAB2LINE_MAP g_lab2lineno;
@@ -55,7 +55,7 @@ SCOPE * new_scope()
 
 void inc_indent(UINT ind)
 {
-    if (g_logmgr != NULL)  {
+    if (g_logmgr != nullptr)  {
         g_logmgr->incIndent(ind);
     }
 }
@@ -63,27 +63,27 @@ void inc_indent(UINT ind)
 
 void dec_indent(UINT ind)
 {
-    if (g_logmgr != NULL)  {
+    if (g_logmgr != nullptr)  {
         g_logmgr->decIndent(ind);
     }
 }
 
 
 //Be usually used in scope process.
-//Return NULL if this function do not find 'sym' in 'sym_list', and
+//Return nullptr if this function do not find 'sym' in 'sym_list', and
 //'sym' will be appended  into list, otherwise return 'sym'.
 Sym * add_to_symtab_list(SYM_LIST ** sym_list , Sym * sym)
 {
-    if (sym_list == NULL || sym == NULL) {
-        return NULL;
+    if (sym_list == nullptr || sym == nullptr) {
+        return nullptr;
     }
-    if ((*sym_list) == NULL) {
+    if ((*sym_list) == nullptr) {
         *sym_list = (SYM_LIST*)xmalloc(sizeof(SYM_LIST));
         SYM_LIST_sym(*sym_list) = sym;
-        return NULL;
+        return nullptr;
     } else {
-        SYM_LIST * p = *sym_list, * q = NULL;
-        while (p != NULL) {
+        SYM_LIST * p = *sym_list, * q = nullptr;
+        while (p != nullptr) {
             q = p;
             if (SYM_LIST_sym(p) == sym) {
                 //'sym' already exist, return 'sym' as result
@@ -96,7 +96,7 @@ Sym * add_to_symtab_list(SYM_LIST ** sym_list , Sym * sym)
         q = SYM_LIST_next(q);
         SYM_LIST_sym(q) = sym;
     }
-    return NULL;
+    return nullptr;
 }
 
 
@@ -139,7 +139,7 @@ SCOPE * get_global_scope()
         }
         s = SCOPE_parent(s);
     }
-    return NULL;
+    return nullptr;
 }
 
 
@@ -147,7 +147,7 @@ SCOPE * get_last_sub_scope(SCOPE * s)
 {
     ASSERT0(s);
     SCOPE * sub = SCOPE_sub(s);
-    while (SCOPE_nsibling(sub) != NULL) {
+    while (SCOPE_nsibling(sub) != nullptr) {
         sub = SCOPE_nsibling(sub);
     }
     return sub;
@@ -157,8 +157,8 @@ SCOPE * get_last_sub_scope(SCOPE * s)
 //Dump scope in a cascade of tree.
 void dump_scope_tree(SCOPE * s, INT indent)
 {
-    if (g_logmgr == NULL) { return; }
-    if (s == NULL) return;
+    if (g_logmgr == nullptr) { return; }
+    if (s == nullptr) return;
     note(g_logmgr, "\n");
     INT i = indent;
     while (i-- > 0) { prt(g_logmgr, "    "); }
@@ -172,18 +172,18 @@ void dump_scope_tree(SCOPE * s, INT indent)
 //label, type info, and trees.
 void dump_scope(SCOPE * s, UINT flag)
 {
-    if (g_logmgr == NULL) { return; }
+    if (g_logmgr == nullptr) { return; }
     StrBuf buf(64);
     note(g_logmgr, "\nSCOPE(id:%d, level:%d)", SCOPE_id(s), SCOPE_level(s));
     g_logmgr->incIndent(2);
 
     //symbols
     SYM_LIST * sym_list = SCOPE_sym_tab_list(s);
-    if (sym_list != NULL) {
+    if (sym_list != nullptr) {
         note(g_logmgr, "\nSYMBAL:");
         g_logmgr->incIndent(2);
         note(g_logmgr, "\n");
-        while (sym_list != NULL) {
+        while (sym_list != nullptr) {
             note(g_logmgr, "%s\n", SYM_name(SYM_LIST_sym(sym_list)));
             sym_list = SYM_LIST_next(sym_list);
         }
@@ -192,11 +192,11 @@ void dump_scope(SCOPE * s, UINT flag)
 
     //all of defined customer label in code
     LabelInfo * li = SCOPE_label_list(s).get_head();
-    if (li != NULL) {
+    if (li != nullptr) {
         note(g_logmgr, "\nDEFINED LABEL:");
         g_logmgr->incIndent(2);
         note(g_logmgr, "\n");
-        for (; li != NULL; li = SCOPE_label_list(s).get_next()) {
+        for (; li != nullptr; li = SCOPE_label_list(s).get_next()) {
             ASSERT0(map_lab2lineno(li) != 0);
             note(g_logmgr, "%s (def in line:%d)\n",
                  SYM_name(LABELINFO_name(li)),
@@ -207,11 +207,11 @@ void dump_scope(SCOPE * s, UINT flag)
 
     //refered customer label in code
     li = SCOPE_ref_label_list(s).get_head();
-    if (li != NULL) {
+    if (li != nullptr) {
         note(g_logmgr, "\nREFED LABEL:");
         g_logmgr->incIndent(2);
         note(g_logmgr, "\n");
-        for (; li != NULL; li = SCOPE_ref_label_list(s).get_next()) {
+        for (; li != nullptr; li = SCOPE_ref_label_list(s).get_next()) {
             note(g_logmgr, "%s (use in line:%d)\n",
                  SYM_name(LABELINFO_name(li)),
                  map_lab2lineno(li));
@@ -221,11 +221,11 @@ void dump_scope(SCOPE * s, UINT flag)
 
     //enums
     EnumList * el = SCOPE_enum_list(s);
-    if (el != NULL) {
+    if (el != nullptr) {
         note(g_logmgr, "\nENUM List:");
         g_logmgr->incIndent(2);
         note(g_logmgr, "\n");
-        while (el != NULL) {
+        while (el != nullptr) {
             buf.clean();
             format_enum_complete(buf, ENUM_LIST_enum(el));
             note(g_logmgr, "%s\n", buf.buf);
@@ -236,11 +236,11 @@ void dump_scope(SCOPE * s, UINT flag)
 
     //user defined type, by 'typedef'
     UserTypeList * utl = SCOPE_user_type_list(s);
-    if (utl != NULL) {
+    if (utl != nullptr) {
         note(g_logmgr, "\nUSER Type:");
         g_logmgr->incIndent(2);
         note(g_logmgr, "\n");
-        while (utl != NULL) {
+        while (utl != nullptr) {
             buf.clean();
             format_user_type_spec(buf, USER_TYPE_LIST_utype(utl));
             note(g_logmgr, "%s\n", buf.buf);
@@ -257,7 +257,7 @@ void dump_scope(SCOPE * s, UINT flag)
 
         xcom::C<Struct*> * ct;
         for (Struct * st = SCOPE_struct_list(s).get_head(&ct);
-             st != NULL; st = SCOPE_struct_list(s).get_next(&ct)) {
+             st != nullptr; st = SCOPE_struct_list(s).get_next(&ct)) {
             buf.clean();
             format_struct_complete(buf, st);
             note(g_logmgr, "%s\n", buf.buf);
@@ -274,7 +274,7 @@ void dump_scope(SCOPE * s, UINT flag)
 
         xcom::C<Union*> * ct;
         for (Union * st = SCOPE_union_list(s).get_head(&ct);
-             st != NULL; st = SCOPE_union_list(s).get_next(&ct)) {
+             st != nullptr; st = SCOPE_union_list(s).get_next(&ct)) {
             buf.clean();
             format_union_complete(buf, st);
             note(g_logmgr, "%s\n", buf.buf);
@@ -285,11 +285,11 @@ void dump_scope(SCOPE * s, UINT flag)
 
     //declarations
     Decl * dcl = SCOPE_decl_list(s);
-    if (dcl != NULL) {
+    if (dcl != nullptr) {
         note(g_logmgr, "\nDECLARATIONS:");
         note(g_logmgr, "\n");
         g_logmgr->incIndent(2);
-        while (dcl != NULL) {
+        while (dcl != nullptr) {
             buf.clean();
             format_declaration(buf, dcl);
             note(g_logmgr, "%s", buf.buf);
@@ -318,7 +318,7 @@ void dump_scope(SCOPE * s, UINT flag)
 
     if (HAVE_FLAG(flag, DUMP_SCOPE_STMT_TREE)) {
         Tree * t = SCOPE_stmt_list(s);
-        if (t != NULL) {
+        if (t != nullptr) {
             note(g_logmgr, "\nSTATEMENT:");
             g_logmgr->incIndent(2);
             note(g_logmgr, "\n");
@@ -333,7 +333,7 @@ void dump_scope(SCOPE * s, UINT flag)
 void destroy_scope_list()
 {
     for (SCOPE * sc = g_scope_list.get_head();
-         sc != NULL; sc = g_scope_list.get_next()) {
+         sc != nullptr; sc = g_scope_list.get_next()) {
         sc->destroy();
     }
 }

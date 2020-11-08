@@ -33,7 +33,7 @@ List<WARN_MSG*> g_warn_msg_list;
 static void * xmalloc(size_t size)
 {
     void * p = smpoolMalloc(size, g_pool_general_used);
-    if (p == NULL) return NULL;
+    if (p == nullptr) return nullptr;
     ::memset(p, 0, size);
     return p;
 }
@@ -44,7 +44,7 @@ void show_err()
     if (g_err_msg_list.get_elem_count() == 0) return;
     fprintf(stdout,"\n");
     for (ERR_MSG * e = g_err_msg_list.get_head();
-         e != NULL; e = g_err_msg_list.get_next()) {
+         e != nullptr; e = g_err_msg_list.get_next()) {
         fprintf(stdout, "\nerror(%d):%s", ERR_MSG_lineno(e), ERR_MSG_msg(e));
     }
     fprintf(stdout,"\n");
@@ -56,7 +56,7 @@ void show_warn()
     if (g_warn_msg_list.get_elem_count() == 0) return;
     fprintf(stdout,"\n");
     for (WARN_MSG * e = g_warn_msg_list.get_head();
-         e != NULL; e = g_warn_msg_list.get_next()) {
+         e != nullptr; e = g_warn_msg_list.get_next()) {
         fprintf(stdout, "\nwarning(%d):%s",
                 WARN_MSG_lineno(e), WARN_MSG_msg(e));
     }
@@ -67,9 +67,9 @@ void show_warn()
 //Report warning with line number.
 void warn(INT line_num, CHAR * msg, ...)
 {
-    if (msg == NULL) { return; }
+    if (msg == nullptr) { return; }
 
-    WARN_MSG * p = NULL;
+    WARN_MSG * p = nullptr;
     StrBuf sbuf(64);
 
     va_list arg;
@@ -87,9 +87,9 @@ void warn(INT line_num, CHAR * msg, ...)
 //Report error with line number.
 void err(INT line_num, CHAR * msg, ...)
 {
-    if (msg == NULL) { return; }
+    if (msg == nullptr) { return; }
 
-    ERR_MSG * p = NULL;
+    ERR_MSG * p = nullptr;
     StrBuf sbuf(64);
 
     va_list arg;

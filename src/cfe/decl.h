@@ -207,9 +207,9 @@ public:
     void clean()
     {
         m_descriptor = 0;
-        u1.m_decl_list = NULL;
+        u1.m_decl_list = nullptr;
         for (INT i = 0; i < MAX_TYPE_FLD; i++) {
-            m_sub_field[i] = NULL;
+            m_sub_field[i] = nullptr;
         }
     }
 
@@ -374,7 +374,7 @@ public:
 #define DECL_id(d) (d)->u1.id
 
 //If current 'decl' is DCL_ARRAY, the followed members record its
-//base and index value/expression, which may be NULL.
+//base and index value/expression, which may be nullptr.
 //
 //NOTE: During the Decl generation processing, DECL_array_dim_exp() is avaiable,
 //it records the expressions of dimension,
@@ -385,7 +385,7 @@ public:
 #define DECL_array_dim_exp(d) (d)->u1.u12.u121.dimexp
 
 //If current 'decl' is DCL_FUN, the followed members record its
-//base and parameter list declaration, which may be NULL
+//base and parameter list declaration, which may be nullptr
 //#define DECL_fun_base(d) (d)->u1.u13.fbase
 #define DECL_fun_para_list(d) (d)->u1.u13.para_list
 
@@ -532,10 +532,8 @@ bool is_enum_exist(EnumList const* e_list,
                    CHAR const* e_name,
                    OUT Enum ** e,
                    OUT INT * idx);
-bool is_user_type_exist(
-            UserTypeList const* ut_list,
-            CHAR const* ut_name,
-            Decl ** ut);
+bool is_user_type_exist(UserTypeList const* ut_list, CHAR const* ut_name,
+                        Decl ** ut);
 bool is_struct_type_exist(List<Struct*> const& struct_list,
                           Sym const* tag,
                           OUT Struct ** s);
@@ -563,7 +561,7 @@ Decl const* get_return_type(Decl const* dcl);
 CHAR const* get_decl_name(Decl * dcl);
 Sym * get_decl_sym(Decl const* dcl);
 Decl const* get_pure_declarator(Decl const* decl);
-Decl * get_parameter_list(Decl * dcl, OUT Decl ** fun_dclor = NULL);
+Decl * get_parameter_list(Decl * dcl, OUT Decl ** fun_dclor = nullptr);
 Decl const* get_decl_id(Decl const* dcl);
 Decl * get_decl_in_scope(CHAR const* name, SCOPE const* scope);
 Tree * get_decl_id_tree(Decl const* dcl);

@@ -34,7 +34,7 @@ static UINT g_tree_count = 1;
 static void * xmalloc(size_t size)
 {
     void * p = smpoolMalloc(size, g_pool_tree_used);
-    if (p == NULL) { return 0; }
+    if (p == nullptr) { return 0; }
     ::memset(p,0,size);
     return p;
 }
@@ -49,7 +49,7 @@ Tree * allocTreeNode(TREE_TYPE tnt, INT lineno)
 #endif
     TREE_type(t) = tnt;
     TREE_lineno(t) = lineno;
-    TREE_parent(t) = NULL;
+    TREE_parent(t) = nullptr;
     return t;
 }
 
@@ -69,7 +69,7 @@ INT is_indirect_tree_node(Tree *t)
 
 void dump_trees(Tree * t)
 {
-    while (t != NULL) {
+    while (t != nullptr) {
         dump_tree(t);
         t = TREE_nsib(t);
     }
@@ -86,7 +86,7 @@ void dump_tree(Tree * t)
 {
     DUMMYUSE(t);    
 #ifdef _DEBUG_
-    if (t == NULL || g_logmgr == NULL) { return; }
+    if (t == nullptr || g_logmgr == nullptr) { return; }
     
     UINT dn = 2;
     StrBuf sbuf(64);
@@ -106,7 +106,7 @@ void dump_tree(Tree * t)
         break;
     case TR_ID: {
         CHAR * name = SYM_name(TREE_id(t));
-        if (TREE_id_decl(t) != NULL) {
+        if (TREE_id_decl(t) != nullptr) {
             sbuf.strcat("-- ");
             if (DECL_is_sub_field(TREE_id_decl(t))) {
                 TypeSpec * ty = DECL_base_type_spec(TREE_id_decl(t));
@@ -478,7 +478,7 @@ void dump_tree(Tree * t)
     case TR_PRAGMA:
         note(g_logmgr, "\nPRAGMA(id:%u)", TREE_uid(t));
         dump_line(t);
-        for (TokenList * tl = TREE_token_lst(t); tl != NULL; tl = TL_next(tl)) {
+        for (TokenList * tl = TREE_token_lst(t); tl != nullptr; tl = TL_next(tl)) {
             switch (TL_tok(tl)) {
             case T_ID:
                 prt(g_logmgr, " %s", SYM_name(TL_id_name(tl)));
@@ -496,7 +496,7 @@ void dump_tree(Tree * t)
         break;
     case TR_PREP:
         note(g_logmgr, "\nPREP(id:%u)", TREE_uid(t));
-        for (TokenList * tl = TREE_token_lst(t); tl != NULL; tl = TL_next(tl)) {
+        for (TokenList * tl = TREE_token_lst(t); tl != nullptr; tl = TL_next(tl)) {
             switch (TL_tok(tl)) {
             case T_ID:
                 prt(g_logmgr, " %s", SYM_name(TL_id_name(tl)));
