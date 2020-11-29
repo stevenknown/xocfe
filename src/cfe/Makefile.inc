@@ -8,4 +8,5 @@ CFE_OBJS +=\
 ../cfe/tree.o\
 ../cfe/treegen.o\
 ../cfe/typeck.o\
+../cfe/cfeutil.o\
 ../cfe/cell.o
