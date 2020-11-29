@@ -9,6 +9,7 @@ cfe/st.o \
 cfe/tree.o \
 cfe/treegen.o \
 cfe/typeck.o \
+cfe/cfeutil.o \
 cfe/cell.o 
 
 COM_OBJS +=\
@@ -21,8 +22,7 @@ com/ltype.o
 OPT_OBJS +=\
 com/symtab.o \
 com/logmgr.o \
-opt/label.o \
-opt/util.o
+opt/label.o
 
 CFLAGS = -O0 -g2 -Wno-write-strings -Wsign-promo \
         -Wsign-compare -Wpointer-arith -Wno-multichar -Winit-self \
