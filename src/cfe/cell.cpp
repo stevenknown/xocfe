@@ -27,7 +27,7 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 @*/
 #include "cfecom.h"
 
-static List<CELL*> g_cell_free_list;
+static List<Cell*> g_cell_free_list;
 
 static void * xmalloc(size_t size)
 {
@@ -39,11 +39,11 @@ static void * xmalloc(size_t size)
 }
 
 
-//CELL operations
-//If you intend to use CELL as a container to hold something, the follows should
+//Cell operations
+//If you intend to use Cell as a container to hold something, the follows should
 //be noticed:
-//When you need a new CELL , invoking 'newcell()', but is not 'get_free_cell()'.
-void free_cell(CELL * c)
+//When you need a new Cell , invoking 'newcell()', but is not 'get_free_cell()'.
+void free_cell(Cell * c)
 {
     if (c == nullptr) {
         return;
@@ -53,22 +53,22 @@ void free_cell(CELL * c)
 }
 
 
-CELL * get_free_cell()
+Cell * get_free_cell()
 {
-    CELL * c = g_cell_free_list.remove_tail();
+    Cell * c = g_cell_free_list.remove_tail();
     if (c) {
-        ::memset(c, 0 , sizeof(CELL));
+        ::memset(c, 0 , sizeof(Cell));
         return c;
     }
     return nullptr;
 }
 
 
-CELL * newcell(INT type)
+Cell * newcell(INT type)
 {
-    CELL * c = get_free_cell();
+    Cell * c = get_free_cell();
     if (!c) {
-        c = (CELL*)xmalloc(sizeof(CELL));
+        c = (Cell*)xmalloc(sizeof(Cell));
     }
     CELL_type(c) = type;
     return c;

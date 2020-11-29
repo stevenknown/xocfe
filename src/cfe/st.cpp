@@ -27,7 +27,7 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 @*/
 #include "cfecom.h"
 
-static Stack<CELL*> g_cell_stack;
+static Stack<Cell*> g_cell_stack;
 ST_INFO g_st_info[]={
     {st_NULL,                "nullptr" },
 
@@ -213,7 +213,7 @@ ST_INFO g_st_info[]={
 //Utility for st.cpp
 SST pushst(SST st, size_t v)
 {
-    CELL * c = newcell(st);
+    Cell * c = newcell(st);
     CELL_val(c) = (LONGLONG)v;
     CELL_line_no(c) = g_real_line_num;
     g_cell_stack.push(c);
@@ -223,7 +223,7 @@ SST pushst(SST st, size_t v)
 
 SST popst()
 {
-    CELL * c = g_cell_stack.pop();
+    Cell * c = g_cell_stack.pop();
     SST sst = c ? (SST)CELL_type(c) : st_NULL;
     free_cell(c);
     return sst;
@@ -233,7 +233,7 @@ SST popst()
 //Return the SST of the Nth element from top of stack.
 SST get_top_nth_st(INT n)
 {
-    CELL * c = g_cell_stack.get_top_nth(n);
+    Cell * c = g_cell_stack.get_top_nth(n);
     return c ? (SST)CELL_type(c) : st_NULL;
 }
 
@@ -241,7 +241,7 @@ SST get_top_nth_st(INT n)
 //check whether 'sst' exist in the SST stack.
 INT is_sst_exist(SST sst)
 {
-    for (CELL * c = g_cell_stack.get_head();
+    for (Cell * c = g_cell_stack.get_head();
          c != nullptr; c = g_cell_stack.get_next()) {
         if (CELL_type(c) == sst) {
             return 1;
@@ -253,14 +253,14 @@ INT is_sst_exist(SST sst)
 
 SST get_top_st()
 {
-    CELL * c = g_cell_stack.get_top();
+    Cell * c = g_cell_stack.get_top();
     return c != nullptr ? (SST)CELL_type(c) : st_NULL;
 }
 
 
 void dump_st_stack()
 {
-    for (CELL * c = g_cell_stack.get_head(); c; c = g_cell_stack.get_next()) {
+    for (Cell * c = g_cell_stack.get_head(); c; c = g_cell_stack.get_next()) {
         switch (CELL_type(c)) {
         case st_ID:
             prt(g_logmgr, "%s ", SYM_name((Sym*)CELL_val(c)));

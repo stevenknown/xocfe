@@ -46,7 +46,7 @@ SymTab * g_fe_sym_tab = nullptr;
 bool g_dump_token = false;
 CHAR * g_real_token_string = nullptr;
 TOKEN g_real_token = T_NUL;
-static List<CELL*> g_cell_list;
+static List<Cell*> g_cell_list;
 bool g_enable_C99_declaration = true;
 xcom::Vector<UINT> g_realline2srcline;
 
@@ -200,9 +200,9 @@ static LabelInfo * add_ref_label(CHAR * name, INT lineno)
 //Append a token to tail of list
 static void append_c_tail(size_t v)
 {
-    //static CELL * g_cell_list_head=nullptr;
-    //static CELL * g_cell_list_tail=nullptr;
-    CELL * c = newcell(0);
+    //static Cell * g_cell_list_head=nullptr;
+    //static Cell * g_cell_list_tail=nullptr;
+    Cell * c = newcell(0);
     CELL_val(c) = (LONGLONG)v;
     CELL_line_no(c) = g_src_line_num;
     g_cell_list.append_tail(c);
@@ -212,7 +212,7 @@ static void append_c_tail(size_t v)
 //Append a token to head of list
 static void append_c_head(size_t v)
 {
-    CELL * c = newcell(0);
+    Cell * c = newcell(0);
     CELL_val(c) = (LONGLONG)v;
     CELL_line_no(c) = g_src_line_num;
     g_cell_list.append_head(c);
@@ -248,7 +248,7 @@ static void append_tok_head(TOKEN tok, CHAR * tokname, INT lineno)
 //Remove a token from head of list
 static size_t remove_head_tok()
 {
-    CELL * c = g_cell_list.remove_head();
+    Cell * c = g_cell_list.remove_head();
     if (c != nullptr) {
         size_t v = (size_t)CELL_val(c);
         free_cell(c);
@@ -260,14 +260,14 @@ static size_t remove_head_tok()
 
 void dump_tok_list()
 {
-    CELL * c = g_cell_list.get_head();
+    Cell * c = g_cell_list.get_head();
     if (c != nullptr) {
-        prt2C("\nTOKEN:");
+        prt("\nTOKEN:");
         for (; c; c = g_cell_list.get_next()) {
             CHAR * s = TOKEN_INFO_name((TokenInfo*)CELL_val(c));
-            prt2C("'%s' ", s);
+            prt("'%s' ", s);
         }
-        prt2C("\n");
+        prt("\n");
     }
 }
 
@@ -615,7 +615,7 @@ static TOKEN look_next_token(INT n,
         //Pry in token_buffer
         if (n <= count) {
             //'n' can be finded in token-buffer
-            CELL * c = g_cell_list.get_head_nth(n - 1);
+            Cell * c = g_cell_list.get_head_nth(n - 1);
             ASSERT0(c);
             return TOKEN_INFO_token((TokenInfo*)CELL_val(c));
         }
@@ -682,7 +682,7 @@ bool look_forward_token(INT num, ...)
         return g_real_token == v;
     }
 
-    CELL * c = g_cell_list.get_head();
+    Cell * c = g_cell_list.get_head();
     if (c != nullptr) {
         //append current real token to 'token-list'
         append_tok_head(g_real_token, g_real_token_string, g_real_line_num);
@@ -731,7 +731,7 @@ UNMATCH:
 static Tree * param_list()
 {
     Tree * t = exp();
-    Tree * last = get_last(t);
+    Tree * last = xcom::get_last(t);
 
     while (g_real_token == T_COMMA) {
         match(T_COMMA);
@@ -1225,7 +1225,7 @@ static Tree * unary_exp()
     }
     return t ;
 FAILED:
-    prt2C("error in unary_exp()");
+    prt("error in unary_exp()");
     return t;
 }
 
@@ -1297,7 +1297,7 @@ static Tree * cast_exp()
     }
     return t ;
 FAILED:
-    prt2C("error in cast_exp()");
+    prt("error in cast_exp()");
     return t;
 }
 
@@ -1332,7 +1332,7 @@ static Tree * multiplicative_exp()
     return t ;
 
 FAILED:
-    prt2C("error in multiplicative_exp()");
+    prt("error in multiplicative_exp()");
     return t;
 }
 
@@ -1365,7 +1365,7 @@ static Tree * additive_exp()
     return t ;
 
 FAILED:
-    prt2C("error in additive_exp()");
+    prt("error in additive_exp()");
     return t;
 }
 
@@ -1398,7 +1398,7 @@ static Tree * shift_exp()
     return t ;
 FAILED:
 
-    prt2C("error in shift_exp()");
+    prt("error in shift_exp()");
     return t;
 }
 
@@ -1431,7 +1431,7 @@ static Tree * relational_exp()
     }
     return t ;
 FAILED:
-    prt2C("error in relational_exp()");
+    prt("error in relational_exp()");
     return t;
 }
 
@@ -1463,7 +1463,7 @@ static Tree * equality_exp()
     }
     return t ;
 FAILED:
-    prt2C("error in equality_exp()");
+    prt("error in equality_exp()");
     return t;
 }
 
@@ -1494,7 +1494,7 @@ static Tree * AND_exp()
     }
     return t ;
 FAILED:
-    prt2C("error in AND_exp()");
+    prt("error in AND_exp()");
     return t;
 }
 
@@ -1525,7 +1525,7 @@ static Tree * exclusive_OR_exp()
     }
     return t ;
 FAILED:
-    prt2C("error in exclusive_OR_exp()");
+    prt("error in exclusive_OR_exp()");
     return t;
 }
 
@@ -1556,7 +1556,7 @@ static Tree * inclusive_OR_exp()
     }
     return t ;
 FAILED:
-    prt2C("error in inclusive_OR_exp()");
+    prt("error in inclusive_OR_exp()");
     return t;
 }
 
@@ -1588,7 +1588,7 @@ static Tree * logical_AND_exp()
     }
     return t ;
 FAILED:
-    prt2C("error in logical_AND_exp()");
+    prt("error in logical_AND_exp()");
     return t;
 }
 
@@ -1619,7 +1619,7 @@ static Tree * logical_OR_exp()
     }
     return t ;
 FAILED:
-    prt2C("error in logical_OR_exp()");
+    prt("error in logical_OR_exp()");
     return t;
 }
 
@@ -1646,7 +1646,7 @@ Tree * conditional_exp()
     }
     return t ;
 FAILED:
-    prt2C("error in conditional_expt()");
+    prt("error in conditional_expt()");
     return t;
 }
 
@@ -1671,7 +1671,7 @@ Tree * exp()
     }
     return t;
 FAILED:
-    prt2C("error in expt()");
+    prt("error in expt()");
     return t;
 }
 
@@ -1679,12 +1679,12 @@ FAILED:
 Tree * exp_list()
 {
     Tree * t = exp();
-    Tree * last = get_last(t);
+    Tree * last = xcom::get_last(t);
     while (g_real_token == T_COMMA) {
         match(T_COMMA);
         Tree * nt = exp();
         xcom::add_next(&t, &last, nt);
-        last = get_last(nt);
+        last = xcom::get_last(nt);
     }
     return t;
 }
@@ -1947,7 +1947,7 @@ static Tree * do_while_stmt()
     return t;
 
 FAILED:
-    prt2C("error in do_while_stmt()");
+    prt("error in do_while_stmt()");
     return t;
 }
 
@@ -1981,7 +1981,7 @@ static Tree * while_do_stmt()
     popst();
     return t;
 FAILED:
-    prt2C("error in while_do_stmt()");
+    prt("error in while_do_stmt()");
     return t;
 }
 
@@ -2043,7 +2043,7 @@ FAILED:
     if (g_enable_C99_declaration) {
         pop_scope();
     }
-    prt2C("error in for_stmt()");
+    prt("error in for_stmt()");
     return t;
 }
 
@@ -2105,7 +2105,7 @@ static Tree * if_stmt()
     }
     return t;
 FAILED:
-    prt2C("error in if_stmt()");
+    prt("error in if_stmt()");
     return t;
 }
 
@@ -2139,7 +2139,7 @@ static Tree * switch_stmt()
     popst();
     return t;
 FAILED:
-    prt2C("error in switch_stmt()");
+    prt("error in switch_stmt()");
     return t;
 }
 
@@ -2170,7 +2170,7 @@ SCOPE * compound_stmt(Decl * para_list)
     SCOPE * cur_scope = push_scope(false);
 
     //Append parameters to declaration list of function body scope.
-    Decl * lastdcl = get_last(SCOPE_decl_list(cur_scope));
+    Decl * lastdcl = xcom::get_last(SCOPE_decl_list(cur_scope));
     UINT pos = 0;
     for (; para_list != nullptr; para_list = DECL_next(para_list), pos++) {
         if (DECL_dt(para_list) == DCL_VARIABLE) {

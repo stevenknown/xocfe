@@ -32,12 +32,12 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 // 'compute_constant_value' absolutely.
 
 static bool g_is_allow_float = false;
-static Stack<CELL*> g_cell_stack;
+static Stack<Cell*> g_cell_stack;
 static bool compute_conditional_exp(IN Tree * t);
 
-static CELL * pushv(LONGLONG v)
+static Cell * pushv(LONGLONG v)
 {
-    CELL * c = newcell(0);
+    Cell * c = newcell(0);
     CELL_val(c) = v;
     CELL_line_no(c) = g_real_line_num;
     g_cell_stack.push(c);
@@ -47,7 +47,7 @@ static CELL * pushv(LONGLONG v)
 
 static LONGLONG popv()
 {
-    CELL *c = g_cell_stack.pop();
+    Cell *c = g_cell_stack.pop();
     if (!c) {
         err(g_real_line_num, "cell value stack cannot be nullptr");
         return -1;

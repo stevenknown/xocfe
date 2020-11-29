@@ -1868,7 +1868,5 @@ INT TypeCheck()
 
         dcl = DECL_next(dcl);
     }
-
-    tfree();
     return st;
 }

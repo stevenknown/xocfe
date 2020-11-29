@@ -33,7 +33,7 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define C_ID_ADDR  3
 #define C_SST      4
 
-class CELL {
+class Cell {
 public:
     LONGLONG val;
     union {
@@ -49,8 +49,8 @@ public:
 
 
 //Exported Functions
-CELL * newcell(INT t);
-void free_cell(CELL * c);
-CELL * get_free_cell();
+Cell * newcell(INT t);
+void free_cell(Cell * c);
+Cell * get_free_cell();
 #endif
 

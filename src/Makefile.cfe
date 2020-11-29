@@ -26,7 +26,7 @@ opt/util.o
 
 CFLAGS = -O0 -g2 -Wno-write-strings -Wsign-promo \
         -Wsign-compare -Wpointer-arith -Wno-multichar -Winit-self \
-        -Wstrict-aliasing=3 -Wswitch -D_DEBUG_ #-Wall
+        -Wstrict-aliasing=3 -Wswitch -D_DEBUG_ -D_SUPPORT_C11_ #-Wall
         #-Werror=overloaded-virtual \
 
 xocfe: cfe_objs com_objs opt_objs
