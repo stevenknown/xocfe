@@ -17,6 +17,7 @@ com/smempool.o \
 com/comf.o \
 com/strbuf.o \
 com/bs.o \
+com/diagnostic.o \
 com/ltype.o
 
 OPT_OBJS +=\
@@ -26,7 +27,7 @@ opt/label.o
 
 CFLAGS = -O0 -g2 -Wno-write-strings -Wsign-promo \
         -Wsign-compare -Wpointer-arith -Wno-multichar -Winit-self \
-        -Wstrict-aliasing=3 -Wswitch -D_DEBUG_ -D_SUPPORT_C11_ #-Wall
+        -Wstrict-aliasing=3 -Wswitch -D_DEBUG_ -D_SUPPORT_C11_ -DFOR_ARM #-Wall
         #-Werror=overloaded-virtual \
 
 xocfe: cfe_objs com_objs opt_objs
