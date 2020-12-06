@@ -35,10 +35,10 @@ class Union;
 class Decl;
 class Enum;
 
-class SYM_LIST {
+class SymList {
 public:
-    SYM_LIST * next;
-    SYM_LIST * prev;
+    SymList * next;
+    SymList * prev;
     Sym * sym;
 };
 #define SYM_LIST_sym(syml) (syml)->sym
@@ -46,7 +46,7 @@ public:
 #define SYM_LIST_prev(syml) (syml)->prev
 
 
-//SCOPE
+//Scope
 // |
 // |--EnumList
 // |--SYM_TAB_LIST
@@ -73,15 +73,15 @@ public:
 #define SCOPE_struct_list(sc) ((sc)->struct_list)
 #define SCOPE_union_list(sc) ((sc)->union_list)
 #define SCOPE_stmt_list(sc) ((sc)->stmt_list)
-class SCOPE {
+class Scope {
 public:
     INT id; //unique id
     INT level; //nested level
     bool is_tmp_scope;
-    SCOPE * parent;
-    SCOPE * next;
-    SCOPE * prev;
-    SCOPE * sub;
+    Scope * parent;
+    Scope * next;
+    Scope * prev;
+    Scope * sub;
 
     EnumList * enum_list;        //enum-type list
     UserTypeList * utl_list;    //record type defined with 'typedef'
@@ -93,7 +93,7 @@ public:
     List<Union*> union_list;    //union list of current scope
 
     Decl * decl_list;            //record identifier declaration info
-    SYM_LIST * sym_tab_list;    //record identifier name
+    SymList * sym_tab_list;    //record identifier name
 
     Tree * stmt_list;            //record statement list to generate code
 
@@ -124,7 +124,7 @@ public:
 typedef TMap<LabelInfo*, UINT> LAB2LINE_MAP;
 
 
-class Compare_Lab {
+class CompareLab {
 public:
     bool is_less(LabelInfo * t1, LabelInfo * t2) const
     { return computeLabelHashValue(t1) < computeLabelHashValue(t2); }
@@ -134,20 +134,23 @@ public:
 
     LabelInfo * createKey(LabelInfo * t) { return t; }
 };
-typedef TTab<LabelInfo*, Compare_Lab> LabelTab;
+typedef TTab<LabelInfo*, CompareLab> LabelTab;
 
 
 //Exported functions
-#define DUMP_SCOPE_FUNC_BODY 1
-#define DUMP_SCOPE_STMT_TREE 2
+//The options of dump_scope function.
+#define DUMP_SCOPE_FUNC_BODY 0x1
+#define DUMP_SCOPE_STMT_TREE 0x2
+#define DUMP_SCOPE_RECUR 0x4
 
-SCOPE * push_scope(bool is_tmp_sc);
-SCOPE * pop_scope();
-SCOPE * new_scope();
-SCOPE * get_last_sub_scope(SCOPE * s);
-SCOPE * get_global_scope();
-void dump_scope(SCOPE * s, UINT flag);
-void dump_scope_tree(SCOPE * s, INT indent);
+Scope * push_scope(bool is_tmp_sc);
+Scope * pop_scope();
+Scope * new_scope();
+Scope * get_last_sub_scope(Scope * s);
+Scope * get_global_scope();
+void dump_scope(Scope * s, UINT flag);
+void dump_scope_tree(Scope * s, INT indent);
+void dump_scope_list(Scope * s, UINT flag);
 void destroy_scope_list();
 UINT map_lab2lineno(LabelInfo * li);
 void set_map_lab2lineno(LabelInfo * li, UINT lineno);
@@ -155,10 +158,10 @@ void set_lab_used(LabelInfo * li);
 bool is_lab_used(LabelInfo * li);
 
 //Export Variables
-extern SCOPE * g_cur_scope;
+extern Scope * g_cur_scope;
 extern LabelTab g_labtab;
 
 //Export Functions
-Sym * add_to_symtab_list(SYM_LIST ** sym_list , Sym * sym);
+Sym * add_to_symtab_list(SymList ** sym_list , Sym * sym);
 #endif
 

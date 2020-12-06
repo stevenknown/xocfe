@@ -76,10 +76,12 @@ void dump_trees(Tree * t)
 }
 
 
+#ifdef _DEBUG_
 static void dump_line(Tree const* t)
 {
     xoc::prt(g_logmgr, " [%d]", TREE_lineno(t));
 }
+#endif
 
 
 void dump_tree(Tree * t)
@@ -114,9 +116,9 @@ void dump_tree(Tree * t)
                 note(g_logmgr, "\n%s(id:%u) base-type:%s",
                      name, TREE_uid(t), sbuf.buf);
             } else {
-                SCOPE * s = DECL_decl_scope(TREE_id_decl(t));
+                Scope * s = DECL_decl_scope(TREE_id_decl(t));
                 format_declaration(sbuf, get_decl_in_scope(name, s));
-                note(g_logmgr, "\nID(id:%u):'%s' SCOPE:%d Decl:%s",
+                note(g_logmgr, "\nID(id:%u):'%s' Scope:%d Decl:%s",
                      TREE_uid(t), name, SCOPE_level(s), sbuf.buf);
             }
         } else {

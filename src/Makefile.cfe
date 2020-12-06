@@ -20,8 +20,8 @@ com/bs.o \
 com/ltype.o
 
 OPT_OBJS +=\
-com/symtab.o \
-com/logmgr.o \
+opt/symtab.o \
+opt/logmgr.o \
 opt/label.o
 
 CFLAGS = -O0 -g2 -Wno-write-strings -Wsign-promo \

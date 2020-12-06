@@ -78,7 +78,7 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //
 //The layout of Declaration:
 //Decl, with DECL_dt is DCL_DECLARATION or DCL_TYPE_NAME
-//    |->SCOPE
+//    |->Scope
 //    |->TypeSpec Specifier
 //        |->const|volatile
 //        |->void|long|int|short|char|float|double|signed|unsigned|struct|union
@@ -249,7 +249,7 @@ Decl * new_decl(DCL dcl_type)
 //Construct declaration.
 //'spec': specifier
 //'declor': declarator.
-Decl * new_declaration(TypeSpec * spec, Decl * declor, SCOPE * sc)
+Decl * new_declaration(TypeSpec * spec, Decl * declor, Scope * sc)
 {
     Decl * declaration = new_decl(DCL_DECLARATION);
     DECL_decl_scope(declaration) = sc;
@@ -263,7 +263,7 @@ Decl * new_declaration(TypeSpec * spec, Decl * declor, SCOPE * sc)
 
 //Construct new declaration within given scope.
 //Front-end dependent.
-Decl * new_var_decl(IN SCOPE * scope, IN CHAR * name)
+Decl * new_var_decl(IN Scope * scope, IN CHAR * name)
 {
     Decl * declaration = new_decl(DCL_DECLARATION);
     DECL_decl_scope(declaration) = scope;
@@ -384,17 +384,31 @@ bool is_constant(Decl const* dcl)
 bool is_initialized(Decl const* dcl)
 {
     ASSERTN(dcl && (DECL_dt(dcl) == DCL_DECLARATION ||
-                   DECL_dt(dcl) == DCL_DECLARATOR),
-           ("need declaration"));
+                    DECL_dt(dcl) == DCL_DECLARATOR),
+            ("need declaration"));
     if (DECL_dt(dcl) == DCL_DECLARATION) {
         dcl = DECL_decl_list(dcl); //get DCRLARATOR
         ASSERTN(DECL_dt(dcl) == DCL_DECLARATOR ||
-            DECL_dt(dcl) == DCL_ABS_DECLARATOR, ("need declaration"));
+                DECL_dt(dcl) == DCL_ABS_DECLARATOR, ("need declaration"));
     }
     if (DECL_is_init(dcl)) {
         return true;
     }
     return false;
+}
+
+
+Tree * get_decl_init_tree(Decl const* dcl)
+{
+    ASSERT0(is_initialized(dcl));
+    if (DECL_dt(dcl) == DCL_DECLARATION) {
+        dcl = DECL_decl_list(dcl); //get DCRLARATOR
+        ASSERTN(DECL_dt(dcl) == DCL_DECLARATOR ||
+                DECL_dt(dcl) == DCL_ABS_DECLARATOR, ("need declaration"));
+    }
+    ASSERT0(DECL_is_init(dcl));
+    ASSERT0(DECL_init_tree(dcl));
+    return DECL_init_tree(dcl);
 }
 
 
@@ -428,7 +442,7 @@ bool is_restrict(Decl const* dcl)
 bool is_global_variable(Decl const* dcl)
 {
     ASSERTN(DECL_dt(dcl) == DCL_DECLARATION, ("need declaration"));
-    SCOPE const* sc = DECL_decl_scope(dcl);
+    Scope const* sc = DECL_decl_scope(dcl);
     ASSERTN(sc, ("variable must be allocated within a scope."));
     if (SCOPE_level(sc) == GLOBAL_SCOPE) {
         return true;
@@ -454,7 +468,7 @@ bool is_static(Decl const* dcl)
 bool is_local_variable(Decl const* dcl)
 {
     ASSERTN(DECL_dt(dcl)==DCL_DECLARATION, ("need declaration"));
-    SCOPE const* sc = DECL_decl_scope(dcl);
+    Scope const* sc = DECL_decl_scope(dcl);
     ASSERTN(sc, ("variable must be allocated within a scope."));
     if (SCOPE_level(sc) >= FUNCTION_SCOPE && !is_static(dcl)) {
         return true;
@@ -529,7 +543,7 @@ bool is_union_complete(TypeSpec const* type)
 
 bool is_struct_type_exist_in_cur_scope(CHAR const* tag, OUT Struct ** s)
 {
-    SCOPE * sc = g_cur_scope;
+    Scope * sc = g_cur_scope;
     if (is_struct_type_exist(SCOPE_struct_list(sc), tag, s)) {
         return true;
     }
@@ -575,7 +589,7 @@ bool is_extern(Decl const*dcl)
 //dcl:   DCL_DECLARATION info
 bool is_decl_exist_in_outer_scope(CHAR const* name, OUT Decl ** dcl)
 {
-    SCOPE const* scope = g_cur_scope;
+    Scope const* scope = g_cur_scope;
     Decl * dr = nullptr, * dcl_list = nullptr;
     while (scope != nullptr) {
         dcl_list = SCOPE_decl_list(scope);
@@ -600,8 +614,8 @@ bool is_decl_exist_in_outer_scope(CHAR const* name, OUT Decl ** dcl)
 //Return true if 'd1' and 'd2' are the same identifier.
 bool is_decl_equal(Decl const* d1, Decl const* d2)
 {
-    SCOPE const* s1 = DECL_decl_scope(d1);
-    SCOPE const* s2 = DECL_decl_scope(d2);
+    Scope const* s1 = DECL_decl_scope(d1);
+    Scope const* s2 = DECL_decl_scope(d2);
     if (s1 == s2) {
         CHAR const* name1 = SYM_name(get_decl_sym(d1));
         CHAR const* name2 = SYM_name(get_decl_sym(d2));
@@ -638,7 +652,7 @@ bool is_declaration(Decl * decl)
 }
 
 
-Decl * get_decl_in_scope(CHAR const* name, SCOPE const* scope)
+Decl * get_decl_in_scope(CHAR const* name, Scope const* scope)
 {
     Decl * dr = nullptr, * dcl_list = nullptr;
     if (scope == nullptr) {
@@ -2391,7 +2405,7 @@ static Decl * declarator(TypeSpec * qua)
 }
 
 
-static INT label_ck(SCOPE * s)
+static INT label_ck(Scope * s)
 {
     if (s == nullptr) { return ST_ERR; }
     LabelInfo * lref = SCOPE_ref_label_list(s).get_head();
@@ -2476,7 +2490,7 @@ static Tree * refineArray(Tree * t)
     //ID is unique to its scope.
     CHAR * name = SYM_name(TREE_id(base));
     ASSERT0(TREE_id_decl(base));
-    SCOPE * s = DECL_decl_scope(TREE_id_decl(base));
+    Scope * s = DECL_decl_scope(TREE_id_decl(base));
     Decl * decl = get_decl_in_scope(name, s);
     ASSERT0(decl != nullptr);
     if (!DECL_is_formal_para(decl)) { return t; }
@@ -2519,7 +2533,7 @@ static Tree * refine_tree(Tree * t)
     if (TREE_type(t) == TR_ARRAY) {
         t = refineArray(t);
     } else if (TREE_type(t) == TR_SCOPE) {
-        SCOPE * s = TREE_scope(t);
+        Scope * s = TREE_scope(t);
         SCOPE_stmt_list(s) = refine_tree_list(SCOPE_stmt_list(s));
     }
 
@@ -2547,7 +2561,7 @@ static Tree * refine_tree_list(Tree * t)
 //Convert Tree in terms of C specification.
 static void refine_func(Decl * func)
 {
-    SCOPE * scope = DECL_fun_body(func);
+    Scope * scope = DECL_fun_body(func);
     Tree * t = SCOPE_stmt_list(scope);
     if (t != nullptr) {
         t = refine_tree_list(t);
@@ -2694,7 +2708,7 @@ bool is_enum_exist(EnumList const* e_list,
 //Enum typed identifier is effective at all of outer scopes.
 bool is_enum_id_exist_in_outer_scope(CHAR const* cl, OUT Enum ** e)
 {
-    SCOPE * sc = g_cur_scope;
+    Scope * sc = g_cur_scope;
     while (sc != nullptr) {
         if (is_enum_id_exist(SCOPE_enum_list(sc), cl, e)) {
             return true;
@@ -2705,7 +2719,7 @@ bool is_enum_id_exist_in_outer_scope(CHAR const* cl, OUT Enum ** e)
 }
 
 
-bool is_aggr_exist_in_outer_scope(SCOPE * scope,
+bool is_aggr_exist_in_outer_scope(Scope * scope,
                                   CHAR const* tag,
                                   TypeSpec const* spec,
                                   OUT Aggr ** s)
@@ -2718,7 +2732,7 @@ bool is_aggr_exist_in_outer_scope(SCOPE * scope,
 }
 
 
-bool is_aggr_exist_in_outer_scope(SCOPE * scope,
+bool is_aggr_exist_in_outer_scope(Scope * scope,
                                   Sym const* tag,
                                   TypeSpec const* spec,
                                   OUT Aggr ** s)
@@ -2733,12 +2747,12 @@ bool is_aggr_exist_in_outer_scope(SCOPE * scope,
 
 //Return true if the struct typed declaration have already existed in both
 //current and all of outer scopes.
-bool is_struct_exist_in_outer_scope(SCOPE * scope,
+bool is_struct_exist_in_outer_scope(Scope * scope,
                                     CHAR const* tag,
                                     OUT Struct ** s)
 {
     ASSERT0(scope);
-    SCOPE * sc = scope;
+    Scope * sc = scope;
     while (sc != nullptr) {
         if (is_struct_type_exist(SCOPE_struct_list(sc), tag, s)) {
             return true;
@@ -2751,12 +2765,12 @@ bool is_struct_exist_in_outer_scope(SCOPE * scope,
 
 //Return true if the struct typed declaration have already existed in both
 //current and all of outer scopes.
-bool is_struct_exist_in_outer_scope(SCOPE * scope,
+bool is_struct_exist_in_outer_scope(Scope * scope,
                                     Sym const* tag,
                                     OUT Struct ** s)
 {
     ASSERT0(scope);
-    SCOPE * sc = scope;
+    Scope * sc = scope;
     while (sc != nullptr) {
         if (is_struct_type_exist(SCOPE_struct_list(sc), tag, s)) {
             return true;
@@ -2769,11 +2783,11 @@ bool is_struct_exist_in_outer_scope(SCOPE * scope,
 
 //Return true if the union typed declaration have already existed in both
 //current and all of outer scopes.
-bool is_union_exist_in_outer_scope(SCOPE * scope,
+bool is_union_exist_in_outer_scope(Scope * scope,
                                    CHAR const* tag,
                                    OUT Union ** s)
 {
-    SCOPE * sc = scope;
+    Scope * sc = scope;
     while (sc != nullptr) {
         if (is_union_type_exist(SCOPE_union_list(sc), tag, s)) {
             return true;
@@ -2786,11 +2800,11 @@ bool is_union_exist_in_outer_scope(SCOPE * scope,
 
 //Return true if the union typed declaration have already existed in both
 //current and all of outer scopes.
-bool is_union_exist_in_outer_scope(SCOPE * scope,
+bool is_union_exist_in_outer_scope(Scope * scope,
                                    Sym const* tag,
                                    OUT Union ** s)
 {
-    SCOPE * sc = scope;
+    Scope * sc = scope;
     while (sc != nullptr) {
         if (is_union_type_exist(SCOPE_union_list(sc), tag, s)) {
             return true;
@@ -2808,7 +2822,7 @@ bool is_union_exist_in_outer_scope(SCOPE * scope,
 //'idx': index in 'e' const list, start at 0.
 bool findEnumConst(CHAR const* name, OUT Enum ** e, OUT INT * idx)
 {
-    for (SCOPE * sc = g_cur_scope; sc != nullptr; sc = SCOPE_parent(sc)) {
+    for (Scope * sc = g_cur_scope; sc != nullptr; sc = SCOPE_parent(sc)) {
         if (is_enum_exist(SCOPE_enum_list(sc), name, e, idx)) {
             return true;
         }
@@ -3925,7 +3939,7 @@ INT format_dcrl(Decl const* decl, INT indent)
                                   indent + DECL_FMT_INDENT_INTERVAL);
             prt(g_logmgr, ")\n");
         }
-        pd(indent);
+        //pd(indent);
         if (DECL_next(decl) != nullptr) {
             prt(g_logmgr, " RET_VAL_DCL_TYPE:");
         }
@@ -3959,7 +3973,7 @@ INT format_declarator(Decl const* decl, TypeSpec const* ty, INT indent)
 {
     DUMMYUSE(ty);
     if (decl == nullptr) { return ST_SUCC; }
-    pd(indent);
+    //pd(indent);
     if (DECL_dt(decl) == DCL_ABS_DECLARATOR||
         DECL_dt(decl) == DCL_DECLARATOR) {
         prt(g_logmgr, "%s", g_dcl_name[DECL_dt(decl)]);
@@ -3977,8 +3991,10 @@ INT format_declarator(Decl const* decl, TypeSpec const* ty, INT indent)
                  DECL_dt(decl) == DCL_ID      ||
                  DECL_dt(decl) == DCL_VARIABLE),
                  ("unknown declarator"));
-        pd(indent + DECL_FMT_INDENT_INTERVAL);
+        //pd(indent + DECL_FMT_INDENT_INTERVAL);
+        g_logmgr->incIndent(DECL_FMT_INDENT_INTERVAL);
         format_dcrl(decl, indent + DECL_FMT_INDENT_INTERVAL);
+        g_logmgr->decIndent(DECL_FMT_INDENT_INTERVAL);
     }
     return ST_SUCC;
 }
@@ -4010,7 +4026,7 @@ INT format_declaration(Decl const* decl, INT indent)
 {
     if (decl == nullptr || g_logmgr == nullptr) { return ST_SUCC; }
     note(g_logmgr, "\n");
-    pd(indent);
+    //pd(indent);
     StrBuf sbuf(128);
     if (DECL_dt(decl) == DCL_DECLARATION || DECL_dt(decl) == DCL_TYPE_NAME) {
         TypeSpec * ty = DECL_spec(decl);
@@ -4023,30 +4039,45 @@ INT format_declaration(Decl const* decl, INT indent)
         note(g_logmgr, "\n");
 
         format_decl_spec(sbuf, ty, is_pointer(decl));
-        pd(indent + DECL_FMT_INDENT_INTERVAL);
+
+        //pd(indent + DECL_FMT_INDENT_INTERVAL);
+        g_logmgr->incIndent(DECL_FMT_INDENT_INTERVAL);
+
         prt(g_logmgr, "SPECIFIER:%s", sbuf.buf);
 
         note(g_logmgr, "\n");
         format_declarator(dcl, DECL_spec(decl),
                           indent + DECL_FMT_INDENT_INTERVAL);
+
+        g_logmgr->decIndent(DECL_FMT_INDENT_INTERVAL);
+
         return ST_SUCC;
-    } else if (DECL_dt(decl) == DCL_DECLARATOR ||
-               DECL_dt(decl) == DCL_ABS_DECLARATOR) {
+    }
+    
+    if (DECL_dt(decl) == DCL_DECLARATOR ||
+        DECL_dt(decl) == DCL_ABS_DECLARATOR) {
         Decl * dcl = DECL_decl_list(decl);
         prt(g_logmgr, "%s", g_dcl_name[DECL_dt(decl)]);
         note(g_logmgr, "\n");
         format_declarator(dcl, nullptr, indent + DECL_FMT_INDENT_INTERVAL);
-    } else if (DECL_dt(decl) == DCL_POINTER ||
-               DECL_dt(decl) == DCL_ARRAY ||
-               DECL_dt(decl) == DCL_FUN ||
-               DECL_dt(decl) == DCL_ID) {
+        return ST_SUCC;
+    }
+
+    if (DECL_dt(decl) == DCL_POINTER ||
+        DECL_dt(decl) == DCL_ARRAY ||
+        DECL_dt(decl) == DCL_FUN ||
+        DECL_dt(decl) == DCL_ID) {
         prt(g_logmgr, "%s ", g_dcl_name[DECL_dt(decl)]);
         format_declarator(decl, nullptr, indent + DECL_FMT_INDENT_INTERVAL);
-    } else if (DECL_dt(decl) == DCL_VARIABLE) {
-        prt(g_logmgr, "... ");
-    } else {
-        ASSERTN(0, ("Unkonwn Decl type"));
+        return ST_SUCC;
     }
+    
+    if (DECL_dt(decl) == DCL_VARIABLE) {
+        prt(g_logmgr, "... ");
+        return ST_SUCC;
+    }
+
+    ASSERTN(0, ("Unkonwn Decl type"));
     return ST_ERR;
 }
 //END DECL_FMT
@@ -4731,44 +4762,15 @@ void fix_extern_array_size(Decl * declaration)
 }
 
 
-//declaration:
-//  declaration_spec init_declarator_list;
-//  declaration_spec ;
-//Return true if variable definition is found.
-bool declaration()
+//Postprocess init declaration list.
+//Split them into a list of declarations via generating the DCL_DECLARATION
+//accroding TypeSpec, DECLLARATOR.
+bool post_init_declarator_list(Decl * dcl_list, TypeSpec * type_spec,
+                               UINT lineno, bool * is_last_fun_def)
 {
-    bool is_last_fun_def = false;
-    Decl * dcl_list = nullptr;
-    Decl * dcl = nullptr;
-    UINT lineno = g_real_line_num;
-    TypeSpec * type_spec = declaration_spec();
-    if (type_spec == nullptr) { return false; }
-
-    TypeSpec * qualifier = new_type();
-    extract_qualifier(type_spec, qualifier);
-    complement_qua(type_spec);
-
-    process_enum(type_spec);
-
-    bool def_var_or_perform_init = false;
-    dcl_list = init_declarator_list(qualifier);
-    if (dcl_list == nullptr) {
-        //For enum type, there is no enum variable defined, such as:
-        //    enum {X, Y, Z};
-        //    enum _tag {X, Y, Z};
-        def_var_or_perform_init = false;
-        goto FIN;
-    }
-    def_var_or_perform_init = true;
-
-    DECL_align(dcl_list) = g_alignment;
-    if (DECL_child(dcl_list) == nullptr) {
-        err(g_real_line_num, "declaration expected identifier");
-        return def_var_or_perform_init;
-    }
-
+    *is_last_fun_def = false;
     while (dcl_list != nullptr) {
-        dcl = dcl_list;
+        Decl * dcl = dcl_list;
         dcl_list = DECL_next(dcl_list);
 
         //Generate the DCL_DECLARATION accroding TypeSpec, DECLLARATOR.
@@ -4791,7 +4793,7 @@ bool declaration()
         if (is_fun_decl(declaration)) {
             if (g_real_token == T_LLPAREN) {
                 if (!func_def(declaration)) {
-                    goto FAILED;
+                    return false;
                 }
             } else if (g_real_token == T_SEMI) {
                 //Function Declaration.
@@ -4800,7 +4802,7 @@ bool declaration()
             } else {
                 err(g_real_line_num,
                     "illegal function definition/declaration, might be miss ';'");
-                goto FAILED;
+                return false;
             }
         } else {
             //Common variable definition/declaration.
@@ -4808,7 +4810,7 @@ bool declaration()
             if (!is_unique_decl(SCOPE_decl_list(g_cur_scope), declaration)) {
                 err(g_real_line_num, "'%s' already defined",
                     SYM_name(get_decl_sym(declaration)));
-                goto FAILED;
+                return false;
             }
             xcom::add_next(&SCOPE_decl_list(g_cur_scope), declaration);
         }
@@ -4822,11 +4824,11 @@ bool declaration()
         }
 
         if (!check_struct_union_complete(declaration)) {
-            goto FAILED;
+            return false;
         }
 
         if (!check_bitfield(declaration)) {
-            goto FAILED;
+            return false;
         }
 
         if (DECL_is_init(DECL_decl_list(declaration))) {
@@ -4841,9 +4843,49 @@ bool declaration()
             }
         }
 
-        is_last_fun_def = DECL_is_fun_def(declaration);
+        *is_last_fun_def = DECL_is_fun_def(declaration);
     }
-FIN:
+    return true;
+}
+
+
+//declaration:
+//  declaration_spec init_declarator_list;
+//  declaration_spec ;
+//Return true if variable declaration is found.
+bool declaration()
+{
+    UINT lineno = g_real_line_num;
+    TypeSpec * type_spec = declaration_spec();
+    if (type_spec == nullptr) { return false; }
+
+    TypeSpec * qualifier = new_type();
+    extract_qualifier(type_spec, qualifier);
+    complement_qua(type_spec);
+
+    process_enum(type_spec);
+
+    Decl * dcl_list = init_declarator_list(qualifier);
+    if (dcl_list == nullptr) {
+        //For enum type, there is no enum variable declared, such as:
+        //    enum {X, Y, Z};
+        //    enum _tag {X, Y, Z};
+        return false; //no variable declared
+    }
+
+    bool def_or_init_var = true;
+    DECL_align(dcl_list) = g_alignment;
+    if (DECL_child(dcl_list) == nullptr) {
+        err(g_real_line_num, "declaration expected identifier");
+        return def_or_init_var;
+    }
+    
+    bool is_last_fun_def = false;
+    if (!post_init_declarator_list(dcl_list, type_spec,
+                                   lineno, &is_last_fun_def)) {
+        return def_or_init_var;
+    }
+
     if (!is_last_fun_def) {
         if (g_real_token != T_SEMI) {
             err(g_real_line_num, "expected ';' after declaration");
@@ -4851,9 +4893,8 @@ FIN:
             match(T_SEMI);
         }
     }
-    return def_var_or_perform_init;
-FAILED:
-    return def_var_or_perform_init;
+
+    return def_or_init_var;
 }
 
 

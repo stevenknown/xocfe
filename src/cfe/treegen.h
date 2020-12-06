@@ -43,8 +43,10 @@ extern bool g_dump_token;
 void initParser();
 void finiParser();
 
+Tree * buildAssign(Decl const* decl, Tree * rhs);
+
 INT Parser();
-SCOPE * compound_stmt(Decl * para_list);
+Scope * compound_stmt(Decl * para_list);
 Tree * conditional_exp();
 
 void dump_tok_list();

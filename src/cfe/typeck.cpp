@@ -30,21 +30,6 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define BUILD_TYNAME(T)  buildTypeName(buildBaseTypeSpec(T))
 
-class TYCtx {
-public:
-    //When it comes to lvalue expression of assignment,
-    //TR_ID should corresponding with IR_ID, rather than IR_LD.
-    bool is_lvalue;
-
-    //Set to true if current TR_ID indicate field one of
-    //struct/union contained.
-    bool is_field;
-
-    //Record base of current memory accessing.
-    //e.g: it records the struct/union name if we meet a field.
-    Tree * base_tree_node;
-};
-
 static TypeSpec * g_schar_type;
 static TypeSpec * g_sshort_type;
 static TypeSpec * g_sint_type;
@@ -66,7 +51,6 @@ static INT process_struct_init(TypeSpec * ty, Tree ** init);
 static INT process_union_init(TypeSpec * ty, Tree ** init);
 static INT process_base_init(TypeSpec * ty, Tree ** init);
 static TypeSpec * buildBaseTypeSpec(INT des);
-static INT TypeCheckCore(Tree * t, TYCtx * cont);
 
 //Go through the init tree , 'dcl' must be DCL_ARRAY
 //NOTE: compute_array_dim() should be invoked.
@@ -809,10 +793,457 @@ static bool TypeTranID(Tree * t, TYCtx * cont)
 }
 
 
-//Transfering type declaration for all AST nodes.
-static INT TypeTran(Tree * t, TYCtx * cont)
+//The function handles dereference of pointer.
+static INT TypeTranDeref(Tree * t, TYCtx * cont)
 {
-    TYCtx ct = {0};
+    if (ST_SUCC != TypeTran(TREE_lchild(t), cont)) {
+        return ST_ERR;
+    }
+
+    Decl * ld = TREE_result_type(TREE_lchild(t));
+    if (!is_pointer(ld) && !is_array(ld)) {
+        err(TREE_lineno(t), "Illegal dereferencing operation, "
+            "indirection operation should operate on pointer type.");
+        return ST_ERR;
+    }
+
+    Decl * td = cp_type_name(ld);
+    ld = PURE_DECL(td);
+    ASSERTN(ld, ("lchild must be pointer type"));
+    if (DECL_dt(ld) == DCL_POINTER ||
+        DECL_dt(ld) == DCL_ARRAY) {
+        //In C, base of array only needs address, so the DEREF
+        //operator has alias effect. It means ARRAY(LD(p)) for
+        //given declaration: int (*p)[].
+        //
+        //The value is needed if there is not an ARRAY operator,
+        //e.g: a = *p, should generate a=LD(LD(p)).
+        xcom::remove(&PURE_DECL(td), ld);
+    } else if (DECL_dt(ld) == DCL_FUN) {
+        //ACCEPT
+    } else {
+        err(TREE_lineno(t), "illegal indirection");
+        return ST_ERR;
+    }
+    TREE_result_type(t) = td;
+    return ST_SUCC; 
+}
+
+
+static INT TypeTranMulti(Tree * t, TYCtx * cont)
+{
+    if (ST_SUCC != TypeTran(TREE_lchild(t), cont)) { return ST_ERR; }
+    if (ST_SUCC != TypeTran(TREE_rchild(t), cont)) { return ST_ERR; }
+
+    Decl * ld = TREE_result_type(TREE_lchild(t));
+    Decl * rd = TREE_result_type(TREE_rchild(t));
+    if (TREE_token(t) == T_ASTERISK || TREE_token(t) == T_DIV) {
+        if (is_arith(ld) && is_arith(rd)) {
+            //arithmetic operation
+            TREE_result_type(t) = buildBinaryOpType(TREE_type(t), ld, rd);
+        } else {
+            err(TREE_lineno(t), "illegal operation for '%s'",
+                getTokenName(TREE_token(TREE_rchild(t))));
+            return ST_ERR;
+        }
+    } else {
+        if (is_integer(ld) && is_integer(rd)) {
+            //arithmetic operation
+            TREE_result_type(t) = buildBinaryOpType(TREE_type(t), ld, rd);
+        } else {
+            err(TREE_lineno(t), "illegal operation for '%%'");
+            return ST_ERR;
+        }
+    }
+    return ST_SUCC; 
+}
+
+
+static INT TypeTranCond(Tree * t, TYCtx * cont)
+{
+    if (ST_SUCC != TypeTran(TREE_det(t), cont)) { return ST_ERR; }
+    if (ST_SUCC != TypeTran(TREE_true_part(t), cont)) { return ST_ERR; }
+    if (ST_SUCC != TypeTran(TREE_false_part(t), cont)) { return ST_ERR; }
+
+    Decl * td = TREE_result_type(TREE_true_part(t));
+    Decl * fd = TREE_result_type(TREE_false_part(t));
+    ASSERT0(td && fd);
+    if (is_pointer(td) && !is_pointer(fd)) {
+        if (!is_imm_int(TREE_false_part(t)) ||
+            TREE_imm_val(TREE_false_part(t)) != 0) {
+            err(TREE_lineno(t),
+                "no conversion from pointer to non-pointer");
+            return ST_ERR;
+        }
+    } else if (!is_pointer(td) && is_pointer(fd)) {
+        if (!is_imm_int(TREE_true_part(t)) ||
+            TREE_imm_val(TREE_true_part(t)) != 0) {
+            err(TREE_lineno(t),
+                "no conversion from pointer to non-pointer");
+            return ST_ERR;
+        }
+    } else if (is_array(td) && !is_array(fd)) {
+        err(TREE_lineno(t), "no conversion from array to non-array");
+        return ST_ERR;
+    } else if (!is_array(td) && is_array(fd)) {
+        err(TREE_lineno(t), "no conversion from non-array to array");
+        return ST_ERR;
+    } else if (is_struct(td) && !is_struct(fd)) {
+        err(TREE_lineno(t),
+            "can not select between struct and non-struct");
+        return ST_ERR;
+    } else if (is_union(td) && !is_union(fd)) {
+        err(TREE_lineno(t),
+            "can not select between union and non-union");
+        return ST_ERR;
+    }
+
+    //Record true-part type as the result type.
+    TREE_result_type(t) = td;
+    return ST_SUCC; 
+}
+
+
+static INT TypeTranPreAndPostInc(Tree * t, TYCtx * cont)
+{
+    if (ST_SUCC != TypeTran(TREE_inc_exp(t), cont)) { return ST_ERR; }
+
+    Decl * d = TREE_result_type(TREE_inc_exp(t));
+    if (!is_arith(d) && !is_pointer(d)) {
+        StrBuf buf(64);
+        format_declaration(buf, d);
+        if (TREE_type(t) == TR_INC) {
+            err(TREE_lineno(t),
+                "illegal prefixed '++', for type '%s'", buf.buf);
+        } else {
+            err(TREE_lineno(t),
+                "illegal postfix '++', for type '%s'", buf.buf);
+        }
+    }
+    TREE_result_type(t) = d;
+    return ST_SUCC; 
+}
+
+
+static INT TypeTranPreAndPostDec(Tree * t, TYCtx * cont)
+{
+    if (ST_SUCC != TypeTran(TREE_dec_exp(t), cont)) { return ST_ERR; }
+
+    Decl * d = TREE_result_type(TREE_dec_exp(t));
+    if (!is_arith(d) && !is_pointer(d)) {
+        StrBuf buf(64);
+        format_declaration(buf, d);
+        if (TREE_type(t) == TR_DEC) {
+            err(TREE_lineno(t),
+                "illegal prefixed '--' for type '%s'", buf.buf);
+        } else {
+            err(TREE_lineno(t),
+                "illegal postfix '--' for type '%s'", buf.buf);
+        }
+    }
+    TREE_result_type(t) = d;
+    return ST_SUCC; 
+}
+
+
+static INT TypeTranSizeof(Tree * t, TYCtx * cont)
+{
+    Tree * kid = TREE_sizeof_exp(t);
+    if (kid == nullptr) {
+        err(TREE_lineno(t), "miss expression after sizeof");
+        return ST_ERR;
+    }
+
+    if (TREE_type(kid) == TR_TYPE_NAME) {
+        Decl * type_name = TREE_type_name(kid);
+        if (IS_USER_TYPE_REF(DECL_spec(type_name))) {
+            //Expand the combined type here.
+            type_name = expand_user_type(type_name);
+            ASSERTN(is_valid_type_name(type_name), 
+                    ("Illegal expanding user-type"));
+            TREE_type_name(kid) = type_name;
+        }
+    }
+
+    INT size;
+    if (TREE_type(kid) == TR_TYPE_NAME) {
+        ASSERT0(TREE_type_name(kid));
+        size = get_decl_size(TREE_type_name(kid));
+    } else {
+        if (ST_SUCC != TypeTran(kid, cont)) { 
+            return ST_ERR;
+        }
+        ASSERT0(TREE_result_type(kid));
+        size = get_decl_size(TREE_result_type(kid));
+    }
+    ASSERT0(size != 0);
+    TREE_type(t) = TR_IMMU;
+    TREE_imm_val(t) = size;
+    return TypeTran(t, cont);
+}
+
+
+static INT TypeTranInDMem(Tree * t, TYCtx * cont)
+{
+    if (ST_SUCC != TypeTran(TREE_base_region(t), cont)) {
+        return ST_ERR;
+    }
+
+    Decl * ld = TREE_result_type(TREE_base_region(t));
+    ASSERTN(TREE_type(TREE_field(t)) == TR_ID, ("illegal TR_INDMEM node!!"));
+    if (!IS_STRUCT(DECL_spec(ld)) && !IS_UNION(DECL_spec(ld))) {
+        err(TREE_lineno(t), "left of '->' must have struct/union type");
+        return ST_ERR;
+    }
+
+    cont->is_field = true;
+    cont->base_tree_node = TREE_base_region(t);
+    if (ST_SUCC != TypeTran(TREE_field(t), cont)) {
+        return ST_ERR;
+    }
+
+    Decl * rd = TREE_result_type(TREE_field(t));
+    cont->base_tree_node = nullptr;
+    cont->is_field = false;
+    if (!is_pointer(ld)) {
+        Sym * sym = get_decl_sym(TREE_id_decl(TREE_field(t)));
+        err(TREE_lineno(t),
+            "'->%s' : left operand has 'struct' type, use '.'",
+            SYM_name(sym));
+        return ST_ERR;
+    }
+
+    TREE_result_type(t) = buildTypeName(DECL_spec(rd));
+    PURE_DECL(TREE_result_type(t)) = cp_decl_begin_at(PURE_DECL(rd));
+    return ST_SUCC; 
+}
+
+
+static INT TypeTranDMem(Tree * t, TYCtx * cont)
+{
+    if (ST_SUCC != TypeTran(TREE_base_region(t), cont)) {
+        return ST_ERR; 
+    }
+
+    Decl * ld = TREE_result_type(TREE_base_region(t));
+    ASSERTN(TREE_type(TREE_field(t)) == TR_ID, ("illegal TR_DMEM node!!"));
+    if (!IS_STRUCT(DECL_spec(ld)) && !IS_UNION(DECL_spec(ld))) {
+        err(TREE_lineno(t),
+            "left of field access operation '.' must be struct/union type");
+        return ST_ERR; 
+    }
+ 
+    cont->is_field = true;
+    cont->base_tree_node = TREE_base_region(t);
+    if (ST_SUCC != TypeTran(TREE_field(t), cont)) {
+        return ST_ERR; 
+    }
+
+    Decl * rd = TREE_result_type(TREE_field(t));
+    cont->base_tree_node = nullptr;
+    cont->is_field = false;
+ 
+    if (is_pointer(ld)) {
+        Sym * sym = get_decl_sym(TREE_id_decl(TREE_field(t)));
+        err(TREE_lineno(t),
+            "'.%s' : left operand points to 'struct' type, should use '->'",
+            SYM_name(sym));
+        return ST_ERR; 
+    }
+
+    TREE_result_type(t) = buildTypeName(DECL_spec(rd));
+    PURE_DECL(TREE_result_type(t)) = cp_decl_begin_at(PURE_DECL(rd));
+    return ST_SUCC; 
+}
+
+
+static INT TypeTranArray(Tree * t, TYCtx * cont)
+{
+    //Under C specification, user can derefence pointer
+    //utilizing array-operator,
+    //e.g:
+    //    int ** p;
+    //    p[i][j] = 10;
+    if (ST_SUCC != TypeTran(TREE_array_base(t), cont)) {
+        return ST_ERR; 
+    }
+    if (ST_SUCC != TypeTran(TREE_array_indx(t), cont)) {
+        return ST_ERR; 
+    }
+
+    Decl * ld = TREE_result_type(TREE_array_base(t));
+
+    //Return sub-dimension of base if 'ld' is
+    //multi-dimensional array.
+    Decl * td = cp_type_name(ld);
+    if (PURE_DECL(td) == nullptr) {
+        err(TREE_lineno(t),
+            "The referrence of array is not match with its declaration.");
+    } else if (DECL_dt(PURE_DECL(td)) == DCL_ARRAY ||
+               DECL_dt(PURE_DECL(td)) == DCL_POINTER) {
+        xcom::removehead(&PURE_DECL(td));
+    }
+    TREE_result_type(t) = td;
+    return ST_SUCC;
+}
+
+
+static INT TypeTranCall(Tree * t, TYCtx * cont)
+{
+    if (ST_SUCC != TypeTran(TREE_para_list(t), cont)) {
+        return ST_ERR;
+    }
+    if (ST_SUCC != TypeTran(TREE_fun_exp(t), cont)) {
+        return ST_ERR;
+    }
+
+    insertCvtForParams(t);
+    Decl * ld = TREE_result_type(TREE_fun_exp(t));
+    ASSERTN(DECL_dt(ld) == DCL_TYPE_NAME, ("expect TypeSpec-NAME"));
+    ASSERT0(DECL_decl_list(ld));
+    ASSERTN(DECL_dt(DECL_decl_list(ld)) == DCL_ABS_DECLARATOR,
+            ("expect abs-declarator"));
+
+    //Return value type is the CALL node type.
+    //So constructing return value type.
+    TypeSpec * ty = DECL_spec(ld);
+    Decl * pure = PURE_DECL(ld);
+    if (DECL_dt(pure) == DCL_FUN) {
+        pure = DECL_next(pure);
+    } else if (DECL_dt(pure) == DCL_POINTER &&
+               DECL_next(pure) != nullptr &&
+               DECL_dt(DECL_next(pure)) == DCL_FUN) {
+        //FUN_POINTER
+        pure = DECL_next(DECL_next(pure));
+    }
+
+    ASSERTN(pure == nullptr || DECL_dt(pure) != DCL_FUN, ("Illegal dcl list"));
+    TREE_result_type(t) = buildTypeName(ty);
+    PURE_DECL(TREE_result_type(t)) = pure;
+    return ST_SUCC;
+}
+
+
+//The function handles token '+' '-'.
+static INT TypeTranAdditive(Tree * t, TYCtx * cont)
+{
+    if (ST_SUCC != TypeTran(TREE_lchild(t), cont)) {
+        return ST_ERR;
+    }
+
+    if (ST_SUCC != TypeTran(TREE_rchild(t), cont)) {
+        return ST_ERR;
+    }
+
+    Decl * ld = TREE_result_type(TREE_lchild(t));
+    Decl * rd = TREE_result_type(TREE_rchild(t));
+    if (TREE_token(t) == T_ADD) { // '+'
+        if (is_pointer(ld) && is_pointer(rd)) {
+            err(TREE_lineno(t), "can not add two pointers");
+            return ST_ERR;
+        }
+
+        if (is_array(ld) && is_array(rd)) {
+            err(TREE_lineno(t), "can not add two arrays");
+            return ST_ERR;
+        }
+
+        if (!is_pointer(ld)) {
+            if (is_struct(ld) || is_union(rd)) {
+                err(TREE_lineno(t), "illegal '%s' for struct/union",
+                    getTokenName(TREE_token(t)));
+                return ST_ERR;
+            }
+        }
+
+        if (is_pointer(rd)) {
+            //Swap operands.
+            Decl * tmp = ld;
+            ld = rd;
+            rd = tmp;
+            TREE_result_type(TREE_lchild(t)) = ld;
+            TREE_result_type(TREE_rchild(t)) = rd;
+        }
+
+        if (is_array(ld) && is_integer(rd)) {
+            //Regard array type as pointer,
+            //the result type is pointer.
+            //e.g: int a[]; b=a+2; b is pointer.
+            TREE_result_type(t) = buildPointerType(DECL_spec(ld));
+        } else if (is_pointer(ld) && is_integer(rd)) {
+            //Pointer arith.
+            TREE_result_type(t) = ld;
+        } else if (is_arith(ld) && is_arith(rd)) {
+            //Arithmetic type.
+            TREE_result_type(t) = buildBinaryOpType(TREE_type(t), ld, rd);
+        } else {
+            ASSERTN(0, ("illegal type for '%s'", getTokenName(TREE_token(t))));
+        }
+        return ST_SUCC; 
+    }
+
+    if (TREE_token(t) == T_SUB) { // '-'
+        if (!is_pointer(ld) && is_pointer(rd)) {
+            err(TREE_lineno(t),
+                "pointer can only be subtracted from another pointer");
+            return ST_ERR;
+        }
+
+        if (!is_pointer(ld)) {
+            if (is_struct(DECL_spec(ld)) || is_union(DECL_spec(ld))) {
+                err(TREE_lineno(t), "illegal '%s' for struct/union",
+                    getTokenName(TREE_token(t)));
+                return ST_ERR;
+            }
+        }
+
+        if (!is_pointer(rd)) {
+            if (is_struct(DECL_spec(rd)) || is_union(DECL_spec(rd))) {
+                err(TREE_lineno(t), "illegal '%s' for struct/union",
+                    getTokenName(TREE_token(t)));
+                return ST_ERR;
+            }
+        }
+
+        if (is_pointer(ld) && is_pointer(rd)) {
+            //pointer - pointer
+            TREE_result_type(t) = BUILD_TYNAME(T_SPEC_UNSIGNED | T_SPEC_LONG);
+        } else if (is_pointer(ld) && is_integer(rd)) {
+            //pointer - integer
+            TREE_result_type(t) = ld;
+        } else if (is_arith(ld) && is_arith(rd)) {
+            //Arithmetic type
+            TREE_result_type(t) = buildBinaryOpType(TREE_type(t), ld, rd);
+        } else {
+            ASSERTN(0, ("illegal type for '%s'",
+                    getTokenName(TREE_token(t))));
+        }
+        return ST_SUCC; 
+    }
+
+    ASSERTN(0, ("illegal type for '%s'", getTokenName(TREE_token(t))));
+    return ST_ERR; 
+}
+
+
+static INT TypeTranDeclInit(Decl const* decl, TYCtx * cont)
+{
+    for (Decl const* dcl = decl; dcl != nullptr; dcl = DECL_next(dcl)) {
+        if (!is_initialized(dcl)) { continue; }
+        Tree * inittree = get_decl_init_tree(dcl);
+        ASSERT0(inittree);
+        if (ST_SUCC != TypeTran(inittree, cont)) {
+            return ST_ERR;
+        } 
+    }
+    return ST_SUCC;
+}
+
+
+//Transfering type declaration for all AST nodes.
+INT TypeTran(Tree * t, TYCtx * cont)
+{
+    TYCtx ct;
     if (cont == nullptr) {
         cont = &ct;
     }
@@ -829,7 +1260,7 @@ static INT TypeTran(Tree * t, TYCtx * cont)
                 goto FAILED;
             }
             if (!checkAssign(t, TREE_result_type(TREE_lchild(t)),
-                           TREE_result_type(TREE_rchild(t)))) {
+                             TREE_result_type(TREE_rchild(t)))) {
                 goto FAILED;
             }
             TREE_result_type(t) = TREE_result_type(TREE_lchild(t));
@@ -882,24 +1313,23 @@ static INT TypeTran(Tree * t, TYCtx * cont)
         }
         case TR_LOGIC_OR:  //logical or       ||
         case TR_LOGIC_AND: //logical and      &&
-            if (ST_SUCC != TypeTran(TREE_lchild(t), cont)) goto FAILED;
-            if (ST_SUCC != TypeTran(TREE_rchild(t), cont)) goto FAILED;
+            if (ST_SUCC != TypeTran(TREE_lchild(t), cont)) { goto FAILED; }
+            if (ST_SUCC != TypeTran(TREE_rchild(t), cont)) { goto FAILED; }
             TREE_result_type(t) = BUILD_TYNAME(T_SPEC_UNSIGNED | T_SPEC_CHAR);
             break;
         case TR_INCLUSIVE_OR: //inclusive or  |
         case TR_XOR: //exclusive or
         case TR_INCLUSIVE_AND: //inclusive and &
         case TR_SHIFT: { // >> <<
-            if (ST_SUCC != TypeTran(TREE_lchild(t), cont)) goto FAILED;
-            if (ST_SUCC != TypeTran(TREE_rchild(t), cont)) goto FAILED;
+            if (ST_SUCC != TypeTran(TREE_lchild(t), cont)) { goto FAILED; }
+            if (ST_SUCC != TypeTran(TREE_rchild(t), cont)) { goto FAILED; }
 
             Decl * ld = TREE_result_type(TREE_lchild(t));
             Decl * rd = TREE_result_type(TREE_rchild(t));
             if (is_pointer(ld) || is_array(ld)) {
                 StrBuf buf(64);
                 format_declaration(buf,ld);
-                err(TREE_lineno(t),
-                    "illegal '%s', left operand has type '%s'",
+                err(TREE_lineno(t), "illegal '%s', left operand has type '%s'",
                     getTokenName(TREE_token(TREE_lchild(t))), buf.buf);
                 goto FAILED;
             }
@@ -907,8 +1337,7 @@ static INT TypeTran(Tree * t, TYCtx * cont)
             if (is_pointer(rd) || is_array(rd)) {
                 StrBuf buf(64);
                 format_declaration(buf,rd);
-                err(TREE_lineno(t),
-                    "illegal '%s', right operand has type '%s'",
+                err(TREE_lineno(t), "illegal '%s', right operand has type '%s'",
                     getTokenName(TREE_token(TREE_rchild(t))), buf.buf);
                 goto FAILED;
             }
@@ -926,8 +1355,8 @@ static INT TypeTran(Tree * t, TYCtx * cont)
         }
         case TR_EQUALITY: // == !=
         case TR_RELATION: { // < > >= <=
-            if (ST_SUCC != TypeTran(TREE_lchild(t), cont)) goto FAILED;
-            if (ST_SUCC != TypeTran(TREE_rchild(t), cont)) goto FAILED;
+            if (ST_SUCC != TypeTran(TREE_lchild(t), cont)) { goto FAILED; }
+            if (ST_SUCC != TypeTran(TREE_rchild(t), cont)) { goto FAILED; }
 
             Decl * ld = TREE_result_type(TREE_lchild(t));
             Decl * rd = TREE_result_type(TREE_rchild(t));
@@ -946,165 +1375,64 @@ static INT TypeTran(Tree * t, TYCtx * cont)
                     getTokenName(TREE_token(t)));
                 goto FAILED;
             }
-            TREE_result_type(t) =
-                BUILD_TYNAME(T_SPEC_UNSIGNED | T_SPEC_CHAR);
+            TREE_result_type(t) = BUILD_TYNAME(T_SPEC_UNSIGNED | T_SPEC_CHAR);
             break;
         }
-        case TR_ADDITIVE: { // '+' '-'
-            if (ST_SUCC != TypeTran(TREE_lchild(t), cont)) {
-                goto FAILED;
-            }
-            if (ST_SUCC != TypeTran(TREE_rchild(t), cont)) {
-                goto FAILED;
-            }
-            Decl * ld = TREE_result_type(TREE_lchild(t));
-            Decl * rd = TREE_result_type(TREE_rchild(t));
-            if (TREE_token(t) == T_ADD) { // '+'
-                if (is_pointer(ld) && is_pointer(rd)) {
-                    err(TREE_lineno(t), "can not add two pointers");
-                    goto FAILED;
-                }
-                if (is_array(ld) && is_array(rd)) {
-                    err(TREE_lineno(t), "can not add two arrays");
-                    goto FAILED;
-                }
-                if (!is_pointer(ld)) {
-                    if (is_struct(ld) || is_union(rd)) {
-                        err(TREE_lineno(t),
-                            "illegal '%s' for struct/union",
-                            getTokenName(TREE_token(t)));
-                        goto FAILED;
-                    }
-                }
-                if (is_pointer(rd)) {
-                    //Swap operands.
-                    Decl * tmp = ld;
-                    ld = rd;
-                    rd = tmp;
-                    TREE_result_type(TREE_lchild(t)) = ld;
-                    TREE_result_type(TREE_rchild(t)) = rd;
-                }
-
-                if (is_array(ld) && is_integer(rd)) {
-                    //Regard array type as pointer,
-                    //the result type is pointer.
-                    //e.g: int a[]; b=a+2; b is pointer.
-                    TREE_result_type(t) = buildPointerType(DECL_spec(ld));
-                } else if (is_pointer(ld) && is_integer(rd)) {
-                    //Pointer arith.
-                    TREE_result_type(t) = ld;
-                } else if (is_arith(ld) && is_arith(rd)) {
-                    //Arithmetic type.
-                    TREE_result_type(t) = buildBinaryOpType(
-                        TREE_type(t), ld, rd);
-                } else {
-                    ASSERTN(0, ("illegal type for '%s'",
-                        getTokenName(TREE_token(t))));
-                }
-            } else if (TREE_token(t) == T_SUB) { // '-'
-                if (!is_pointer(ld) && is_pointer(rd)) {
-                    err(TREE_lineno(t),
-                        "pointer can only be "
-                        "subtracted from another pointer");
-                    goto FAILED;
-                }
-
-                if (!is_pointer(ld)) {
-                    if (is_struct(DECL_spec(ld)) ||
-                        is_union(DECL_spec(ld))) {
-                        err(TREE_lineno(t),
-                            "illegal '%s' for struct/union",
-                            getTokenName(TREE_token(t)));
-                        goto FAILED;
-                    }
-                }
-
-                if (!is_pointer(rd)) {
-                    if (is_struct(DECL_spec(rd)) ||
-                        is_union(DECL_spec(rd))) {
-                        err(TREE_lineno(t),
-                            "illegal '%s' for struct/union",
-                            getTokenName(TREE_token(t)));
-                        goto FAILED;
-                    }
-                }
-
-                if (is_pointer(ld) && is_pointer(rd)) {
-                    //pointer - pointer
-                    TREE_result_type(t) =
-                        BUILD_TYNAME(T_SPEC_UNSIGNED | T_SPEC_LONG);
-                } else if (is_pointer(ld) && is_integer(rd)) {
-                    //pointer - integer
-                    TREE_result_type(t) = ld;
-                } else if (is_arith(ld) && is_arith(rd)) {
-                    //Arithmetic type
-                    TREE_result_type(t) = buildBinaryOpType(
-                        TREE_type(t), ld, rd);
-                } else {
-                    ASSERTN(0, ("illegal type for '%s'",
-                            getTokenName(TREE_token(t))));
-                }
-            } else {
-                ASSERTN(0, ("illegal type for '%s'",
-                        getTokenName(TREE_token(t))));
-            }
+        case TR_ADDITIVE: // '+' '-'
+            if (ST_SUCC != TypeTranAdditive(t, cont)) { goto FAILED; }
             break;
-        }
-        case TR_MULTI: { // '*' '/' '%'
-            if (ST_SUCC != TypeTran(TREE_lchild(t), cont)) goto FAILED;
-            if (ST_SUCC != TypeTran(TREE_rchild(t), cont)) goto FAILED;
-            Decl * ld = TREE_result_type(TREE_lchild(t));
-            Decl * rd = TREE_result_type(TREE_rchild(t));
-
-            if (TREE_token(t) == T_ASTERISK || TREE_token(t) == T_DIV) {
-                if (is_arith(ld) && is_arith(rd)) {
-                    //arithmetic operation
-                    TREE_result_type(t) = buildBinaryOpType(
-                        TREE_type(t), ld, rd);
-                } else {
-                    err(TREE_lineno(t), "illegal operation for '%s'",
-                         getTokenName(TREE_token(TREE_rchild(t))));
-                    goto FAILED;
-                }
-            } else {
-                if (is_integer(ld) && is_integer(rd)) {
-                    //arithmetic operation
-                    TREE_result_type(t) = buildBinaryOpType(
-                        TREE_type(t), ld, rd);
-                } else {
-                    err(TREE_lineno(t), "illegal operation for '%%'");
-                    goto FAILED;
-                }
-            }
+        case TR_MULTI: // '*' '/' '%'
+            if (ST_SUCC != TypeTranMulti(t, cont)) { goto FAILED; }
             break;
-        }
         case TR_SCOPE: {
-            SCOPE * sc = TREE_scope(t);
-            if (ST_SUCC != TypeTran(SCOPE_stmt_list(sc), nullptr)) goto FAILED;
+            Scope * sc = TREE_scope(t);
+            if (ST_SUCC != TypeTranDeclInit(SCOPE_decl_list(sc), nullptr)) {
+                goto FAILED;
+            }
+            if (ST_SUCC != TypeTran(SCOPE_stmt_list(sc), nullptr)) {
+                goto FAILED;
+            }
             break;
         }
         case TR_IF:
-            if (ST_SUCC != TypeTran(TREE_if_det(t), cont)) goto FAILED;
-            if (ST_SUCC != TypeTran(TREE_if_true_stmt(t), cont)) goto FAILED;
-            if (ST_SUCC != TypeTran(TREE_if_false_stmt(t), cont)) goto FAILED;
+            if (ST_SUCC != TypeTran(TREE_if_det(t), cont)) { goto FAILED; }
+            if (ST_SUCC != TypeTran(TREE_if_true_stmt(t), cont)) {
+                goto FAILED;
+            }
+            if (ST_SUCC != TypeTran(TREE_if_false_stmt(t), cont)) {
+                goto FAILED;
+            }
             break;
         case TR_DO:
-            if (ST_SUCC != TypeTran(TREE_dowhile_det(t), cont)) goto FAILED;
-            if (ST_SUCC != TypeTran(TREE_dowhile_body(t), cont)) goto FAILED;
+            if (ST_SUCC != TypeTran(TREE_dowhile_det(t), cont)) { goto FAILED; }
+            if (ST_SUCC != TypeTran(TREE_dowhile_body(t), cont)) {
+                goto FAILED;
+            }
             break;
         case TR_WHILE:
-            if (ST_SUCC != TypeTran(TREE_whiledo_det(t), cont)) goto FAILED;
-            if (ST_SUCC != TypeTran(TREE_whiledo_body(t), cont)) goto FAILED;
+            if (ST_SUCC != TypeTran(TREE_whiledo_det(t), cont)) { goto FAILED; }
+            if (ST_SUCC != TypeTran(TREE_whiledo_body(t), cont)) {
+                goto FAILED;
+            }
             break;
         case TR_FOR:
-            if (ST_SUCC != TypeTran(TREE_for_init(t), nullptr)) goto FAILED;
-            if (ST_SUCC != TypeTran(TREE_for_det(t), nullptr)) goto FAILED;
-            if (ST_SUCC != TypeTran(TREE_for_step(t), nullptr)) goto FAILED;
-            if (ST_SUCC != TypeTran(TREE_for_body(t), nullptr)) goto FAILED;
+            if (TREE_for_scope(t) != nullptr &&
+                ST_SUCC != TypeTranDeclInit(
+                    SCOPE_decl_list(TREE_for_scope(t)), nullptr)) {
+                goto FAILED;
+            }
+            if (ST_SUCC != TypeTran(TREE_for_init(t), nullptr)) { goto FAILED; }
+            if (ST_SUCC != TypeTran(TREE_for_det(t), nullptr)) { goto FAILED; }
+            if (ST_SUCC != TypeTran(TREE_for_step(t), nullptr)) { goto FAILED; }
+            if (ST_SUCC != TypeTran(TREE_for_body(t), nullptr)) { goto FAILED; }
             break;
         case TR_SWITCH:
-            if (ST_SUCC != TypeTran(TREE_switch_det(t), nullptr)) goto FAILED;
-            if (ST_SUCC != TypeTran(TREE_switch_body(t), nullptr)) goto FAILED;
+            if (ST_SUCC != TypeTran(TREE_switch_det(t), nullptr)) {
+                goto FAILED; 
+            }
+            if (ST_SUCC != TypeTran(TREE_switch_body(t), nullptr)) {
+                goto FAILED;
+            }
             break;
         case TR_BREAK:
         case TR_CONTINUE:
@@ -1114,52 +1442,11 @@ static INT TypeTran(Tree * t, TYCtx * cont)
         case TR_CASE:
             break;
         case TR_RETURN:
-            if (ST_SUCC != TypeTran(TREE_ret_exp(t), cont)) goto FAILED;
+            if (ST_SUCC != TypeTran(TREE_ret_exp(t), cont)) { goto FAILED; }
             break;
-        case TR_COND: { //formulized log_OR_exp?exp:cond_exp
-            if (ST_SUCC != TypeTran(TREE_det(t), cont)) goto FAILED;
-            if (ST_SUCC != TypeTran(TREE_true_part(t), cont)) {
-                goto FAILED;
-            }
-            if (ST_SUCC != TypeTran(TREE_false_part(t), cont)) {
-                goto FAILED;
-            }
-            Decl * td = TREE_result_type(TREE_true_part(t));
-            Decl * fd = TREE_result_type(TREE_false_part(t));
-            ASSERT0(td && fd);
-            if (is_pointer(td) && !is_pointer(fd)) {
-                if (!is_imm_int(TREE_false_part(t)) ||
-                    TREE_imm_val(TREE_false_part(t)) != 0) {
-                    err(TREE_lineno(t),
-                        "no conversion from pointer to non-pointer");
-                    goto FAILED;
-                }
-            } else if (!is_pointer(td) && is_pointer(fd)) {
-                if (!is_imm_int(TREE_true_part(t)) ||
-                    TREE_imm_val(TREE_true_part(t)) != 0) {
-                    err(TREE_lineno(t),
-                        "no conversion from pointer to non-pointer");
-                    goto FAILED;
-                }
-            } else if (is_array(td) && !is_array(fd)) {
-                err(TREE_lineno(t), "no conversion from array to non-array");
-                goto FAILED;
-            } else if (!is_array(td) && is_array(fd)) {
-                err(TREE_lineno(t), "no conversion from non-array to array");
-                goto FAILED;
-            } else if (is_struct(td) && !is_struct(fd)) {
-                err(TREE_lineno(t),
-                    "can not select between struct and non-struct");
-                goto FAILED;
-            } else if (is_union(td) && !is_union(fd)) {
-                err(TREE_lineno(t),
-                    "can not select between union and non-union");
-                goto FAILED;
-            }
-            //Record true-part type as the result type.
-            TREE_result_type(t) = td;
+        case TR_COND: //formulized log_OR_exp?exp:cond_exp
+            if (ST_SUCC != TypeTranCond(t, cont)) { goto FAILED; }
             break;
-        }
         case TR_CVT: { //type convertion
             if (ST_SUCC != TypeTran(TREE_cast_exp(t), cont)) { goto FAILED; }
 
@@ -1185,38 +1472,9 @@ static INT TypeTran(Tree * t, TYCtx * cont)
             TREE_result_type(t) = td;
             break;
         }
-        case TR_DEREF: { // *p  dereferencing the pointer 'p'
-            if (ST_SUCC != TypeTran(TREE_lchild(t), cont)) {
-                goto FAILED;
-            }
-            Decl * ld = TREE_result_type(TREE_lchild(t));
-            if (!is_pointer(ld) && !is_array(ld)) {
-                err(TREE_lineno(t), "Illegal dereferencing operation, "
-                    "indirection operation should operate on pointer type.");
-
-                goto FAILED;
-            }
-            Decl * td = cp_type_name(ld);
-            ld = PURE_DECL(td);
-            ASSERTN(ld, ("lchild must be pointer type"));
-            if (DECL_dt(ld) == DCL_POINTER ||
-                DECL_dt(ld) == DCL_ARRAY) {
-                //In C, base of array only needs address, so the DEREF
-                //operator has alias effect. It means ARRAY(LD(p)) for
-                //given declaration: int (*p)[].
-                //
-                //The value is needed if there is not an ARRAY operator,
-                //e.g: a = *p, should generate a=LD(LD(p)).
-                xcom::remove(&PURE_DECL(td), ld);
-            } else if (DECL_dt(ld) == DCL_FUN) {
-                //ACCEPT
-            } else {
-                err(TREE_lineno(t), "illegal indirection");
-                goto FAILED;
-            }
-            TREE_result_type(t) = td;
+        case TR_DEREF: // *p  dereferencing the pointer 'p'
+            if (ST_SUCC != TypeTranDeref(t, cont)) { goto FAILED; }
             break;
-        }
         case TR_PLUS: // +123
         case TR_MINUS: { // -123
             if (ST_SUCC != TypeTran(TREE_lchild(t), cont)) goto FAILED;
@@ -1261,202 +1519,28 @@ static INT TypeTran(Tree * t, TYCtx * cont)
             break;
         }
         case TR_INC:   //++a
-        case TR_POST_INC: { //a++
-            if (ST_SUCC != TypeTran(TREE_inc_exp(t), cont)) goto FAILED;
-            Decl * d = TREE_result_type(TREE_inc_exp(t));
-            if (!is_arith(d) && !is_pointer(d)) {
-                StrBuf buf(64);
-                format_declaration(buf, d);
-                if (TREE_type(t) == TR_INC) {
-                    err(TREE_lineno(t),
-                        "illegal prefixed '++', for type '%s'", buf.buf);
-                } else {
-                    err(TREE_lineno(t),
-                        "illegal postfix '++', for type '%s'", buf.buf);
-                }
-            }
-            TREE_result_type(t) = d;
+        case TR_POST_INC: //a++
+            if (ST_SUCC != TypeTranSizeof(t, cont)) { goto FAILED; }
             break;
-        }
         case TR_DEC: //--a
-        case TR_POST_DEC: { //a--
-            if (ST_SUCC != TypeTran(TREE_dec_exp(t), cont)) goto FAILED;
-
-            Decl * d = TREE_result_type(TREE_dec_exp(t));
-            if (!is_arith(d) && !is_pointer(d)) {
-                StrBuf buf(64);
-                format_declaration(buf, d);
-                if (TREE_type(t) == TR_DEC) {
-                    err(TREE_lineno(t),
-                        "illegal prefixed '--' for type '%s'", buf.buf);
-                } else {
-                    err(TREE_lineno(t),
-                        "illegal postfix '--' for type '%s'", buf.buf);
-                }
-            }
-            TREE_result_type(t) = d;
+        case TR_POST_DEC: //a--
+            if (ST_SUCC != TypeTranSizeof(t, cont)) { goto FAILED; }
             break;
-        }
-        case TR_SIZEOF: { // sizeof(a)
-            Tree * kid = TREE_sizeof_exp(t);
-            if (kid == nullptr) {
-                err(TREE_lineno(t), "miss expression after sizeof");
-                break;
-            }
-            if (TREE_type(kid) == TR_TYPE_NAME) {
-                Decl * type_name = TREE_type_name(kid);
-                if (IS_USER_TYPE_REF(DECL_spec(type_name))) {
-                    //Expand the combined type here.
-                    type_name = expand_user_type(type_name);
-                    ASSERTN(is_valid_type_name(type_name),
-                            ("Illegal expanding user-type"));
-                    TREE_type_name(kid) = type_name;
-                }
-            }
-            INT size;
-            if (TREE_type(kid) == TR_TYPE_NAME) {
-                ASSERT0(TREE_type_name(kid));
-                size = get_decl_size(TREE_type_name(kid));
-            } else {
-                if (ST_SUCC != TypeTran(kid, cont)) { goto FAILED; }
-                ASSERT0(TREE_result_type(kid));
-                size = get_decl_size(TREE_result_type(kid));
-            }
-            ASSERT0(size != 0);
-            TREE_type(t) = TR_IMMU;
-            TREE_imm_val(t) = size;
-            if (ST_SUCC != TypeTran(t, cont)) { goto FAILED; }
+        case TR_SIZEOF: // sizeof(a)
+            if (ST_SUCC != TypeTranSizeof(t, cont)) { goto FAILED; }
             break;
-        }
-        case TR_CALL: {
-            if (ST_SUCC != TypeTran(TREE_para_list(t), cont)) {
-                goto FAILED;
-            }
-            if (ST_SUCC != TypeTran(TREE_fun_exp(t), cont)) {
-                goto FAILED;
-            }
-            insertCvtForParams(t);
-            Decl * ld = TREE_result_type(TREE_fun_exp(t));
-            ASSERTN(DECL_dt(ld) == DCL_TYPE_NAME, ("expect TypeSpec-NAME"));
-            ASSERT0(DECL_decl_list(ld));
-            ASSERTN(DECL_dt(DECL_decl_list(ld)) == DCL_ABS_DECLARATOR,
-                    ("expect abs-declarator"));
-
-            //Return value type is the CALL node type.
-            //So constructing return value type.
-            TypeSpec * ty = DECL_spec(ld);
-            Decl * pure = PURE_DECL(ld);
-            if (DECL_dt(pure) == DCL_FUN) {
-                pure = DECL_next(pure);
-            } else if (DECL_dt(pure) == DCL_POINTER &&
-                       DECL_next(pure) != nullptr &&
-                       DECL_dt(DECL_next(pure)) == DCL_FUN) {
-                //FUN_POINTER
-                pure = DECL_next(DECL_next(pure));
-            }
-
-            ASSERTN(pure == nullptr || DECL_dt(pure) != DCL_FUN,
-                   ("Illegal dcl list"));
-
-            TREE_result_type(t) = buildTypeName(ty);
-            PURE_DECL(TREE_result_type(t)) = pure;
+        case TR_CALL:
+            if (ST_SUCC != TypeTranCall(t, cont)) { goto FAILED; }
             break;
-        }
-        case TR_ARRAY: {
-            //Under C specification, user can derefence pointer
-            //utilizing array-operator,
-            //e.g:
-            //    int ** p;
-            //    p[i][j] = 10;
-            if (ST_SUCC != TypeTran(TREE_array_base(t), cont)) {
-                goto FAILED;
-            }
-            if (ST_SUCC != TypeTran(TREE_array_indx(t), cont)) {
-                goto FAILED;
-            }
-
-            Decl * ld = TREE_result_type(TREE_array_base(t));
-
-            //Return sub-dimension of base if 'ld' is
-            //multi-dimensional array.
-            Decl * td = cp_type_name(ld);
-            if (PURE_DECL(td) == nullptr) {
-                err(TREE_lineno(t),
-                    "The referrence of array is not match"
-                    " with its declaration.");
-            } else if (DECL_dt(PURE_DECL(td)) == DCL_ARRAY ||
-                       DECL_dt(PURE_DECL(td)) == DCL_POINTER) {
-                xcom::removehead(&PURE_DECL(td));
-            }
-            TREE_result_type(t) = td;
+        case TR_ARRAY:
+            if (ST_SUCC != TypeTranArray(t, cont)) { goto FAILED; }
             break;
-        }
-        case TR_DMEM: { // a.b
-            Decl * rd, * ld;
-            if (ST_SUCC != TypeTran(TREE_base_region(t), cont)) {
-                goto FAILED;
-            }
-            ld = TREE_result_type(TREE_base_region(t));
-            ASSERTN(TREE_type(TREE_field(t)) == TR_ID,
-                    ("illegal TR_DMEM node!!"));
-            if (!IS_STRUCT(DECL_spec(ld)) && !IS_UNION(DECL_spec(ld))) {
-                err(TREE_lineno(t),
-                    "left of field access operation '.'"
-                    " must be struct/union type");
-                goto FAILED;
-            }
-
-            cont->is_field = true;
-            cont->base_tree_node = TREE_base_region(t);
-            if (ST_SUCC != TypeTran(TREE_field(t), cont)) goto FAILED;
-            rd = TREE_result_type(TREE_field(t)),
-            cont->base_tree_node = nullptr;
-            cont->is_field = false;
-
-            if (is_pointer(ld)) {
-                Sym * sym = get_decl_sym(TREE_id_decl(TREE_field(t)));
-                err(TREE_lineno(t),
-                    "'.%s' : left operand points to"
-                    " 'struct' type, should use '->'",
-                    SYM_name(sym));
-                goto FAILED;
-            }
-            TREE_result_type(t) = buildTypeName(DECL_spec(rd));
-            PURE_DECL(TREE_result_type(t)) = cp_decl_begin_at(PURE_DECL(rd));
+        case TR_DMEM: // a.b
+            if (ST_SUCC != TypeTranDMem(t, cont)) { goto FAILED; }
             break;
-        }
-        case TR_INDMEM: { // a->b
-            Decl * rd,*ld;
-            if (ST_SUCC != TypeTran(TREE_base_region(t), cont)) goto FAILED;
-            ld = TREE_result_type(TREE_base_region(t));
-
-            ASSERTN(TREE_type(TREE_field(t)) == TR_ID,
-                    ("illegal TR_INDMEM node!!"));
-            if (!IS_STRUCT(DECL_spec(ld)) && !IS_UNION(DECL_spec(ld))) {
-                err(TREE_lineno(t),
-                    "left of '->' must have struct/union type");
-                goto FAILED;
-            }
-
-            cont->is_field = true;
-            cont->base_tree_node = TREE_base_region(t);
-            if (ST_SUCC != TypeTran(TREE_field(t), cont)) goto FAILED;
-            rd = TREE_result_type(TREE_field(t)),
-            cont->base_tree_node = nullptr;
-            cont->is_field = false;
-
-            if (!is_pointer(ld)) {
-                Sym * sym = get_decl_sym(TREE_id_decl(TREE_field(t)));
-                err(TREE_lineno(t),
-                    "'->%s' : left operand has 'struct' type, use '.'",
-                    SYM_name(sym));
-                goto FAILED;
-            }
-            TREE_result_type(t) = buildTypeName(DECL_spec(rd));
-            PURE_DECL(TREE_result_type(t)) =
-                cp_decl_begin_at(PURE_DECL(rd));
+        case TR_INDMEM: // a->b
+            if (ST_SUCC != TypeTranInDMem(t, cont)) { goto FAILED; }
             break;
-        }
         case TR_PRAGMA:
         case TR_PREP:
             break;
@@ -1512,8 +1596,8 @@ static INT checkDeclaration(Decl const* d)
 
 static bool checkCall(Tree * t, TYCtx * cont)
 {
-    if (ST_SUCC != TypeCheckCore(TREE_para_list(t), cont)) return false;
-    if (ST_SUCC != TypeCheckCore(TREE_fun_exp(t), cont)) return false;
+    if (ST_SUCC != TypeCheckTreeList(TREE_para_list(t), cont)) { return false; }
+    if (ST_SUCC != TypeCheckTreeList(TREE_fun_exp(t), cont)) { return false; }
     Decl * fun_decl = TREE_result_type(TREE_fun_exp(t));
 
     //Return type is the call type.
@@ -1638,8 +1722,8 @@ static void checkAssignLHS(Tree * t)
 
 static bool checkAssign(Tree * t, TYCtx * cont)
 {
-    TypeCheckCore(TREE_lchild(t), cont);
-    TypeCheckCore(TREE_rchild(t), cont);
+    TypeCheckTreeList(TREE_lchild(t), cont);
+    TypeCheckTreeList(TREE_rchild(t), cont);
     if ((is_pointer(TREE_result_type(TREE_lchild(t))) &&
          !isConsistentWithPointer(TREE_rchild(t))) ||
         (is_pointer(TREE_result_type(TREE_rchild(t))) &&
@@ -1657,11 +1741,22 @@ static bool checkAssign(Tree * t, TYCtx * cont)
 }
 
 
-//Perform type checking.
-static INT TypeCheckCore(Tree * t, TYCtx * cont)
+static void TypeCheckDeclInit(Decl const* decl, TYCtx * cont)
 {
+    for (Decl const* dcl = decl; dcl != nullptr; dcl = DECL_next(dcl)) {
+        if (!is_initialized(dcl)) { continue; }
+        Tree * inittree = get_decl_init_tree(dcl);
+        ASSERT0(inittree);
+        TypeCheckTreeList(inittree, cont);    
+    }
+}
+
+
+//Perform type checking.
+INT TypeCheckTreeList(Tree * t, TYCtx * cont)
+{
+    TYCtx ct;
     if (cont == nullptr) {
-        TYCtx ct = {0};
         cont = &ct;
     }
 
@@ -1691,34 +1786,35 @@ static INT TypeCheckCore(Tree * t, TYCtx * cont)
         case TR_RELATION:      // < > >= <=
         case TR_ADDITIVE:      // '+' '-'
         case TR_MULTI:         // '*' '/' '%'
-            TypeCheckCore(TREE_lchild(t), cont);
-            TypeCheckCore(TREE_rchild(t), cont);
+            TypeCheckTreeList(TREE_lchild(t), cont);
+            TypeCheckTreeList(TREE_rchild(t), cont);
             break;
         case TR_SCOPE:
-            TypeCheckCore(SCOPE_stmt_list(TREE_scope(t)), cont);
+            TypeCheckDeclInit(SCOPE_decl_list(TREE_scope(t)), cont);
+            TypeCheckTreeList(SCOPE_stmt_list(TREE_scope(t)), cont);
             break;
         case TR_IF:
-            TypeCheckCore(TREE_if_det(t), cont);
-            TypeCheckCore(TREE_if_true_stmt(t), cont);
-            TypeCheckCore(TREE_if_false_stmt(t), cont);
+            TypeCheckTreeList(TREE_if_det(t), cont);
+            TypeCheckTreeList(TREE_if_true_stmt(t), cont);
+            TypeCheckTreeList(TREE_if_false_stmt(t), cont);
             break;
         case TR_DO:
-            TypeCheckCore(TREE_dowhile_body(t), cont);
-            TypeCheckCore(TREE_dowhile_det(t), cont);
+            TypeCheckTreeList(TREE_dowhile_body(t), cont);
+            TypeCheckTreeList(TREE_dowhile_det(t), cont);
             break;
         case TR_WHILE:
-            TypeCheckCore(TREE_whiledo_det(t), cont);
-            TypeCheckCore(TREE_whiledo_body(t), cont);
+            TypeCheckTreeList(TREE_whiledo_det(t), cont);
+            TypeCheckTreeList(TREE_whiledo_body(t), cont);
             break;
         case TR_FOR:
-            TypeCheckCore(TREE_for_init(t), cont);
-            TypeCheckCore(TREE_for_det(t), cont);
-            TypeCheckCore(TREE_for_step(t), cont);
-            TypeCheckCore(TREE_for_body(t), cont);
+            TypeCheckTreeList(TREE_for_init(t), cont);
+            TypeCheckTreeList(TREE_for_det(t), cont);
+            TypeCheckTreeList(TREE_for_step(t), cont);
+            TypeCheckTreeList(TREE_for_body(t), cont);
             break;
         case TR_SWITCH:
-            TypeCheckCore(TREE_switch_det(t), cont);
-            TypeCheckCore(TREE_switch_body(t), cont);
+            TypeCheckTreeList(TREE_switch_det(t), cont);
+            TypeCheckTreeList(TREE_switch_body(t), cont);
             break;
         case TR_BREAK:
         case TR_CONTINUE:
@@ -1728,15 +1824,15 @@ static INT TypeCheckCore(Tree * t, TYCtx * cont)
         case TR_CASE:
             break;
         case TR_RETURN:
-            TypeCheckCore(TREE_ret_exp(t), cont);
+            TypeCheckTreeList(TREE_ret_exp(t), cont);
             break;
         case TR_COND:      //formulized log_OR_exp?exp:cond_exp
-            TypeCheckCore(TREE_det(t), cont);
-            TypeCheckCore(TREE_true_part(t), cont);
-            TypeCheckCore(TREE_false_part(t), cont);
+            TypeCheckTreeList(TREE_det(t), cont);
+            TypeCheckTreeList(TREE_true_part(t), cont);
+            TypeCheckTreeList(TREE_false_part(t), cont);
             break;
         case TR_CVT:       //type convertion
-            TypeCheckCore(TREE_cast_exp(t), cont);
+            TypeCheckTreeList(TREE_cast_exp(t), cont);
             break;
         case TR_TYPE_NAME: //user defined type or C standard type
             break;
@@ -1746,25 +1842,25 @@ static INT TypeCheckCore(Tree * t, TYCtx * cont)
         case TR_MINUS:     // -123
         case TR_REV:       // Reverse
         case TR_NOT:       // get non-value
-            TypeCheckCore(TREE_lchild(t), cont);
+            TypeCheckTreeList(TREE_lchild(t), cont);
             break;
         case TR_INC:       //++a
         case TR_POST_INC:  //a++
-            TypeCheckCore(TREE_inc_exp(t), cont);
+            TypeCheckTreeList(TREE_inc_exp(t), cont);
             break;
         case TR_DEC:       //--a
         case TR_POST_DEC:  //a--
-            TypeCheckCore(TREE_dec_exp(t), cont);
+            TypeCheckTreeList(TREE_dec_exp(t), cont);
             break;
         case TR_SIZEOF:    // sizeof(a)
-            TypeCheckCore(TREE_sizeof_exp(t), cont);
+            TypeCheckTreeList(TREE_sizeof_exp(t), cont);
             break;
         case TR_CALL:
             if (!checkCall(t, cont)) { goto FAILED; }
             break;
         case TR_ARRAY:
-            TypeCheckCore(TREE_array_base(t), cont);
-            TypeCheckCore(TREE_array_indx(t), cont);
+            TypeCheckTreeList(TREE_array_base(t), cont);
+            TypeCheckTreeList(TREE_array_indx(t), cont);
             break;
         case TR_DMEM:      // a.b
         case TR_INDMEM:    // a->b
@@ -1830,7 +1926,7 @@ public:
 INT TypeTransform()
 {
     initTypeTran();
-    SCOPE * s = get_global_scope();
+    Scope * s = get_global_scope();
     Decl * dcl = SCOPE_decl_list(s);
     while (dcl != nullptr) {
         ASSERT0(DECL_decl_scope(dcl) == s);
@@ -1851,7 +1947,7 @@ INT TypeTransform()
 
 INT TypeCheck()
 {
-    SCOPE * s = get_global_scope();
+    Scope * s = get_global_scope();
     Decl * dcl = SCOPE_decl_list(s);
     INT st = ST_SUCC;
     while (dcl != nullptr) {
@@ -1859,13 +1955,12 @@ INT TypeCheck()
         checkDeclaration(dcl);
         if (DECL_is_fun_def(dcl)) {
             Tree * stmt = SCOPE_stmt_list(DECL_fun_body(dcl));
-            TypeCheckCore(stmt, nullptr);
+            TypeCheckTreeList(stmt, nullptr);
             if (g_err_msg_list.get_elem_count() > 0) {
                 st = ST_ERR;
                 break;
             }
         }
-
         dcl = DECL_next(dcl);
     }
     return st;

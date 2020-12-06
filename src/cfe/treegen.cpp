@@ -28,7 +28,7 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "cfecom.h"
 #include "cfecommacro.h"
 
-#define NEWTN(ttt)  allocTreeNode((ttt), g_real_line_num)
+#define NEWTN(tok)  allocTreeNode((tok), g_real_line_num)
 
 static Tree * statement();
 static bool is_c_type_spec(TOKEN tok);
@@ -145,7 +145,7 @@ static bool verify(Tree * t)
 static LabelInfo * add_label(CHAR * name, INT lineno)
 {
     LabelInfo * li;
-    SCOPE * sc = g_cur_scope;
+    Scope * sc = g_cur_scope;
     while (sc && SCOPE_level(sc) != FUNCTION_SCOPE) {
         sc = SCOPE_parent(sc);
     }
@@ -176,7 +176,7 @@ static LabelInfo * add_label(CHAR * name, INT lineno)
 static LabelInfo * add_ref_label(CHAR * name, INT lineno)
 {
     LabelInfo * li;
-    SCOPE * sc = g_cur_scope;
+    Scope * sc = g_cur_scope;
     while (sc != nullptr && SCOPE_level(sc) != FUNCTION_SCOPE) {
         sc = SCOPE_parent(sc);
     }
@@ -399,7 +399,7 @@ static bool is_c_stor_spec(TOKEN tok)
 
 bool is_user_type_exist_in_outer_scope(CHAR * cl, OUT Decl ** ut)
 {
-    SCOPE * sc = g_cur_scope;
+    Scope * sc = g_cur_scope;
     while (sc != nullptr) {
         if (is_user_type_exist(SCOPE_user_type_list(sc), cl, ut)) {
             return true;
@@ -412,7 +412,7 @@ bool is_user_type_exist_in_outer_scope(CHAR * cl, OUT Decl ** ut)
 
 INT is_user_type_exist_in_cur_scope(CHAR * cl, OUT Decl ** ut)
 {
-    SCOPE * sc = g_cur_scope;
+    Scope * sc = g_cur_scope;
     if (is_user_type_exist(SCOPE_user_type_list(sc), cl, ut)) {
         return 1;
     }
@@ -494,7 +494,7 @@ void suck_tok_to(INT placeholder, ...)
 {
     va_list arg;
     TOKEN tok;
-    ASSERT0_DUMMYUSE(sizeof(TOKEN) == sizeof(INT));
+    ASSERT0(sizeof(TOKEN) == sizeof(INT));
     for (;;) {
         if (g_real_token == T_END || g_real_token == T_NUL) break;
         va_start(arg, placeholder);
@@ -1223,7 +1223,7 @@ static Tree * unary_exp()
         break;
     default:;
     }
-    return t ;
+    return t;
 FAILED:
     prt("error in unary_exp()");
     return t;
@@ -1295,7 +1295,7 @@ static Tree * cast_exp()
     } else {
         t = p;
     }
-    return t ;
+    return t;
 FAILED:
     prt("error in cast_exp()");
     return t;
@@ -1305,14 +1305,14 @@ FAILED:
 static Tree * multiplicative_exp()
 {
     Tree * t = cast_exp(), * p = nullptr;
-    if (t == nullptr) return nullptr;
+    if (t == nullptr) { return nullptr; }
     while (g_real_token == T_ASTERISK ||
            g_real_token == T_DIV ||
            g_real_token == T_MOD) {
         p = NEWTN(TR_MULTI);
         TREE_token(p) = g_real_token;
         TREE_lchild(p) = t;
-        setParent(p,TREE_lchild(p));
+        setParent(p, TREE_lchild(p));
             // a*b*c  =>
             //             *
             //           /  |
@@ -1321,7 +1321,7 @@ static Tree * multiplicative_exp()
             //         a  b
         match(g_real_token);
         TREE_rchild(p) = cast_exp();
-        setParent(p,TREE_rchild(p));
+        setParent(p, TREE_rchild(p));
         if (TREE_rchild(p) == nullptr) {
             err(g_real_line_num, "'%s': right operand cannot be nullptr",
                 TOKEN_INFO_name(get_token_info(TREE_token(p))));
@@ -1329,7 +1329,7 @@ static Tree * multiplicative_exp()
         }
         t = p;
     }
-    return t ;
+    return t;
 
 FAILED:
     prt("error in multiplicative_exp()");
@@ -1340,7 +1340,7 @@ FAILED:
 static Tree * additive_exp()
 {
     Tree * t = multiplicative_exp(), * p = nullptr;
-    if (t == nullptr) return nullptr;
+    if (t == nullptr) { return nullptr; }
     while (g_real_token == T_ADD || g_real_token == T_SUB) {
         p = NEWTN(TR_ADDITIVE);
         TREE_token(p) = g_real_token;
@@ -1362,7 +1362,7 @@ static Tree * additive_exp()
         }
         t = p;
     }
-    return t ;
+    return t;
 
 FAILED:
     prt("error in additive_exp()");
@@ -1373,12 +1373,12 @@ FAILED:
 static Tree * shift_exp()
 {
     Tree * t = additive_exp(), * p = nullptr;
-    if (t == nullptr) return nullptr;
+    if (t == nullptr) { return nullptr; }
     while (g_real_token == T_LSHIFT || g_real_token == T_RSHIFT) {
         p = NEWTN(TR_SHIFT);
         TREE_token(p) = g_real_token;
         TREE_lchild(p) = t;
-        setParent(p,TREE_lchild(p));
+        setParent(p, TREE_lchild(p));
            //  a<<b<<c  =>
            //              <<
            //             /  |
@@ -1387,7 +1387,7 @@ static Tree * shift_exp()
            //          a   b
         match(g_real_token);
         TREE_rchild(p) = additive_exp();
-        setParent(p,TREE_rchild(p));
+        setParent(p, TREE_rchild(p));
         if (TREE_rchild(p) == nullptr) {
             err(g_real_line_num, "'%s': right operand cannot be nullptr",
                 TOKEN_INFO_name(get_token_info(TREE_token(p))));
@@ -1395,7 +1395,7 @@ static Tree * shift_exp()
         }
         t = p;
     }
-    return t ;
+    return t;
 FAILED:
 
     prt("error in shift_exp()");
@@ -1406,13 +1406,13 @@ FAILED:
 static Tree * relational_exp()
 {
     Tree * t = shift_exp(), * p = nullptr;
-    if (t == nullptr) return nullptr;
+    if (t == nullptr) { return nullptr; }
     while (g_real_token == T_LESSTHAN || g_real_token == T_MORETHAN ||
            g_real_token == T_NOMORETHAN || g_real_token == T_NOLESSTHAN) {
         p = NEWTN(TR_RELATION);
         TREE_token(p) = g_real_token;
         TREE_lchild(p) = t;
-        setParent(p,TREE_lchild(p));
+        setParent(p, TREE_lchild(p));
            //  a<b<c   =>
            //              <
            //             / |
@@ -1421,7 +1421,7 @@ static Tree * relational_exp()
            //          a  b
         match(g_real_token);
         TREE_rchild(p) = shift_exp();
-        setParent(p,TREE_rchild(p));
+        setParent(p, TREE_rchild(p));
         if (TREE_rchild(p) == nullptr) {
             err(g_real_line_num, "'%s': right operand cannot be nullptr",
                 TOKEN_INFO_name(get_token_info(TREE_token(p))));
@@ -1429,7 +1429,7 @@ static Tree * relational_exp()
         }
         t = p;
     }
-    return t ;
+    return t;
 FAILED:
     prt("error in relational_exp()");
     return t;
@@ -1439,7 +1439,7 @@ FAILED:
 static Tree * equality_exp()
 {
     Tree * t = relational_exp(), * p = nullptr;
-    if (t == nullptr) return nullptr;
+    if (t == nullptr) { return nullptr; }
     while (g_real_token == T_EQU || g_real_token == T_NOEQU) {
         p = NEWTN(TR_EQUALITY);
         TREE_token(p) = g_real_token;
@@ -1461,7 +1461,7 @@ static Tree * equality_exp()
         }
         t = p;
     }
-    return t ;
+    return t;
 FAILED:
     prt("error in equality_exp()");
     return t;
@@ -1471,7 +1471,7 @@ FAILED:
 static Tree * AND_exp()
 {
     Tree * t = equality_exp(), * p = nullptr;
-    if (t == nullptr) return nullptr;
+    if (t == nullptr) { return nullptr; }
     while (g_real_token == T_BITAND) {
         p = NEWTN(TR_INCLUSIVE_AND);
         TREE_token(p) = g_real_token;
@@ -1484,7 +1484,7 @@ static Tree * AND_exp()
            //          a  b
         match(T_BITAND);
         TREE_rchild(p) = equality_exp();
-        setParent(p,TREE_rchild(p));
+        setParent(p, TREE_rchild(p));
         if (TREE_rchild(p) == nullptr) {
             err(g_real_line_num, "'%s': right operand cannot be nullptr",
                 TOKEN_INFO_name(get_token_info(TREE_token(p))));
@@ -1492,7 +1492,7 @@ static Tree * AND_exp()
         }
         t = p;
     }
-    return t ;
+    return t;
 FAILED:
     prt("error in AND_exp()");
     return t;
@@ -1502,12 +1502,12 @@ FAILED:
 static Tree * exclusive_OR_exp()
 {
     Tree * t = AND_exp(), * p = nullptr;
-    if (t == nullptr) return nullptr;
+    if (t == nullptr) { return nullptr; }
     while (g_real_token == T_XOR) {
         p = NEWTN(TR_XOR);
         TREE_token(p) = g_real_token;
         TREE_lchild(p) = t;
-        setParent(p,TREE_lchild(p));
+        setParent(p, TREE_lchild(p));
            //  a^b^c   =>  ^
            //             / |
            //            ^  c
@@ -1515,7 +1515,7 @@ static Tree * exclusive_OR_exp()
            //          a  b
         match(T_XOR);
         TREE_rchild(p) = AND_exp();
-        setParent(p,TREE_rchild(p));
+        setParent(p, TREE_rchild(p));
         if (TREE_rchild(p) == nullptr) {
             err(g_real_line_num, "'%s': right operand cannot be nullptr",
                 TOKEN_INFO_name(get_token_info(TREE_token(p))));
@@ -1523,7 +1523,7 @@ static Tree * exclusive_OR_exp()
         }
         t = p;
     }
-    return t ;
+    return t;
 FAILED:
     prt("error in exclusive_OR_exp()");
     return t;
@@ -1533,12 +1533,12 @@ FAILED:
 static Tree * inclusive_OR_exp()
 {
     Tree * t = exclusive_OR_exp(), * p = nullptr;
-    if (t == nullptr) return nullptr;
+    if (t == nullptr) { return nullptr; }
     while (g_real_token == T_BITOR) {
         p = NEWTN(TR_INCLUSIVE_OR);
         TREE_token(p) = g_real_token;
         TREE_lchild(p) = t;
-        setParent(p,TREE_lchild(p));
+        setParent(p, TREE_lchild(p));
         //  a|b|c   =>  |
         //             / |
         //            |  c
@@ -1546,7 +1546,7 @@ static Tree * inclusive_OR_exp()
         //          a  b
         match(T_BITOR);
         TREE_rchild(p) = exclusive_OR_exp();
-        setParent(p,TREE_rchild(p));
+        setParent(p, TREE_rchild(p));
         if (TREE_rchild(p) == nullptr) {
             err(g_real_line_num, "'%s': right operand cannot be nullptr",
                 TOKEN_INFO_name(get_token_info(TREE_token(p))));
@@ -1554,7 +1554,7 @@ static Tree * inclusive_OR_exp()
         }
         t = p;
     }
-    return t ;
+    return t;
 FAILED:
     prt("error in inclusive_OR_exp()");
     return t;
@@ -1564,12 +1564,12 @@ FAILED:
 static Tree * logical_AND_exp()
 {
     Tree * t = inclusive_OR_exp(), * p = nullptr;
-    if (t == nullptr) return nullptr;
+    if (t == nullptr) { return nullptr; }
     while (g_real_token == T_AND) {
         p = NEWTN(TR_LOGIC_AND);
         TREE_token(p) = g_real_token;
         TREE_lchild(p) = t;
-        setParent(p,TREE_lchild(p));
+        setParent(p, TREE_lchild(p));
         //a && b && c =>
         //              &&
         //             /  |
@@ -1578,7 +1578,7 @@ static Tree * logical_AND_exp()
         //           a  b
         match(T_AND);
         TREE_rchild(p) = inclusive_OR_exp();
-        setParent(p,TREE_rchild(p));
+        setParent(p, TREE_rchild(p));
         if (TREE_rchild(p) == nullptr) {
             err(g_real_line_num, "'%s': right operand cannot be nullptr",
                 TOKEN_INFO_name(get_token_info(TREE_token(p))));
@@ -1586,7 +1586,7 @@ static Tree * logical_AND_exp()
         }
         t = p;
     }
-    return t ;
+    return t;
 FAILED:
     prt("error in logical_AND_exp()");
     return t;
@@ -1596,12 +1596,12 @@ FAILED:
 static Tree * logical_OR_exp()
 {
     Tree * t = logical_AND_exp(), * p = nullptr;
-    if (t == nullptr) return nullptr;
+    if (t == nullptr) { return nullptr; }
     while (g_real_token == T_OR) {
         p = NEWTN(TR_LOGIC_OR);
         TREE_token(p) = g_real_token;
         TREE_lchild(p) = t;
-        setParent(p,TREE_lchild(p));
+        setParent(p, TREE_lchild(p));
         //  a||b||c  =>  ||
         //              /  |
         //             ||  c
@@ -1609,7 +1609,7 @@ static Tree * logical_OR_exp()
         //           a   b
         match(T_OR);
         TREE_rchild(p) = logical_AND_exp();
-        setParent(p,TREE_rchild(p));
+        setParent(p, TREE_rchild(p));
         if (TREE_rchild(p) == nullptr) {
             err(g_real_line_num, "'%s': right operand cannot be nullptr",
                 TOKEN_INFO_name(get_token_info(TREE_token(p))));
@@ -1617,7 +1617,7 @@ static Tree * logical_OR_exp()
         }
         t = p;
     }
-    return t ;
+    return t;
 FAILED:
     prt("error in logical_OR_exp()");
     return t;
@@ -1644,17 +1644,42 @@ Tree * conditional_exp()
         TREE_false_part(t) = exp_list();
         setParent(t,TREE_false_part(t));
     }
-    return t ;
+    return t;
 FAILED:
     prt("error in conditional_expt()");
     return t;
 }
 
 
+Tree * buildId(Decl const* decl)
+{
+    Tree * t = NEWTN(TR_ID);
+    TREE_token(t) = T_ID;
+    Sym * sym = get_decl_sym(decl);
+    ASSERT0(sym);
+    TREE_id(t) = sym;
+    TREE_id_decl(t) = const_cast<Decl*>(decl);
+    return t;
+}
+
+
+Tree * buildAssign(Decl const* decl, Tree * rhs)
+{
+    Tree * id = buildId(decl);
+    Tree * p = NEWTN(TR_ASSIGN);
+    TREE_token(p) = T_ASSIGN;
+    TREE_lchild(p) = id;
+    setParent(p, TREE_lchild(p));
+    TREE_rchild(p) = rhs;
+    setParent(p, TREE_rchild(p));
+    return p;
+}
+
+
 Tree * exp()
 {
     Tree * t = conditional_exp(), * p;
-    if (t == nullptr) { return t; }
+    if (t == nullptr) { return nullptr; }
     if (is_assign_op(g_real_token)) {
         p = NEWTN(TR_ASSIGN);
         TREE_token(p) = g_real_token;
@@ -1667,7 +1692,7 @@ Tree * exp()
             goto FAILED;
         }
         setParent(p, TREE_rchild(p));
-          t = p ;
+        t = p;
     }
     return t;
 FAILED:
@@ -1990,8 +2015,8 @@ Tree * for_stmt()
 {
     Tree * t = NEWTN(TR_FOR);
     TREE_token(t) = g_real_token;
-     match(T_FOR);
-     if (match(T_LPAREN) != ST_SUCC) {
+    match(T_FOR);
+    if (match(T_LPAREN) != ST_SUCC) {
         err(g_real_line_num, "synatx error : '%s', need '('",
             g_real_token_string);
         return t;;
@@ -2001,7 +2026,11 @@ Tree * for_stmt()
     //to function level scope.
     if (g_enable_C99_declaration) {
         push_scope(false);
+
+        //Should record for-stmt's init-list scope.
+        TREE_for_scope(t) = g_cur_scope;
     }
+
     if (!declaration_list()) {
         //initializing expression
         TREE_for_init(t) = exp_list();
@@ -2034,11 +2063,12 @@ Tree * for_stmt()
     TREE_for_body(t) = statement();
     setParent(t, TREE_for_body(t));
     popst();
+
     if (g_enable_C99_declaration) {
         pop_scope();
     }
-
     return t;
+
 FAILED:
     if (g_enable_C99_declaration) {
         pop_scope();
@@ -2160,14 +2190,14 @@ static Tree * select_stmt()
 }
 
 
-SCOPE * compound_stmt(Decl * para_list)
+Scope * compound_stmt(Decl * para_list)
 {
     Tree * t = nullptr;
-    SCOPE * s = nullptr;
+    Scope * s = nullptr;
     Tree * last;
     INT cerr = 0;
     //enter a new sub-scope region
-    SCOPE * cur_scope = push_scope(false);
+    Scope * cur_scope = push_scope(false);
 
     //Append parameters to declaration list of function body scope.
     Decl * lastdcl = xcom::get_last(SCOPE_decl_list(cur_scope));

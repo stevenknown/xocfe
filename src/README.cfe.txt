@@ -84,7 +84,7 @@ Declaration List
 
     Declaration consist of Type, and a list of Declators.
         DCL_DECLARATION
-            |->SCOPE
+            |->Scope
             |->TYPE
                 |->const|volatile
                 |-> void|long|int|short|char|float|double|signed|unsigned|struct|union
@@ -135,7 +135,7 @@ How to walk through AST.
 
     void walk_through_ast()
     {
-        SCOPE * scope = get_global_scope(); //The most high level scope.
+        Scope * scope = get_global_scope(); //The most high level scope.
 
         //Find function definition. Because the function body always belong to
         //a function definition.

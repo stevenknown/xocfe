@@ -30,7 +30,7 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #define ALLOW_CONST_VOLATILE 1
 
-class SCOPE;
+class Scope;
 
 #define EVAL_LIST_val(el) ((el)->val)
 #define EVAL_LIST_name(el) ((el)->str)
@@ -93,7 +93,7 @@ public:
     Decl * m_decl_list;
     Sym * tag;
     UINT align;
-    SCOPE * scope;
+    Scope * scope;
 };
 
 
@@ -277,7 +277,7 @@ public:
         TypeSpec * specifier;
 
         Decl * declarator_list; //declarator list
-        SCOPE * scope; //declaration reside in
+        Scope * scope; //declaration reside in
     } u0; //only for DCL_DECLARATION used
 
     TypeSpec * qualifier; //quanlifier for POINTER/ID
@@ -318,7 +318,7 @@ public:
     union {
         //Record a function body
         //ONLY record as a child of DCL_DECLARATION
-        SCOPE * fun_body;
+        Scope * fun_body;
 
         //Record an initializing tree
         //ONLY record as a child of DCL_DECLARATOR
@@ -500,29 +500,29 @@ bool is_fp(Decl const* dcl);
 bool is_fp(TypeSpec const* ty);
 bool is_float(Decl const* dcl);
 bool is_double(Decl const* dcl);
-bool is_union_exist_in_outer_scope(SCOPE * scope,
+bool is_union_exist_in_outer_scope(Scope * scope,
                                    CHAR const* tag,
                                    OUT Union ** s);
 //Return true if the union typed declaration have already existed in both
 //current and all of outer scopes.
-bool is_union_exist_in_outer_scope(SCOPE * scope,
+bool is_union_exist_in_outer_scope(Scope * scope,
                                    Sym const* tag,
                                    OUT Union ** s);
 bool is_struct_type_exist_in_cur_scope(CHAR const* tag, OUT Struct ** s);
 //Return true if the struct typed declaration have already existed in both
 //current and all of outer scopes.
-bool is_aggr_exist_in_outer_scope(SCOPE * scope,
+bool is_aggr_exist_in_outer_scope(Scope * scope,
                                   Sym const* tag,
                                   TypeSpec const* spec,
                                   OUT Aggr ** s);
-bool is_aggr_exist_in_outer_scope(SCOPE * scope,
+bool is_aggr_exist_in_outer_scope(Scope * scope,
                                   CHAR const* tag,
                                   TypeSpec const* spec,
                                   OUT Aggr ** s);
-bool is_struct_exist_in_outer_scope(SCOPE * scope,
+bool is_struct_exist_in_outer_scope(Scope * scope,
                                     Sym const* tag,
                                     OUT Struct ** s);
-bool is_struct_exist_in_outer_scope(SCOPE * scope,
+bool is_struct_exist_in_outer_scope(Scope * scope,
                                     CHAR const* tag,
                                     OUT Struct ** s);
 bool is_enum_id_exist_in_outer_scope(CHAR const* cl, OUT Enum ** e);
@@ -555,6 +555,7 @@ bool is_struct(TypeSpec const* type);
 bool is_struct(Decl const* decl);
 bool is_bitfield(Decl const* decl);
 
+Tree * get_decl_init_tree(Decl const* dcl);
 CHAR const* get_aggr_type_name(TypeSpec const* type);
 Decl const* gen_type_name(TypeSpec * ty);
 Decl const* get_return_type(Decl const* dcl);
@@ -563,7 +564,7 @@ Sym * get_decl_sym(Decl const* dcl);
 Decl const* get_pure_declarator(Decl const* decl);
 Decl * get_parameter_list(Decl * dcl, OUT Decl ** fun_dclor = nullptr);
 Decl const* get_decl_id(Decl const* dcl);
-Decl * get_decl_in_scope(CHAR const* name, SCOPE const* scope);
+Decl * get_decl_in_scope(CHAR const* name, Scope const* scope);
 Tree * get_decl_id_tree(Decl const* dcl);
 INT get_enum_const_val(Enum const* e, INT idx);
 UINT getSimplyTypeSize(TypeSpec const* ty);
@@ -580,9 +581,9 @@ UINT getDeclaratorSize(TypeSpec const* spec, Decl const* d);
 CHAR const* get_enum_const_name(Enum const* e, INT idx);
 UINT get_struct_field_ofst(Struct * st, CHAR * name);
 
-Decl * new_declaration(TypeSpec * spec, Decl * declor, SCOPE * sc);
+Decl * new_declaration(TypeSpec * spec, Decl * declor, Scope * sc);
 Decl * new_decl(DCL dcl_type);
-Decl * new_var_decl(IN SCOPE * scope, IN CHAR * name);
+Decl * new_var_decl(IN Scope * scope, IN CHAR * name);
 TypeSpec * new_type();
 TypeSpec * new_type(INT cate);
 Enum * new_enum();
