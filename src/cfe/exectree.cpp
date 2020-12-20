@@ -25,7 +25,7 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 @*/
-#include "cfecom.h"
+#include "cfeinc.h"
 
 //Computing expected value in compiling period, such as constant expression.
 // 'g_is_allow_float' cannot be used via extern , it must be assigned with

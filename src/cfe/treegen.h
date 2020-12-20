@@ -43,7 +43,25 @@ extern bool g_dump_token;
 void initParser();
 void finiParser();
 
+Tree * buildString(Sym const* str);
+Tree * buildInt(HOST_INT val);
+Tree * buildId(Decl const* decl);
 Tree * buildAssign(Decl const* decl, Tree * rhs);
+Tree * buildAssign(Tree * lhs, Tree * rhs);
+Tree * buildArray(Decl const* decl, xcom::Vector<UINT> & subexp_vec);
+Tree * buildIndmem(Tree * base, Decl const* fld);
+Tree * buildDmem(Tree * base, Decl const* fld);
+//Build aggregate reference tree node.
+//decl: aggregate declaration.
+//fldvec: record a list of indices in aggregate.
+//  e.g: struct T { unsigned int b, c; struct Q {int m,n;} char e; };
+//  m's fldvec is <2, 1>, e's fldvec is <3>.
+Tree * buildAggrFieldRef(Decl const* decl, xcom::Vector<UINT> & fldvec);
+Tree * buildAggrRef(Tree * base, Decl const* fld);
+
+//Duplicate 't' and its kids, but without ir's sibiling node.
+Tree * copyTree(Tree const* t);
+Tree * copyTreeList(Tree const* t);
 
 INT Parser();
 Scope * compound_stmt(Decl * para_list);

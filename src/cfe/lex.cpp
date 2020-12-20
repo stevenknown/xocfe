@@ -27,7 +27,7 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 @*/
 #include "../com/xcominc.h"
 #include "err.h"
-#include "cfecom.h"
+#include "cfeinc.h"
 #include "cfecommacro.h"
 #include "lex.h"
 

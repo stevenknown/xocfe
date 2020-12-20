@@ -25,51 +25,29 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 @*/
-#include "cfeinc.h"
+#include "cfe_targ_const_info.h"
 
-static List<Cell*> g_cell_free_list;
+#include "../com/xcominc.h"
+using namespace xcom;
 
-static void * xmalloc(size_t size)
-{
-    ASSERT0(g_pool_general_used != nullptr);
-    void * p = smpoolMalloc(size, g_pool_general_used);
-    if (p == nullptr) return nullptr;
-    ::memset(p, 0, size);
-    return p;
-}
+#include "../opt/logmgr.h"
+#include "../opt/symtab.h"
+#include "../opt/label.h"
+using namespace xoc;
 
-
-//Cell operations
-//If you intend to use Cell as a container to hold something, the follows should
-//be noticed:
-//When you need a new Cell , invoking 'newcell()', but is not 'get_free_cell()'.
-void free_cell(Cell * c)
-{
-    if (c == nullptr) {
-        return;
-    }
-    g_cell_free_list.append_tail(c);
-    return ;
-}
-
-
-Cell * get_free_cell()
-{
-    Cell * c = g_cell_free_list.remove_tail();
-    if (c) {
-        ::memset(c, 0 , sizeof(Cell));
-        return c;
-    }
-    return nullptr;
-}
-
-
-Cell * newcell(INT type)
-{
-    Cell * c = get_free_cell();
-    if (!c) {
-        c = (Cell*)xmalloc(sizeof(Cell));
-    }
-    CELL_type(c) = type;
-    return c;
-}
+#include "cfecommacro.h"
+#include "cfeutil.h"
+#include "errno.h"
+#include "cfexport.h"
+#include "err.h"
+#include "lex.h"
+#include "typeck.h"
+#include "typetran.h"
+#include "declinit.h"
+#include "scope.h"
+#include "decl.h"
+#include "tree.h"
+#include "st.h"
+#include "cell.h"
+#include "treegen.h"
+#include "exectree.h"

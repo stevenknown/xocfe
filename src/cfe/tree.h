@@ -95,7 +95,7 @@ typedef enum _TREE_TYPE {
     TR_ARRAY,
     TR_CALL,            // function call
     TR_SCOPE,           // record a scope
-    TR_EXP_SCOPE,       // record a scope which only permit expression-list.
+    TR_INITVAL_SCOPE,       // record a scope which only permit expression-list.
     TR_PRAGMA,          // pragma
     TR_PREP,            // preprocessor output info
 } TREE_TYPE;
@@ -218,7 +218,7 @@ public:
 //goto target label name
 #define TREE_lab_name(t) (t)->u1.lab_name
 
-//represent a identifier and its declaration
+//represent an identifier and its declaration
 #define TREE_id(t) (t)->u1.u12.id
 #define TREE_id_decl(t) (t)->u1.u12.id_decl
 
@@ -228,8 +228,8 @@ public:
 //record a for-scope
 #define TREE_for_scope(t) (t)->u1.for_scope
 
-//record a exp-list
-#define TREE_exp_scope(t) (t)->u1.exp_scope
+//record an exp-list
+#define TREE_initval_scope(t) (t)->u1.exp_scope
 
 class Tree {
 public:
@@ -250,10 +250,11 @@ public:
             Sym * id; //record id in SymTab
             Decl * id_decl; //record legal declaration
         } u12;
-        Sym * sval; //record a string in SymTab
-        Sym * lab_name; //record a label name in SymTab
+        Sym const* sval; //record a string in SymTab
+        Sym const* lab_name; //record a label name in SymTab
         HOST_INT ival; //record an integer value
-        LabelInfo * lab_info; //record a label info defined in function level
+        LabelInfo const* lab_info; //record a label info defined
+                                   //in function level
         INT  case_value; //record a constant value of jump-case table
         //Type * ty; //C standard type description
         //USER_TYPE * uty; //user type description

@@ -30,14 +30,17 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 class TYCtx {
 public:
+    //The property propagated top down.
     //When it comes to lvalue expression of assignment,
     //TR_ID should corresponding with IR_ID, rather than IR_LD.
     BYTE is_lvalue:1;
 
+    //The property propagated top down.
     //Set to true if current TR_ID indicate field one of
     //struct/union contained.
     BYTE is_field:1;
 
+    //The property propagated top down.
     //Record base of current memory accessing.
     //e.g: it records the struct/union name if we meet a field.
     Tree * base_tree_node;
@@ -46,11 +49,7 @@ public:
 };
 
 bool isConsistentWithPointer(Tree * t);
-INT process_init(Decl * decl, Tree ** init);
-INT process_init(Decl * decl);
 INT TypeCheckTreeList(Tree * t, TYCtx * cont);
 INT TypeCheck();
-INT TypeTransform();
-INT TypeTran(Tree * t, TYCtx * cont);
 
 #endif

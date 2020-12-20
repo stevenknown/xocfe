@@ -25,7 +25,7 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 @*/
-#include "cfecom.h"
+#include "cfeinc.h"
 
 #ifdef _DEBUG_
 static UINT g_tree_count = 1;
@@ -468,11 +468,11 @@ void dump_tree(Tree * t)
         note(g_logmgr, "\n}");
         g_logmgr->decIndent(dn);
         break;
-    case TR_EXP_SCOPE:
+    case TR_INITVAL_SCOPE:
         g_logmgr->incIndent(dn);
         note(g_logmgr, "\n{");
         g_logmgr->incIndent(dn);
-        dump_trees(TREE_exp_scope(t));
+        dump_trees(TREE_initval_scope(t));
         g_logmgr->decIndent(dn);
         note(g_logmgr, "\n}");
         g_logmgr->decIndent(dn);

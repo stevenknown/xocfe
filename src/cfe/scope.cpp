@@ -25,7 +25,7 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 @*/
-#include "cfecom.h"
+#include "cfeinc.h"
 
 //The outermost scope is global region which id is 0, and the inner
 //scope scope is function body-stmt which id is 1, etc.

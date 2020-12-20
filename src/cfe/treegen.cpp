@@ -25,7 +25,7 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 @*/
-#include "cfecom.h"
+#include "cfeinc.h"
 #include "cfecommacro.h"
 
 #define NEWTN(tok)  allocTreeNode((tok), g_real_line_num)
@@ -56,6 +56,184 @@ static void * xmalloc(size_t size)
     ASSERT0(p);
     ::memset(p, 0, size);
     return p;
+}
+
+
+Tree * buildIndmem(Tree * base, Decl const* fld)
+{
+    Tree * t = NEWTN(TR_INDMEM);
+    TREE_token(t) = T_ARROW;
+    TREE_base_region(t) = base;
+    TREE_field(t) = buildId(fld);
+    setParent(t, TREE_base_region(t));
+    setParent(t, TREE_field(t));
+    return t; 
+}
+
+
+//Build aggregate reference tree node.
+//decl: aggregate declaration.
+//fldvec: record a list of indices in aggregate.
+//  e.g: struct T { unsigned int b, c; struct Q {int m,n;} char e; };
+//  m's fldvec is <2, 1>, e's fldvec is <3>.
+Tree * buildAggrFieldRef(Decl const* decl, xcom::Vector<UINT> & fldvec)
+{
+    ASSERT0(is_struct(decl) || is_union(decl));
+    ASSERTN(fldvec.get_last_idx() >= 0, ("miss field index"));
+    Tree * base = buildId(decl);
+    Decl const* basedecl = decl;
+    for (INT i = 0; i <= fldvec.get_last_idx(); i++) {
+        Decl * flddecl = nullptr;
+        if (is_struct(basedecl)) {
+            Struct * spec = get_struct_spec(basedecl);
+            get_struct_field(spec, fldvec.get(i), &flddecl);
+        } else {
+            Union * spec = get_union_spec(basedecl);
+            ASSERT0(0); //TODO
+            //get_union_field(spec, fldvec.get(i), &flddecl);
+        }
+        ASSERTN(flddecl, ("not find field"));
+
+        if (is_pointer(basedecl)) {
+            base = buildIndmem(base, flddecl);
+        } else {
+            base = buildDmem(base, flddecl);
+        }
+        basedecl = flddecl;
+    }
+    return base;
+}
+
+
+Tree * buildDmem(Tree * base, Decl const* fld)
+{
+    Tree * t = NEWTN(TR_DMEM);
+    TREE_token(t) = T_DOT;
+    TREE_base_region(t) = base;
+    TREE_field(t) = buildId(fld);
+    setParent(t, TREE_base_region(t));
+    setParent(t, TREE_field(t));
+    return t;
+}
+
+
+Tree * buildId(Decl const* decl)
+{
+    Tree * t = NEWTN(TR_ID);
+    TREE_token(t) = T_ID;
+    Sym * sym = get_decl_sym(decl);
+    ASSERT0(sym);
+    TREE_id(t) = sym;
+    TREE_id_decl(t) = const_cast<Decl*>(decl);
+    return t;
+}
+
+
+Tree * buildAggrRef(Tree * base, Decl const* fld)
+{
+    if (is_pointer(fld)) {
+        return buildIndmem(base, fld);
+    }
+    return buildDmem(base, fld);
+}
+
+
+Tree * buildInt(HOST_INT val)
+{
+    Tree * t = NEWTN(TR_IMM);
+    //If the target integer hold in 'g_real_token_string' is longer than
+    //host size_t type, it will be truncated now.
+    TREE_token(t) = T_IMM;
+    TREE_imm_val(t) = val;
+    return t; 
+}
+
+
+Tree * buildString(Sym const* str)
+{
+    Tree * t = NEWTN(TR_STRING);
+    TREE_token(t) = T_STRING;
+    TREE_string_val(t) = str;
+    return t;
+}
+
+
+Tree * buildAssign(Decl const* decl, Tree * rhs)
+{
+    Tree * id = buildId(decl);
+    Tree * p = NEWTN(TR_ASSIGN);
+    TREE_token(p) = T_ASSIGN;
+    TREE_lchild(p) = id;
+    setParent(p, TREE_lchild(p));
+    TREE_rchild(p) = rhs;
+    setParent(p, TREE_rchild(p));
+    return p;
+}
+
+
+Tree * buildAssign(Tree * lhs, Tree * rhs)
+{
+    Tree * p = NEWTN(TR_ASSIGN);
+    TREE_token(p) = T_ASSIGN;
+    TREE_lchild(p) = lhs;
+    setParent(p, TREE_lchild(p));
+    TREE_rchild(p) = rhs;
+    setParent(p, TREE_rchild(p));
+    return p;
+}
+
+
+//Build array tree node.
+//subexp_vec: record a list of subscript expressions.
+//            e.g: arr[3][5], subexp_vec is <3, 5>.
+Tree * buildArray(Decl const* decl, xcom::Vector<UINT> & subexp_vec)
+{
+    ASSERTN(subexp_vec.get_last_idx() >= 0, ("miss dimension exp"));
+    Tree * base = buildId(decl);
+    for (INT i = 0; i <= subexp_vec.get_last_idx(); i++) {
+        Tree * array = NEWTN(TR_ARRAY);
+        TREE_array_base(array) = base;
+        setParent(array, base);
+        TREE_array_indx(array) = buildInt(subexp_vec.get(i));
+        setParent(array, TREE_array_indx(array));
+        base = array; 
+    }
+    return base;
+}
+
+
+Tree * copyTreeList(Tree const* t)
+{
+    Tree * new_list = nullptr;
+    while (t != nullptr) {
+        Tree * newt = copyTree(t);
+        xcom::add_next(&new_list, newt);
+        t = TREE_nsib(t);
+    }
+    return new_list;
+}
+
+
+//Duplicate 't' and its kids, but without ir's sibiling node.
+Tree * copyTree(Tree const* t)
+{
+    if (t == nullptr) { return nullptr; }    
+    Tree * newt = NEWTN(TREE_type(t));    
+    UINT id = TREE_uid(newt);
+    ::memcpy(newt, t, sizeof(Tree));
+    TREE_uid(newt) = id;
+    TREE_parent(newt) = nullptr;
+    TREE_psib(newt) = nullptr;
+    TREE_nsib(newt) = nullptr;
+    
+    for (UINT i = 0; i < MAX_TREE_FLDS; i++) {
+        Tree * kid = TREE_fld(t, i);
+        if (kid != nullptr) {
+            Tree * newkid_list = copyTreeList(kid);
+            TREE_fld(newt, i) = newkid_list;
+        }
+    }
+    return newt;
 }
 
 
@@ -157,7 +335,7 @@ static LabelInfo * add_label(CHAR * name, INT lineno)
 
     for (li = SCOPE_label_list(sc).get_head();
          li != nullptr; li = SCOPE_label_list(sc).get_next()) {
-        if (strcmp(SYM_name(LABELINFO_name(li)), name) == 0) {
+        if (::strcmp(SYM_name(LABELINFO_name(li)), name) == 0) {
             err(g_real_line_num, "label : '%s' already defined",name);
             return nullptr;
         }
@@ -754,38 +932,35 @@ static Tree * primary_exp(IN OUT UINT * st)
 {
     Tree * t = nullptr;
     switch (g_real_token) {
-    case T_ID:
-        {
-            Enum * e = nullptr;
-            INT idx = 0;
-            if (findEnumConst(g_real_token_string, &e, &idx)) {
-                t = NEWTN(TR_ENUM_CONST);
-                TREE_enum(t) = e;
-                TREE_enum_val_idx(t) = idx;
-            } else {
-                //Struct, Union, TYPEDEF-NAME should be
-                //parsed during declaration().
-                Decl * dcl = nullptr;
-                t = id();
-                if (!is_id_exist_in_outer_scope(g_real_token_string, &dcl)) {
-                    err(g_real_line_num, "'%s' undeclared identifier",
-                        g_real_token_string);
-                    match(T_ID);
-                    *st = ST_ERR;
-                    return nullptr;
-                }
-                TREE_id_decl(t) = dcl;
+    case T_ID: {
+        Enum * e = nullptr;
+        INT idx = 0;
+        if (findEnumConst(g_real_token_string, &e, &idx)) {
+            t = NEWTN(TR_ENUM_CONST);
+            TREE_enum(t) = e;
+            TREE_enum_val_idx(t) = idx;
+        } else {
+            //Struct, Union, TYPEDEF-NAME should be
+            //parsed during declaration().
+            Decl * dcl = nullptr;
+            t = id();
+            if (!is_id_exist_in_outer_scope(g_real_token_string, &dcl)) {
+                err(g_real_line_num, "'%s' undeclared identifier",
+                    g_real_token_string);
+                match(T_ID);
+                *st = ST_ERR;
+                return nullptr;
             }
-            TREE_token(t) = g_real_token;
-            match(T_ID);
+            TREE_id_decl(t) = dcl;
         }
+        TREE_token(t) = g_real_token;
+        match(T_ID);
         break;
+    }
     case T_IMM:
-        t = NEWTN(TR_IMM);
         //If the target integer hold in 'g_real_token_string' is longer than
         //host size_t type, it will be truncated now.
-        TREE_token(t) = g_real_token;
-        TREE_imm_val(t) = (HOST_INT)xatoll(g_real_token_string, false);
+        t = buildInt((HOST_INT)xatoll(g_real_token_string, false));
         match(T_IMM);
         return t;
     case T_IMML:
@@ -826,38 +1001,37 @@ static Tree * primary_exp(IN OUT UINT * st)
         TREE_fp_str_val(t) = g_fe_sym_tab->add(g_real_token_string);
         match(T_FPLD);
         break;
-    case T_STRING:     // "abcd"
-        {
-            t = NEWTN(TR_STRING);
-            TREE_token(t) = g_real_token;
-            CHAR * tbuf = nullptr;
-            UINT tbuflen = 0;
-            Sym * sym = g_fe_sym_tab->add(g_real_token_string);
-            match(T_STRING);
+    case T_STRING: { // "abcd"
+        t = NEWTN(TR_STRING);
+        TREE_token(t) = g_real_token;
+        CHAR * tbuf = nullptr;
+        UINT tbuflen = 0;
+        Sym * sym = g_fe_sym_tab->add(g_real_token_string);
+        match(T_STRING);
 
-            //Concatenate string.
-            for (; g_real_token == T_STRING; match(T_STRING)) {
-                if (tbuf == nullptr) {
-                    tbuflen = (UINT)strlen(SYM_name(sym)) +
-                              (UINT)strlen(g_real_token_string) + 1;
-                    tbuf = (CHAR*)malloc(tbuflen);
-                    sprintf(tbuf, "%s%s", SYM_name(sym), g_real_token_string);
-                } else {
-                    tbuflen += (UINT)strlen(g_real_token_string);
-                    CHAR * ttbuf = (CHAR*)malloc(tbuflen);
-                    sprintf(ttbuf, "%s%s", tbuf, g_real_token_string);
-                    free(tbuf);
-                    tbuf = ttbuf;
-                }
-            }
-
-            if (tbuf != nullptr) {
-                sym = g_fe_sym_tab->add(tbuf);
+        //Concatenate string.
+        for (; g_real_token == T_STRING; match(T_STRING)) {
+            if (tbuf == nullptr) {
+                tbuflen = (UINT)strlen(SYM_name(sym)) +
+                          (UINT)strlen(g_real_token_string) + 1;
+                tbuf = (CHAR*)malloc(tbuflen);
+                sprintf(tbuf, "%s%s", SYM_name(sym), g_real_token_string);
+            } else {
+                tbuflen += (UINT)strlen(g_real_token_string);
+                CHAR * ttbuf = (CHAR*)malloc(tbuflen);
+                sprintf(ttbuf, "%s%s", tbuf, g_real_token_string);
                 free(tbuf);
+                tbuf = ttbuf;
             }
-            TREE_string_val(t) = sym;
         }
+
+        if (tbuf != nullptr) {
+            sym = g_fe_sym_tab->add(tbuf);
+            free(tbuf);
+        }
+        TREE_string_val(t) = sym;
         return t;
+    }
     case T_CHAR_LIST:  // 'abcd'
         t = NEWTN(TR_IMM);
         TREE_token(t) = g_real_token;
@@ -1648,31 +1822,6 @@ Tree * conditional_exp()
 FAILED:
     prt("error in conditional_expt()");
     return t;
-}
-
-
-Tree * buildId(Decl const* decl)
-{
-    Tree * t = NEWTN(TR_ID);
-    TREE_token(t) = T_ID;
-    Sym * sym = get_decl_sym(decl);
-    ASSERT0(sym);
-    TREE_id(t) = sym;
-    TREE_id_decl(t) = const_cast<Decl*>(decl);
-    return t;
-}
-
-
-Tree * buildAssign(Decl const* decl, Tree * rhs)
-{
-    Tree * id = buildId(decl);
-    Tree * p = NEWTN(TR_ASSIGN);
-    TREE_token(p) = T_ASSIGN;
-    TREE_lchild(p) = id;
-    setParent(p, TREE_lchild(p));
-    TREE_rchild(p) = rhs;
-    setParent(p, TREE_rchild(p));
-    return p;
 }
 
 

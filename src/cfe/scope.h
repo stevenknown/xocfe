@@ -49,10 +49,11 @@ public:
 //Scope
 // |
 // |--EnumList
-// |--SYM_TAB_LIST
+// |--SYM_LIST
 // |--TYPE_LIST
 // |--SUB_SCOPE
 // |--UserTypeList
+
 #define MAX_SCOPE_FILED 4
 #define GLOBAL_SCOPE 0 //Global memory space
 #define FUNCTION_SCOPE 1 //Function unit
@@ -75,29 +76,25 @@ public:
 #define SCOPE_stmt_list(sc) ((sc)->stmt_list)
 class Scope {
 public:
-    INT id; //unique id
+    UINT is_tmp_scope:1;
+    UINT id:31; //unique id
     INT level; //nested level
-    bool is_tmp_scope;
     Scope * parent;
     Scope * next;
     Scope * prev;
     Scope * sub;
-
-    EnumList * enum_list;        //enum-type list
-    UserTypeList * utl_list;    //record type defined with 'typedef'
-
-    List<LabelInfo*> li_list;    //label definition
+    EnumList * enum_list; //enum-type list
+    UserTypeList * utl_list; //record type defined with 'typedef'
+    Decl * decl_list; //record identifier declaration info
+    SymList * sym_tab_list; //record identifier name
+    Tree * stmt_list; //record statement list to generate code
+    List<LabelInfo*> li_list; //label definition
     List<LabelInfo*> lref_list;//reference label
+    List<Struct*> struct_list; //structure list of current scope
+    List<Union*> union_list; //union list of current scope
 
-    List<Struct*> struct_list;    //structure list of current scope
-    List<Union*> union_list;    //union list of current scope
-
-    Decl * decl_list;            //record identifier declaration info
-    SymList * sym_tab_list;    //record identifier name
-
-    Tree * stmt_list;            //record statement list to generate code
-
-    inline void init(UINT & sc)
+public:
+    void init(UINT & sc)
     {
         li_list.init();
         lref_list.init();

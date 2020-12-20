@@ -8,6 +8,8 @@ cfe/scope.o \
 cfe/st.o \
 cfe/tree.o \
 cfe/treegen.o \
+cfe/typetran.o \
+cfe/declinit.o \
 cfe/typeck.o \
 cfe/cfeutil.o \
 cfe/cell.o 

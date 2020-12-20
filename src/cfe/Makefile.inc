@@ -9,4 +9,6 @@ CFE_OBJS +=\
 ../cfe/treegen.o\
 ../cfe/typeck.o\
 ../cfe/cfeutil.o\
+../cfe/declinit.o\
+../cfe/typetran.o\
 ../cfe/cell.o
