@@ -275,9 +275,16 @@ public:
 
 //Exported Functions
 extern Tree * allocTreeNode(TREE_TYPE tnt, INT lineno);
-extern void dump_tree(Tree * t);
-extern void dump_trees(Tree * t);
-extern INT is_indirect_tree_node(Tree * t);
-extern bool is_imm_int(Tree * t);
-extern bool is_imm_fp(Tree * t);
+extern void dump_tree(Tree const* t);
+extern void dump_trees(Tree const* t);
+extern INT is_indirect_tree_node(Tree const* t);
+extern bool is_imm_int(Tree const* t);
+extern bool is_imm_fp(Tree const* t);
+extern bool is_aggr_field_access(Tree const* t);
+//Get base of array if exist.
+extern Tree * get_array_base(Tree * t);
+//Get base of aggregate if exist.
+extern Tree * get_aggr_base(Tree * t);
+//Get base of aggregate/array if exist.
+extern Tree * get_base(Tree * t);
 #endif

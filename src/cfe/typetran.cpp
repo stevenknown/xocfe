@@ -1075,10 +1075,10 @@ static INT TypeTranArray(Tree * t, TYCtx * cont)
     //    int ** p;
     //    p[i][j] = 10;
     if (ST_SUCC != TypeTran(TREE_array_base(t), cont)) {
-        return ST_ERR; 
+        return ST_ERR;
     }
     if (ST_SUCC != TypeTran(TREE_array_indx(t), cont)) {
-        return ST_ERR; 
+        return ST_ERR;
     }
 
     Decl * ld = TREE_result_type(TREE_array_base(t));

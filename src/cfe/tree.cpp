@@ -54,7 +54,7 @@ Tree * allocTreeNode(TREE_TYPE tnt, INT lineno)
 }
 
 
-INT is_indirect_tree_node(Tree *t)
+INT is_indirect_tree_node(Tree const* t)
 {
     switch (TREE_type(t)) {
     case TR_DMEM:
@@ -67,7 +67,7 @@ INT is_indirect_tree_node(Tree *t)
 }
 
 
-void dump_trees(Tree * t)
+void dump_trees(Tree const* t)
 {
     while (t != nullptr) {
         dump_tree(t);
@@ -84,7 +84,7 @@ static void dump_line(Tree const* t)
 #endif
 
 
-void dump_tree(Tree * t)
+void dump_tree(Tree const* t)
 {
     DUMMYUSE(t);    
 #ifdef _DEBUG_
@@ -522,7 +522,7 @@ void dump_tree(Tree * t)
 }
 
 
-bool is_imm_int(Tree * t)
+bool is_imm_int(Tree const* t)
 {
     switch(TREE_type(t)) {
     case TR_IMM:
@@ -536,7 +536,7 @@ bool is_imm_int(Tree * t)
 }
 
 
-bool is_imm_fp(Tree * t)
+bool is_imm_fp(Tree const* t)
 {
     switch (TREE_type(t)) {
     case TR_FP:
@@ -546,4 +546,67 @@ bool is_imm_fp(Tree * t)
     default:;
     }
     return false;
+}
+
+
+bool is_aggr_field_access(Tree const* t)
+{
+    return TREE_type(t) == TR_DMEM || TREE_type(t) == TR_INDMEM;
+}
+
+
+//Get base of array if exist.
+Tree * get_array_base(Tree * t)
+{
+    ASSERT0(TREE_type(t) == TR_ARRAY);
+    Tree * base = TREE_array_base(t);
+    for (; base != nullptr && TREE_type(base) == TR_ARRAY;
+         base = TREE_array_base(base)) {
+    }
+    ASSERT0(base);
+    return base;
+}
+
+
+//Get base of aggregate if exist.
+Tree * get_aggr_base(Tree * t)
+{
+    ASSERT0(is_aggr_field_access(t));
+    Tree * base = TREE_base_region(t);
+    for (; base != nullptr && is_aggr_field_access(base);
+         base = TREE_base_region(base)) {
+    }
+    ASSERT0(base);
+    return base;
+}
+
+
+//Get base of aggregate/array if exist.
+Tree * get_base(Tree * t)
+{
+    Tree * base = nullptr;
+    if (is_aggr_field_access(t)) {
+        base = TREE_base_region(t);
+    } else if (TREE_type(t) == TR_ARRAY) {
+        base = TREE_array_base(t);
+    } else {
+        return nullptr;
+    }
+
+    ASSERT0(base);
+    for (; base != nullptr; ) {
+        if (!is_aggr_field_access(base) && TREE_type(base) != TR_ARRAY) {
+             break;
+         }
+
+         if (is_aggr_field_access(base)) {
+             base = TREE_base_region(base);
+         } else if (TREE_type(base) == TR_ARRAY) {
+             base = TREE_array_base(base);
+         } else {
+            UNREACHABLE();
+         }
+    } 
+    ASSERT0(base);
+    return base;
 }

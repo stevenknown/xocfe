@@ -75,7 +75,7 @@ Tree * buildIndmem(Tree * base, Decl const* fld)
 //decl: aggregate declaration.
 //fldvec: record a list of indices in aggregate.
 //  e.g: struct T { unsigned int b, c; struct Q {int m,n;} char e; };
-//  m's fldvec is <2, 1>, e's fldvec is <3>.
+//  The accessing to m's fldvec is <2, 0>, whereas e's fldvec is <3>.
 Tree * buildAggrFieldRef(Decl const* decl, xcom::Vector<UINT> & fldvec)
 {
     ASSERT0(is_struct(decl) || is_union(decl));
@@ -86,11 +86,12 @@ Tree * buildAggrFieldRef(Decl const* decl, xcom::Vector<UINT> & fldvec)
         Decl * flddecl = nullptr;
         if (is_struct(basedecl)) {
             Struct * spec = get_struct_spec(basedecl);
-            get_struct_field(spec, fldvec.get(i), &flddecl);
-        } else {
+            get_aggr_field(spec, fldvec.get(i), &flddecl);
+        } else if (is_union(basedecl)) {
             Union * spec = get_union_spec(basedecl);
-            ASSERT0(0); //TODO
-            //get_union_field(spec, fldvec.get(i), &flddecl);
+            get_aggr_field(spec, fldvec.get(i), &flddecl);
+        } else {
+            ASSERTN(0, ("the function only handle aggregate reference"));
         }
         ASSERTN(flddecl, ("not find field"));
 
@@ -99,6 +100,7 @@ Tree * buildAggrFieldRef(Decl const* decl, xcom::Vector<UINT> & fldvec)
         } else {
             base = buildDmem(base, flddecl);
         }
+
         basedecl = flddecl;
     }
     return base;
@@ -183,13 +185,9 @@ Tree * buildAssign(Tree * lhs, Tree * rhs)
 }
 
 
-//Build array tree node.
-//subexp_vec: record a list of subscript expressions.
-//            e.g: arr[3][5], subexp_vec is <3, 5>.
-Tree * buildArray(Decl const* decl, xcom::Vector<UINT> & subexp_vec)
+Tree * buildArray(Tree * base, xcom::Vector<UINT> & subexp_vec)
 {
     ASSERTN(subexp_vec.get_last_idx() >= 0, ("miss dimension exp"));
-    Tree * base = buildId(decl);
     for (INT i = 0; i <= subexp_vec.get_last_idx(); i++) {
         Tree * array = NEWTN(TR_ARRAY);
         TREE_array_base(array) = base;
@@ -199,6 +197,16 @@ Tree * buildArray(Decl const* decl, xcom::Vector<UINT> & subexp_vec)
         base = array; 
     }
     return base;
+}
+
+
+//Build array tree node.
+//subexp_vec: record a list of subscript expressions.
+//            e.g: arr[3][5], subexp_vec is <3, 5>.
+Tree * buildArray(Decl const* decl, xcom::Vector<UINT> & subexp_vec)
+{
+    ASSERTN(subexp_vec.get_last_idx() >= 0, ("miss dimension exp"));
+    return buildArray(buildId(decl), subexp_vec);
 }
 
 
@@ -225,12 +233,14 @@ Tree * copyTree(Tree const* t)
     TREE_parent(newt) = nullptr;
     TREE_psib(newt) = nullptr;
     TREE_nsib(newt) = nullptr;
-    
     for (UINT i = 0; i < MAX_TREE_FLDS; i++) {
         Tree * kid = TREE_fld(t, i);
-        if (kid != nullptr) {
-            Tree * newkid_list = copyTreeList(kid);
-            TREE_fld(newt, i) = newkid_list;
+        if (kid == nullptr) { continue; }
+
+        Tree * newkid_list = copyTreeList(kid);
+        TREE_fld(newt, i) = newkid_list;
+        for (Tree * xt = newkid_list; xt != nullptr; xt = TREE_nsib(xt)) {
+            TREE_parent(xt) = newt;
         }
     }
     return newt;

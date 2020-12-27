@@ -249,7 +249,8 @@ Decl * new_decl(DCL dcl_type)
 //Construct declaration.
 //'spec': specifier
 //'declor': declarator.
-Decl * new_declaration(TypeSpec * spec, Decl * declor, Scope * sc)
+Decl * new_declaration(TypeSpec * spec, Decl * declor, Scope * sc,
+                       Tree * inittree)
 {
     Decl * declaration = new_decl(DCL_DECLARATION);
     DECL_decl_scope(declaration) = sc;
@@ -257,6 +258,10 @@ Decl * new_declaration(TypeSpec * spec, Decl * declor, Scope * sc)
     Decl * declarator = new_decl(DCL_DECLARATOR);
     DECL_child(declarator) = declor;
     DECL_decl_list(declaration) = declarator;
+    if (inittree != nullptr) {
+        DECL_is_init(declarator) = true;
+        DECL_init_tree(declarator) = inittree;
+    }
     return declaration;
 }
 
@@ -1759,7 +1764,7 @@ static Decl * direct_abstract_declarator(TypeSpec * qua)
             DECL_array_dim_exp(ndcl2) = t;
 
             //'id' should be the last one in declarator-list.
-            insertbefore_one(&dcl, dcl, ndcl2);
+            xcom::insertbefore_one(&dcl, dcl, ndcl2);
         }
         break;
     }
@@ -1814,7 +1819,7 @@ static Decl * abstract_declarator(TypeSpec * qua)
     //e.g:
     //    ptr is '*', dcl is '[]'->'ID'
     //    return: '*'->'[]'->'ID'
-    insertbefore(&dcl, dcl, ptr);    
+    xcom::insertbefore(&dcl, dcl, ptr);    
     return dcl;
 }
 
@@ -1928,8 +1933,9 @@ static Tree * initializer(TypeSpec * qua)
 {
     Tree * t = nullptr, * es = nullptr;
     switch (g_real_token) {
-    case T_LLPAREN:
-        match(T_LLPAREN);
+    case T_LLPAREN: {
+        UINT lineno = g_real_line_num;
+        match(T_LLPAREN); 
         t = initializer_list(qua);
         if (g_real_token == T_COMMA) {
             match(T_COMMA);
@@ -1941,10 +1947,11 @@ static Tree * initializer(TypeSpec * qua)
             err(g_real_line_num, "syntax error : '%s'", g_real_token_string);
             return t;
         }
-        es = allocTreeNode(TR_INITVAL_SCOPE, g_real_line_num);
+        es = allocTreeNode(TR_INITVAL_SCOPE, lineno);
         TREE_initval_scope(es) = t;
         t = es;
         return t;
+    }
     default:
         if (is_in_first_set_of_exp_list(g_real_token)) {
             return exp();
@@ -2336,7 +2343,7 @@ static Decl * direct_declarator(TypeSpec * qua)
             DECL_is_paren(ndcl) = is_paren;
 
             //'id' should be the last one in declarator-list.
-            insertbefore_one(&dcl, dcl, ndcl);
+            xcom::insertbefore_one(&dcl, dcl, ndcl);
         }
         break;
     }
@@ -2420,7 +2427,7 @@ static Decl * declarator(TypeSpec * qua)
     //e.g:
     //    ptr is '*', dclr is '[]'->'ID'
     //    return: '*'->'[]'->'ID'
-    insertbefore(&dclr, dclr, ptr);
+    xcom::insertbefore(&dclr, dclr, ptr);
     return dclr; //'id' is the list tail.
 }
 
@@ -3318,6 +3325,30 @@ UINT getDeclaratorSize(TypeSpec const* spec, Decl const* d)
 }
 
 
+//Get and generate array element declaration.
+Decl * get_array_elem_decl(Decl const* decl)
+{
+    ASSERT0(is_array(decl));
+    //Return sub-dimension of base if 'decl' is
+    //multi-dimensional array.
+    Decl * elemdcl = cp_decl_fully(decl);
+    ASSERT0(PURE_DECL(elemdcl));
+    Decl * td = PURE_DECL(elemdcl);
+    if (DECL_dt(td) == DCL_ID) {
+        //e.g: td is: ID->ARRAY->ARRAY.
+        //We need ARRAY->ARRAY.
+        td = DECL_next(td);
+    }
+    if (DECL_dt(td) == DCL_ARRAY ||
+        DECL_dt(td) == DCL_POINTER) {
+        //e.g: td is: ARRAY->ARRAY.
+        //We need ARRAY.
+        xcom::remove(&PURE_DECL(elemdcl), td);
+    }
+    return elemdcl;
+}
+
+
 //Return the *first* Decl structure which indicate an array
 //in pure-list of declaration.
 //e.g: int p[10][20]; the declarator is: DCL_ID(p)->DCL_ARRAY(20)->DCL_ARRAY(10).
@@ -4171,6 +4202,10 @@ bool is_struct(Decl const* decl)
             (DECL_dt(decl) == DCL_TYPE_NAME ||
              DECL_dt(decl) == DCL_DECLARATION),
             ("need TypeSpec-NAME or DCRLARATION"));
+    if (is_pointer(decl) || is_array(decl)) {
+        //Complex type is consist of type-specifier and declarator.
+        return false;
+    }
     return is_struct(DECL_spec(decl));
 }
 
@@ -4190,11 +4225,7 @@ bool is_aggr(TypeSpec const* type)
 
 bool is_aggr(Decl const* decl)
 {
-    ASSERTN(decl &&
-            (DECL_dt(decl) == DCL_TYPE_NAME ||
-             DECL_dt(decl) == DCL_DECLARATION),
-            ("need TypeSpec-NAME or DCRLARATION"));
-    return is_aggr(DECL_spec(decl));
+    return is_struct(decl) || is_union(decl);
 }
 
 
@@ -4211,6 +4242,10 @@ bool is_union(Decl const* decl)
             (DECL_dt(decl) == DCL_TYPE_NAME ||
              DECL_dt(decl) == DCL_DECLARATION),
             ("need TypeSpec-NAME or DCRLARATION"));
+    if (is_pointer(decl) || is_array(decl)) {
+        //Complex type is consist of type-specifier and declarator.
+        return false;
+    }
     return is_union(DECL_spec(decl));
 }
 
@@ -4413,10 +4448,10 @@ bool is_pointer(Decl const* dcl)
             break;
         default:
             ASSERTN(DECL_dt(dcl) != DCL_DECLARATION &&
-                   DECL_dt(dcl) != DCL_DECLARATOR &&
-                   DECL_dt(dcl) != DCL_ABS_DECLARATOR &&
-                   DECL_dt(dcl) != DCL_TYPE_NAME,
-                   ("\nunsuitable Decl type locate here in is_pointer()\n"));
+                    DECL_dt(dcl) != DCL_DECLARATOR &&
+                    DECL_dt(dcl) != DCL_ABS_DECLARATOR &&
+                    DECL_dt(dcl) != DCL_TYPE_NAME,
+                    ("\nunsuitable Decl type locate here in is_pointer()\n"));
             return false;
         }
         dcl = DECL_next(dcl);
@@ -4484,38 +4519,45 @@ Union * get_union_spec(Decl const* decl)
 {
     ASSERT0(is_union(decl));
     return TYPE_union_type(DECL_spec(decl));
-
 }
 
 
-//Get offset of appointed 'name' in struct 'st'.
-UINT get_struct_field(Struct * st, CHAR const* name, Decl ** fld_decl)
+Aggr * get_aggr_spec(Decl const* decl)
 {
-    Decl * decl = STRUCT_decl_list(st);
+    ASSERT0(is_struct(decl) || is_union(decl));
+    return is_struct(decl) ? (Aggr*)get_struct_spec(decl) :
+                             (Aggr*)get_union_spec(decl);
+}
+
+
+//Get offset of appointed 'name' in struct/union 'st'.
+UINT get_aggr_field(Aggr * st, CHAR const* name, Decl ** fld_decl)
+{
+    Decl * decl = AGGR_decl_list(st);
     UINT ofst = 0;
     UINT size = 0;
     while (decl != nullptr) {
         Sym * sym = get_decl_sym(decl);
-        if (strcmp(name, SYM_name(sym)) == 0) {
+        if (::strcmp(name, SYM_name(sym)) == 0) {
             if (fld_decl != nullptr) {
                 *fld_decl = decl;
             }
             return ofst;
         }
         size = get_decl_size(decl);
-        ofst += (UINT)ceil_align(size, STRUCT_align(st));
+        ofst += (UINT)ceil_align(size, AGGR_align(st));
         decl = DECL_next(decl);
     }
-    ASSERTN(0, ("Unknown struct field"));
+    ASSERTN(0, ("Unknown aggregate field"));
     return 0;
 }
 
 
 //Get offset and declaration of field indexed by 'idx'.
 //idx: the idx of field, start at 0.
-UINT get_struct_field(Struct * st, INT idx, Decl ** fld_decl)
+UINT get_aggr_field(Aggr * st, INT idx, Decl ** fld_decl)
 {
-    Decl * decl = STRUCT_decl_list(st);
+    Decl * decl = AGGR_decl_list(st);
     UINT ofst = 0;
     UINT size = 0;
     while (decl != nullptr && idx >= 0) {
@@ -4527,11 +4569,11 @@ UINT get_struct_field(Struct * st, INT idx, Decl ** fld_decl)
             return ofst;
         }
         size = get_decl_size(decl);
-        ofst += (UINT)ceil_align(size, STRUCT_align(st));
+        ofst += (UINT)ceil_align(size, AGGR_align(st));
         decl = DECL_next(decl);
         idx--;
     }
-    ASSERTN(0, ("Unknown struct field"));
+    ASSERTN(0, ("Unknown aggregate field"));
     return 0;
 }
 
@@ -4682,7 +4724,7 @@ static Decl * factor_user_type_rec(Decl * decl, TypeSpec ** new_spec)
     }
 
     cur_declor = cp_decl_begin_at(cur_declor);
-    insertbefore(&new_declor, new_declor, cur_declor);
+    xcom::insertbefore(&new_declor, new_declor, cur_declor);
     return new_declor;
 }
 
@@ -4740,12 +4782,16 @@ Decl * factor_user_type(Decl * decl)
     SET_FLAG(TYPE_des(new_spec), (TYPE_des(spec) & T_STOR_STATIC));
     SET_FLAG(TYPE_des(new_spec), (TYPE_des(spec) & T_STOR_AUTO));
 
+    Tree * inittree = nullptr;
+    if (is_initialized(decl)) {
+        inittree = get_decl_init_tree(decl);
+    }
     Decl * cur_declor = const_cast<Decl*>(get_pure_declarator(decl));
     if (cur_declor == nullptr) {
         //cur_declor may be abstract declarator list.
         //There is at least DCL_ID if the declaration is typedef.
         ASSERT0(!is_typedef);
-        return new_declaration(new_spec, new_declor, g_cur_scope);
+        return new_declaration(new_spec, new_declor, g_cur_scope, inittree);
     }
 
     ASSERTN(DECL_decl_list(decl), ("miss declarator"));
@@ -4754,17 +4800,16 @@ Decl * factor_user_type(Decl * decl)
         ("either decl is abstract declarator or miss typedef/variable name."));
 
     //Neglect the first DCL_ID node, we only need the rest.
-    insertbefore(&new_declor, new_declor,
-                 cp_decl_begin_at(DECL_next(cur_declor)));
+    xcom::insertbefore(&new_declor, new_declor,
+                       cp_decl_begin_at(DECL_next(cur_declor)));
 
     //Put an ID to be the head of declarator list.
     DECL_next(cur_declor) = nullptr;
     ASSERT0(DECL_prev(cur_declor) == nullptr);
-    insertbefore_one(&new_declor, new_declor, cur_declor);
+    xcom::insertbefore_one(&new_declor, new_declor, cur_declor);
 
     //Create a new declaration with factored specifier.
-    Decl * declaration = new_declaration(new_spec, new_declor, g_cur_scope);
-    return declaration;
+    return new_declaration(new_spec, new_declor, g_cur_scope, inittree);
 }
 
 
@@ -4795,8 +4840,8 @@ static void process_enum(TypeSpec * ty)
     ENUM_LIST_enum(elst) = TYPE_enum_type(ty);
 
     ASSERT0(!find_enum(SCOPE_enum_list(g_cur_scope), TYPE_enum_type(ty)));
-    insertbefore_one(&SCOPE_enum_list(g_cur_scope),
-                     SCOPE_enum_list(g_cur_scope), elst);
+    xcom::insertbefore_one(&SCOPE_enum_list(g_cur_scope),
+                           SCOPE_enum_list(g_cur_scope), elst);
 }
 
 

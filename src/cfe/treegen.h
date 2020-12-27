@@ -49,6 +49,7 @@ Tree * buildId(Decl const* decl);
 Tree * buildAssign(Decl const* decl, Tree * rhs);
 Tree * buildAssign(Tree * lhs, Tree * rhs);
 Tree * buildArray(Decl const* decl, xcom::Vector<UINT> & subexp_vec);
+Tree * buildArray(Tree * base, xcom::Vector<UINT> & subexp_vec);
 Tree * buildIndmem(Tree * base, Decl const* fld);
 Tree * buildDmem(Tree * base, Decl const* fld);
 //Build aggregate reference tree node.

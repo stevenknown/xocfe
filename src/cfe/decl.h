@@ -98,22 +98,22 @@ public:
 
 
 //Struct
-#define STRUCT_decl_list(s) ((s)->m_decl_list)
-#define STRUCT_tag(s) ((s)->tag)
-#define STRUCT_is_complete(s) ((s)->is_complete)
-#define STRUCT_align(s) ((s)->align)
-#define STRUCT_scope(s) ((s)->scope)
+#define STRUCT_decl_list(s) AGGR_decl_list(s)
+#define STRUCT_tag(s) AGGR_tag(s)
+#define STRUCT_is_complete(s) AGGR_is_complete(s)
+#define STRUCT_align(s) AGGR_align(s)
+#define STRUCT_scope(s) AGGR_scope(s)
 class Struct : public Aggr {
 public:
 };
 
 
 //Union
-#define UNION_decl_list(s) ((s)->m_decl_list)
-#define UNION_tag(s) ((s)->tag)
-#define UNION_is_complete(s) ((s)->is_complete)
-#define UNION_align(s) ((s)->align)
-#define UNION_scope(s) ((s)->scope)
+#define UNION_decl_list(s) AGGR_decl_list(s)
+#define UNION_tag(s) AGGR_tag(s)
+#define UNION_is_complete(s) AGGR_is_complete(s)
+#define UNION_align(s) AGGR_align(s)
+#define UNION_scope(s) AGGR_scope(s)
 class Union : public Aggr {
 public:
 };
@@ -573,6 +573,7 @@ UINT get_decl_size(Decl const* decl);
 UINT get_pointer_base_size(Decl const* decl);
 Decl const* get_pointer_decl(Decl const* decl);
 Decl * get_array_decl(Decl * decl);
+Decl * get_array_elem_decl(Decl const* decl);
 ULONG get_array_elemnum_to_dim(Decl const* arr, UINT dim);
 ULONG get_array_elem_bytesize(Decl const* arr);
 UINT get_array_dim(Decl const* arr);
@@ -580,12 +581,14 @@ Decl * get_pointer_base_decl(Decl const* decl, TypeSpec ** ty);
 TypeSpec * get_pure_type_spec(TypeSpec * type);
 UINT getDeclaratorSize(TypeSpec const* spec, Decl const* d);
 CHAR const* get_enum_const_name(Enum const* e, INT idx);
-UINT get_struct_field(Struct * st, CHAR const* name, Decl ** fld_decl);
-UINT get_struct_field(Struct * st, INT idx, Decl ** fld_decl);
+UINT get_aggr_field(Aggr * st, CHAR const* name, Decl ** fld_decl);
+UINT get_aggr_field(Aggr * st, INT idx, Decl ** fld_decl);
 Struct * get_struct_spec(Decl const* decl);
 Union * get_union_spec(Decl const* decl);
+Aggr * get_aggr_spec(Decl const* decl);
 
-Decl * new_declaration(TypeSpec * spec, Decl * declor, Scope * sc);
+Decl * new_declaration(TypeSpec * spec, Decl * declor, Scope * sc,
+                       Tree * inittree);
 Decl * new_decl(DCL dcl_type);
 Decl * new_var_decl(IN Scope * scope, IN CHAR * name);
 TypeSpec * new_type();

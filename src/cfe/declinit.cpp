@@ -28,35 +28,57 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "cfeinc.h"
 #include "cfecommacro.h"
 
+static void replaceBaseWith(Tree const* newbase, Tree * stmts);
+static INT processAggrInit(Decl const* dcl, Tree * initval, OUT Tree ** stmts);
+
 static INT processArrayInitRecur(Decl const* dcl, Tree * initval, UINT curdim,
                                  xcom::Vector<UINT> & dimvec,
                                  OUT Tree ** stmts)
 {
     if (TREE_type(initval) == TR_INITVAL_SCOPE) {
-        curdim++;
-        UINT pos_in_curdim = 0;
-        for (Tree * t = TREE_initval_scope(initval);
-             t != nullptr; t = TREE_nsib(t), pos_in_curdim++) {
-            dimvec.set(curdim, pos_in_curdim);
-            processArrayInitRecur(dcl, t, curdim, dimvec, stmts);
+        Decl const* dummy_elemdcl = get_array_elem_decl(dcl);
+        if (is_aggr(dummy_elemdcl)) {
+            Tree * inittree = nullptr;
+            //If element of array is Aggregate type.
+            processAggrInit(dummy_elemdcl, initval, &inittree);
+
+            Tree * arr_ref = buildArray(dcl, dimvec);
+            TREE_lineno(arr_ref) = TREE_lineno(initval);
+            replaceBaseWith(arr_ref, inittree);
+            xcom::add_next(stmts, inittree);
+            return ST_SUCC;
         }
-        return ST_SUCC;
+
+        if (is_array(dummy_elemdcl)) {
+            curdim++;
+            UINT pos_in_curdim = 0;
+            for (Tree * t = TREE_initval_scope(initval);
+                 t != nullptr; t = TREE_nsib(t), pos_in_curdim++) {
+                dimvec.set(curdim, pos_in_curdim);
+                processArrayInitRecur(dcl, t, curdim, dimvec, stmts);
+            }
+            return ST_SUCC;
+        }
+
+        UNREACHABLE();
+        return ST_ERR;
     }
 
     Tree * lhs = buildArray(dcl, dimvec);
+    TREE_lineno(lhs) = TREE_lineno(initval);
     Tree * assign = buildAssign(lhs, copyTree(initval));
+    TREE_lineno(assign) = TREE_lineno(initval);
     xcom::add_next(stmts, assign);
     return ST_SUCC;
 }
 
 
-//Note the function does not check whether initval scope matchs the
-//declaration. It should be diagnosticed before.
-static INT processArrayInit(Decl const* dcl, OUT Tree ** stmts)
+//dcl: the declaration of array.
+//initval: the initial-value tree to array.
+//stmts: generated tree to perform initialization of array.
+static INT processArrayInit(Decl const* dcl, Tree * initval, OUT Tree ** stmts)
 {
-    ASSERT0(is_array(dcl));
-    Tree * initval = get_decl_init_tree(dcl);
-    ASSERT0(TREE_type(initval) == TR_INITVAL_SCOPE);
+    ASSERT0(initval && TREE_type(initval) == TR_INITVAL_SCOPE);
 
     //Record the position in each dimension of array.
     //e.g: given array[I][J][K], curdim begins at the left-first dimension I,
@@ -78,57 +100,115 @@ static INT processArrayInit(Decl const* dcl, OUT Tree ** stmts)
 }
 
 
-static INT processStructInitRecur(Decl const* dcl, Tree * initval, UINT curdim,
-                                  xcom::Vector<UINT> & fldvec,
-                                  OUT Tree ** stmts)
+//Note the function does not check whether initval scope matchs the
+//declaration. It should be diagnosticed before.
+static INT processArrayInit(Decl const* dcl, OUT Tree ** stmts)
+{
+    ASSERT0(is_array(dcl));
+    Tree * initval = get_decl_init_tree(dcl);
+    return processArrayInit(dcl, initval, stmts);
+}
+
+
+//stmts: a list of assignment.
+static void replaceBaseWith(Tree const* newbase, Tree * stmts)
+{
+    ASSERT0(newbase);
+    for (Tree * t = stmts; t != nullptr; t = TREE_nsib(t)) {
+        ASSERT0(TREE_type(t) == TR_ASSIGN);
+        Tree * lhs = TREE_lchild(t);
+        ASSERT0(lhs);
+        Tree * base = get_base(lhs);
+        ASSERT0(base && TREE_type(base) == TR_ID);
+        
+        Tree * dup = copyTree(newbase);
+        TREE_base_region(TREE_parent(base)) = dup;
+        TREE_parent(dup) = TREE_parent(base);
+    }
+}
+
+
+static INT processAggrInitRecur(Decl const* dcl, Decl const* flddecl,
+                                Tree * initval, UINT curdim,
+                                xcom::Vector<UINT> & fldvec,
+                                OUT Tree ** stmts)
 {
     if (TREE_type(initval) == TR_INITVAL_SCOPE) {
-        curdim++;
-        UINT pos_in_curdim = 0;
-        for (Tree * t = TREE_initval_scope(initval);
-             t != nullptr; t = TREE_nsib(t), pos_in_curdim++) {
-            fldvec.set(curdim, pos_in_curdim);
-            processStructInitRecur(dcl, t, curdim, fldvec, stmts);
+        if (is_aggr(flddecl)) {
+            curdim++;
+            UINT pos_in_curdim = 0;
+            for (Tree * t = TREE_initval_scope(initval);
+                 t != nullptr; t = TREE_nsib(t), pos_in_curdim++) {
+                Decl * flddecl_of_fld = nullptr;
+                get_aggr_field(get_aggr_spec(flddecl), (INT)pos_in_curdim,
+                               &flddecl_of_fld);
+                ASSERT0(flddecl_of_fld);
+                fldvec.set(curdim, pos_in_curdim);
+                processAggrInitRecur(dcl, flddecl_of_fld, t,
+                                     curdim, fldvec, stmts);
+            }
+            return ST_SUCC;
         }
-        return ST_SUCC;
+
+        if (is_array(flddecl)) {
+            Tree * inittree = nullptr;
+            if (ST_SUCC != processArrayInit(flddecl, initval, &inittree)) {
+                return ST_ERR;
+            }
+            Tree * aggr_ref = buildAggrFieldRef(dcl, fldvec);
+            TREE_lineno(aggr_ref) = TREE_lineno(initval);
+            ASSERT0(is_aggr_field_access(aggr_ref));
+            replaceBaseWith(aggr_ref, inittree);
+            xcom::add_next(stmts, inittree);
+            return ST_SUCC;
+        }
+
+        UNREACHABLE();
+        return ST_ERR;
     }
 
     Tree * lhs = buildAggrFieldRef(dcl, fldvec);
+    TREE_lineno(lhs) = TREE_lineno(initval);
     Tree * assign = buildAssign(lhs, copyTree(initval));
+    TREE_lineno(assign) = TREE_lineno(initval);
     xcom::add_next(stmts, assign);
     return ST_SUCC;
 }
 
 
-static INT processStructInit(Decl const* dcl, OUT Tree ** stmts)
+//dcl: the declaration of aggregate.
+//initval: the initial-value tree to aggregate.
+//stmts: generated tree to perform initialization of aggregate.
+static INT processAggrInit(Decl const* dcl, Tree * initval,
+                             OUT Tree ** stmts)
 {
-    ASSERT0(is_struct(dcl));
-    Tree * initval = get_decl_init_tree(dcl);
-    ASSERT0(TREE_type(initval) == TR_INITVAL_SCOPE);
+    ASSERT0(initval && TREE_type(initval) == TR_INITVAL_SCOPE);
 
     //Record the position in each dimension of array.
     //e.g: given array[I][J][K], curdim begins at the left-first dimension I,
     //the position in dimension I begins at 0.
     xcom::Vector<UINT> fieldvec;
-    //TBD:Could 'dcl' be declared as zero dimension array? May be it is true
-    //in dynamic-type language.
-    //for (INT i = get_array_dim(dcl) - 1; i >= 0; i--) {
-    //    dimvec.set(i, 0);
-    //}
+
     UINT pos_in_curdim = 0;
     UINT curdim = 0;
     for (Tree * t = TREE_initval_scope(initval);
          t != nullptr; t = TREE_nsib(t), pos_in_curdim++) {
+        Decl * flddecl = nullptr;
+        get_aggr_field(get_aggr_spec(dcl), pos_in_curdim, &flddecl);
+        ASSERT0(flddecl);
+        fieldvec.clean();
         fieldvec.set(curdim, pos_in_curdim);
-        processStructInitRecur(dcl, t, curdim, fieldvec, stmts);
+        processAggrInitRecur(dcl, flddecl, t, curdim, fieldvec, stmts);
     }
     return ST_SUCC;
 }
 
 
-static INT processUnionInit(Decl const* dcl, OUT Tree ** stmts)
+static INT processAggrInit(Decl const* dcl, OUT Tree ** stmts)
 {
-    return ST_SUCC;
+    ASSERT0(is_struct(dcl) || is_union(dcl));
+    Tree * initval = get_decl_init_tree(dcl);
+    return processAggrInit(dcl, initval, stmts);
 }
 
 
@@ -136,6 +216,7 @@ static INT processScalarInit(Decl const* dcl, OUT Tree ** stmts)
 {
     Tree * initval = get_decl_init_tree(dcl);
     Tree * assign = buildAssign(dcl, initval);
+    TREE_lineno(assign) = TREE_lineno(initval);
     xcom::add_next(stmts, assign);
     return ST_SUCC;
 }
@@ -149,12 +230,8 @@ static INT processDeclList(Decl const* decl, OUT Tree ** stmts)
             if (ST_SUCC != processArrayInit(dcl, stmts)) { return ST_ERR; }
             continue;
         }
-        if (is_struct(dcl)) {
-            if (ST_SUCC != processStructInit(dcl, stmts)) { return ST_ERR; }
-            continue;
-        }
-        if (is_union(dcl)) {
-            if (ST_SUCC != processUnionInit(dcl, stmts)) { return ST_ERR; }
+        if (is_struct(dcl) || is_union(dcl)) {
+            if (ST_SUCC != processAggrInit(dcl, stmts)) { return ST_ERR; }
             continue;
         }
         if (ST_SUCC != processScalarInit(dcl, stmts)) { return ST_ERR; }
