@@ -28,7 +28,7 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "cfeinc.h"
 
 static Stack<Cell*> g_cell_stack;
-ST_INFO g_st_info[]={
+ST_INFO g_st_info[] = {
     {st_NULL,                "nullptr" },
 
     //non-terminal chacartor as followed

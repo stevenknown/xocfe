@@ -274,14 +274,16 @@ INT process_init(Decl * decl)
     }
 
     INT st = ST_SUCC;
-    if (is_array(dcl)) {
+    if (is_pointer(dcl)) {
+        //First, determine whether 'dcl' is aggregate or array type.
+        //e.g: basic type, pointer type.
+        st = process_pointer_init(DECL_child(dcl), ty, &initval);
+    } else if (is_array(dcl)) {
         st = process_array_init(decl, &initval);
     } else if (is_struct(ty)) {
         st = process_struct_init(ty, &initval);
     } else if (is_union(ty)) {
         st = process_union_init(ty, &initval);
-    } else if (is_pointer(dcl)) {
-        st = process_pointer_init(DECL_child(dcl), ty, &initval);
     } else {
         //simple type init. e.g INT SHORT
         st = process_base_init(ty, &initval);
@@ -597,9 +599,9 @@ static void insertCvtForParams(Tree * t)
 }
 
 
-static bool findAndRefillStructUnionField(Decl * base,
+static bool findAndRefillStructUnionField(Decl const* base,
                                           Sym const* field_name,
-                                          Decl ** field_decl,
+                                          OUT Decl ** field_decl,
                                           INT lineno)
 {
     TypeSpec * base_spec = DECL_spec(base);
@@ -669,6 +671,7 @@ static INT TypeTranIDField(Tree * t, Decl ** field_decl, TYCtx * cont)
     //Get the struct/union type base.
     Decl * base = TREE_result_type(cont->base_tree_node);
     ASSERTN(base, ("should be struct/union type"));
+
     if (!findAndRefillStructUnionField(base, TREE_id(t), field_decl,
                                        TREE_lineno(t))) {
         StrBuf buf(64);
@@ -1013,8 +1016,9 @@ static INT TypeTranInDMem(Tree * t, TYCtx * cont)
     Decl * rd = TREE_result_type(TREE_field(t));
     cont->base_tree_node = nullptr;
     cont->is_field = false;
+
     if (!is_pointer(ld)) {
-        Sym * sym = get_decl_sym(TREE_id_decl(TREE_field(t)));
+        xoc::Sym * sym = get_decl_sym(TREE_id_decl(TREE_field(t)));
         err(TREE_lineno(t),
             "'->%s' : left operand has 'struct' type, use '.'",
             SYM_name(sym));

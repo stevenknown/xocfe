@@ -140,6 +140,25 @@ Tree * buildAggrRef(Tree * base, Decl const* fld)
 }
 
 
+Tree * buildUInt(HOST_UINT val)
+{
+    Tree * t = NEWTN(TR_IMMU);
+    //If the target integer hold in 'g_real_token_string' is longer than
+    //host size_t type, it will be truncated now.
+    TREE_token(t) = T_IMMU;
+    TREE_imm_val(t) = (HOST_INT)val;
+    return t; 
+}
+
+
+Tree * buildInitvalScope(Tree * exp_list)
+{
+    Tree * t = NEWTN(TR_INITVAL_SCOPE);
+    TREE_initval_scope(t) = exp_list;
+    return t;
+}
+
+
 Tree * buildInt(HOST_INT val)
 {
     Tree * t = NEWTN(TR_IMM);
@@ -452,7 +471,7 @@ void dump_tok_list()
     if (c != nullptr) {
         prt("\nTOKEN:");
         for (; c; c = g_cell_list.get_next()) {
-            CHAR * s = TOKEN_INFO_name((TokenInfo*)CELL_val(c));
+            CHAR const* s = TOKEN_INFO_name((TokenInfo*)CELL_val(c));
             prt("'%s' ", s);
         }
         prt("\n");
@@ -747,7 +766,7 @@ static TOKEN reset_tok()
     }
 
     //Set the current token with the head element in token_list.
-    g_real_token_string = TOKEN_INFO_name(tki);
+    g_real_token_string = const_cast<CHAR*>(TOKEN_INFO_name(tki));
     g_real_token = TOKEN_INFO_token(tki);
     g_real_line_num = TOKEN_INFO_lineno(tki);
     return g_real_token;
@@ -761,7 +780,7 @@ INT suck_tok()
         gettok();
     } else {
         //Set the current token with head in token-info list
-        g_real_token_string = TOKEN_INFO_name(tki);
+        g_real_token_string = const_cast<CHAR*>(TOKEN_INFO_name(tki));
         g_real_token = TOKEN_INFO_token(tki);
         g_real_line_num = TOKEN_INFO_lineno(tki);
     }

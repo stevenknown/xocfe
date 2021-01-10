@@ -440,7 +440,7 @@ typedef enum {
 class ST_INFO {
 public:
     SST sst;
-    CHAR * name;
+    CHAR const* name;
 };
 
 

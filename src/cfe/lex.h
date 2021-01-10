@@ -167,7 +167,7 @@ typedef enum _TOKEN {
 class TokenInfo {
 public:
     TOKEN tok;
-    CHAR * name;
+    CHAR const* name;
     union{
         INT  lineno;
     } u1;
@@ -179,7 +179,7 @@ public:
 class KeywordInfo {
 public:
     TOKEN tok;
-    CHAR * name;
+    CHAR const* name;
 };
 
 
@@ -211,7 +211,7 @@ void initKeyWordTab();
 TOKEN getNextToken();
 
 //Get the string name of current token.
-CHAR * getTokenName(TOKEN tok);
+CHAR const* getTokenName(TOKEN tok);
 
 TokenInfo const* get_token_info(TOKEN tok);
 #endif

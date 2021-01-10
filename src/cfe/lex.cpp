@@ -885,7 +885,7 @@ TOKEN t_dot()
 }
 
 
-CHAR * getTokenName(TOKEN tok)
+CHAR const* getTokenName(TOKEN tok)
 {
     return TOKEN_INFO_name(&g_token_info[tok]);
 }

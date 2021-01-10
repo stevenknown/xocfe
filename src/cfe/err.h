@@ -58,8 +58,8 @@ extern List<ERR_MSG*> g_err_msg_list;
 extern List<WARN_MSG*> g_warn_msg_list;
 
 //Exported Functions
-void warn(INT line_num, CHAR * msg, ...);
-void err(INT line_num, CHAR * msg, ...);
+void warn(INT line_num, CHAR const* msg, ...);
+void err(INT line_num, CHAR const* msg, ...);
 void show_err();
 void show_warn();
 INT is_too_many_err();

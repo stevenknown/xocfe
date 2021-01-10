@@ -108,8 +108,7 @@ static INT format_struct_union(StrBuf & buf, TypeSpec const* ty);
 UINT g_decl_counter = 1;
 #endif
 INT g_alignment = PRAGMA_ALIGN; //default alignment.
-CHAR * g_dcl_name [] = {
-//character of DCL enum-type.
+CHAR const* g_dcl_name [] = { //character of DCL enum-type.    
     "",
     "ARRAY",
     "POINTER",
@@ -268,7 +267,7 @@ Decl * new_declaration(TypeSpec * spec, Decl * declor, Scope * sc,
 
 //Construct new declaration within given scope.
 //Front-end dependent.
-Decl * new_var_decl(IN Scope * scope, IN CHAR * name)
+Decl * new_var_decl(IN Scope * scope, CHAR const* name)
 {
     Decl * declaration = new_decl(DCL_DECLARATION);
     DECL_decl_scope(declaration) = scope;
@@ -388,9 +387,9 @@ bool is_constant(Decl const* dcl)
 //Return true if dcl has initial value.
 bool is_initialized(Decl const* dcl)
 {
-    ASSERTN(dcl && (DECL_dt(dcl) == DCL_DECLARATION ||
-                    DECL_dt(dcl) == DCL_DECLARATOR),
-            ("need declaration"));
+    ASSERTN(dcl &&
+            (DECL_dt(dcl) == DCL_DECLARATION ||
+             DECL_dt(dcl) == DCL_DECLARATOR), ("need declaration"));
     if (DECL_dt(dcl) == DCL_DECLARATION) {
         dcl = DECL_decl_list(dcl); //get DCRLARATOR
         ASSERTN(DECL_dt(dcl) == DCL_DECLARATOR ||
@@ -400,6 +399,21 @@ bool is_initialized(Decl const* dcl)
         return true;
     }
     return false;
+}
+
+
+void set_decl_init_tree(Decl const* decl, Tree * initval)
+{
+    ASSERT0(DECL_dt(decl) == DCL_DECLARATION);
+    Decl * dclor = DECL_decl_list(decl); //get DCRLARATOR
+    ASSERTN(DECL_dt(dclor) == DCL_DECLARATOR ||
+            DECL_dt(dclor) == DCL_ABS_DECLARATOR, ("need declaration"));
+    if (initval == nullptr) {
+        DECL_is_init(dclor) = false;
+    } else {
+        DECL_is_init(dclor) = true;
+    }
+    DECL_init_tree(dclor) = initval;
 }
 
 
@@ -980,13 +994,17 @@ static TypeSpec * type_spec_struct(TypeSpec * ty)
         //e.g:struct EX * ex;
         //    struct EX { ... };
         //Here, we make an incomplete struct/union, then find the complete
-        //versionand refill the declaration if need access its field.
+        //version and refill the declaration if need access its field.
         if (!is_struct_exist_in_outer_scope(g_cur_scope,
                                             g_real_token_string, &s)) {
             s = (Struct*)xmalloc(sizeof(Struct));
-            STRUCT_tag(s) = g_fe_sym_tab->add(g_real_token_string);
-            STRUCT_is_complete(s) = false;
-            STRUCT_scope(s) = g_cur_scope;
+            AGGR_tag(s) = g_fe_sym_tab->add(g_real_token_string);
+            AGGR_is_complete(s) = false;
+            AGGR_scope(s) = g_cur_scope;
+            SCOPE_struct_list(g_cur_scope).append_tail(s);            
+            //Note we do not append anonymous aggregate into scope list because
+            //user can not find the aggregate through tag name. Thus there will
+            //multiple aggregates that have same data structure layout.
         }
         match(T_ID);
     }
@@ -996,21 +1014,18 @@ static TypeSpec * type_spec_struct(TypeSpec * ty)
             //Struct format as either struct TAG {} or struct {}.
             //The struct declarated without TAG.
             s = (Struct*)xmalloc(sizeof(Struct));
-            STRUCT_tag(s) = nullptr;
-            STRUCT_is_complete(s) = false;
-            STRUCT_scope(s) = g_cur_scope;
+            AGGR_tag(s) = nullptr;
+            AGGR_is_complete(s) = false;
+            AGGR_scope(s) = g_cur_scope;
         }
-        if (STRUCT_is_complete(s)) {
+        if (AGGR_is_complete(s)) {
             //Report error if there exist a previous declaration.
-            ASSERT0(STRUCT_tag(s));
+            ASSERT0(AGGR_tag(s));
             err(g_real_line_num, "struct '%s' redefined",
-                SYM_name(STRUCT_tag(s)));
+                SYM_name(AGGR_tag(s)));
             return ty;
         }
         type_spec_struct_field(s, ty);
-        if (STRUCT_is_complete(s)) {
-            SCOPE_struct_list(g_cur_scope).append_tail(s);
-        }
     }
     
     if (s == nullptr) {
@@ -1028,7 +1043,7 @@ static TypeSpec * type_spec_struct(TypeSpec * ty)
     //    struct A a2;
     //    ...
     //    So, a1 and a2 are implement as different alignment!
-    STRUCT_align(s) = alignment;
+    AGGR_align(s) = alignment;
 
     TYPE_struct_type(ty) = s;
     return ty;
@@ -1040,12 +1055,13 @@ static void type_spec_union_field(Union * s, TypeSpec * ty)
     ASSERT0(s);
     match(T_LLPAREN);
     push_scope(false);
+
     //UINT errn = g_err_msg_list.get_elem_count();
-    UNION_decl_list(s) = union_declaration_list();
-    if (UNION_decl_list(s) == nullptr) {
+    AGGR_decl_list(s) = union_declaration_list();
+    if (AGGR_decl_list(s) == nullptr) {
         //Empty field list, for compiler convenient, insert one byte field.
         Decl * var = new_var_decl(g_cur_scope, "#placeholder");
-        UNION_decl_list(s) = var;
+        AGGR_decl_list(s) = var;
     }
     pop_scope();
     //if (g_err_msg_list.get_elem_count() == errn) {
@@ -1054,7 +1070,7 @@ static void type_spec_union_field(Union * s, TypeSpec * ty)
 
     //Numbering field id.    
     UINT i = 0;
-    for (Decl * field = UNION_decl_list(s);
+    for (Decl * field = AGGR_decl_list(s);
          field != nullptr; field = DECL_next(field)) {
         DECL_fieldno(field) = i++;
         DECL_is_sub_field(field) = true;
@@ -1065,7 +1081,7 @@ static void type_spec_union_field(Union * s, TypeSpec * ty)
         err(g_real_line_num, "expected '}' after union definition");
         return;
     }
-    UNION_is_complete(s) = true;
+    AGGR_is_complete(s) = true;
 }
 
 
@@ -1094,9 +1110,10 @@ static TypeSpec * type_spec_union(TypeSpec * ty)
         if (!is_union_exist_in_outer_scope(g_cur_scope,
                                            g_real_token_string, &s)) {
             s = (Union*)xmalloc(sizeof(Union));
-            UNION_tag(s) = g_fe_sym_tab->add(g_real_token_string);
-            UNION_is_complete(s) = false;
-            UNION_scope(s) = g_cur_scope;
+            AGGR_tag(s) = g_fe_sym_tab->add(g_real_token_string);
+            AGGR_is_complete(s) = false;
+            AGGR_scope(s) = g_cur_scope;
+            SCOPE_union_list(g_cur_scope).append_tail(s);
         }
         match(T_ID);
     }
@@ -1109,21 +1126,20 @@ static TypeSpec * type_spec_union(TypeSpec * ty)
             //Union format as either union TAG {} or union {}.
             //The union declarated without TAG.
             s = (Union*)xmalloc(sizeof(Union));
-            UNION_tag(s) = nullptr;
-            UNION_is_complete(s) = false;
-            UNION_scope(s) = g_cur_scope;
+            AGGR_tag(s) = nullptr;
+            AGGR_is_complete(s) = false;
+            AGGR_scope(s) = g_cur_scope;
+            //Note we do not append anonymous aggregate into scope list because
+            //user can not find the aggregate through tag name. Thus there will
+            //multiple aggregates that have same data structure layout.
         }
-        if (UNION_is_complete(s)) {
+        if (AGGR_is_complete(s)) {
             //Report error if there exist a previous declaration.
-            ASSERT0(UNION_tag(s));
-            err(g_real_line_num, "union '%s' redefined",
-                SYM_name(UNION_tag(s)));
+            ASSERT0(AGGR_tag(s));
+            err(g_real_line_num, "union '%s' redefined", SYM_name(AGGR_tag(s)));
             return ty;
         }
-        type_spec_union_field(s, ty);
-        if (UNION_is_complete(s)) {
-            SCOPE_union_list(g_cur_scope).append_tail(s);
-        }
+        type_spec_union_field(s, ty);        
     }
 
     if (s == nullptr) {
@@ -1142,9 +1158,9 @@ static TypeSpec * type_spec_union(TypeSpec * ty)
     //    union A a2;
     //    ...
     //So, a1 and a2 are implement as different alignment!
-    UNION_align(s) = alignment;
+    AGGR_align(s) = alignment;
 
-    TYPE_union_type(ty) = s;
+    TYPE_aggr_type(ty) = s;
     return ty;
 }
 
@@ -2775,8 +2791,7 @@ bool is_aggr_exist_in_outer_scope(Scope * scope,
 
 //Return true if the struct typed declaration have already existed in both
 //current and all of outer scopes.
-bool is_struct_exist_in_outer_scope(Scope * scope,
-                                    CHAR const* tag,
+bool is_struct_exist_in_outer_scope(Scope * scope, CHAR const* tag,
                                     OUT Struct ** s)
 {
     ASSERT0(scope);
@@ -2793,8 +2808,7 @@ bool is_struct_exist_in_outer_scope(Scope * scope,
 
 //Return true if the struct typed declaration have already existed in both
 //current and all of outer scopes.
-bool is_struct_exist_in_outer_scope(Scope * scope,
-                                    Sym const* tag,
+bool is_struct_exist_in_outer_scope(Scope * scope, Sym const* tag,
                                     OUT Struct ** s)
 {
     ASSERT0(scope);
@@ -2811,8 +2825,7 @@ bool is_struct_exist_in_outer_scope(Scope * scope,
 
 //Return true if the union typed declaration have already existed in both
 //current and all of outer scopes.
-bool is_union_exist_in_outer_scope(Scope * scope,
-                                   CHAR const* tag,
+bool is_union_exist_in_outer_scope(Scope * scope, CHAR const* tag,
                                    OUT Union ** s)
 {
     Scope * sc = scope;
@@ -2828,8 +2841,7 @@ bool is_union_exist_in_outer_scope(Scope * scope,
 
 //Return true if the union typed declaration have already existed in both
 //current and all of outer scopes.
-bool is_union_exist_in_outer_scope(Scope * scope,
-                                   Sym const* tag,
+bool is_union_exist_in_outer_scope(Scope * scope, Sym const* tag,
                                    OUT Union ** s)
 {
     Scope * sc = scope;
@@ -4531,7 +4543,7 @@ Aggr * get_aggr_spec(Decl const* decl)
 
 
 //Get offset of appointed 'name' in struct/union 'st'.
-UINT get_aggr_field(Aggr * st, CHAR const* name, Decl ** fld_decl)
+UINT get_aggr_field(Aggr const* st, CHAR const* name, Decl ** fld_decl)
 {
     Decl * decl = AGGR_decl_list(st);
     UINT ofst = 0;
@@ -4553,9 +4565,15 @@ UINT get_aggr_field(Aggr * st, CHAR const* name, Decl ** fld_decl)
 }
 
 
+TypeSpec const* get_decl_spec(Decl const* decl)
+{
+    return DECL_spec(decl);
+}
+
+
 //Get offset and declaration of field indexed by 'idx'.
 //idx: the idx of field, start at 0.
-UINT get_aggr_field(Aggr * st, INT idx, Decl ** fld_decl)
+UINT get_aggr_field(Aggr const* st, INT idx, Decl ** fld_decl)
 {
     Decl * decl = AGGR_decl_list(st);
     UINT ofst = 0;
@@ -4783,7 +4801,7 @@ Decl * factor_user_type(Decl * decl)
     SET_FLAG(TYPE_des(new_spec), (TYPE_des(spec) & T_STOR_AUTO));
 
     Tree * inittree = nullptr;
-    if (is_initialized(decl)) {
+    if (DECL_dt(decl) == DCL_DECLARATION && is_initialized(decl)) {
         inittree = get_decl_init_tree(decl);
     }
     Decl * cur_declor = const_cast<Decl*>(get_pure_declarator(decl));

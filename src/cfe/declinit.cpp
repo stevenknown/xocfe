@@ -100,13 +100,49 @@ static INT processArrayInit(Decl const* dcl, Tree * initval, OUT Tree ** stmts)
 }
 
 
+static Tree * canonArrayInitVal(Decl const* dcl, Tree * initval)
+{
+    ASSERT0(is_array(dcl) && DECL_dt(dcl) == DCL_DECLARATION);
+    if (TREE_type(initval) == TR_INITVAL_SCOPE) {
+        return initval;
+    }
+
+    TypeSpec const* ty = get_decl_spec(dcl);
+    if (IS_TYPE(ty, T_SPEC_CHAR)) {
+        //In C lang, char array can be initialied by string.
+        //e.g: char arr[] = "hello";
+        ASSERT0(TREE_type(initval) == TR_STRING);
+        char const* str = TREE_string_val(initval)->getStr();
+        size_t len = ::strlen(str) + 1;
+        Tree * last = nullptr;
+        Tree * explst = nullptr;
+        UINT lineno = TREE_lineno(initval);
+        for (UINT i = 0; i < len; i++) {
+            Tree * v = buildUInt(str[i]);
+            TREE_lineno(v) = lineno;
+            xcom::add_next(&explst, &last, v);
+        }
+        Tree * new_initval = buildInitvalScope(explst);
+        TREE_lineno(new_initval) = lineno;
+        return new_initval;
+    }
+
+    UNREACHABLE();
+    return initval;
+}
+
+
 //Note the function does not check whether initval scope matchs the
 //declaration. It should be diagnosticed before.
 static INT processArrayInit(Decl const* dcl, OUT Tree ** stmts)
 {
     ASSERT0(is_array(dcl));
     Tree * initval = get_decl_init_tree(dcl);
-    return processArrayInit(dcl, initval, stmts);
+    Tree * new_initval = canonArrayInitVal(dcl, initval);
+    if (new_initval != initval) {
+        set_decl_init_tree(dcl, new_initval); 
+    }
+    return processArrayInit(dcl, new_initval, stmts);
 }
 
 
@@ -226,6 +262,10 @@ static INT processDeclList(Decl const* decl, OUT Tree ** stmts)
 {
     for (Decl const* dcl = decl; dcl != nullptr; dcl = DECL_next(dcl)) {
         if (!is_initialized(dcl)) { continue; }
+        if (is_pointer(dcl)) {
+            if (ST_SUCC != processScalarInit(dcl, stmts)) { return ST_ERR; }
+            continue;
+        }
         if (is_array(dcl)) {
             if (ST_SUCC != processArrayInit(dcl, stmts)) { return ST_ERR; }
             continue;
@@ -254,8 +294,9 @@ static INT processScope(Scope * scope)
 
 
 //Process stmt list.
-static INT processStmt(Tree * t)
+static INT processStmt(Tree ** head)
 {
+    Tree * t = *head;
     while (t != nullptr) {
         switch (TREE_type(t)) {
         case TR_SCOPE:
@@ -265,20 +306,20 @@ static INT processStmt(Tree * t)
             }
             break;
         case TR_IF:
-            if (ST_SUCC != processStmt(TREE_if_true_stmt(t))) {
+            if (ST_SUCC != processStmt(&TREE_if_true_stmt(t))) {
                 return ST_ERR;
             }
-            if (ST_SUCC != processStmt(TREE_if_false_stmt(t))) {
+            if (ST_SUCC != processStmt(&TREE_if_false_stmt(t))) {
                 return ST_ERR;
             }
             break;
         case TR_DO:
-            if (ST_SUCC != processStmt(TREE_dowhile_body(t))) {
+            if (ST_SUCC != processStmt(&TREE_dowhile_body(t))) {
                 return ST_ERR;
             }
             break;
         case TR_WHILE:
-            if (ST_SUCC != processStmt(TREE_whiledo_body(t))) {
+            if (ST_SUCC != processStmt(&TREE_whiledo_body(t))) {
                 return ST_ERR;
             }
             break;
@@ -290,16 +331,16 @@ static INT processStmt(Tree * t)
                     return ST_ERR;
                 }
             }
-            if (ST_SUCC != processStmt(TREE_for_body(t))) {
+            if (ST_SUCC != processStmt(&TREE_for_body(t))) {
                 return ST_ERR;
             }
             if (stmts != nullptr) {
-                xcom::insertbefore(&TREE_for_body(t), TREE_for_body(t), stmts);
+                xcom::insertbefore(head, t, stmts);
             }
             break;
         }
         case TR_SWITCH:
-            if (ST_SUCC != processStmt(TREE_switch_body(t))) {
+            if (ST_SUCC != processStmt(&TREE_switch_body(t))) {
                 return ST_ERR;
             }
             break;
@@ -319,7 +360,7 @@ static INT processFuncDef(Decl * dcl)
     }
 
     //Process stmt list.
-    if (ST_SUCC != processStmt(SCOPE_stmt_list(DECL_fun_body(dcl)))) {
+    if (ST_SUCC != processStmt(&SCOPE_stmt_list(DECL_fun_body(dcl)))) {
         return ST_ERR;
     }
     if (g_err_msg_list.get_elem_count() > 0) {

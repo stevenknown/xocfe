@@ -581,19 +581,22 @@ Decl * get_pointer_base_decl(Decl const* decl, TypeSpec ** ty);
 TypeSpec * get_pure_type_spec(TypeSpec * type);
 UINT getDeclaratorSize(TypeSpec const* spec, Decl const* d);
 CHAR const* get_enum_const_name(Enum const* e, INT idx);
-UINT get_aggr_field(Aggr * st, CHAR const* name, Decl ** fld_decl);
-UINT get_aggr_field(Aggr * st, INT idx, Decl ** fld_decl);
+UINT get_aggr_field(Aggr const* st, CHAR const* name, Decl ** fld_decl);
+UINT get_aggr_field(Aggr const* st, INT idx, Decl ** fld_decl);
 Struct * get_struct_spec(Decl const* decl);
 Union * get_union_spec(Decl const* decl);
 Aggr * get_aggr_spec(Decl const* decl);
+TypeSpec const* get_decl_spec(Decl const* decl);
 
 Decl * new_declaration(TypeSpec * spec, Decl * declor, Scope * sc,
                        Tree * inittree);
 Decl * new_decl(DCL dcl_type);
-Decl * new_var_decl(IN Scope * scope, IN CHAR * name);
+Decl * new_var_decl(IN Scope * scope, CHAR const* name);
 TypeSpec * new_type();
 TypeSpec * new_type(INT cate);
 Enum * new_enum();
+
+void set_decl_init_tree(Decl const* decl, Tree * initval);
 
 Decl * type_name();
 Decl * trans_to_pointer(Decl * decl, bool is_append);
@@ -601,5 +604,5 @@ Decl * trans_to_pointer(Decl * decl, bool is_append);
 
 //Exported Variables
 extern INT g_alignment;
-extern CHAR * g_dcl_name[];
+extern CHAR const* g_dcl_name[];
 #endif

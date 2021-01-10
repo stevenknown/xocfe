@@ -43,8 +43,10 @@ extern bool g_dump_token;
 void initParser();
 void finiParser();
 
+Tree * buildInitvalScope(Tree * exp_list);
 Tree * buildString(Sym const* str);
 Tree * buildInt(HOST_INT val);
+Tree * buildUInt(HOST_UINT val);
 Tree * buildId(Decl const* decl);
 Tree * buildAssign(Decl const* decl, Tree * rhs);
 Tree * buildAssign(Tree * lhs, Tree * rhs);

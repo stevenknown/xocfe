@@ -25,10 +25,10 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 @*/
-#include "../cfe/cfecom.h"
+#include "../cfe/cfeinc.h"
 
-CHAR * g_c_file_name = nullptr;
-CHAR * g_dump_file_name = nullptr;
+static CHAR const* g_c_file_name = nullptr;
+static CHAR const* g_dump_file_name = nullptr;
 
 UINT FrontEnd()
 {

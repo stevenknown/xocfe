@@ -31,5 +31,4 @@ class Decl;
 class Tree;
 
 //Exported Variable.
-extern CHAR * g_c_file_name;
 extern bool g_prt_asm_horizontal;
