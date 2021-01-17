@@ -30,6 +30,7 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 static void replaceBaseWith(Tree const* newbase, Tree * stmts);
 static INT processAggrInit(Decl const* dcl, Tree * initval, OUT Tree ** stmts);
+static INT processScope(Scope * scope);
 
 static INT processArrayInitRecur(Decl const* dcl, Tree * initval, UINT curdim,
                                  xcom::Vector<UINT> & dimvec,
@@ -280,19 +281,6 @@ static INT processDeclList(Decl const* decl, OUT Tree ** stmts)
 }
 
 
-//Process local declaration's initialization.
-static INT processScope(Scope * scope)
-{
-    Decl * decl_list = SCOPE_decl_list(scope);
-    Tree * stmts = nullptr;
-    if (ST_SUCC != processDeclList(decl_list, &stmts)) {
-        return ST_ERR;
-    }
-    xcom::insertbefore(&SCOPE_stmt_list(scope), SCOPE_stmt_list(scope), stmts);
-    return ST_SUCC;
-} 
-
-
 //Process stmt list.
 static INT processStmt(Tree ** head)
 {
@@ -352,15 +340,29 @@ static INT processStmt(Tree ** head)
 }
 
 
-static INT processFuncDef(Decl * dcl)
+//Process local declaration's initialization.
+static INT processScope(Scope * scope)
 {
-    ASSERT0(DECL_is_fun_def(dcl));
-    if (ST_SUCC != processScope(DECL_fun_body(dcl))) {
+    Decl * decl_list = SCOPE_decl_list(scope);
+    Tree * stmts = nullptr;
+    if (ST_SUCC != processDeclList(decl_list, &stmts)) {
         return ST_ERR;
     }
 
     //Process stmt list.
-    if (ST_SUCC != processStmt(&SCOPE_stmt_list(DECL_fun_body(dcl)))) {
+    if (ST_SUCC != processStmt(&SCOPE_stmt_list(scope))) {
+        return ST_ERR;
+    }
+
+    xcom::insertbefore(&SCOPE_stmt_list(scope), SCOPE_stmt_list(scope), stmts);
+    return ST_SUCC;
+} 
+
+
+static INT processFuncDef(Decl * dcl)
+{
+    ASSERT0(DECL_is_fun_def(dcl));
+    if (ST_SUCC != processScope(DECL_fun_body(dcl))) {
         return ST_ERR;
     }
     if (g_err_msg_list.get_elem_count() > 0) {
@@ -384,5 +386,6 @@ INT processDeclInit()
             }
         }
     }
+
     return ST_SUCC;
 }
