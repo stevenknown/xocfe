@@ -86,13 +86,18 @@ public:
 #define AGGR_is_complete(s) ((s)->is_complete)
 #define AGGR_tag(s) ((s)->tag)
 #define AGGR_align(s) ((s)->align)
+#define AGGR_field_align(s) ((s)->field_align)
+#define AGGR_pack_align(s) ((s)->pack_align)
 #define AGGR_scope(s) ((s)->scope)
 class Aggr {
 public:
     bool is_complete;
     Decl * m_decl_list;
     Sym * tag;
-    UINT align;
+    UINT align; //alignment that whole structure have to align.
+    UINT field_align; //alignment that each fields in structure have to align.
+                      //0 indicates there is requirement to field align.
+    UINT pack_align; //User declared field alignment.
     Scope * scope;
 };
 
@@ -411,13 +416,10 @@ public:
 //Exported Functions
 Decl * addToUserTypeList(UserTypeList ** ut_list , Decl * decl);
 
-UINT computeArraySize(TypeSpec const* spec, Decl * decl);
-Decl * cp_type_name(Decl const* src);
-
-
 //Copy Decl of src is DCL_TYPE_NAME, or generate TYPE_NAME accroding
 //to src information.
 Decl * cp_typename(Decl const* src);
+Decl * cp_type_name(Decl const* src);
 TypeSpec * cp_spec(TypeSpec * ty);
 
 //Copy whole Decl, include all its specifier, qualifier, and declarator.
@@ -488,6 +490,7 @@ bool is_simple_base_type(INT des);
 bool is_complex_type(Decl const* dcl);
 bool is_array(Decl const* dcl);
 bool is_pointer(Decl const* dcl);
+bool is_pointer_point_to_array(Decl const* decl);
 bool is_any(Decl const* dcl);
 bool is_fun_decl(Decl const* dcl);
 bool is_fun_void_return(Decl const* dcl);
@@ -567,19 +570,22 @@ Decl const* get_decl_id(Decl const* dcl);
 Decl * get_decl_in_scope(CHAR const* name, Scope const* scope);
 Tree * get_decl_id_tree(Decl const* dcl);
 INT get_enum_const_val(Enum const* e, INT idx);
-UINT getSimplyTypeSize(TypeSpec const* ty);
+UINT getSpecTypeSize(TypeSpec const* ty);
 ULONG getComplexTypeSize(Decl const* decl);
 UINT get_decl_size(Decl const* decl);
 UINT get_pointer_base_size(Decl const* decl);
+Decl const* get_pointer_declarator(Decl const* decl);
 Decl const* get_pointer_decl(Decl const* decl);
-Decl * get_array_decl(Decl * decl);
+Decl * get_first_array_decl(Decl * decl);
+Decl const* get_array_base_declarator(Decl const* dcl);
+Decl * get_array_base_decl(Decl const* decl);
 Decl * get_array_elem_decl(Decl const* decl);
 ULONG get_array_elemnum_to_dim(Decl const* arr, UINT dim);
+ULONG get_array_elemnum(Decl const* arr, UINT dim);
 ULONG get_array_elem_bytesize(Decl const* arr);
 UINT get_array_dim(Decl const* arr);
 Decl * get_pointer_base_decl(Decl const* decl, TypeSpec ** ty);
 TypeSpec * get_pure_type_spec(TypeSpec * type);
-UINT getDeclaratorSize(TypeSpec const* spec, Decl const* d);
 CHAR const* get_enum_const_name(Enum const* e, INT idx);
 UINT get_aggr_field(Aggr const* st, CHAR const* name, Decl ** fld_decl);
 UINT get_aggr_field(Aggr const* st, INT idx, Decl ** fld_decl);

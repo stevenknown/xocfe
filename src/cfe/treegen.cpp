@@ -989,7 +989,7 @@ static Tree * primary_exp(IN OUT UINT * st)
     case T_IMM:
         //If the target integer hold in 'g_real_token_string' is longer than
         //host size_t type, it will be truncated now.
-        t = buildInt((HOST_INT)xatoll(g_real_token_string, false));
+        t = buildInt((HOST_INT)xcom::xatoll(g_real_token_string, false));
         match(T_IMM);
         return t;
     case T_IMML:
@@ -997,19 +997,19 @@ static Tree * primary_exp(IN OUT UINT * st)
         //If the target integer hold in 'g_real_token_string' is longer than
         //host size_t type, it will be truncated now.
         TREE_token(t) = g_real_token;
-        TREE_imm_val(t) = (HOST_INT)xatoll(g_real_token_string, false);
+        TREE_imm_val(t) = (HOST_INT)xcom::xatoll(g_real_token_string, false);
         match(T_IMML);
         return t;
     case T_IMMU:
         t = NEWTN(TR_IMMU);
         TREE_token(t) = g_real_token;
-        TREE_imm_val(t) = (HOST_UINT)xatoll(g_real_token_string, false);
+        TREE_imm_val(t) = (HOST_UINT)xcom::xatoll(g_real_token_string, false);
         match(T_IMMU);
         return t;
     case T_IMMUL:
         t = NEWTN(TR_IMMUL);
         TREE_token(t) = g_real_token;
-        TREE_imm_val(t) = (HOST_UINT)xatoll(g_real_token_string, false);
+        TREE_imm_val(t) = (HOST_UINT)xcom::xatoll(g_real_token_string, false);
         match(T_IMMUL);
         return t;
     case T_FP:         // decimal e.g 3.14
@@ -2001,6 +2001,12 @@ static Tree * sharp_start_stmt()
         TokenList * tl = (TokenList*)xmalloc(sizeof(TokenList));
         TL_tok(tl) = g_real_token;
         switch (g_real_token) {
+        case T_IMM:
+        case T_IMML:
+        case T_IMMU:
+        case T_IMMUL:
+            TL_imm(tl) = (UINT)xcom::xatoll(g_real_token_string, false);
+            break;
         case T_ID:
             TL_id_name(tl) = g_fe_sym_tab->add(g_real_token_string);
             break;
@@ -2488,6 +2494,91 @@ static Tree * exp_stmt()
 }
 
 
+static bool is_align_token(Sym const* sym)
+{
+    return ::strcmp(sym->getStr(), "align") == 0;
+}
+
+
+static bool process_pragma_imm(TokenList const* tl, UINT * imm)
+{
+    switch (TL_tok(tl)) {
+    case T_IMM:
+    case T_IMML:
+    case T_IMMU:
+    case T_IMMUL:
+        *imm = (UINT)TL_imm(tl);
+        return true;
+    default:
+        return false;
+    }
+    UNREACHABLE();
+    return false;
+}
+
+
+static bool is_valid_alignment(UINT align)
+{
+    switch (align) {
+    case 1:
+    case 2:
+    case 4:
+    case 8:
+    case 16:
+        return true;
+    default:;
+    }
+    return false;
+}
+
+
+//Alignment format is: pragma align (IMM)
+//tl: the token-list indicates the 'align' token.
+//Return true if the pragma is processed correctly, otherwise return false.
+static bool process_pragma_align(TokenList const** tl)
+{
+    ASSERT0(TL_tok(*tl) == T_ID && TL_str(*tl) && is_align_token(TL_str(*tl)));
+    *tl = TL_next(*tl);
+    if (TL_tok(*tl) != T_LPAREN) { return false; }
+
+    UINT align = g_alignment;
+    *tl = TL_next(*tl);
+    if (!process_pragma_imm(*tl, &align)) {
+        return false;
+    }
+    
+    if (!is_valid_alignment(align)) {
+        warn(g_real_line_num, "alignment should be one of 1, 2, 4, 8, 16");
+        return false;
+    }    
+
+    *tl = TL_next(*tl);
+    if (TL_tok(*tl) != T_RPAREN) { return false; }
+
+    *tl = TL_next(*tl);
+    g_alignment = align;
+    return true;
+}
+
+
+static void process_pragma(Tree const* t)
+{
+    ASSERT0(TREE_type(t) == TR_PRAGMA);
+    TokenList const* tl = TREE_token_lst(t);
+    switch (TL_tok(tl)) {
+    case T_ID:
+        ASSERT0(TL_str(tl));
+        if (is_align_token(TL_str(tl))) {
+            //Alignment format is: pragma align (IMM)
+            process_pragma_align(&tl);
+            return;
+        }
+        break;
+    default:;
+    }
+} 
+
+
 //statement:
 //  labeled_statement // this already be recog in dispatch()
 //  expression_list;
@@ -2533,6 +2624,7 @@ static Tree * statement()
             break;
         case T_SHARP:
             t = sharp_start_stmt();
+            process_pragma(t);
             break;
         default:
             //It mMay be varirable or type declaration.

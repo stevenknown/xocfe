@@ -42,7 +42,8 @@ static void * xmalloc(size_t size)
 //Cell operations
 //If you intend to use Cell as a container to hold something, the follows should
 //be noticed:
-//When you need a new Cell , invoking 'newcell()', but is not 'get_free_cell()'.
+//When you require a new Cell , invoking 'newcell()', rather than
+//'get_free_cell()'.
 void free_cell(Cell * c)
 {
     if (c == nullptr) {

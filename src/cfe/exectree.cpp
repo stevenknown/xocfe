@@ -103,7 +103,7 @@ static bool compute_sizeof(Tree * t)
         return compute_conditional_exp(p);
     }
 
-    err(TREE_lineno(p), "'sizeof' need type-name");
+    err(TREE_lineno(p), "'sizeof' requires type-name");
 
     return false;
 }

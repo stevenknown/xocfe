@@ -29,52 +29,61 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "cfecommacro.h"
 
 //Example to show the structure of class Decl.
-//    e.g1:
-//    int * a, * const * volatile b[10];
-//    declaration----
-//        |          |--type-spec (int)
-//        |          |--declarator1 (DCL_DECLARATOR)
-//        |                |---decl-type (id:a)
-//        |                |---decl-type (pointer)
-//        |
-//        |          |--declarator2 (DCL_DECLARATOR)
-//        |                |---decl-type (id:b)
-//        |                |---decl-type (array:dim=10)
-//        |                |---decl-type (pointer:volatile)
-//        |                |---decl-type (pointer:const)
+//  e.g1: int * a, * const * volatile b[10];
+//  declaration----
+//      |          |--type-spec (int)
+//      |          |--declarator1 (DCL_DECLARATOR)
+//      |                |---decl-type (id:a)
+//      |                |---decl-type (pointer)
+//      |
+//      |          |--declarator2 (DCL_DECLARATOR)
+//      |                |---decl-type (id:b)
+//      |                |---decl-type (array:dim=10)
+//      |                |---decl-type (pointer:volatile)
+//      |                |---decl-type (pointer:const)
 //
-//    e.g2:
-//    int (*q)[30];
-//    declaration----
-//        |          |--type-spec (int)
-//        |          |--declarator1 (DCL_DECLARATOR)
-//        |                |---decl-type (id:q)
-//        |                |---decl-type (pointer)
-//        |                |---decl-type (array:dim=30)
+//  e.g2: int (*q)[30];
+//  declaration----
+//      |          |--type-spec (int)
+//      |          |--declarator1 (DCL_DECLARATOR)
+//      |                |---decl-type (id:q)
+//      |                |---decl-type (pointer)
+//      |                |---decl-type (array:dim=30)
 //
-//    e.g3:
-//    unsigned long const (* const c)(void);
-//    declaration----
-//                  |--type-spec (unsigned long const)
-//                  |--declarator1 (DCL_DECLARATOR)
-//                        |---decl-type (id:c)
-//                        |---decl-type (pointer:const)
-//                        |---decl-type (function)
+//  e.g3: unsigned long const (* const c)(void);
+//  declaration----
+//                |--type-spec (unsigned long const)
+//                |--declarator1 (DCL_DECLARATOR)
+//                      |---decl-type (id:c)
+//                      |---decl-type (pointer:const)
+//                      |---decl-type (function)
 //
-//    e.g4:
-//    USER_DEFINED_TYPE var;
-//    declaration----
-//                  |--type-spec (T_SPEC_USER_TYPE)
-//                  |--declarator (DCL_DECLARATOR)
-//                        |---decl-type (id:var)
+//  e.g4: USER_DEFINED_TYPE var;
+//  declaration----
+//                |--type-spec (T_SPEC_USER_TYPE)
+//                |--declarator (DCL_DECLARATOR)
+//                      |---decl-type (id:var)
 //
-//    e.g5: Abstract declarator, often used in parameters.
-//    int *
-//    declaration----
-//                  |--type-spec (int)
-//                  |--declarator (DCL_ABS_DECLARATOR)
-//                        |---nullptr
+//  e.g5: Abstract declarator, often used in parameters.
+//  int *
+//  declaration----
+//                |--type-spec (int)
+//                |--declarator (DCL_ABS_DECLARATOR)
+//                      |---nullptr
 //
+//  e.g6: double (*arr[10][40])[20][30];
+//  Note the lowest dimension, which iterates most slowly, is at the most right
+//  of decl-type list.
+//  In this example, array:dim=40 is the lowest dimension.
+//  declaration----
+//      |         |--type-spec (double)
+//      |         |--declarator1 (DCL_DECLARATOR)
+//      |               |---decl-type (id:arr)
+//      |               |---decl-type (array:dim=10)
+//      |               |---decl-type (array:dim=40)
+//      |               |---decl-type (pointer)
+//      |               |---decl-type (array:dim=20)
+//      |               |---decl-type (array:dim=30)
 //
 //The layout of Declaration:
 //Decl, with DECL_dt is DCL_DECLARATION or DCL_TYPE_NAME
@@ -103,6 +112,7 @@ static bool is_enum_id_exist(EnumList const* e_list,
                              OUT Enum ** e);
 static INT format_base_type_spec(StrBuf & buf, TypeSpec const* ty);
 static INT format_struct_union(StrBuf & buf, TypeSpec const* ty);
+static UINT computeArrayByteSize(TypeSpec const* spec, Decl const* decl);
 
 #ifdef _DEBUG_
 UINT g_decl_counter = 1;
@@ -147,6 +157,60 @@ static void complement_qua(TypeSpec * ty)
         des == T_STOR_AUTO) {
         SET_FLAG(TYPE_des(ty), T_SPEC_INT);
     }
+}
+
+
+//size: byte size.
+//align: the alignment of 'size' should conform.
+//       Note 0 indicates there is requirement to field align.
+static UINT pad_align(UINT size, UINT align)
+{
+    ASSERT0(align > 0);
+    if (size % align != 0) {
+        size = (size / align + 1) * align;
+    }
+    return size; 
+}
+
+
+//The function computes the byte offset after appending a field that size is
+//'field_size'.
+//field_align: 0 indicates there is requirement to field align.
+static UINT compute_field_ofst_consider_pad(Aggr const* st, UINT ofst,
+                                            UINT field_size, UINT elemnum,
+                                            UINT field_align)
+{
+    //return ofst + (UINT)xcom::ceil_align(field_size, STRUCT_align(st));
+    if (field_align != 0) {
+        ofst = pad_align(ofst, field_align);
+    } else {
+        ofst = pad_align(ofst, field_size);
+    }
+    ASSERTN(elemnum >= 1, ("at least one element"));
+    return ofst + field_size * elemnum;
+}
+
+
+static UINT compute_field_ofst_consider_pad(Aggr const* st, UINT ofst,
+                                            Decl const* field, UINT elemnum,
+                                            UINT field_align)
+{
+    return compute_field_ofst_consider_pad(st, ofst, get_decl_size(field),
+                                           elemnum, field_align);
+}
+
+
+//Calculate byte size of pure decl-type list, but without the 'specifier'.
+//There only 2 type of decl-type: pointer and array.
+//e.g  Given type is: int *(*p)[3][4], and calculating the
+//  size of '*(*) [3][4]'.
+//  The order of decl is: p->*->[3]->[4]->*
+static UINT getDeclaratorSize(TypeSpec const* spec, Decl const* d)
+{
+    if (d == nullptr) { return 0; }
+    if (is_pointer(d)) { return BYTE_PER_POINTER; }
+    if (is_array(d)) { return computeArrayByteSize(spec, d); }
+    return 0;
 }
 
 
@@ -361,7 +425,7 @@ Sym * get_decl_sym(Decl const* dcl)
 //Return true if dcl declared with 'inline'.
 bool is_inline(Decl const* dcl)
 {
-    ASSERTN(DECL_dt(dcl) == DCL_DECLARATION, ("need declaration"));
+    ASSERTN(DECL_dt(dcl) == DCL_DECLARATION, ("requires declaration"));
     TypeSpec const* ty = DECL_spec(dcl);
     ASSERT0(ty);
     if (IS_INLINE(ty)) {
@@ -374,7 +438,7 @@ bool is_inline(Decl const* dcl)
 //Return true if dcl declared with 'const'.
 bool is_constant(Decl const* dcl)
 {
-    ASSERTN(DECL_dt(dcl) == DCL_DECLARATION, ("need declaration"));
+    ASSERTN(DECL_dt(dcl) == DCL_DECLARATION, ("requires declaration"));
     TypeSpec const* ty = DECL_spec(dcl);
     ASSERT0(ty);
     if (IS_CONST(ty)) {
@@ -389,11 +453,11 @@ bool is_initialized(Decl const* dcl)
 {
     ASSERTN(dcl &&
             (DECL_dt(dcl) == DCL_DECLARATION ||
-             DECL_dt(dcl) == DCL_DECLARATOR), ("need declaration"));
+             DECL_dt(dcl) == DCL_DECLARATOR), ("requires declaration"));
     if (DECL_dt(dcl) == DCL_DECLARATION) {
         dcl = DECL_decl_list(dcl); //get DCRLARATOR
         ASSERTN(DECL_dt(dcl) == DCL_DECLARATOR ||
-                DECL_dt(dcl) == DCL_ABS_DECLARATOR, ("need declaration"));
+                DECL_dt(dcl) == DCL_ABS_DECLARATOR, ("requires declaration"));
     }
     if (DECL_is_init(dcl)) {
         return true;
@@ -407,7 +471,7 @@ void set_decl_init_tree(Decl const* decl, Tree * initval)
     ASSERT0(DECL_dt(decl) == DCL_DECLARATION);
     Decl * dclor = DECL_decl_list(decl); //get DCRLARATOR
     ASSERTN(DECL_dt(dclor) == DCL_DECLARATOR ||
-            DECL_dt(dclor) == DCL_ABS_DECLARATOR, ("need declaration"));
+            DECL_dt(dclor) == DCL_ABS_DECLARATOR, ("requires declaration"));
     if (initval == nullptr) {
         DECL_is_init(dclor) = false;
     } else {
@@ -423,7 +487,7 @@ Tree * get_decl_init_tree(Decl const* dcl)
     if (DECL_dt(dcl) == DCL_DECLARATION) {
         dcl = DECL_decl_list(dcl); //get DCRLARATOR
         ASSERTN(DECL_dt(dcl) == DCL_DECLARATOR ||
-                DECL_dt(dcl) == DCL_ABS_DECLARATOR, ("need declaration"));
+                DECL_dt(dcl) == DCL_ABS_DECLARATOR, ("requires declaration"));
     }
     ASSERT0(DECL_is_init(dcl));
     ASSERT0(DECL_init_tree(dcl));
@@ -433,7 +497,7 @@ Tree * get_decl_init_tree(Decl const* dcl)
 
 bool is_volatile(Decl const* dcl)
 {
-    ASSERTN(DECL_dt(dcl) == DCL_DECLARATION, ("need declaration"));
+    ASSERTN(DECL_dt(dcl) == DCL_DECLARATION, ("requires declaration"));
     TypeSpec const* ty = DECL_spec(dcl);
     ASSERT0(ty);
     if (IS_VOLATILE(ty)) {
@@ -445,7 +509,7 @@ bool is_volatile(Decl const* dcl)
 
 bool is_restrict(Decl const* dcl)
 {
-    ASSERTN(DECL_dt(dcl) == DCL_DECLARATION, ("need declaration"));
+    ASSERTN(DECL_dt(dcl) == DCL_DECLARATION, ("needs declaration"));
     if (is_pointer(dcl)) {
         Decl const* x = get_pointer_decl(dcl);
         ASSERT0(x);
@@ -460,7 +524,7 @@ bool is_restrict(Decl const* dcl)
 
 bool is_global_variable(Decl const* dcl)
 {
-    ASSERTN(DECL_dt(dcl) == DCL_DECLARATION, ("need declaration"));
+    ASSERTN(DECL_dt(dcl) == DCL_DECLARATION, ("needs declaration"));
     Scope const* sc = DECL_decl_scope(dcl);
     ASSERTN(sc, ("variable must be allocated within a scope."));
     if (SCOPE_level(sc) == GLOBAL_SCOPE) {
@@ -475,7 +539,7 @@ bool is_global_variable(Decl const* dcl)
 
 bool is_static(Decl const* dcl)
 {
-    ASSERTN(DECL_dt(dcl) == DCL_DECLARATION, ("need declaration"));
+    ASSERTN(DECL_dt(dcl) == DCL_DECLARATION, ("needs declaration"));
     ASSERTN(DECL_spec(dcl), ("miss specify type"));
     if (IS_STATIC(DECL_spec(dcl))) {
         return true;
@@ -486,7 +550,7 @@ bool is_static(Decl const* dcl)
 
 bool is_local_variable(Decl const* dcl)
 {
-    ASSERTN(DECL_dt(dcl)==DCL_DECLARATION, ("need declaration"));
+    ASSERTN(DECL_dt(dcl)==DCL_DECLARATION, ("needs declaration"));
     Scope const* sc = DECL_decl_scope(dcl);
     ASSERTN(sc, ("variable must be allocated within a scope."));
     if (SCOPE_level(sc) >= FUNCTION_SCOPE && !is_static(dcl)) {
@@ -983,7 +1047,7 @@ static TypeSpec * type_spec_struct(TypeSpec * ty)
         return ty;
     }
 
-    INT alignment = g_alignment; //record alignment declaration before struct.
+    INT alignment = g_alignment; //record alignment before struct declaration.
     Struct * s = nullptr;
     if (g_real_token == T_ID) {
         //struct definition
@@ -994,7 +1058,8 @@ static TypeSpec * type_spec_struct(TypeSpec * ty)
         //e.g:struct EX * ex;
         //    struct EX { ... };
         //Here, we make an incomplete struct/union, then find the complete
-        //version and refill the declaration if need access its field.
+        //version and refill the declaration if there are requirments to
+        //access its field.
         if (!is_struct_exist_in_outer_scope(g_cur_scope,
                                             g_real_token_string, &s)) {
             s = (Struct*)xmalloc(sizeof(Struct));
@@ -1034,15 +1099,15 @@ static TypeSpec * type_spec_struct(TypeSpec * ty)
         return ty;
     }
 
-    //We must change alignment always, because user may apply
-    //#pragma align anywhere.
+    //We must update alignment always, because user may apply #pragma directive
+    //anywhere.
     //e.g:#pragma align (4)
-    //    struct A {...} a1;
+    //    struct A a1;
     //    ...
     //    #pragma align (8)
     //    struct A a2;
     //    ...
-    //    So, a1 and a2 are implement as different alignment!
+    //  In actually, a1 and a2 are implemented in different alignment.
     AGGR_align(s) = alignment;
 
     TYPE_struct_type(ty) = s;
@@ -1094,7 +1159,7 @@ static TypeSpec * type_spec_union(TypeSpec * ty)
         return ty;
     }
 
-    INT alignment = g_alignment; //record alignment declaration before union.
+    INT alignment = g_alignment; //record alignment before union declaration.
     Union * s = nullptr;
     if (g_real_token == T_ID) {
         //union definition
@@ -1106,7 +1171,8 @@ static TypeSpec * type_spec_union(TypeSpec * ty)
         //e.g:union EX * ex;
         //    union EX { ... };
         //Here, we make an incomplete struct/union, then find the complete
-        //versionand refill the declaration if need access its field.
+        //versionand refill the declaration if there are requirments to
+        //access its field.
         if (!is_union_exist_in_outer_scope(g_cur_scope,
                                            g_real_token_string, &s)) {
             s = (Union*)xmalloc(sizeof(Union));
@@ -2123,18 +2189,20 @@ Decl const* get_pure_declarator(Decl const* decl)
 }
 
 
-//Get the dimension of given array.
+//Return the dimension of given array.
 //Note array should be DCL_DECLARATION or DCL_TYPE_NAME.
 UINT get_array_dim(Decl const* arr)
 {
     ASSERT0(DECL_dt(arr) == DCL_DECLARATION || DECL_dt(arr) == DCL_TYPE_NAME);
     ASSERT0(is_array(arr));
     Decl * dclr = const_cast<Decl*>(get_pure_declarator(arr));
+    //Get the first ARRAY decl-type.
     while (dclr != nullptr) {
         if (DECL_dt(dclr) == DCL_ARRAY) { break; }
         dclr = DECL_next(dclr);
     }
 
+    //Count the dimension.
     UINT ndim = 0;
     while (dclr != nullptr) {
         if (DECL_dt(dclr) != DCL_ARRAY) { break; }
@@ -2145,17 +2213,22 @@ UINT get_array_dim(Decl const* arr)
 }
 
 
-
 //Get the number of element to given dimension.
 //Note the field DECL_array_dim of array is only
 //available after compute_array_dim() invoked, and
 //it compute the really number of array element via
 //DECL_array_dim_exp, that is a constant expression.
 //'arr': array declaration.
-//'dim': given dimension to compute, start at 0.
+//'dim': given dimension to compute, start at 0 which is the closest dimension
+//    to leading ID, in decl-type list.
+//    e.g: int arr[8][12][24];
+//    In C language, [24] is the lowest dimension. 
+//    where decl-type list will be: 
+//      ID:'arr' -> ARRAY[8] -> ARRAY[12] -> ARRAY[24]
+//    dim 0 indicates ARRAY[8], the highest dimension of 'arr'.
 ULONG get_array_elemnum_to_dim(Decl const* arr, UINT dim)
 {
-    Decl const* dcl = get_array_decl(const_cast<Decl*>(arr));
+    Decl const* dcl = get_first_array_decl(const_cast<Decl*>(arr));
     ASSERT0(dcl);
     UINT i = 0;
     while (i < dim && dcl != nullptr) {
@@ -2173,12 +2246,24 @@ ULONG get_array_elemnum_to_dim(Decl const* arr, UINT dim)
 }
 
 
+//Get the number of elements in entire array.
+ULONG get_array_elemnum(Decl const* arr)
+{
+    UINT dn = get_array_dim(arr);
+    UINT en = 1;
+    for (UINT i = 0; i < dn; i++) {
+        en *= get_array_elemnum_to_dim(arr, i);
+    }
+    return en;
+}
+
+
 //Get the bytesize of array element.
 ULONG get_array_elem_bytesize(Decl const* arr)
 {
     ASSERT0(is_array(arr));
     ASSERT0(DECL_spec(arr));
-    return getSimplyTypeSize(DECL_spec(arr));
+    return getSpecTypeSize(DECL_spec(arr));
 }
 
 
@@ -3027,9 +3112,10 @@ TypeSpec * new_type(INT cate)
 }
 
 
+//Compute array byte size.
 //'decl' presents DCL_DECLARATOR or DCL_ABS_DECLARATOR,
 //Compute byte size of total array.
-UINT computeArraySize(TypeSpec const* spec, Decl const* decl)
+static UINT computeArrayByteSize(TypeSpec const* spec, Decl const* decl)
 {
     if (DECL_dt(decl) == DCL_DECLARATOR) {
         decl = DECL_child(decl);
@@ -3172,28 +3258,69 @@ UINT computeBitFieldByteSize(Decl const** dcl)
 }
 
 
-UINT computeStructTypeSize(TypeSpec const* ty)
+UINT computeAggrAlignedSize(Aggr const* aggr, UINT aggr_size,
+                            UINT max_field_size)
+{
+    if (AGGR_align(aggr) < max_field_size) {
+        //Ensure field alignment is compatible with target machine's
+        //alignment constraint.
+        max_field_size = pad_align(max_field_size, AGGR_align(aggr));
+    }
+    if (AGGR_pack_align(aggr) != 0) {
+        aggr_size = pad_align(aggr_size, AGGR_align(aggr));
+    } else {
+        //There is no user declared constraint on struct alignment,
+        //thus aligning the struct in its natural alignment.
+        aggr_size = pad_align(aggr_size, max_field_size);
+    }
+    return aggr_size;
+}
+
+
+static UINT compute_field_ofst(Aggr const* s, UINT ofst,
+                               Decl const* dcl, UINT field_align,
+                               UINT * elem_bytesize)
+{
+    if (is_array(dcl)) {
+        Decl const* elem_dcl = get_array_base_decl(dcl);
+        *elem_bytesize = get_decl_size(elem_dcl);
+        UINT elem_num = get_array_elemnum(dcl);
+        ofst = compute_field_ofst_consider_pad(s, ofst, *elem_bytesize,
+                                               elem_num, AGGR_field_align(s));
+    } else {
+        *elem_bytesize = get_decl_size(dcl);
+        ofst = compute_field_ofst_consider_pad(s, ofst, *elem_bytesize,
+                                               1, AGGR_field_align(s));
+    }
+    return ofst;
+}
+
+
+static UINT computeStructTypeSize(TypeSpec const* ty)
 {
     ASSERT0(IS_STRUCT(ty));
     ASSERT0(is_struct_complete(ty));
     Struct const* s = TYPE_struct_type(ty);
     Decl const* dcl = STRUCT_decl_list(s);
-    UINT size = 0;
+    UINT ofst = 0;
+    UINT max_field_sz = 0;
     while (dcl != nullptr) {
         if (is_bitfield(dcl)) {
-            size += computeBitFieldByteSize(&dcl);
+            UINT bytesize = computeBitFieldByteSize(&dcl);
+            ofst = compute_field_ofst_consider_pad(s, ofst, bytesize, 1,
+                                                   AGGR_field_align(s));
+            max_field_sz = MAX(max_field_sz, bytesize);
             continue;
         }
-
-        size += get_decl_size(dcl);
+        UINT elem_bytesize = 0;
+        ofst = compute_field_ofst(s, ofst, dcl, AGGR_field_align(s),
+                                  &elem_bytesize);
+        max_field_sz = MAX(max_field_sz, elem_bytesize);
         dcl = DECL_next(dcl);
     }
 
-    UINT mod = size % STRUCT_align(s);
-    if (mod != 0) {
-        size = (size / STRUCT_align(s) + 1) * STRUCT_align(s);
-    }
-    return size;
+    UINT size = ofst;
+    return computeAggrAlignedSize(s, size, max_field_sz);
 }
 
 
@@ -3208,12 +3335,7 @@ UINT computeUnionTypeSize(TypeSpec const* ty)
         size = MAX(size, get_decl_size(dcl));
         dcl = DECL_next(dcl);
     }
-
-    UINT mod = size % UNION_align(s);
-    if (mod != 0) {
-        size = (size / UNION_align(s) + 1) * UNION_align(s);
-    }
-    return size;
+    return computeAggrAlignedSize(s, size, size);
 }
 
 
@@ -3228,14 +3350,14 @@ bool is_complex_type(Decl const* dcl)
 }
 
 
-//SimplyType refer to Non-pointer and non-array type.
-// e.g : int a;
-//   void a;
-//   struct a;
-//   union a;
-//   enum a;
-//   USER_DEFINED_TYPE_NAME a;
-UINT getSimplyTypeSize(TypeSpec const* spec)
+//Get specifior type, specifior type refers to Non-pointer and non-array type.
+// e.g: int a;
+//      void a;
+//      struct a;
+//      union a;
+//      enum a;
+//      USER_DEFINED_TYPE_NAME a;
+UINT getSpecTypeSize(TypeSpec const* spec)
 {
     if (spec == nullptr) { return 0; }
     if (HAVE_FLAG(TYPE_des(spec), T_SPEC_LONGLONG)) return BYTE_PER_LONGLONG;
@@ -3281,10 +3403,20 @@ ULONG getComplexTypeSize(Decl const* decl)
     ASSERTN(spec, ("composing type expected specifier"));
     ULONG declor_size = getDeclaratorSize(spec, d);
     if (is_array(d)) {
-        ULONG s = getSimplyTypeSize(spec);
+        Decl const* base_dcl = get_array_base_declarator(d);
+        if (base_dcl != nullptr && DECL_dt(base_dcl) == DCL_POINTER) {
+            //If base of array is pointer, then we can disgard the base type
+            //of the pointer, because all pointer size is identical.
+            return declor_size * BYTE_PER_POINTER;
+        }
+
+        //The base of array could only be pointer, what else could there be?
+        ASSERT0(base_dcl == nullptr);
+        ULONG s = getSpecTypeSize(spec);
         return declor_size * s;
     }
 
+    ASSERT0(is_pointer(d));
     return declor_size;
 }
 
@@ -3304,40 +3436,26 @@ Decl const* gen_type_name(TypeSpec * ty)
 UINT get_decl_size(Decl const* decl)
 {
     TypeSpec const* spec = DECL_spec(decl);
-    Decl const* d = nullptr;
-    if (DECL_dt(decl) == DCL_DECLARATION ||
-        DECL_dt(decl) == DCL_TYPE_NAME) {
-        d = DECL_decl_list(decl); //get declarator
+    if (DECL_dt(decl) == DCL_DECLARATION || DECL_dt(decl) == DCL_TYPE_NAME) {
+        Decl const* d = DECL_decl_list(decl); //get declarator
         ASSERTN(d && (DECL_dt(d) == DCL_DECLARATOR ||
                       DECL_dt(d) == DCL_ABS_DECLARATOR),
                 ("illegal declarator"));
         if (is_complex_type(d)) {
             return getComplexTypeSize(decl);
-        } else {
-            return getSimplyTypeSize(spec);
         }
-    } else {
-        ASSERTN(0, ("unexpected declaration"));
+        return getSpecTypeSize(spec);
     }
-    return 0;
-}
-
-
-//Calculate byte size of pure decl-type list, but without the 'specifier'.
-//There only 2 type of decl-type: pointer and array.
-//  e.g  Given type is: int *(*p)[3][4], and calculating the
-//    size of '*(*) [3][4]'.
-//    The order of decl is: p->*->[3]->[4]->*
-UINT getDeclaratorSize(TypeSpec const* spec, Decl const* d)
-{
-    if (d == nullptr) { return 0; }
-    if (is_pointer(d)) { return BYTE_PER_POINTER; }
-    if (is_array(d)) { return computeArraySize(spec, d); }
+    ASSERTN(0, ("unexpected declaration"));    
     return 0;
 }
 
 
 //Get and generate array element declaration.
+//Note if array is multiple-dimension, the funtion only construct and
+//return the element type of sub-dimension.
+//e.g: given int arr[10][20]; the declarator is: ID(arr)->ARRAY(10)->ARRAY(20).
+//     The function constructs and returns an array decl: 'int [20]';
 Decl * get_array_elem_decl(Decl const* decl)
 {
     ASSERT0(is_array(decl));
@@ -3347,17 +3465,47 @@ Decl * get_array_elem_decl(Decl const* decl)
     ASSERT0(PURE_DECL(elemdcl));
     Decl * td = PURE_DECL(elemdcl);
     if (DECL_dt(td) == DCL_ID) {
-        //e.g: td is: ID->ARRAY->ARRAY.
-        //We need ARRAY->ARRAY.
+        //e.g: If td is: ID->ARRAY->ARRAY.
+        //We elide ID and keep ARRAY->ARRAY.
         td = DECL_next(td);
     }
-    if (DECL_dt(td) == DCL_ARRAY ||
-        DECL_dt(td) == DCL_POINTER) {
-        //e.g: td is: ARRAY->ARRAY.
-        //We need ARRAY.
+    if (DECL_dt(td) == DCL_ARRAY || DECL_dt(td) == DCL_POINTER) {
+        //e.g: If td is: ARRAY->ARRAY.
+        //We elide the first ARRAY, and keep the second ARRAY.
         xcom::remove(&PURE_DECL(elemdcl), td);
     }
     return elemdcl;
+}
+
+
+//Get and generate array base declaration.
+//Note if array is multiple-dimension, the funtion constructs and
+//return the basel type of sub-dimension.
+//e.g: given int arr[10][20];
+//     the function construct and return decl: 'int';
+Decl * get_array_base_decl(Decl const* decl)
+{
+    ASSERT0(is_array(decl));
+    //Return sub-dimension of base if 'decl' is
+    //multi-dimensional array.
+    Decl * newdecl = cp_decl_fully(decl);
+    ASSERT0(PURE_DECL(newdecl));
+    Decl * td = PURE_DECL(newdecl);
+
+    //Given declator list, we elide the most outside ARRAY, and keep the rest
+    //and the declator of base type.
+    //e.g: If td is: ID->ARRAY1->POINTER->ARRAY2->ARRAY3.
+    //  We elide ARRAY1, the returned declator
+    //  is: ID->POINTER->ARRAY2->ARRAY3.
+    Decl * dclor = get_first_array_decl(newdecl);
+    Decl * prev = nullptr;
+    while (dclor != nullptr && DECL_dt(dclor) == DCL_ARRAY) {
+        prev = DECL_prev(dclor);
+        xcom::remove(&PURE_DECL(newdecl), dclor);
+        dclor = prev;
+    }
+
+    return newdecl;
 }
 
 
@@ -3365,10 +3513,9 @@ Decl * get_array_elem_decl(Decl const* decl)
 //in pure-list of declaration.
 //e.g: int p[10][20]; the declarator is: DCL_ID(p)->DCL_ARRAY(20)->DCL_ARRAY(10).
 //return DCL_ARRAY(20).
-Decl * get_array_decl(Decl * decl)
+Decl * get_first_array_decl(Decl * decl)
 {
-    ASSERTN(DECL_dt(decl) == DCL_TYPE_NAME ||
-            DECL_dt(decl) == DCL_DECLARATION ,
+    ASSERTN(DECL_dt(decl) == DCL_TYPE_NAME || DECL_dt(decl) == DCL_DECLARATION ,
             ("expect DCRLARATION"));
     ASSERTN(is_array(decl), ("expect pointer type"));
     Decl * x = const_cast<Decl*>(get_pure_declarator(decl));
@@ -3445,10 +3592,11 @@ Decl * get_pointer_base_decl(Decl const* decl, TypeSpec ** ty)
             ("expect DCRLARATION"));
     ASSERTN(is_pointer(decl), ("expect pointer type"));
 
-    *ty = DECL_spec(decl);
+    if (ty != nullptr) {
+        *ty = DECL_spec(decl);
+    }
 
     Decl * d = const_cast<Decl*>(get_pure_declarator(decl));
-
     if (DECL_dt(d) == DCL_ID) {
         d = DECL_next(d);
         ASSERTN(DECL_dt(d) == DCL_POINTER || DECL_dt(d) == DCL_FUN,
@@ -3480,7 +3628,7 @@ UINT get_pointer_base_size(Decl const* decl)
             return 0;
         }
 
-        UINT s = getSimplyTypeSize(ty);
+        UINT s = getSpecTypeSize(ty);
         ASSERTN(s != 0, ("simply type size cannot be zero"));
         return s;
     }
@@ -3488,7 +3636,7 @@ UINT get_pointer_base_size(Decl const* decl)
     UINT s = 1;
     UINT e = getDeclaratorSize(DECL_spec(decl), d);
     if (!is_pointer(d)) {
-        s = getSimplyTypeSize(ty);
+        s = getSpecTypeSize(ty);
     }
     ASSERTN(e != 0, ("declarator size cannot be zero"));
     return e * s;
@@ -4433,6 +4581,14 @@ bool is_fun_pointer(Decl const* dcl)
 }
 
 
+bool is_pointer_point_to_array(Decl const* decl)
+{
+    if (!is_pointer(decl)) { return false; }
+    Decl const* base_decl = get_pointer_base_decl(decl, nullptr);
+    return base_decl != nullptr && is_array(base_decl);
+}
+
+
 //Is 'dcl' a pointer-declarator,
 //e.g:Given Decl as : 'int * a', then the second decltor in the type-chain
 //    must be DCL_POINTER, the first is DCL_ID 'a'.
@@ -4448,7 +4604,7 @@ bool is_pointer(Decl const* dcl)
             //    DCL_POINTER->DCL_FUN
             //function-decl type:
             //    DCL_ID->DCL_FUN
-            if (DECL_prev(dcl) &&
+            if (DECL_prev(dcl) != nullptr &&
                 DECL_dt(DECL_prev(dcl)) == DCL_POINTER) {
                 return true;
             }
@@ -4469,6 +4625,87 @@ bool is_pointer(Decl const* dcl)
         dcl = DECL_next(dcl);
     }
     return false;
+}
+
+
+//The function get the base decloarator of ARRAY in decl-list.
+//e.g: the function will return 'pointer' decl-type.
+//    declaration----
+//        |          |--type-spec (int)
+//        |          |--declarator1 (DCL_DECLARATOR)
+//        |                |---decl-type (id:a)
+//        |                |---decl-type (array) the highest dimension
+//        |                |---decl-type (array)
+//        |                |---decl-type (pointer)
+Decl const* get_array_base_declarator(Decl const* dcl)
+{
+    dcl = get_pure_declarator(dcl);
+    while (dcl != nullptr) {
+        switch (DECL_dt(dcl)) {
+        case DCL_ARRAY:
+            while (dcl != nullptr  && DECL_dt(dcl) == DCL_ARRAY) {
+                dcl = DECL_next(dcl);
+            }
+            return dcl;
+        case DCL_ID:
+        case DCL_VARIABLE:
+            break;
+        default:
+            ASSERTN(DECL_dt(dcl) != DCL_DECLARATION &&
+                    DECL_dt(dcl) != DCL_DECLARATOR &&
+                    DECL_dt(dcl) != DCL_ABS_DECLARATOR &&
+                    DECL_dt(dcl) != DCL_TYPE_NAME,
+                    ("\nunsuitable Decl type locate here in is_array()\n"));
+            return nullptr;
+        }
+        dcl = DECL_next(dcl);
+    }
+    return nullptr;
+}
+
+
+//The function get the POINTER decl-type in decl-list.
+//   declaration----
+//       |          |--type-spec (int)
+//       |          |--declarator1 (DCL_DECLARATOR)
+//       |                |---decl-type (id:a)
+//       |                |---decl-type (pointer)
+//
+//e.g:given Decl as : 'int * a', then the second decl-type in the decl-list
+//    must be DCL_POINTER, the first is DCL_ID 'a'.
+//    And simplar for abs-decl, as an example 'int *', the first decltor
+//    in the type-chain must be DCL_POINTER.
+Decl const* get_pointer_declarator(Decl const* dcl)
+{
+    dcl = get_pure_declarator(dcl);
+    while (dcl != nullptr) {
+        switch (DECL_dt(dcl)) {
+        case DCL_FUN:
+            //function-pointer type:
+            //  DCL_POINTER->DCL_FUN
+            //function-decl type:
+            //  DCL_ID->DCL_FUN
+            if (DECL_prev(dcl) != nullptr &&
+                DECL_dt(DECL_prev(dcl)) == DCL_POINTER) {
+                return dcl;
+            }
+            return nullptr;
+        case DCL_POINTER:
+            return dcl;
+        case DCL_ID:
+        case DCL_VARIABLE:
+            break;
+        default:
+            ASSERTN(DECL_dt(dcl) != DCL_DECLARATION &&
+                    DECL_dt(dcl) != DCL_DECLARATOR &&
+                    DECL_dt(dcl) != DCL_ABS_DECLARATOR &&
+                    DECL_dt(dcl) != DCL_TYPE_NAME,
+                    ("\nunsuitable Decl type locate here in is_pointer()\n"));
+            return nullptr;
+        }
+        dcl = DECL_next(dcl);
+    }
+    return nullptr;
 }
 
 
@@ -4543,22 +4780,22 @@ Aggr * get_aggr_spec(Decl const* decl)
 
 
 //Get offset of appointed 'name' in struct/union 'st'.
-UINT get_aggr_field(Aggr const* st, CHAR const* name, Decl ** fld_decl)
+UINT get_aggr_field(Aggr const* s, CHAR const* name, Decl ** fld_decl)
 {
-    Decl * decl = AGGR_decl_list(st);
+    Decl * dcl = AGGR_decl_list(s);
     UINT ofst = 0;
-    UINT size = 0;
-    while (decl != nullptr) {
-        Sym * sym = get_decl_sym(decl);
+    while (dcl != nullptr) {
+        Sym * sym = get_decl_sym(dcl);
         if (::strcmp(name, SYM_name(sym)) == 0) {
             if (fld_decl != nullptr) {
-                *fld_decl = decl;
+                *fld_decl = dcl;
             }
             return ofst;
         }
-        size = get_decl_size(decl);
-        ofst += (UINT)ceil_align(size, AGGR_align(st));
-        decl = DECL_next(decl);
+        UINT elem_bytesize = 0;
+        ofst = compute_field_ofst(s, ofst, dcl, AGGR_field_align(s),
+                                  &elem_bytesize);
+        dcl = DECL_next(dcl);
     }
     ASSERTN(0, ("Unknown aggregate field"));
     return 0;
@@ -4573,22 +4810,23 @@ TypeSpec const* get_decl_spec(Decl const* decl)
 
 //Get offset and declaration of field indexed by 'idx'.
 //idx: the idx of field, start at 0.
-UINT get_aggr_field(Aggr const* st, INT idx, Decl ** fld_decl)
+UINT get_aggr_field(Aggr const* s, INT idx, Decl ** fld_decl)
 {
-    Decl * decl = AGGR_decl_list(st);
+    Decl * dcl = AGGR_decl_list(s);
     UINT ofst = 0;
     UINT size = 0;
-    while (decl != nullptr && idx >= 0) {
-        Sym * sym = get_decl_sym(decl);
+    while (dcl != nullptr && idx >= 0) {
+        Sym * sym = get_decl_sym(dcl);
         if (idx == 0) {
             if (fld_decl != nullptr) {
-                *fld_decl = decl;
+                *fld_decl = dcl;
             }
             return ofst;
         }
-        size = get_decl_size(decl);
-        ofst += (UINT)ceil_align(size, AGGR_align(st));
-        decl = DECL_next(decl);
+        UINT elem_bytesize = 0;
+        ofst = compute_field_ofst(s, ofst, dcl, AGGR_field_align(s),
+                                  &elem_bytesize);
+        dcl = DECL_next(dcl);
         idx--;
     }
     ASSERTN(0, ("Unknown aggregate field"));

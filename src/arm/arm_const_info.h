@@ -255,23 +255,23 @@ typedef enum _REGFILE {
     RF_SPSR = 9,
 
     //Predicate register, includes
-    //EQ     Equal
-    //NE     Not equal
-    //CS     Carry set (identical to HS)
-    //HS     Unsigned higher or same (identical to CS)
-    //CC     Carry clear (identical to LO)
-    //LO     Unsigned lower (identical to CC)
-    //MI     Minus or negative result
-    //PL     Positive or zero result
-    //VS     Overflow
-    //VC     No overflow
-    //HI     Unsigned higher
-    //LS     Unsigned lower or same
-    //GE     Signed greater than or equal
-    //LT     Signed less than
-    //GT     Signed greater than
-    //LE     Signed less than or equal
-    //AL     Always (this is the default)
+    //EQ  Equal
+    //NE  Not equal
+    //CS  Carry set (identical to HS)
+    //HS  Unsigned higher or same (identical to CS, Unsigned GE)
+    //CC  Carry clear (identical to LO)
+    //LO  Unsigned lower (identical to CC, Unsigned LT)
+    //MI  Minus or negative result
+    //PL  Positive or zero result
+    //VS  Overflow
+    //VC  No overflow
+    //HI  Unsigned higher
+    //LS  Unsigned lower or same
+    //GE  Signed greater than or equal
+    //LT  Signed less than
+    //GT  Signed greater than
+    //LE  Signed less than or equal
+    //AL  Always (this is the default)
     RF_P = 10,
     RF_NUM = 11,
 } REGFILE;
@@ -282,7 +282,7 @@ typedef enum _REGFILE {
 #define REG_R1 2
 #define REG_R2 3
 #define REG_R3 4
-#define REG_R12 13 //Scratch Register
+#define REG_R12 13 //Scratch Register, the synonym is IP register.
 #define REG_SP 14
 #define REG_RFLAG_REGISTER 97
 #define REG_EQ_PRED 98

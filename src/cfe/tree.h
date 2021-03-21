@@ -107,6 +107,7 @@ typedef enum _TREE_TYPE {
 #define TL_id_name(tl) (tl)->u1.id_name
 #define TL_chars(tl) (tl)->u1.chars
 #define TL_str(tl) (tl)->u1.string
+#define TL_imm(tl) (tl)->u1.imm
 class TokenList {
 public:
     TokenList * prev;
@@ -116,6 +117,7 @@ public:
         Sym * id_name;
         Sym * chars;
         Sym * string;
+        UINT imm;
     } u1;
 };
 
