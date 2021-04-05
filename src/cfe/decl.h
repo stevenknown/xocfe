@@ -257,6 +257,7 @@ public:
     Decl * prev;
     Decl * next;
     Decl * child;
+    Tree * placeholder; //record the placeholder in stmt list of scope.
     UINT lineno; //record line number of declaration.
 
     //record the num of fields while the base of Decl is Struct/Union.
@@ -403,6 +404,10 @@ public:
 #define DECL_bit_len(d) (d)->u1.u16.bit_len
 //#define DECL_bit_exp(d) (d)->u1.u16.bit_exp
 
+//Record the placeholder in stmt list of scope.
+//The placeholder is used to mark the lexicographical order of declarataion.
+#define  DECL_placeholder(d) (d)->placeholder
+
 //'d' must be TypeSpec-NAME, get pure declarator list
 //The macro without validation check, plz call
 //get_pure_declarator if you want to check.
@@ -435,8 +440,8 @@ UINT computeUnionTypeSize(TypeSpec * ty);
 UINT computeStructTypeSize(TypeSpec * ty);
 UINT computeScalarTypeBitSize(UINT des);
 
-bool declaration();
-bool declaration_list();
+Tree * declaration();
+Tree * declaration_list();
 void dump_decl(Decl const* dcl);
 void dump_decl(Decl const* dcl, StrBuf & buf);
 
@@ -503,6 +508,8 @@ bool is_fp(Decl const* dcl);
 bool is_fp(TypeSpec const* ty);
 bool is_float(Decl const* dcl);
 bool is_double(Decl const* dcl);
+bool is_bool(TypeSpec const* ty);
+bool is_bool(Decl const* dcl);
 bool is_union_exist_in_outer_scope(Scope * scope,
                                    CHAR const* tag,
                                    OUT Union ** s);
@@ -606,7 +613,6 @@ void set_decl_init_tree(Decl const* decl, Tree * initval);
 
 Decl * type_name();
 Decl * trans_to_pointer(Decl * decl, bool is_append);
-
 
 //Exported Variables
 extern INT g_alignment;

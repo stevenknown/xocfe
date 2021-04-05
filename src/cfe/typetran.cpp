@@ -591,6 +591,7 @@ static void insertCvtForParams(Tree * t)
         if (is_double(realp_decl) && is_float(formalp_decl)) {
             //Insert convertion operation: truncate double to float.
             realp = gen_cvt(formalp_decl, realp);
+            TypeTran(realp, nullptr);
         }
         xcom::add_next(&newparamlist, &last, realp);
         formalp_decl = DECL_next(formalp_decl);
@@ -656,7 +657,7 @@ static bool findAndRefillStructUnionField(Decl const* base,
             //Update and refill current field's type-specifier.
             TYPE_aggr_type(DECL_spec(*field_decl)) = findone2;
         }
-    }    
+    }
     return true;
 }
 
@@ -814,7 +815,7 @@ static INT TypeTranDeref(Tree * t, TYCtx * cont)
 
     Decl * td = cp_type_name(ld);
     ld = PURE_DECL(td);
-    ASSERTN(ld, ("lchild must be pointer type"));
+    ASSERTN(ld, ("left child must be pointer type"));
     if (DECL_dt(ld) == DCL_POINTER ||
         DECL_dt(ld) == DCL_ARRAY) {
         //In C, base of array only needs address, so the DEREF
@@ -831,37 +832,60 @@ static INT TypeTranDeref(Tree * t, TYCtx * cont)
         return ST_ERR;
     }
     TREE_result_type(t) = td;
-    return ST_SUCC; 
+    return ST_SUCC;
 }
 
 
 static INT TypeTranMulti(Tree * t, TYCtx * cont)
 {
     ASSERT0(t);
+    ASSERT0(TREE_token(t) == T_ASTERISK || TREE_token(t) == T_DIV ||
+            TREE_token(t) == T_MOD);
     if (ST_SUCC != TypeTran(TREE_lchild(t), cont)) { return ST_ERR; }
     if (ST_SUCC != TypeTran(TREE_rchild(t), cont)) { return ST_ERR; }
 
     Decl * ld = TREE_result_type(TREE_lchild(t));
     Decl * rd = TREE_result_type(TREE_rchild(t));
     if (TREE_token(t) == T_ASTERISK || TREE_token(t) == T_DIV) {
-        if (is_arith(ld) && is_arith(rd)) {
-            //arithmetic operation
-            TREE_result_type(t) = buildBinaryOpType(TREE_type(t), ld, rd);
-        } else {
-            err(TREE_lineno(t), "illegal operation for '%s'",
-                getTokenName(TREE_token(TREE_rchild(t))));
+        //Deal with perand type of MUL, DIV.
+        if (!is_arith(ld)) {
+            err(TREE_lineno(t),
+                "illegal operation for '%s', left operand"
+                " must be arithmetic type",
+                getTokenName(TREE_token(t)));
             return ST_ERR;
         }
-    } else {
-        if (is_integer(ld) && is_integer(rd)) {
-            //arithmetic operation
-            TREE_result_type(t) = buildBinaryOpType(TREE_type(t), ld, rd);
-        } else {
-            err(TREE_lineno(t), "illegal operation for '%%'");
+
+        if (!is_arith(rd)) {
+            err(TREE_lineno(t),
+                "illegal operation for '%s', right operand"
+                " must be arithmetic type",
+                getTokenName(TREE_token(t)));
             return ST_ERR;
         }
+
+        //arithmetic operation
+        TREE_result_type(t) = buildBinaryOpType(TREE_type(t), ld, rd);
+        return ST_SUCC;
     }
-    return ST_SUCC; 
+
+    //Deal with perand type of MOD.
+    if (!is_integer(ld)) {
+        err(TREE_lineno(t),
+            "illegal operation for '%s', left operand must be integer",
+            getTokenName(TREE_token(t)));
+        return ST_ERR;
+    }
+    if (!is_integer(rd)) {
+        err(TREE_lineno(t),
+            "illegal operation for '%s', right operand must be integer",
+            getTokenName(TREE_token(t)));
+        return ST_ERR;
+    }
+
+    //arithmetic operation
+    TREE_result_type(t) = buildBinaryOpType(TREE_type(t), ld, rd);
+    return ST_SUCC;
 }
 
 
@@ -907,7 +931,7 @@ static INT TypeTranCond(Tree * t, TYCtx * cont)
 
     //Record true-part type as the result type.
     TREE_result_type(t) = td;
-    return ST_SUCC; 
+    return ST_SUCC;
 }
 
 
@@ -929,7 +953,7 @@ static INT TypeTranPreAndPostInc(Tree * t, TYCtx * cont)
         }
     }
     TREE_result_type(t) = d;
-    return ST_SUCC; 
+    return ST_SUCC;
 }
 
 
@@ -951,7 +975,7 @@ static INT TypeTranPreAndPostDec(Tree * t, TYCtx * cont)
         }
     }
     TREE_result_type(t) = d;
-    return ST_SUCC; 
+    return ST_SUCC;
 }
 
 
@@ -969,7 +993,7 @@ static INT TypeTranSizeof(Tree * t, TYCtx * cont)
         if (IS_USER_TYPE_REF(DECL_spec(type_name))) {
             //Expand the combined type here.
             type_name = expand_user_type(type_name);
-            ASSERTN(is_valid_type_name(type_name), 
+            ASSERTN(is_valid_type_name(type_name),
                     ("Illegal expanding user-type"));
             TREE_type_name(kid) = type_name;
         }
@@ -980,7 +1004,7 @@ static INT TypeTranSizeof(Tree * t, TYCtx * cont)
         ASSERT0(TREE_type_name(kid));
         size = get_decl_size(TREE_type_name(kid));
     } else {
-        if (ST_SUCC != TypeTran(kid, cont)) { 
+        if (ST_SUCC != TypeTran(kid, cont)) {
             return ST_ERR;
         }
         ASSERT0(TREE_result_type(kid));
@@ -1027,7 +1051,7 @@ static INT TypeTranInDMem(Tree * t, TYCtx * cont)
 
     TREE_result_type(t) = buildTypeName(DECL_spec(rd));
     PURE_DECL(TREE_result_type(t)) = cp_decl_begin_at(PURE_DECL(rd));
-    return ST_SUCC; 
+    return ST_SUCC;
 }
 
 
@@ -1035,7 +1059,7 @@ static INT TypeTranDMem(Tree * t, TYCtx * cont)
 {
     ASSERT0(t);
     if (ST_SUCC != TypeTran(TREE_base_region(t), cont)) {
-        return ST_ERR; 
+        return ST_ERR;
     }
 
     Decl * ld = TREE_result_type(TREE_base_region(t));
@@ -1043,30 +1067,30 @@ static INT TypeTranDMem(Tree * t, TYCtx * cont)
     if (!IS_STRUCT(DECL_spec(ld)) && !IS_UNION(DECL_spec(ld))) {
         err(TREE_lineno(t),
             "left of field access operation '.' must be struct/union type");
-        return ST_ERR; 
+        return ST_ERR;
     }
- 
+
     cont->is_field = true;
     cont->base_tree_node = TREE_base_region(t);
     if (ST_SUCC != TypeTran(TREE_field(t), cont)) {
-        return ST_ERR; 
+        return ST_ERR;
     }
 
     Decl * rd = TREE_result_type(TREE_field(t));
     cont->base_tree_node = nullptr;
     cont->is_field = false;
- 
+
     if (is_pointer(ld)) {
         Sym * sym = get_decl_sym(TREE_id_decl(TREE_field(t)));
         err(TREE_lineno(t),
             "'.%s' : left operand points to 'struct' type, should use '->'",
             SYM_name(sym));
-        return ST_ERR; 
+        return ST_ERR;
     }
 
     TREE_result_type(t) = buildTypeName(DECL_spec(rd));
     PURE_DECL(TREE_result_type(t)) = cp_decl_begin_at(PURE_DECL(rd));
-    return ST_SUCC; 
+    return ST_SUCC;
 }
 
 
@@ -1195,7 +1219,7 @@ static INT TypeTranAdditive(Tree * t, TYCtx * cont)
         } else {
             ASSERTN(0, ("illegal type for '%s'", getTokenName(TREE_token(t))));
         }
-        return ST_SUCC; 
+        return ST_SUCC;
     }
 
     if (TREE_token(t) == T_SUB) { // '-'
@@ -1234,11 +1258,11 @@ static INT TypeTranAdditive(Tree * t, TYCtx * cont)
             ASSERTN(0, ("illegal type for '%s'",
                     getTokenName(TREE_token(t))));
         }
-        return ST_SUCC; 
+        return ST_SUCC;
     }
 
     ASSERTN(0, ("illegal type for '%s'", getTokenName(TREE_token(t))));
-    return ST_ERR; 
+    return ST_ERR;
 }
 
 
@@ -1250,7 +1274,7 @@ static INT TypeTranDeclInit(Decl const* decl, TYCtx * cont)
         ASSERT0(inittree);
         if (ST_SUCC != TypeTran(inittree, cont)) {
             return ST_ERR;
-        } 
+        }
     }
     return ST_SUCC;
 }
@@ -1492,7 +1516,7 @@ static INT TypeTran(Tree * t, TYCtx * cont)
             break;
         case TR_SWITCH:
             if (ST_SUCC != TypeTran(TREE_switch_det(t), nullptr)) {
-                goto FAILED; 
+                goto FAILED;
             }
             if (ST_SUCC != TypeTran(TREE_switch_body(t), nullptr)) {
                 goto FAILED;
@@ -1573,7 +1597,7 @@ static INT TypeTran(Tree * t, TYCtx * cont)
             if (ST_SUCC != TypeTran(TREE_lchild(t), cont)) goto FAILED;
 
             Decl * ld = TREE_result_type(TREE_lchild(t));
-            if (!is_arith(ld) && !is_pointer(ld)) {
+            if (!is_arith(ld) && !is_pointer(ld) && !is_bool(ld)) {
                 StrBuf buf(64);
                 format_declaration(buf, ld);
                 err(TREE_lineno(t),
@@ -1607,6 +1631,7 @@ static INT TypeTran(Tree * t, TYCtx * cont)
             break;
         case TR_PRAGMA:
         case TR_PREP:
+        case TR_DECL:
             break;
         default: ASSERTN(0, ("unknown tree type:%d", TREE_type(t)));
         }

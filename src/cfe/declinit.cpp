@@ -30,7 +30,7 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 static void replaceBaseWith(Tree const* newbase, Tree * stmts);
 static INT processAggrInit(Decl const* dcl, Tree * initval, OUT Tree ** stmts);
-static INT processScope(Scope * scope);
+static INT processScope(Scope * scope, bool is_collect_stmt);
 
 static INT processArrayInitRecur(Decl const* dcl, Tree * initval, UINT curdim,
                                  xcom::Vector<UINT> & dimvec,
@@ -76,7 +76,8 @@ static INT processArrayInitRecur(Decl const* dcl, Tree * initval, UINT curdim,
 
 //dcl: the declaration of array.
 //initval: the initial-value tree to array.
-//stmts: generated tree to perform initialization of array.
+//stmts: records generated tree to perform initialization of array if it is
+//       not NULL, otherwise append the genereted stmt after placeholder.
 static INT processArrayInit(Decl const* dcl, Tree * initval, OUT Tree ** stmts)
 {
     ASSERT0(initval && TREE_type(initval) == TR_INITVAL_SCOPE);
@@ -92,10 +93,23 @@ static INT processArrayInit(Decl const* dcl, Tree * initval, OUT Tree ** stmts)
     }
     UINT pos_in_curdim = 0;
     UINT curdim = 0;
+    Tree * stmtlst = nullptr;
     for (Tree * t = TREE_initval_scope(initval);
          t != nullptr; t = TREE_nsib(t), pos_in_curdim++) {
         dimvec.set(curdim, pos_in_curdim);
-        processArrayInitRecur(dcl, t, curdim, dimvec, stmts);
+        if (stmts != nullptr) {
+            processArrayInitRecur(dcl, t, curdim, dimvec, stmts);
+        } else {
+            processArrayInitRecur(dcl, t, curdim, dimvec, &stmtlst);
+        }
+    }
+
+    if (stmtlst != nullptr) {
+        ASSERT0(DECL_placeholder(dcl));
+        //Because placeholder will never be header of list, the insertion will
+        //always insert a node after placeholder.
+        Tree * pl = DECL_placeholder(dcl);
+        xcom::insertafter(&pl, stmtlst);
     }
     return ST_SUCC;
 }
@@ -141,7 +155,7 @@ static INT processArrayInit(Decl const* dcl, OUT Tree ** stmts)
     Tree * initval = get_decl_init_tree(dcl);
     Tree * new_initval = canonArrayInitVal(dcl, initval);
     if (new_initval != initval) {
-        set_decl_init_tree(dcl, new_initval); 
+        set_decl_init_tree(dcl, new_initval);
     }
     return processArrayInit(dcl, new_initval, stmts);
 }
@@ -157,7 +171,7 @@ static void replaceBaseWith(Tree const* newbase, Tree * stmts)
         ASSERT0(lhs);
         Tree * base = get_base(lhs);
         ASSERT0(base && TREE_type(base) == TR_ID);
-        
+
         Tree * dup = copyTree(newbase);
         TREE_base_region(TREE_parent(base)) = dup;
         TREE_parent(dup) = TREE_parent(base);
@@ -215,7 +229,8 @@ static INT processAggrInitRecur(Decl const* dcl, Decl const* flddecl,
 
 //dcl: the declaration of aggregate.
 //initval: the initial-value tree to aggregate.
-//stmts: generated tree to perform initialization of aggregate.
+//stmts: records generated tree to perform initialization of array if it is
+//       not NULL, otherwise append the genereted stmt after placeholder.
 static INT processAggrInit(Decl const* dcl, Tree * initval,
                              OUT Tree ** stmts)
 {
@@ -228,6 +243,7 @@ static INT processAggrInit(Decl const* dcl, Tree * initval,
 
     UINT pos_in_curdim = 0;
     UINT curdim = 0;
+    Tree * stmtlst = nullptr;
     for (Tree * t = TREE_initval_scope(initval);
          t != nullptr; t = TREE_nsib(t), pos_in_curdim++) {
         Decl * flddecl = nullptr;
@@ -235,7 +251,19 @@ static INT processAggrInit(Decl const* dcl, Tree * initval,
         ASSERT0(flddecl);
         fieldvec.clean();
         fieldvec.set(curdim, pos_in_curdim);
-        processAggrInitRecur(dcl, flddecl, t, curdim, fieldvec, stmts);
+        if (stmts != nullptr) {
+            processAggrInitRecur(dcl, flddecl, t, curdim, fieldvec, stmts);
+        } else {
+            processAggrInitRecur(dcl, flddecl, t, curdim, fieldvec, &stmtlst);
+        }
+    }
+
+    if (stmtlst != nullptr) {
+        ASSERT0(DECL_placeholder(dcl));
+        //Because placeholder will never be header of list, the insertion will
+        //always insert a node after placeholder.
+        Tree * pl = DECL_placeholder(dcl);
+        xcom::insertafter(&pl, stmtlst);
     }
     return ST_SUCC;
 }
@@ -249,12 +277,22 @@ static INT processAggrInit(Decl const* dcl, OUT Tree ** stmts)
 }
 
 
+//stmts: records generated stmts if it is not NULL, otherwise append the
+//genereted stmt after placeholder.
 static INT processScalarInit(Decl const* dcl, OUT Tree ** stmts)
 {
     Tree * initval = get_decl_init_tree(dcl);
     Tree * assign = buildAssign(dcl, initval);
     TREE_lineno(assign) = TREE_lineno(initval);
-    xcom::add_next(stmts, assign);
+    if (stmts != nullptr) {
+        xcom::add_next(stmts, assign);
+    } else {
+        ASSERT0(DECL_placeholder(dcl));
+        //Because placeholder will never be header of list, the insertion will
+        //always insert a node after placeholder.
+        Tree * pl = DECL_placeholder(dcl);
+        xcom::insertafter(&pl, assign);
+    }
     return ST_SUCC;
 }
 
@@ -282,44 +320,51 @@ static INT processDeclList(Decl const* decl, OUT Tree ** stmts)
 
 
 //Process stmt list.
-static INT processStmt(Tree ** head)
+//is_collect_stmt: true if we are going to collect all generated stmts,
+//                 otherwise these stmts will be append to placeholder.
+static INT processStmt(Tree ** head, bool is_collect_stmt)
 {
     Tree * t = *head;
     while (t != nullptr) {
         switch (TREE_type(t)) {
         case TR_SCOPE:
             ASSERT0(TREE_scope(t));
-            if (ST_SUCC != processScope(TREE_scope(t))) {
+            if (ST_SUCC != processScope(TREE_scope(t), is_collect_stmt)) {
                 return ST_ERR;
             }
             break;
         case TR_IF:
-            if (ST_SUCC != processStmt(&TREE_if_true_stmt(t))) {
+            if (ST_SUCC != processStmt(&TREE_if_true_stmt(t),
+                                       is_collect_stmt)) {
                 return ST_ERR;
             }
-            if (ST_SUCC != processStmt(&TREE_if_false_stmt(t))) {
+            if (ST_SUCC != processStmt(&TREE_if_false_stmt(t),
+                                       is_collect_stmt)) {
                 return ST_ERR;
             }
             break;
         case TR_DO:
-            if (ST_SUCC != processStmt(&TREE_dowhile_body(t))) {
+            if (ST_SUCC != processStmt(&TREE_dowhile_body(t),
+                                       is_collect_stmt)) {
                 return ST_ERR;
             }
             break;
         case TR_WHILE:
-            if (ST_SUCC != processStmt(&TREE_whiledo_body(t))) {
+            if (ST_SUCC != processStmt(&TREE_whiledo_body(t),
+                                       is_collect_stmt)) {
                 return ST_ERR;
             }
             break;
         case TR_FOR: {
             Tree * stmts = nullptr;
             if (TREE_for_scope(t) != nullptr) {
-                if (ST_SUCC != processDeclList(
-                        SCOPE_decl_list(TREE_for_scope(t)), &stmts)) {
+                Decl const* decllist = SCOPE_decl_list(TREE_for_scope(t));
+                if (ST_SUCC != processDeclList(decllist, is_collect_stmt ?
+                                                         &stmts : nullptr)) {
                     return ST_ERR;
                 }
             }
-            if (ST_SUCC != processStmt(&TREE_for_body(t))) {
+            if (ST_SUCC != processStmt(&TREE_for_body(t), is_collect_stmt)) {
                 return ST_ERR;
             }
             if (stmts != nullptr) {
@@ -328,7 +373,8 @@ static INT processStmt(Tree ** head)
             break;
         }
         case TR_SWITCH:
-            if (ST_SUCC != processStmt(&TREE_switch_body(t))) {
+            if (ST_SUCC != processStmt(&TREE_switch_body(t),
+                                       is_collect_stmt)) {
                 return ST_ERR;
             }
             break;
@@ -341,28 +387,37 @@ static INT processStmt(Tree ** head)
 
 
 //Process local declaration's initialization.
-static INT processScope(Scope * scope)
+//is_collect_stmt: true if we are going to collect all generated stmts,
+//                 otherwise these stmts will be append to placeholder.
+static INT processScope(Scope * scope, bool is_collect_stmt)
 {
     Decl * decl_list = SCOPE_decl_list(scope);
     Tree * stmts = nullptr;
-    if (ST_SUCC != processDeclList(decl_list, &stmts)) {
+    if (ST_SUCC != processDeclList(decl_list, is_collect_stmt ?
+                                              &stmts : nullptr)) {
         return ST_ERR;
     }
 
     //Process stmt list.
-    if (ST_SUCC != processStmt(&SCOPE_stmt_list(scope))) {
+    if (ST_SUCC != processStmt(&SCOPE_stmt_list(scope), is_collect_stmt)) {
         return ST_ERR;
     }
 
-    xcom::insertbefore(&SCOPE_stmt_list(scope), SCOPE_stmt_list(scope), stmts);
+    if (is_collect_stmt) {
+        xcom::insertbefore(&SCOPE_stmt_list(scope), SCOPE_stmt_list(scope),
+                           stmts);
+    }
     return ST_SUCC;
-} 
+}
 
 
 static INT processFuncDef(Decl * dcl)
 {
     ASSERT0(DECL_is_fun_def(dcl));
-    if (ST_SUCC != processScope(DECL_fun_body(dcl))) {
+
+    //Set to true if we are going to collect all generated stmts.
+    bool is_collect_stmt = false;
+    if (ST_SUCC != processScope(DECL_fun_body(dcl), is_collect_stmt)) {
         return ST_ERR;
     }
     if (g_err_msg_list.get_elem_count() > 0) {

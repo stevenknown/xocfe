@@ -28,6 +28,8 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "cfeinc.h"
 #include "cfecommacro.h"
 
+static bool checkTreeList(Tree * t, TYCtx * cont);
+
 //Checking compatible between formal parameter and real parameter.
 //'formalp': formal parameter
 //'realp': real parameter
@@ -70,10 +72,10 @@ static INT checkDeclaration(Decl const* d)
 
 static bool checkCall(Tree * t, TYCtx * cont)
 {
-    if (ST_SUCC != TypeCheckTreeList(TREE_para_list(t), cont)) {
+    if (!checkTreeList(TREE_para_list(t), cont)) {
         return false;
     }
-    if (ST_SUCC != TypeCheckTreeList(TREE_fun_exp(t), cont)) { return false; }
+    if (!checkTreeList(TREE_fun_exp(t), cont)) { return false; }
     Decl * fun_decl = TREE_result_type(TREE_fun_exp(t));
 
     //Return type is the call type.
@@ -196,10 +198,10 @@ static void checkAssignLHS(Tree * t)
 }
 
 
-static bool TypeCheckAssign(Tree * t, TYCtx * cont)
+static bool checkAssign(Tree * t, TYCtx * cont)
 {
-    TypeCheckTreeList(TREE_lchild(t), cont);
-    TypeCheckTreeList(TREE_rchild(t), cont);
+    checkTreeList(TREE_lchild(t), cont);
+    checkTreeList(TREE_rchild(t), cont);
     if ((is_pointer(TREE_result_type(TREE_lchild(t))) &&
          !isConsistentWithPointer(TREE_rchild(t))) ||
         (is_pointer(TREE_result_type(TREE_rchild(t))) &&
@@ -217,25 +219,95 @@ static bool TypeCheckAssign(Tree * t, TYCtx * cont)
 }
 
 
-static void TypeCheckDeclInit(Decl const* decl, TYCtx * cont)
+static bool checkLda(Tree * t, TYCtx * cont)
+{
+    bool res = checkTreeList(TREE_lchild(t), cont);
+    switch (TREE_type(TREE_lchild(t))) {
+    case TR_ID:
+    case TR_ARRAY:
+    case TR_DEREF:
+    case TR_DMEM:
+    case TR_INDMEM:
+    case TR_STRING:
+    case TR_INC:
+    case TR_DEC:
+        return true;
+    default:
+        err(TREE_lineno(t), "'&' needs l-value");
+        return false;
+    }
+    return res;
+}
+
+
+static bool checkCvt(Tree * t, TYCtx * cont)
+{
+    bool res = checkTreeList(TREE_cast_exp(t), cont);
+    Decl const* srcty = TREE_result_type(TREE_cast_exp(t));
+    Decl const* tgtty = TREE_result_type(t);
+    ASSERT0(srcty && tgtty);
+
+    bool src_is_arr = is_array(srcty);
+    bool tgt_is_arr = is_array(tgtty);
+    bool src_is_aggr = is_aggr(srcty);
+    bool tgt_is_aggr = is_aggr(tgtty);
+    bool src_is_sc = is_scalar(srcty);
+    bool tgt_is_sc = is_scalar(tgtty);
+    bool src_is_pt = is_pointer(srcty);
+    bool tgt_is_pt = is_pointer(tgtty);
+    bool src_is_fp = is_fp(srcty);
+    bool tgt_is_fp = is_fp(tgtty);
+    xcom::StrBuf bufsrc(64);
+    xcom::StrBuf buftgt(64);
+
+    if ((src_is_arr || src_is_aggr) && (tgt_is_arr || tgt_is_aggr)) {
+        format_declaration(bufsrc, srcty);
+        format_declaration(buftgt, tgtty);
+        err(TREE_lineno(t),
+            "can not convert '%s' to '%s'", bufsrc.buf, buftgt.buf);
+        return false;
+    }
+
+    if (((src_is_arr || src_is_aggr) && tgt_is_sc) ||
+        ((tgt_is_arr || tgt_is_aggr) && src_is_sc)) {
+        format_declaration(bufsrc, srcty);
+        format_declaration(buftgt, tgtty);
+        err(TREE_lineno(t),
+            "can not convert '%s' to '%s'", bufsrc.buf, buftgt.buf);
+        return false;
+    }
+
+    if ((src_is_pt && tgt_is_fp) || (tgt_is_pt && src_is_fp)) {
+        format_declaration(bufsrc, srcty);
+        format_declaration(buftgt, tgtty);
+        err(TREE_lineno(t),
+            "can not convert '%s' to '%s'", bufsrc.buf, buftgt.buf);
+        return false;
+    }
+    return res;
+}
+
+
+static void checkDeclInit(Decl const* decl, TYCtx * cont)
 {
     for (Decl const* dcl = decl; dcl != nullptr; dcl = DECL_next(dcl)) {
         if (!is_initialized(dcl)) { continue; }
         Tree * inittree = get_decl_init_tree(dcl);
         ASSERT0(inittree);
-        TypeCheckTreeList(inittree, cont);    
+        checkTreeList(inittree, cont);
     }
 }
 
 
-static void TypeCheckInitValScope(Tree const* t, TYCtx * cont)
+static void checkInitValScope(Tree const* t, TYCtx * cont)
 {
-    TypeCheckTreeList(TREE_initval_scope(t), cont);
+    //TBD: Does it necessary to check the Decl Type of node in init-value.
+    //checkTreeList(TREE_initval_scope(t), cont);
 }
 
 
 //Perform type checking.
-INT TypeCheckTreeList(Tree * t, TYCtx * cont)
+bool checkTreeList(Tree * t, TYCtx * cont)
 {
     TYCtx ct;
     if (cont == nullptr) {
@@ -246,60 +318,60 @@ INT TypeCheckTreeList(Tree * t, TYCtx * cont)
         g_src_line_num = TREE_lineno(t);
         switch (TREE_type(t)) {
         case TR_ASSIGN:
-            TypeCheckAssign(t, cont);
+            checkAssign(t, cont);
             break;
         case TR_ID:
         case TR_IMM:
         case TR_IMML:
         case TR_IMMU:
         case TR_IMMUL:
-        case TR_FP:            // double
-        case TR_FPF:           // float
-        case TR_FPLD:          // long double
+        case TR_FP: // double
+        case TR_FPF: // float
+        case TR_FPLD: // long double
         case TR_ENUM_CONST:
         case TR_STRING:
-        case TR_LOGIC_OR:      // logical or ||
-        case TR_LOGIC_AND:     // logical and &&
-        case TR_INCLUSIVE_OR:  // inclusive or |
-        case TR_XOR:           // exclusive or
+        case TR_LOGIC_OR: // logical or ||
+        case TR_LOGIC_AND: // logical and &&
+        case TR_INCLUSIVE_OR: // inclusive or |
+        case TR_XOR: // exclusive or
         case TR_INCLUSIVE_AND: // inclusive and &
-        case TR_SHIFT:         // >> <<
-        case TR_EQUALITY:      // == !=
-        case TR_RELATION:      // < > >= <=
-        case TR_ADDITIVE:      // '+' '-'
-        case TR_MULTI:         // '*' '/' '%'
-            TypeCheckTreeList(TREE_lchild(t), cont);
-            TypeCheckTreeList(TREE_rchild(t), cont);
+        case TR_SHIFT: // >> <<
+        case TR_EQUALITY: // == !=
+        case TR_RELATION: // < > >= <=
+        case TR_ADDITIVE: // '+' '-'
+        case TR_MULTI: // '*' '/' '%'
+            checkTreeList(TREE_lchild(t), cont);
+            checkTreeList(TREE_rchild(t), cont);
             break;
         case TR_SCOPE:
-            TypeCheckDeclInit(SCOPE_decl_list(TREE_scope(t)), cont);
-            TypeCheckTreeList(SCOPE_stmt_list(TREE_scope(t)), cont);
+            checkDeclInit(SCOPE_decl_list(TREE_scope(t)), cont);
+            checkTreeList(SCOPE_stmt_list(TREE_scope(t)), cont);
             break;
         case TR_INITVAL_SCOPE:
-            TypeCheckInitValScope(t, cont);
+            checkInitValScope(t, cont);
             break;
         case TR_IF:
-            TypeCheckTreeList(TREE_if_det(t), cont);
-            TypeCheckTreeList(TREE_if_true_stmt(t), cont);
-            TypeCheckTreeList(TREE_if_false_stmt(t), cont);
+            checkTreeList(TREE_if_det(t), cont);
+            checkTreeList(TREE_if_true_stmt(t), cont);
+            checkTreeList(TREE_if_false_stmt(t), cont);
             break;
         case TR_DO:
-            TypeCheckTreeList(TREE_dowhile_body(t), cont);
-            TypeCheckTreeList(TREE_dowhile_det(t), cont);
+            checkTreeList(TREE_dowhile_body(t), cont);
+            checkTreeList(TREE_dowhile_det(t), cont);
             break;
         case TR_WHILE:
-            TypeCheckTreeList(TREE_whiledo_det(t), cont);
-            TypeCheckTreeList(TREE_whiledo_body(t), cont);
+            checkTreeList(TREE_whiledo_det(t), cont);
+            checkTreeList(TREE_whiledo_body(t), cont);
             break;
         case TR_FOR:
-            TypeCheckTreeList(TREE_for_init(t), cont);
-            TypeCheckTreeList(TREE_for_det(t), cont);
-            TypeCheckTreeList(TREE_for_step(t), cont);
-            TypeCheckTreeList(TREE_for_body(t), cont);
+            checkTreeList(TREE_for_init(t), cont);
+            checkTreeList(TREE_for_det(t), cont);
+            checkTreeList(TREE_for_step(t), cont);
+            checkTreeList(TREE_for_body(t), cont);
             break;
         case TR_SWITCH:
-            TypeCheckTreeList(TREE_switch_det(t), cont);
-            TypeCheckTreeList(TREE_switch_body(t), cont);
+            checkTreeList(TREE_switch_det(t), cont);
+            checkTreeList(TREE_switch_body(t), cont);
             break;
         case TR_BREAK:
         case TR_CONTINUE:
@@ -309,55 +381,56 @@ INT TypeCheckTreeList(Tree * t, TYCtx * cont)
         case TR_CASE:
             break;
         case TR_RETURN:
-            TypeCheckTreeList(TREE_ret_exp(t), cont);
+            checkTreeList(TREE_ret_exp(t), cont);
             break;
-        case TR_COND:      //formulized log_OR_exp?exp:cond_exp
-            TypeCheckTreeList(TREE_det(t), cont);
-            TypeCheckTreeList(TREE_true_part(t), cont);
-            TypeCheckTreeList(TREE_false_part(t), cont);
+        case TR_COND:
+            checkTreeList(TREE_det(t), cont);
+            checkTreeList(TREE_true_part(t), cont);
+            checkTreeList(TREE_false_part(t), cont);
             break;
-        case TR_CVT:       //type convertion
-            TypeCheckTreeList(TREE_cast_exp(t), cont);
+        case TR_CVT:
+            checkCvt(t, cont);
             break;
         case TR_TYPE_NAME: //user defined type or C standard type
             break;
-        case TR_LDA:       // &a get address of 'a'
-        case TR_DEREF:     // *p  dereferencing the pointer 'p'
-        case TR_PLUS:      // +123
-        case TR_MINUS:     // -123
-        case TR_REV:       // Reverse
-        case TR_NOT:       // get non-value
-            TypeCheckTreeList(TREE_lchild(t), cont);
+        case TR_LDA: // &a get address of 'a'
+            checkLda(t, cont);
             break;
-        case TR_INC:       //++a
-        case TR_POST_INC:  //a++
-            TypeCheckTreeList(TREE_inc_exp(t), cont);
+        case TR_DEREF: // *p  dereferencing the pointer 'p'
+        case TR_PLUS: // +123
+        case TR_MINUS: // -123
+        case TR_REV: // Reverse
+        case TR_NOT: // get non-value
+            checkTreeList(TREE_lchild(t), cont);
             break;
-        case TR_DEC:       //--a
-        case TR_POST_DEC:  //a--
-            TypeCheckTreeList(TREE_dec_exp(t), cont);
+        case TR_INC: //++a
+        case TR_POST_INC: //a++
+            checkTreeList(TREE_inc_exp(t), cont);
             break;
-        case TR_SIZEOF:    // sizeof(a)
-            TypeCheckTreeList(TREE_sizeof_exp(t), cont);
+        case TR_DEC: //--a
+        case TR_POST_DEC: //a--
+            checkTreeList(TREE_dec_exp(t), cont);
+            break;
+        case TR_SIZEOF: // sizeof(a)
+            checkTreeList(TREE_sizeof_exp(t), cont);
             break;
         case TR_CALL:
-            if (!checkCall(t, cont)) { goto FAILED; }
+            if (!checkCall(t, cont)) { return false; }
             break;
         case TR_ARRAY:
-            TypeCheckTreeList(TREE_array_base(t), cont);
-            TypeCheckTreeList(TREE_array_indx(t), cont);
+            checkTreeList(TREE_array_base(t), cont);
+            checkTreeList(TREE_array_indx(t), cont);
             break;
-        case TR_DMEM:      // a.b
-        case TR_INDMEM:    // a->b
+        case TR_DMEM: // a.b
+        case TR_INDMEM: // a->b
         case TR_PRAGMA:
         case TR_PREP:
+        case TR_DECL:
             break;
         default: ASSERTN(0, ("unknown tree type:%d", TREE_type(t)));
         }
     }
-    return ST_SUCC;
-FAILED:
-    return ST_ERR;
+    return true;
 }
 
 
@@ -370,9 +443,9 @@ INT TypeCheck()
         ASSERT0(DECL_decl_scope(dcl) == s);
         checkDeclaration(dcl);
         if (DECL_is_fun_def(dcl)) {
-            TypeCheckDeclInit(SCOPE_decl_list(DECL_fun_body(dcl)), nullptr);
+            checkDeclInit(SCOPE_decl_list(DECL_fun_body(dcl)), nullptr);
             Tree * stmt = SCOPE_stmt_list(DECL_fun_body(dcl));
-            TypeCheckTreeList(stmt, nullptr);
+            checkTreeList(stmt, nullptr);
             if (g_err_msg_list.get_elem_count() > 0) {
                 st = ST_ERR;
                 break;

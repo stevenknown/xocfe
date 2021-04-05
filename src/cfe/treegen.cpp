@@ -28,8 +28,6 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "cfeinc.h"
 #include "cfecommacro.h"
 
-#define NEWTN(tok)  allocTreeNode((tok), g_real_line_num)
-
 static Tree * statement();
 static bool is_c_type_spec(TOKEN tok);
 static bool is_c_type_quan(TOKEN tok);
@@ -47,7 +45,7 @@ bool g_dump_token = false;
 CHAR * g_real_token_string = nullptr;
 TOKEN g_real_token = T_NUL;
 static List<Cell*> g_cell_list;
-bool g_enable_C99_declaration = true;
+bool g_enable_c99_declaration = true;
 xcom::Vector<UINT> g_realline2srcline;
 
 static void * xmalloc(size_t size)
@@ -67,7 +65,7 @@ Tree * buildIndmem(Tree * base, Decl const* fld)
     TREE_field(t) = buildId(fld);
     setParent(t, TREE_base_region(t));
     setParent(t, TREE_field(t));
-    return t; 
+    return t;
 }
 
 
@@ -147,7 +145,7 @@ Tree * buildUInt(HOST_UINT val)
     //host size_t type, it will be truncated now.
     TREE_token(t) = T_IMMU;
     TREE_imm_val(t) = (HOST_INT)val;
-    return t; 
+    return t;
 }
 
 
@@ -166,7 +164,7 @@ Tree * buildInt(HOST_INT val)
     //host size_t type, it will be truncated now.
     TREE_token(t) = T_IMM;
     TREE_imm_val(t) = val;
-    return t; 
+    return t;
 }
 
 
@@ -213,7 +211,7 @@ Tree * buildArray(Tree * base, xcom::Vector<UINT> & subexp_vec)
         setParent(array, base);
         TREE_array_indx(array) = buildInt(subexp_vec.get(i));
         setParent(array, TREE_array_indx(array));
-        base = array; 
+        base = array;
     }
     return base;
 }
@@ -244,8 +242,8 @@ Tree * copyTreeList(Tree const* t)
 //Duplicate 't' and its kids, but without ir's sibiling node.
 Tree * copyTree(Tree const* t)
 {
-    if (t == nullptr) { return nullptr; }    
-    Tree * newt = NEWTN(TREE_type(t));    
+    if (t == nullptr) { return nullptr; }
+    Tree * newt = NEWTN(TREE_type(t));
     UINT id = TREE_uid(newt);
     ::memcpy(newt, t, sizeof(Tree));
     TREE_uid(newt) = id;
@@ -279,6 +277,7 @@ static bool verify(Tree * t)
     case TR_CVT:
     case TR_COND:
     case TR_LABEL:
+    case TR_DECL:
         break;
     default: ASSERT0(TREE_token(t) != T_NUL && getTokenName(TREE_token(t)));
     }
@@ -337,6 +336,7 @@ static bool verify(Tree * t)
     case TR_PRAGMA:
     case TR_SIZEOF:
     case TR_PREP:
+    case TR_DECL:
         break;
     default: ASSERTN(0, ("unknown tree type:%d", TREE_type(t)));
     } //end switch
@@ -2198,6 +2198,7 @@ FAILED:
 Tree * for_stmt()
 {
     Tree * t = NEWTN(TR_FOR);
+    Tree * res = t;
     TREE_token(t) = g_real_token;
     match(T_FOR);
     if (match(T_LPAREN) != ST_SUCC) {
@@ -2208,14 +2209,15 @@ Tree * for_stmt()
 
     //C89 specified init-variable declared in init-field of FOR is belong
     //to function level scope.
-    if (g_enable_C99_declaration) {
+    if (g_enable_c99_declaration) {
         push_scope(false);
 
         //Should record for-stmt's init-list scope.
         TREE_for_scope(t) = g_cur_scope;
     }
 
-    if (!declaration_list()) {
+    Tree * decl_list = declaration_list();
+    if (decl_list == nullptr) {
         //initializing expression
         TREE_for_init(t) = exp_list();
         setParent(t, TREE_for_init(t));
@@ -2225,6 +2227,8 @@ Tree * for_stmt()
             err(g_real_line_num, "miss ';' before determination");
             goto FAILED;
         }
+    } else {
+        xcom::insertbefore(&res, res, decl_list);
     }
 
     TREE_for_det(t) = exp_list();
@@ -2248,17 +2252,17 @@ Tree * for_stmt()
     setParent(t, TREE_for_body(t));
     popst();
 
-    if (g_enable_C99_declaration) {
+    if (g_enable_c99_declaration) {
         pop_scope();
     }
-    return t;
+    return res;
 
 FAILED:
-    if (g_enable_C99_declaration) {
+    if (g_enable_c99_declaration) {
         pop_scope();
     }
     prt("error in for_stmt()");
-    return t;
+    return res;
 }
 
 
@@ -2374,16 +2378,9 @@ static Tree * select_stmt()
 }
 
 
-Scope * compound_stmt(Decl * para_list)
+//Append parameters to declaration list of function body scope.
+static bool append_parameters(Scope * cur_scope, Decl * para_list)
 {
-    Tree * t = nullptr;
-    Scope * s = nullptr;
-    Tree * last;
-    INT cerr = 0;
-    //enter a new sub-scope region
-    Scope * cur_scope = push_scope(false);
-
-    //Append parameters to declaration list of function body scope.
     Decl * lastdcl = xcom::get_last(SCOPE_decl_list(cur_scope));
     UINT pos = 0;
     for (; para_list != nullptr; para_list = DECL_next(para_list), pos++) {
@@ -2421,27 +2418,27 @@ Scope * compound_stmt(Decl * para_list)
         if (add_to_symtab_list(&SCOPE_sym_tab_list(cur_scope), sym)) {
             err(g_real_line_num, "'%s' already defined",
                 g_real_token_string);
-            goto FAILED;
+            return false;
         }
     }
+    return true;
+}
 
-    match(T_LLPAREN);
-    s = cur_scope;
-    declaration_list();
 
-    //statement list
-    cerr = g_err_msg_list.get_elem_count();
-    last = nullptr;
+static bool statement_list(Scope * cur_scope)
+{
+    INT cerr = g_err_msg_list.get_elem_count();
+    Tree * last = nullptr;
     for (;;) {
         if (g_real_token == T_END || g_real_token == T_NUL) {
             break;
         } else if (g_err_msg_list.get_elem_count() >= TOO_MANY_ERR) {
-            goto FAILED;
+            return false;
         } else if (is_compound_terminal()) {
             break;
         }
 
-        t = statement();
+        Tree * t = statement();
 
         ASSERT0(verify(t));
 
@@ -2462,6 +2459,31 @@ Scope * compound_stmt(Decl * para_list)
         }
 
         cerr = g_err_msg_list.get_elem_count();
+    }
+    return true;
+}
+
+
+Scope * compound_stmt(Decl * para_list)
+{
+    //Enter a new sub-scope region.
+    Scope * cur_scope = push_scope(false);
+    Scope * s = nullptr;
+    Tree * t;
+    if (!append_parameters(cur_scope, para_list)) {
+        goto FAILED;
+    }
+
+    match(T_LLPAREN);
+    s = cur_scope;
+
+    //Function local variable declaration list.
+    t = declaration_list();
+    xcom::add_next(&SCOPE_stmt_list(cur_scope), t);
+
+    //Statement list.
+    if (!statement_list(cur_scope)) {
+        goto FAILED;
     }
 
     if (match(T_RLPAREN) != ST_SUCC) {
@@ -2546,11 +2568,11 @@ static bool process_pragma_align(TokenList const** tl)
     if (!process_pragma_imm(*tl, &align)) {
         return false;
     }
-    
+
     if (!is_valid_alignment(align)) {
         warn(g_real_line_num, "alignment should be one of 1, 2, 4, 8, 16");
         return false;
-    }    
+    }
 
     *tl = TL_next(*tl);
     if (TL_tok(*tl) != T_RPAREN) { return false; }
@@ -2576,7 +2598,7 @@ static void process_pragma(Tree const* t)
         break;
     default:;
     }
-} 
+}
 
 
 //statement:
@@ -2588,58 +2610,65 @@ static void process_pragma(Tree const* t)
 //  jump_statement
 static Tree * statement()
 {
-    Tree * t = nullptr;
     if (look_forward_token(2, T_ID, T_COLON)) {
         //current token is 'ID', and next is ':'
-        t = label_stmt();
-    } else if (is_in_first_set_of_exp_list(g_real_token)) {
-        t = exp_stmt();
-    } else {
-        switch (g_real_token) {
-        case T_CASE:
-        case T_DEFAULT:
-            t = label_stmt();
-            break;
-        case T_LLPAREN:
-            t = NEWTN(TR_SCOPE);
-            TREE_scope(t) = compound_stmt(nullptr);
-            break;
-        case T_IF:
-        case T_SWITCH:
-            t = select_stmt();
-            break;
-        case T_DO:
-        case T_WHILE:
-        case T_FOR:
-            t = iter_stmt();
-            break;
-        case T_GOTO:
-        case T_BREAK:
-        case T_RETURN:
-        case T_CONTINUE:
-            t = jump_stmt();
-            break;
-        case T_SEMI: //null statement
-            match(T_SEMI);
-            break;
-        case T_SHARP:
-            t = sharp_start_stmt();
-            process_pragma(t);
-            break;
-        default:
-            //It mMay be varirable or type declaration.
-            if (is_in_first_set_of_declarator()) {
-                //err(g_real_line_num,
-                //    "'%s' is out of definition after or before block",
-                //    g_real_token_string);
-                declaration_list(); //Supported define variables anywhere.
-            } else {
-                err(g_real_line_num,
-                    "syntax error : illegal used '%s'", g_real_token_string);
-            }
-        }
+        return label_stmt();
     }
-    return t;
+
+    if (is_in_first_set_of_exp_list(g_real_token)) {
+        return exp_stmt();
+    }
+
+    switch (g_real_token) {
+    case T_CASE:
+    case T_DEFAULT:
+        return label_stmt();
+    case T_LLPAREN: {
+        Tree * t = NEWTN(TR_SCOPE);
+        TREE_scope(t) = compound_stmt(nullptr);
+        return t;
+    }
+    case T_IF:
+    case T_SWITCH:
+        return select_stmt();
+    case T_DO:
+    case T_WHILE:
+    case T_FOR:
+        return iter_stmt();
+    case T_GOTO:
+    case T_BREAK:
+    case T_RETURN:
+    case T_CONTINUE:
+        return jump_stmt();
+    case T_SEMI: //null statement
+        match(T_SEMI);
+        return nullptr;
+    case T_SHARP: {
+        Tree * t = sharp_start_stmt();
+        if (TREE_type(t) == TR_PRAGMA) {
+            process_pragma(t);
+        } else {
+            ASSERTN(TREE_type(t) == TR_PREP, ("NEED SUPPORT"));
+        }
+        return t;
+    }
+    default:;
+    }
+
+    if (is_in_first_set_of_declarator()) {
+        //It may be varirable or type declaration.
+        if (!g_enable_c99_declaration) {
+            //C89 options.
+            err(g_real_line_num,
+                "'%s' is out of definition after or before block",
+                g_real_token_string);
+        }
+        return declaration_list(); //Supported define variables anywhere.
+    }
+
+    err(g_real_line_num, "syntax error : illegal used '%s'",
+        g_real_token_string);
+    return nullptr;
 }
 
 

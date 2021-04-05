@@ -43,25 +43,25 @@ typedef enum _TREE_TYPE {
     //'>>='  '&='  '^='  '|='
     TR_ASSIGN,
     TR_ID,
-    TR_IMM,             //signed integer
-    TR_IMMU,            //unsigned integer
-    TR_IMML,            //long long integer
-    TR_IMMUL,           //unsigned long long integer
-    TR_FP,              //double
-    TR_FPF,             //float
-    TR_FPLD,            //long double
+    TR_IMM, //signed integer
+    TR_IMMU, //unsigned integer
+    TR_IMML, //long long integer
+    TR_IMMUL, //unsigned long long integer
+    TR_FP, //double
+    TR_FPF, //float
+    TR_FPLD, //long double
     TR_ENUM_CONST,
     TR_STRING,
-    TR_LOGIC_OR,        //logical or ||
-    TR_LOGIC_AND,       //logical and &&
-    TR_INCLUSIVE_OR,    //inclusive or |
-    TR_INCLUSIVE_AND,   //inclusive and &
-    TR_XOR,             //exclusive or
-    TR_EQUALITY,        // == !=
-    TR_RELATION,        // < > >= <=
-    TR_SHIFT,           // >> <<
-    TR_ADDITIVE,        // '+' '-'
-    TR_MULTI,           // '*' '/' '%'
+    TR_LOGIC_OR, //logical or ||
+    TR_LOGIC_AND, //logical and &&
+    TR_INCLUSIVE_OR, //inclusive or |
+    TR_INCLUSIVE_AND, //inclusive and &
+    TR_XOR, //exclusive or
+    TR_EQUALITY, // == !=
+    TR_RELATION, // < > >= <=
+    TR_SHIFT, // >> <<
+    TR_ADDITIVE, // '+' '-'
+    TR_MULTI, // '*' '/' '%'
     TR_INTRI_FUN,
     TR_IF,
     TR_ELSE,
@@ -76,28 +76,29 @@ typedef enum _TREE_TYPE {
     TR_LABEL,
     TR_DEFAULT,
     TR_CASE,
-    TR_COND,            // formulized log_OR_exp ? exp : cond_exp
-    TR_CVT,             // type convertion
-    TR_TYPE_NAME,       // user defined type ord C standard type
-    TR_LDA,             // &a, load address of 'a'
-    TR_DEREF,           // *p dereferencing the pointer 'p'
-    TR_INC,             // ++a
-    TR_DEC,             // --a
-    TR_POST_INC,        // a++
-    TR_POST_DEC,        // a--
-    TR_PLUS,            // +123
-    TR_MINUS,           // -123
-    TR_REV,             // Reverse
-    TR_NOT,             // get non-value
-    TR_SIZEOF,          // sizeof(a)
-    TR_DMEM,            // a.b, direct memory access
-    TR_INDMEM,          // a->b, indirect memory access
+    TR_COND, // formulized log_OR_exp ? exp : cond_exp
+    TR_CVT, // type convertion
+    TR_TYPE_NAME, // user defined type ord C standard type
+    TR_LDA, // &a, load address of 'a'
+    TR_DEREF, // *p dereferencing the pointer 'p'
+    TR_INC, // ++a
+    TR_DEC, // --a
+    TR_POST_INC, // a++
+    TR_POST_DEC, // a--
+    TR_PLUS, // +123
+    TR_MINUS, // -123
+    TR_REV, // Reverse
+    TR_NOT, // get non-value
+    TR_SIZEOF, // sizeof(a)
+    TR_DMEM, // a.b, direct memory access
+    TR_INDMEM, // a->b, indirect memory access
     TR_ARRAY,
-    TR_CALL,            // function call
-    TR_SCOPE,           // record a scope
-    TR_INITVAL_SCOPE,       // record a scope which only permit expression-list.
-    TR_PRAGMA,          // pragma
-    TR_PREP,            // preprocessor output info
+    TR_CALL, // function call
+    TR_SCOPE, // record a scope
+    TR_INITVAL_SCOPE, // record a scope which only permit expression-list.
+    TR_DECL, // record node that indicates declaration of variable or type-name.
+    TR_PRAGMA, // pragma
+    TR_PREP, // preprocessor output info
 } TREE_TYPE;
 
 
@@ -233,6 +234,10 @@ public:
 //record an exp-list
 #define TREE_initval_scope(t) (t)->u1.exp_scope
 
+//TR_DECL uses it.
+//record the declaration of variable or type-name
+#define TREE_decl(t) (t)->u1.decl
+
 class Tree {
 public:
     UINT id;
@@ -265,6 +270,7 @@ public:
         Tree * exp_scope; //record a exp-list
         TokenList * token_list; //record a token-list
         Scope * for_scope; //record scope if tree is for-stmt
+        Decl * decl; //record the declaration of variable or type-name.
     } u1;
 
     //Record DCL_TYPE_NAME that is an abstract type

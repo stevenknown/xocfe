@@ -86,10 +86,10 @@ static void dump_line(Tree const* t)
 
 void dump_tree(Tree const* t)
 {
-    DUMMYUSE(t);    
+    DUMMYUSE(t);
 #ifdef _DEBUG_
     if (t == nullptr || g_logmgr == nullptr) { return; }
-    
+
     UINT dn = 2;
     StrBuf sbuf(64);
     format_declaration(sbuf, TREE_result_type(t));
@@ -125,6 +125,7 @@ void dump_tree(Tree const* t)
             note(g_logmgr, "\nreferred ID(id:%d):'%s' <%s>",
                  TREE_uid(t), name, sbuf.buf);
         }
+        dump_line(t);
         break;
     }
     case TR_IMM:
@@ -141,6 +142,7 @@ void dump_tree(Tree const* t)
              (ULONGLONG)TREE_imm_val(t),
              sbuf.buf);
         #endif
+        dump_line(t);
         break;
     case TR_IMMU:
         #ifdef _VC6_
@@ -156,42 +158,49 @@ void dump_tree(Tree const* t)
              (ULONGLONG)TREE_imm_val(t),
              sbuf.buf);
         #endif
+        dump_line(t);
         break;
     case TR_IMML:
         note(g_logmgr, "\nIMML(id:%u):%lld <%s>",
              TREE_uid(t),
              (LONGLONG)TREE_imm_val(t),
              sbuf.buf);
+        dump_line(t);
         break;
     case TR_IMMUL:
         note(g_logmgr, "\nIMMUL(id:%u):%llu <%s>",
              TREE_uid(t),
              (ULONGLONG)TREE_imm_val(t),
              sbuf.buf);
+        dump_line(t);
         break;
     case TR_FP:
         note(g_logmgr, "\nFP double(id:%u):%s <%s>",
              TREE_uid(t),
              SYM_name(TREE_fp_str_val(t)),
              sbuf.buf);
+        dump_line(t);
         break;
     case TR_FPF:
         note(g_logmgr, "\nFP float(id:%u):%s <%s>",
              TREE_uid(t),
              SYM_name(TREE_fp_str_val(t)),
              sbuf.buf);
+        dump_line(t);
         break;
     case TR_FPLD:
         note(g_logmgr, "\nFP long double(id:%u):%s <%s>",
              TREE_uid(t),
              SYM_name(TREE_fp_str_val(t)),
              sbuf.buf);
+        dump_line(t);
         break;
     case TR_ENUM_CONST: {
         INT v = get_enum_const_val(TREE_enum(t), TREE_enum_val_idx(t));
         CHAR const* s = get_enum_const_name(TREE_enum(t), TREE_enum_val_idx(t));
         note(g_logmgr, "\nENUM_CONST(id:%u):%s %d <%s>",
              TREE_uid(t), s, v, sbuf.buf);
+        dump_line(t);
         break;
     }
     case TR_STRING:
@@ -210,6 +219,7 @@ void dump_tree(Tree const* t)
     case TR_MULTI:    // '*' '/' '%'
         note(g_logmgr, "\nOP(id:%u):%s <%s>", TREE_uid(t),
              TOKEN_INFO_name(get_token_info(TREE_token(t))), sbuf.buf);
+        dump_line(t);
         g_logmgr->incIndent(dn);
         dump_trees(TREE_lchild(t));
         dump_trees(TREE_rchild(t));
@@ -231,7 +241,7 @@ void dump_tree(Tree const* t)
             dump_trees(TREE_if_false_stmt(t));
             g_logmgr->decIndent(dn);
         }
-        note(g_logmgr, "\nENDIF");        
+        note(g_logmgr, "\nENDIF");
         break;
     case TR_DO:
         note(g_logmgr, "\nDO(id:%u)", TREE_uid(t));
@@ -241,7 +251,7 @@ void dump_tree(Tree const* t)
         g_logmgr->decIndent(dn);
         note(g_logmgr, "\nWHILE");
         g_logmgr->incIndent(dn);
-        dump_trees(TREE_dowhile_det(t));        
+        dump_trees(TREE_dowhile_det(t));
         g_logmgr->decIndent(dn);
         break;
     case TR_WHILE:
@@ -332,9 +342,12 @@ void dump_tree(Tree const* t)
         g_logmgr->incIndent(dn);
         dump_trees(TREE_false_part(t));
         g_logmgr->decIndent(dn);
+        dump_line(t);
         break;
     case TR_CVT: //type convertion
         note(g_logmgr, "\nCONVERT(id:%u) <%s>", TREE_uid(t), sbuf.buf);
+        dump_line(t);
+
         g_logmgr->incIndent(dn);
         dump_trees(TREE_cvt_type(t));
         dump_trees(TREE_cast_exp(t));
@@ -343,75 +356,100 @@ void dump_tree(Tree const* t)
     case TR_TYPE_NAME: //user defined type ord C standard type
         format_declaration(sbuf, TREE_type_name(t));
         note(g_logmgr, "\nTYPE_NAME(id:%u):%s", TREE_uid(t), sbuf.buf);
+        dump_line(t);
         break;
     case TR_LDA:   // &a get address of 'a'
         note(g_logmgr, "\nLDA(id:%u) <%s>", TREE_uid(t), sbuf.buf);
+        dump_line(t);
+
         g_logmgr->incIndent(dn);
         dump_trees(TREE_lchild(t));
         g_logmgr->decIndent(dn);
         break;
     case TR_DEREF: // *p  dereferencing the pointer 'p'
         note(g_logmgr, "\nDEREF(id:%u) <%s>", TREE_uid(t), sbuf.buf);
+        dump_line(t);
+
         g_logmgr->incIndent(dn);
         dump_trees(TREE_lchild(t));
         g_logmgr->decIndent(dn);
         break;
     case TR_PLUS: // +123
         note(g_logmgr, "\nPOS(id:%u) <%s>", TREE_uid(t), sbuf.buf);
+        dump_line(t);
+
         g_logmgr->incIndent(dn);
         dump_trees(TREE_lchild(t));
         g_logmgr->decIndent(dn);
         break;
     case TR_MINUS:  // -123
         note(g_logmgr, "\nNEG(id:%u) <%s>", TREE_uid(t), sbuf.buf);
+        dump_line(t);
+
         g_logmgr->incIndent(dn);
         dump_trees(TREE_lchild(t));
         g_logmgr->decIndent(dn);
         break;
     case TR_REV:  // Reverse
         note(g_logmgr, "\nREV(id:%u) <%s>", TREE_uid(t), sbuf.buf);
+        dump_line(t);
+
         g_logmgr->incIndent(dn);
         dump_trees(TREE_lchild(t));
         g_logmgr->decIndent(dn);
         break;
     case TR_NOT:  // get non-value
         note(g_logmgr, "\nNOT(id:%u) <%s>", TREE_uid(t), sbuf.buf);
+        dump_line(t);
+
         g_logmgr->incIndent(dn);
         dump_trees(TREE_lchild(t));
         g_logmgr->decIndent(dn);
         break;
     case TR_INC:   //++a
         note(g_logmgr, "\nPREV_INC(id:%u) <%s>", TREE_uid(t), sbuf.buf);
+        dump_line(t);
+
         g_logmgr->incIndent(dn);
         dump_trees(TREE_inc_exp(t));
         g_logmgr->decIndent(dn);
         break;
     case TR_DEC:   //--a
         note(g_logmgr, "\nPREV_DEC(id:%u) <%s>", TREE_uid(t), sbuf.buf);
+        dump_line(t);
+
         g_logmgr->incIndent(dn);
         dump_trees(TREE_dec_exp(t));
         g_logmgr->decIndent(dn);
         break;
     case TR_POST_INC: //a++
         note(g_logmgr, "\nPOST_INC(id:%u) <%s>", TREE_uid(t), sbuf.buf);
+        dump_line(t);
+
         g_logmgr->incIndent(dn);
         dump_trees(TREE_inc_exp(t));
         g_logmgr->decIndent(dn);
         break;
     case TR_POST_DEC: //a--
         note(g_logmgr, "\nPOST_INC(id:%u) <%s>", TREE_uid(t), sbuf.buf);
+        dump_line(t);
+
         g_logmgr->incIndent(dn);
         dump_trees(TREE_dec_exp(t));
         g_logmgr->decIndent(dn);
         break;
     case TR_SIZEOF: // sizeof(a)
         note(g_logmgr, "\nSIZEOF(id:%u) <%s>", TREE_uid(t), sbuf.buf);
+        dump_line(t);
+
         g_logmgr->incIndent(dn);
         dump_trees(TREE_sizeof_exp(t));
         g_logmgr->decIndent(dn);
         break;
     case TR_DMEM:
         note(g_logmgr, "\nDMEM(id:%u) <%s>", TREE_uid(t), sbuf.buf);
+        dump_line(t);
+
         g_logmgr->incIndent(dn);
         dump_trees(TREE_base_region(t));
         dump_trees(TREE_field(t));
@@ -419,6 +457,8 @@ void dump_tree(Tree const* t)
         break;
     case TR_INDMEM:
         note(g_logmgr, "\nINDMEM(id:%u) <%s>", TREE_uid(t), sbuf.buf);
+        dump_line(t);
+
         g_logmgr->incIndent(dn);
         dump_trees(TREE_base_region(t));
         dump_trees(TREE_field(t));
@@ -426,6 +466,8 @@ void dump_tree(Tree const* t)
         break;
     case TR_ARRAY:
         note(g_logmgr, "\nARRAY(id:%u) <%s>", TREE_uid(t), sbuf.buf);
+        dump_line(t);
+
         g_logmgr->incIndent(dn);
         note(g_logmgr, "\nBASE:");
 
@@ -443,6 +485,7 @@ void dump_tree(Tree const* t)
     case TR_CALL:
         note(g_logmgr, "\nCALL(id:%u) RET-Type:<%s>", TREE_uid(t), sbuf.buf);
         dump_line(t);
+
         g_logmgr->incIndent(dn);
         //Dump function
         note(g_logmgr, "\nFUN_BASE:");
@@ -461,6 +504,8 @@ void dump_tree(Tree const* t)
     case TR_SCOPE:
         g_logmgr->incIndent(dn);
         note(g_logmgr, "\n{");
+        dump_line(t);
+
         g_logmgr->incIndent(dn);
         dump_scope(TREE_scope(t),
                    DUMP_SCOPE_FUNC_BODY|DUMP_SCOPE_STMT_TREE);
@@ -480,7 +525,8 @@ void dump_tree(Tree const* t)
     case TR_PRAGMA:
         note(g_logmgr, "\nPRAGMA(id:%u)", TREE_uid(t));
         dump_line(t);
-        for (TokenList * tl = TREE_token_lst(t); tl != nullptr; tl = TL_next(tl)) {
+        for (TokenList * tl = TREE_token_lst(t);
+             tl != nullptr; tl = TL_next(tl)) {
             switch (TL_tok(tl)) {
             case T_ID:
                 prt(g_logmgr, " %s", SYM_name(TL_id_name(tl)));
@@ -498,7 +544,10 @@ void dump_tree(Tree const* t)
         break;
     case TR_PREP:
         note(g_logmgr, "\nPREP(id:%u)", TREE_uid(t));
-        for (TokenList * tl = TREE_token_lst(t); tl != nullptr; tl = TL_next(tl)) {
+        dump_line(t);
+
+        for (TokenList * tl = TREE_token_lst(t);
+             tl != nullptr; tl = TL_next(tl)) {
             switch (TL_tok(tl)) {
             case T_ID:
                 prt(g_logmgr, " %s", SYM_name(TL_id_name(tl)));
@@ -513,6 +562,14 @@ void dump_tree(Tree const* t)
                 prt(g_logmgr, " %s", getTokenName(TL_tok(tl)));
             }
         }
+        break;
+    case TR_DECL:
+        note(g_logmgr, "\nDECL(id:%u) <%s>", TREE_uid(t), sbuf.buf);
+        dump_line(t);
+
+        g_logmgr->incIndent(dn);
+        dump_decl(TREE_decl(t));
+        g_logmgr->decIndent(dn);
         break;
     default:
         ASSERTN(0, ("unknown tree type:%d",TREE_type(t)));
@@ -606,7 +663,7 @@ Tree * get_base(Tree * t)
          } else {
             UNREACHABLE();
          }
-    } 
+    }
     ASSERT0(base);
     return base;
 }

@@ -49,7 +49,6 @@ public:
 };
 
 bool isConsistentWithPointer(Tree * t);
-INT TypeCheckTreeList(Tree * t, TYCtx * cont);
 INT TypeCheck();
 
 #endif

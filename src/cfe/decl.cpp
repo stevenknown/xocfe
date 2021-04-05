@@ -118,7 +118,7 @@ static UINT computeArrayByteSize(TypeSpec const* spec, Decl const* decl);
 UINT g_decl_counter = 1;
 #endif
 INT g_alignment = PRAGMA_ALIGN; //default alignment.
-CHAR const* g_dcl_name [] = { //character of DCL enum-type.    
+CHAR const* g_dcl_name [] = { //character of DCL enum-type.
     "",
     "ARRAY",
     "POINTER",
@@ -144,7 +144,7 @@ static void * xmalloc(unsigned long size)
 //Complement the INT specifier.
 //e.g: unsigned a => unsigned int a
 //    register a => register int a
-static void complement_qua(TypeSpec * ty)
+static void complement_qualifier(TypeSpec * ty)
 {
     ASSERT0(ty);
 
@@ -169,7 +169,7 @@ static UINT pad_align(UINT size, UINT align)
     if (size % align != 0) {
         size = (size / align + 1) * align;
     }
-    return size; 
+    return size;
 }
 
 
@@ -873,7 +873,7 @@ static INT ck_type_spec_legally(TypeSpec * ty)
             "'%s' type cannot compatilable with '%s'", buf1.buf, buf2.buf);
         return ST_ERR;
     }
-    return ST_SUCC;    
+    return ST_SUCC;
 }
 
 
@@ -1021,7 +1021,7 @@ static void type_spec_struct_field(Struct * s, TypeSpec * ty)
     //    STRUCT_is_complete(s) = true;
     //}
 
-    //Numbering field id.    
+    //Numbering field id.
     UINT i = 0;
     for (Decl * field = STRUCT_decl_list(s);
          field != nullptr; field = DECL_next(field)) {
@@ -1066,7 +1066,7 @@ static TypeSpec * type_spec_struct(TypeSpec * ty)
             AGGR_tag(s) = g_fe_sym_tab->add(g_real_token_string);
             AGGR_is_complete(s) = false;
             AGGR_scope(s) = g_cur_scope;
-            SCOPE_struct_list(g_cur_scope).append_tail(s);            
+            SCOPE_struct_list(g_cur_scope).append_tail(s);
             //Note we do not append anonymous aggregate into scope list because
             //user can not find the aggregate through tag name. Thus there will
             //multiple aggregates that have same data structure layout.
@@ -1092,7 +1092,7 @@ static TypeSpec * type_spec_struct(TypeSpec * ty)
         }
         type_spec_struct_field(s, ty);
     }
-    
+
     if (s == nullptr) {
         //There is neither 'TAG' nor '{'.
         err(g_real_line_num, "illegal use '%s'", g_real_token_string);
@@ -1133,7 +1133,7 @@ static void type_spec_union_field(Union * s, TypeSpec * ty)
     //    UNION_is_complete(s) = true;
     //}
 
-    //Numbering field id.    
+    //Numbering field id.
     UINT i = 0;
     for (Decl * field = AGGR_decl_list(s);
          field != nullptr; field = DECL_next(field)) {
@@ -1205,7 +1205,7 @@ static TypeSpec * type_spec_union(TypeSpec * ty)
             err(g_real_line_num, "union '%s' redefined", SYM_name(AGGR_tag(s)));
             return ty;
         }
-        type_spec_union_field(s, ty);        
+        type_spec_union_field(s, ty);
     }
 
     if (s == nullptr) {
@@ -1717,7 +1717,7 @@ static Decl * parameter_declaration()
         return nullptr;
     }
 
-    complement_qua(type_spec);
+    complement_qualifier(type_spec);
 
     TypeSpec * qualifier = new_type();
 
@@ -1901,7 +1901,7 @@ static Decl * abstract_declarator(TypeSpec * qua)
     //e.g:
     //    ptr is '*', dcl is '[]'->'ID'
     //    return: '*'->'[]'->'ID'
-    xcom::insertbefore(&dcl, dcl, ptr);    
+    xcom::insertbefore(&dcl, dcl, ptr);
     return dcl;
 }
 
@@ -1978,7 +1978,7 @@ Decl * type_name()
     DECL_spec(type_name) = type_spec;
     DECL_decl_list(type_name) = new_decl(DCL_ABS_DECLARATOR);
     DECL_child(DECL_decl_list(type_name)) = reverse_list(abs_decl);
-    complement_qua(type_spec);
+    complement_qualifier(type_spec);
     compute_array_dim(type_name, false);
     return type_name;
 }
@@ -2017,7 +2017,7 @@ static Tree * initializer(TypeSpec * qua)
     switch (g_real_token) {
     case T_LLPAREN: {
         UINT lineno = g_real_line_num;
-        match(T_LLPAREN); 
+        match(T_LLPAREN);
         t = initializer_list(qua);
         if (g_real_token == T_COMMA) {
             match(T_COMMA);
@@ -2222,8 +2222,8 @@ UINT get_array_dim(Decl const* arr)
 //'dim': given dimension to compute, start at 0 which is the closest dimension
 //    to leading ID, in decl-type list.
 //    e.g: int arr[8][12][24];
-//    In C language, [24] is the lowest dimension. 
-//    where decl-type list will be: 
+//    In C language, [24] is the lowest dimension.
+//    where decl-type list will be:
 //      ID:'arr' -> ARRAY[8] -> ARRAY[12] -> ARRAY[24]
 //    dim 0 indicates ARRAY[8], the highest dimension of 'arr'.
 ULONG get_array_elemnum_to_dim(Decl const* arr, UINT dim)
@@ -2360,6 +2360,10 @@ static Decl * init_declarator(TypeSpec * qua)
             //err(g_real_line_num, "initial value is nullptr");
             //Give up parsing subsequent tokens if initialization is empty.
             //suck_tok_to(0, T_SEMI, T_END, T_NUL);
+
+            //Error recovery: fill in a placeholer to let the compilation
+            //goes on.
+            DECL_init_tree(declarator) = buildInt(0);
         }
         DECL_is_init(declarator) = 1;
     }
@@ -2647,7 +2651,7 @@ static Tree * refineArray(Tree * t)
         TREE_array_base(t) = deref;
         setParent(t, TREE_array_base(t));
         fix_para_array_index(decl);
-    }        
+    }
     return t;
 }
 
@@ -3022,7 +3026,7 @@ bool is_struct_type_exist(List<Struct*> const& struct_list,
     if (tag == nullptr) { return false; }
     xcom::C<Struct*> * ct;
     for (Struct * st = struct_list.get_head(&ct);
-         ct != nullptr; st = struct_list.get_next(&ct)) {        
+         ct != nullptr; st = struct_list.get_next(&ct)) {
         if (STRUCT_tag(st) == tag) {
             *s = st;
             return true;
@@ -3313,8 +3317,14 @@ static UINT computeStructTypeSize(TypeSpec const* ty)
             continue;
         }
         UINT elem_bytesize = 0;
-        ofst = compute_field_ofst(s, ofst, dcl, AGGR_field_align(s),
-                                  &elem_bytesize);
+        UINT newofst = compute_field_ofst(s, ofst, dcl, AGGR_field_align(s),
+                                          &elem_bytesize);
+        if (newofst <= ofst) {
+            err(g_real_line_num, "field size may be too large");
+            //Error recovery: to avoid ASSERTION in size verification.
+            newofst += 4;
+        }
+        ofst = newofst;
         max_field_sz = MAX(max_field_sz, elem_bytesize);
         dcl = DECL_next(dcl);
     }
@@ -3446,7 +3456,7 @@ UINT get_decl_size(Decl const* decl)
         }
         return getSpecTypeSize(spec);
     }
-    ASSERTN(0, ("unexpected declaration"));    
+    ASSERTN(0, ("unexpected declaration"));
     return 0;
 }
 
@@ -3941,7 +3951,7 @@ static INT format_dcrl_reverse(StrBuf & buf,
         TypeSpec * quan = DECL_qua(decl);
         bool blank = false;
         if (quan != nullptr) {
-            ASSERT0(!IS_RESTRICT(quan));                
+            ASSERT0(!IS_RESTRICT(quan));
             if (IS_VOLATILE(quan)) {
                 buf.strcat("volatile ");
                 blank = true;
@@ -4017,11 +4027,11 @@ INT format_declarator(StrBuf & buf, TypeSpec const* ty, Decl const* decl)
     }
     if (decl != nullptr) {
         ASSERTN((DECL_dt(decl) == DCL_ARRAY ||
-            DECL_dt(decl) == DCL_POINTER ||
-            DECL_dt(decl) == DCL_FUN     ||
-            DECL_dt(decl) == DCL_ID      ||
-            DECL_dt(decl) == DCL_VARIABLE),
-            ("unknown declarator"));
+                 DECL_dt(decl) == DCL_POINTER ||
+                 DECL_dt(decl) == DCL_FUN ||
+                 DECL_dt(decl) == DCL_ID ||
+                 DECL_dt(decl) == DCL_VARIABLE),
+                ("unknown declarator"));
 
         while (DECL_next(decl) != nullptr) { decl = DECL_next(decl); }
         format_dcrl_reverse(buf, ty, decl);
@@ -4058,8 +4068,10 @@ INT format_declaration(StrBuf & buf, Decl const* decl)
         format_decl_spec(buf, ty, is_pointer(decl));
         format_declarator(buf, ty, dcl);
         return ST_SUCC;
-    } else if (DECL_dt(decl) == DCL_DECLARATOR ||
-               DECL_dt(decl) == DCL_ABS_DECLARATOR) {
+    }
+
+    if (DECL_dt(decl) == DCL_DECLARATOR ||
+        DECL_dt(decl) == DCL_ABS_DECLARATOR) {
         Decl * dcl = DECL_decl_list(decl);
         buf.strcat("nullptr ");
         format_declarator(buf, nullptr, dcl);
@@ -4144,7 +4156,7 @@ INT format_dcrl(Decl const* decl, INT indent)
             format_parameter_list(DECL_fun_para_list(decl),
                                   indent + DECL_FMT_INDENT_INTERVAL);
             prt(g_logmgr, ")\n");
-        }        
+        }
         if (DECL_next(decl) != nullptr) {
             prt(g_logmgr, " RET_VAL_DCL_TYPE:");
         }
@@ -4198,7 +4210,7 @@ INT format_declarator(Decl const* decl, TypeSpec const* ty, INT indent)
                  DECL_dt(decl) == DCL_FUN     ||
                  DECL_dt(decl) == DCL_ID      ||
                  DECL_dt(decl) == DCL_VARIABLE),
-                 ("unknown declarator"));        
+                 ("unknown declarator"));
         g_logmgr->incIndent(DECL_FMT_INDENT_INTERVAL);
         format_dcrl(decl, indent + DECL_FMT_INDENT_INTERVAL);
         g_logmgr->decIndent(DECL_FMT_INDENT_INTERVAL);
@@ -4240,9 +4252,9 @@ INT format_declaration(Decl const* decl, INT indent)
         Decl * dcl = DECL_decl_list(decl);
         prt(g_logmgr, "%s", g_dcl_name[DECL_dt(decl)]);
         #ifdef _DEBUG_
-        prt(g_logmgr, "(uid:%d)", DECL_uid(decl));
+        prt(g_logmgr, "(id:%d)", DECL_uid(decl));
         #endif
-        prt(g_logmgr, "(line:%d)", DECL_lineno(decl));
+        prt(g_logmgr, "[%d]", DECL_lineno(decl));
         note(g_logmgr, "\n");
 
         format_decl_spec(sbuf, ty, is_pointer(decl));
@@ -4259,7 +4271,7 @@ INT format_declaration(Decl const* decl, INT indent)
 
         return ST_SUCC;
     }
-    
+
     if (DECL_dt(decl) == DCL_DECLARATOR ||
         DECL_dt(decl) == DCL_ABS_DECLARATOR) {
         Decl * dcl = DECL_decl_list(decl);
@@ -4277,7 +4289,7 @@ INT format_declaration(Decl const* decl, INT indent)
         format_declarator(decl, nullptr, indent + DECL_FMT_INDENT_INTERVAL);
         return ST_SUCC;
     }
-    
+
     if (DECL_dt(decl) == DCL_VARIABLE) {
         prt(g_logmgr, "... ");
         return ST_SUCC;
@@ -4447,7 +4459,7 @@ bool is_fp(TypeSpec const* ty)
 }
 
 
-//Is integer
+//Is integer type.
 bool is_integer(Decl const* dcl)
 {
     ASSERTN(DECL_dt(dcl) == DCL_TYPE_NAME || DECL_dt(dcl) == DCL_DECLARATION,
@@ -4456,12 +4468,29 @@ bool is_integer(Decl const* dcl)
 }
 
 
-//Is integer
+//Is integer type.
+bool is_bool(Decl const* dcl)
+{
+    ASSERTN(DECL_dt(dcl) == DCL_TYPE_NAME || DECL_dt(dcl) == DCL_DECLARATION,
+           ("expect type-name or dcrlaration"));
+    return is_bool(DECL_spec(dcl));
+}
+
+
+//Is boolean type.
+bool is_bool(TypeSpec const* ty)
+{
+    return IS_TYPE(ty, T_SPEC_BOOL);
+}
+
+
+//Is integer type.
 bool is_integer(TypeSpec const* ty)
 {
     return (IS_TYPE(ty, T_SPEC_CHAR) ||
             IS_TYPE(ty, T_SPEC_SHORT)||
             IS_TYPE(ty, T_SPEC_INT)  ||
+            IS_TYPE(ty, T_SPEC_BOOL)  ||
             IS_TYPE(ty, T_SPEC_LONG) ||
             IS_TYPE(ty, T_SPEC_LONGLONG) ||
             IS_TYPE(ty, T_SPEC_SIGNED) ||
@@ -4859,42 +4888,38 @@ static void remove_redundant_para(Decl * declaration)
 
 
 //Check struct/union completeness if decl is struct/union.
+//Return true if there is no error occur.
 static bool check_struct_union_complete(Decl * decl)
 {
     TypeSpec * type_spec = DECL_spec(decl);
-    if (is_struct(type_spec) || is_union(type_spec)) {
-        Sym * sym = get_decl_sym(decl);
-        CHAR const* name = SYM_name(sym);
-        if (!is_pointer(decl)) {
-            bool e = false; //claim error
-            CHAR const* t = nullptr;
-            if (is_struct(type_spec) && !is_struct_complete(type_spec)) {
-                e = true;
-                t = "struct";
-            } else if (is_union(type_spec) && !is_union_complete(type_spec)) {
-                e = false;
-                t = "union";
-            }
-            if (e) {
-                //error occur!
-                ASSERT0(t);
-                StrBuf buf(64);
-                if (name != nullptr) {
-                    format_struct_union_complete(buf,
-                        get_pure_type_spec(type_spec));
-                    err(g_real_line_num,
-                        "'%s' uses incomplete defined %s : %s",
-                        name, t, buf.buf);
-                    return false;
-                } else {
-                    err(g_real_line_num,
-                        "uses incomplete definfed %s without name", t);
-                    return false;
-                }
-            }
-        }
+    if (!is_aggr(type_spec) || is_pointer(decl)) { return true; }
+
+    bool e = false; //claim error
+    CHAR const* t = nullptr;
+    if (is_struct(type_spec) && !is_struct_complete(type_spec)) {
+        e = true;
+        t = "struct";
+    } else if (is_union(type_spec) && !is_union_complete(type_spec)) {
+        e = false;
+        t = "union";
     }
-    return true;
+
+    if (!e) { return true; }
+
+    //error occur!
+    ASSERT0(t);
+    StrBuf buf(64);
+    Sym * sym = get_decl_sym(decl);
+    CHAR const* name = sym->getStr();
+    if (name != nullptr) {
+        format_struct_union_complete(buf, get_pure_type_spec(type_spec));
+        err(g_real_line_num, "'%s' uses incomplete defined %s : %s",
+            name, t, buf.buf);
+        return false;
+    }
+
+    err(g_real_line_num, "uses incomplete definfed %s without name", t);
+    return false;
 }
 
 
@@ -4908,7 +4933,7 @@ static bool check_bitfield(Decl * decl)
 }
 
 
-static bool func_def(Decl * declaration)
+static bool parse_function_definition(Decl * declaration)
 {
     //Function definition only permit in global scope in C spec.
     if (SCOPE_level(g_cur_scope) != GLOBAL_SCOPE) {
@@ -5083,6 +5108,7 @@ static void inferEnumValue(EnumValueList * evals)
 }
 
 
+//The function accumulates and assigns the value of each enumerations.
 static void process_enum(TypeSpec * ty)
 {
     if (!IS_ENUM_TYPE(ty) || TYPE_enum_type(ty) == nullptr) { return; }
@@ -5101,13 +5127,15 @@ static void process_enum(TypeSpec * ty)
 }
 
 
-void fix_extern_array_size(Decl * declaration)
+//Reshape zero-dimension array declaration to be including at least one element.
+static void fix_extern_array_size(Decl * declaration)
 {
     ASSERT0(DECL_dt(declaration) == DCL_DECLARATION);
     ASSERT0(is_array(declaration));
     if (!is_extern(declaration)) {
         return;
     }
+
     Decl * decl = const_cast<Decl*>(get_pure_declarator(declaration));
     if (DECL_dt(decl) == DCL_ID) {
         decl = DECL_next(decl);
@@ -5127,11 +5155,15 @@ void fix_extern_array_size(Decl * declaration)
 
 //Postprocess init declaration list.
 //Split them into a list of declarations via generating the DCL_DECLARATION
-//accroding TypeSpec, DECLLARATOR.
-bool post_init_declarator_list(Decl * dcl_list, TypeSpec * type_spec,
-                               UINT lineno, bool * is_last_fun_def)
+//accroding TypeSpec and Declarator.
+//Return true if there is no error occur, otherwise return false.
+//is_last_decl: record if current declaration is the last stuff in scope.
+static bool post_init_declarator_list(Decl * dcl_list, TypeSpec * type_spec,
+                                      UINT lineno, bool * is_last_decl,
+                                      Tree ** dcl_tree_list)
 {
-    *is_last_fun_def = false;
+    *is_last_decl = false;
+    Tree * last = nullptr;
     while (dcl_list != nullptr) {
         Decl * dcl = dcl_list;
         dcl_list = DECL_next(dcl_list);
@@ -5147,8 +5179,14 @@ bool post_init_declarator_list(Decl * dcl_list, TypeSpec * type_spec,
         DECL_decl_scope(declaration) = g_cur_scope;
         DECL_lineno(declaration) = lineno;
 
+        Tree * t = NEWTN(TR_DECL);
+        TREE_decl(t) = declaration;
+        DECL_placeholder(declaration) = t;
+        xcom::add_next(dcl_tree_list, &last, t);
+
         if (IS_USER_TYPE_REF(type_spec)) {
             declaration = factor_user_type(declaration);
+            DECL_placeholder(declaration) = t;
             DECL_align(declaration) = g_alignment;
             DECL_decl_scope(declaration) = g_cur_scope;
             DECL_lineno(declaration) = lineno;
@@ -5156,7 +5194,8 @@ bool post_init_declarator_list(Decl * dcl_list, TypeSpec * type_spec,
 
         if (is_fun_decl(declaration)) {
             if (g_real_token == T_LLPAREN) {
-                if (!func_def(declaration)) {
+                //Function Definition.
+                if (!parse_function_definition(declaration)) {
                     return false;
                 }
             } else if (g_real_token == T_SEMI) {
@@ -5164,14 +5203,15 @@ bool post_init_declarator_list(Decl * dcl_list, TypeSpec * type_spec,
                 xcom::add_next(&SCOPE_decl_list(g_cur_scope), declaration);
                 DECL_is_fun_def(declaration) = 0;
             } else {
+                //Nothing at all.
                 err(g_real_line_num,
                     "illegal function definition/declaration, "
                     "might be miss ';'");
                 return false;
             }
         } else {
-            //Common variable definition/declaration.
             //Check the declarator that should be unique at current scope.
+            //Common variable definition/declaration.
             if (!is_unique_decl(SCOPE_decl_list(g_cur_scope), declaration)) {
                 err(g_real_line_num, "'%s' already defined",
                     SYM_name(get_decl_sym(declaration)));
@@ -5180,7 +5220,8 @@ bool post_init_declarator_list(Decl * dcl_list, TypeSpec * type_spec,
             xcom::add_next(&SCOPE_decl_list(g_cur_scope), declaration);
         }
 
-        if (is_user_type_decl(declaration)) { //typedef declaration
+        if (is_user_type_decl(declaration)) {
+            //Current declaration is user typedef declaration.
             //As the preivous parsing in 'declarator()' has recoginzed that
             //current identifier is identical exactly in current scope,
             //it is dispensable to warry about the redefinition, even if
@@ -5208,7 +5249,7 @@ bool post_init_declarator_list(Decl * dcl_list, TypeSpec * type_spec,
             }
         }
 
-        *is_last_fun_def = DECL_is_fun_def(declaration);
+        *is_last_decl = DECL_is_fun_def(declaration);
     }
     return true;
 }
@@ -5218,40 +5259,46 @@ bool post_init_declarator_list(Decl * dcl_list, TypeSpec * type_spec,
 //  declaration_spec init_declarator_list;
 //  declaration_spec ;
 //Return true if variable declaration is found.
-bool declaration()
+Tree * declaration()
 {
+    //Parse specifier.
     UINT lineno = g_real_line_num;
     TypeSpec * type_spec = declaration_spec();
-    if (type_spec == nullptr) { return false; }
+    if (type_spec == nullptr) { return nullptr; }
 
+    //Deal with informations that is encoded in specifier.
     TypeSpec * qualifier = new_type();
     extract_qualifier(type_spec, qualifier);
-    complement_qua(type_spec);
-
+    complement_qualifier(type_spec);
     process_enum(type_spec);
 
+    //Parse variable declaration list.
     Decl * dcl_list = init_declarator_list(qualifier);
     if (dcl_list == nullptr) {
         //For enum type, there is no enum variable declared, such as:
-        //    enum {X, Y, Z};
-        //    enum _tag {X, Y, Z};
-        return false; //no variable declared
+        //  enum {X, Y, Z};
+        //  enum _tag {X, Y, Z};
+        return nullptr; //no variable declared
     }
 
-    bool def_or_init_var = true;
+    //Assigns alignment to variables.
     DECL_align(dcl_list) = g_alignment;
     if (DECL_child(dcl_list) == nullptr) {
         err(g_real_line_num, "declaration expected identifier");
-        return def_or_init_var;
-    }
-    
-    bool is_last_fun_def = false;
-    if (!post_init_declarator_list(dcl_list, type_spec,
-                                   lineno, &is_last_fun_def)) {
-        return def_or_init_var;
+        return nullptr;
     }
 
-    if (!is_last_fun_def) {
+    //Deal with initialization of each decalarations in list.
+    bool is_last_decl = false;
+    Tree * dcl_tree_list = nullptr;
+    if (!post_init_declarator_list(dcl_list, type_spec,
+                                   lineno, &is_last_decl, &dcl_tree_list)) {
+        return dcl_tree_list;
+    }
+
+    if (!is_last_decl) {
+        //A special error handling here, to check the syntax of C.
+        //To diagnose if there is an ending ';' for the last stuff.
         if (g_real_token != T_SEMI) {
             err(g_real_line_num, "expected ';' after declaration");
         } else {
@@ -5259,15 +5306,18 @@ bool declaration()
         }
     }
 
-    return def_or_init_var;
+    return dcl_tree_list;
 }
 
 
-bool declaration_list()
+//Return tree node if variable declaration is found.
+Tree * declaration_list()
 {
-    bool find = false;
+    Tree * decl_list = nullptr;
+    Tree * last = nullptr;
     while (is_in_first_set_of_declarator()) {
-        find |= declaration();
+        Tree * decl = declaration();
+        xcom::add_next(&decl_list, &last, decl);
     }
-    return find;
+    return decl_list;
 }

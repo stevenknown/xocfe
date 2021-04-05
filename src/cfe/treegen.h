@@ -28,16 +28,16 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef __TREE_GEN_H__
 #define __TREE_GEN_H__
 
+#define NEWTN(tok)  allocTreeNode((tok), g_real_line_num)
+
 //Exported Variables
 extern CHAR * g_real_token_string;
 extern TOKEN g_real_token;
-extern bool g_enable_C99_declaration;
 extern SMemPool * g_pool_general_used;
 extern SMemPool * g_pool_tree_used; //front end
 extern SMemPool * g_pool_st_used;
 extern SymTab * g_fe_sym_tab;
 extern bool g_dump_token;
-
 
 //Exported Functions
 void initParser();

@@ -205,7 +205,7 @@ static void dump_labels(Scope * s)
         g_logmgr->decIndent(2);
     }
 
-    //All of refered labels in scope. 
+    //All of refered labels in scope.
     li = SCOPE_ref_label_list(s).get_head();
     if (li != nullptr) {
         note(g_logmgr, "\nREFED LABEL:");
