@@ -170,7 +170,7 @@ static INT process_struct_init(TypeSpec * ty, Tree ** init)
     Struct * s = TYPE_struct_type(ty);
     if (!STRUCT_is_complete(s)) {
         err(g_real_line_num, "uses incomplete struct %s",
-            SYM_name(STRUCT_tag(s)));
+            STRUCT_tag(s) != nullptr ? STRUCT_tag(s)->getStr() : "");
         return ST_ERR;
     }
 
@@ -181,7 +181,7 @@ static INT process_struct_init(TypeSpec * ty, Tree ** init)
 
     if (TREE_type(*init) != TR_INITVAL_SCOPE) {
         err(g_real_line_num, "unmatch initial value type to struct %s",
-            STRUCT_tag(s)->getStr());
+            STRUCT_tag(s) != nullptr ? STRUCT_tag(s)->getStr() : "");
     }
 
     //Strip off the initval-scope.

@@ -2351,9 +2351,21 @@ static Decl * init_declarator(TypeSpec * qua)
     if (g_real_token == T_ASSIGN) {
         match(T_ASSIGN);
         DECL_init_tree(declarator) = initializer(qua);
-        if (DECL_init_tree(declarator) == nullptr ||
-            (TREE_type(DECL_init_tree(declarator)) == TR_INITVAL_SCOPE &&
-             TREE_initval_scope(DECL_init_tree(declarator)) == nullptr)) {
+        if (DECL_init_tree(declarator) == nullptr) {
+            warn(g_real_line_num, "initial value is empty");
+        
+            //TO BE CONFIRMED: Do we allow an empty initialization?
+            //err(g_real_line_num, "initial value is nullptr");
+            //Give up parsing subsequent tokens if initialization is empty.
+            //suck_tok_to(0, T_SEMI, T_END, T_NUL);
+        
+            //Error recovery: fill in a placeholer to let the compilation
+            //goes on.
+            DECL_init_tree(declarator) = buildInitvalScope(buildInt(0));
+        }
+
+        if (TREE_type(DECL_init_tree(declarator)) == TR_INITVAL_SCOPE &&
+            TREE_initval_scope(DECL_init_tree(declarator)) == nullptr) {
             warn(g_real_line_num, "initial value is empty");
 
             //TO BE CONFIRMED: Do we allow an empty initialization?
@@ -2363,8 +2375,9 @@ static Decl * init_declarator(TypeSpec * qua)
 
             //Error recovery: fill in a placeholer to let the compilation
             //goes on.
-            DECL_init_tree(declarator) = buildInt(0);
+            TREE_initval_scope(DECL_init_tree(declarator)) = buildInt(0);
         }
+
         DECL_is_init(declarator) = 1;
     }
     return declarator;
