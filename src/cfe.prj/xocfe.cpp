@@ -79,7 +79,7 @@ bool processCmdLine(INT argc, CHAR * argv[])
         if (argv[i][0] == '-') {
             CHAR const* cmdstr = &argv[i][1];
             if (!strcmp(cmdstr, "dump")) {
-                g_dump_file_name = process_d(argc, argv, i);      
+                g_dump_file_name = process_d(argc, argv, i);
             } else {
                 return false;
             }

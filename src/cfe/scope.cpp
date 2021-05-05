@@ -44,6 +44,93 @@ static void * xmalloc(size_t size)
 }
 
 
+//
+//START Scope
+//
+void Scope::init(UINT & sc)
+{
+    li_list.init();
+    lref_list.init();
+    struct_list.init();
+    union_list.init();
+
+    SCOPE_id(this) = sc++;
+    SCOPE_level(this) = -1;
+    SCOPE_parent(this) = nullptr;
+    SCOPE_nsibling(this) = nullptr;
+    SCOPE_sub(this)  = nullptr;
+    SCOPE_enum_tab(this) = new EnumTab();
+}
+
+void Scope::destroy()
+{
+    li_list.destroy();
+    lref_list.destroy();
+    struct_list.destroy();
+    union_list.destroy();
+    delete SCOPE_enum_tab(this);
+    SCOPE_enum_tab(this) = nullptr;
+}
+
+
+Enum * Scope::addEnum(Enum * e)
+{
+    ASSERT0(e);
+    return getEnumTab()->append_and_retrieve(e); 
+}
+
+
+void Scope::addStruct(Struct * s)
+{
+    ASSERT0(s);
+    SCOPE_struct_list(this).append_tail(s);
+    AGGR_scope(s) = this;
+}
+
+
+void Scope::addUnion(Union * u)
+{
+    ASSERT0(u);
+    SCOPE_union_list(this).append_tail(u);
+    AGGR_scope(u) = this;
+}
+
+
+void Scope::addDecl(Decl * decl)
+{
+    ASSERT0(decl);
+    xcom::add_next(&SCOPE_decl_list(this), decl);
+    DECL_decl_scope(decl) = this;
+}
+
+
+void Scope::addStmt(Tree * t)
+{
+    ASSERT0(t);
+    xcom::add_next(&SCOPE_stmt_list(this), t);
+}
+
+
+//Return true if enum-value existed in current scope.
+//idx: the index that indicates the position of pacticular Item in Enum.
+bool Scope::isEnumExist(CHAR const* vname, OUT Enum ** e, OUT INT * idx) const
+{
+    if (vname == nullptr) { return false; }
+
+    EnumTabIter it;
+    EnumTab const* et = getEnumTab();
+    for (Enum * en = et->get_first(it);
+         en != nullptr; en = et->get_next(it)) {
+        if (en->isEnumValExist(vname, idx)) {
+            *e = en;
+            return true;
+        }
+    }
+    return false;
+}
+//END Scope
+
+
 Scope * new_scope()
 {
     Scope * sc = (Scope*)xmalloc(sizeof(Scope));
@@ -71,31 +158,59 @@ void dec_indent(UINT ind)
 
 //Be usually used in scope process.
 //Return nullptr if this function do not find 'sym' in 'sym_list', and
-//'sym' will be appended  into list, otherwise return 'sym'.
-Sym * add_to_symtab_list(SymList ** sym_list , Sym * sym)
+//'sym' will be appended into list, otherwise return 'sym'.
+Sym const* Scope::addToSymList(Sym const* sym)
 {
-    if (sym_list == nullptr || sym == nullptr) {
+    if (sym == nullptr) { return nullptr; }
+    if (SCOPE_sym_list(this) == nullptr) {
+        SCOPE_sym_list(this) = (SymList*)xmalloc(sizeof(SymList));
+        SYM_LIST_sym(SCOPE_sym_list(this)) = sym;
         return nullptr;
     }
-    if ((*sym_list) == nullptr) {
-        *sym_list = (SymList*)xmalloc(sizeof(SymList));
-        SYM_LIST_sym(*sym_list) = sym;
-        return nullptr;
-    } else {
-        SymList * p = *sym_list, * q = nullptr;
-        while (p != nullptr) {
-            q = p;
-            if (SYM_LIST_sym(p) == sym) {
-                //'sym' already exist, return 'sym' as result
-                return sym;
-            }
-            p = SYM_LIST_next(p);
+
+    SymList * p = SCOPE_sym_list(this), * q = nullptr;
+    while (p != nullptr) {
+        q = p;
+        if (SYM_LIST_sym(p) == sym) {
+            //'sym' already exist, return 'sym' as result
+            return sym;
         }
-        SYM_LIST_next(q) = (SymList*)xmalloc(sizeof(SymList));
-        SYM_LIST_prev(SYM_LIST_next(q)) = q;
-        q = SYM_LIST_next(q);
-        SYM_LIST_sym(q) = sym;
+        p = SYM_LIST_next(p);
     }
+    SYM_LIST_next(q) = (SymList*)xmalloc(sizeof(SymList));
+    SYM_LIST_prev(SYM_LIST_next(q)) = q;
+    q = SYM_LIST_next(q);
+    SYM_LIST_sym(q) = sym;
+    return nullptr;
+}
+
+
+//Return nullptr indicate we haven't found it in 'ut_list', and
+//append 'ut' to tail of the list as correct, otherwise return
+//the finded one.
+Decl * Scope::addToUserTypeList(Decl * decl)
+{
+    if (decl == nullptr) { return nullptr; }
+    if (SCOPE_user_type_list(this) == nullptr) {
+        SCOPE_user_type_list(this) = (UserTypeList*)xmalloc(
+            sizeof(UserTypeList));
+        USER_TYPE_LIST_utype(SCOPE_user_type_list(this)) = decl;
+        return nullptr;
+    }
+
+    UserTypeList * p = SCOPE_user_type_list(this), * q = nullptr;
+    while (p != nullptr) {
+        q = p;
+        if (USER_TYPE_LIST_utype(p) == decl) {
+            //'sym' already exist, return 'sym' as result
+            return decl;
+        }
+        p = USER_TYPE_LIST_next(p);
+    }
+    USER_TYPE_LIST_next(q) = (UserTypeList*)xmalloc(sizeof(UserTypeList));
+    USER_TYPE_LIST_prev(USER_TYPE_LIST_next(q)) = q;
+    q = USER_TYPE_LIST_next(q);
+    USER_TYPE_LIST_utype(q) = decl;
     return nullptr;
 }
 
@@ -169,7 +284,7 @@ void dump_scope_tree(Scope * s, INT indent)
 
 static void dump_symbols(Scope * s)
 {
-    SymList * sym_list = SCOPE_sym_tab_list(s);
+    SymList * sym_list = SCOPE_sym_list(s);
     if (sym_list != nullptr) {
         note(g_logmgr, "\nSYMBAL:");
         g_logmgr->incIndent(2);
@@ -223,20 +338,22 @@ static void dump_labels(Scope * s)
 
 static void dump_enums(Scope * s)
 {
-    EnumList * el = SCOPE_enum_list(s);
-    if (el != nullptr) {
-        StrBuf buf(64);
-        note(g_logmgr, "\nENUM List:");
-        g_logmgr->incIndent(2);
-        note(g_logmgr, "\n");
-        while (el != nullptr) {
-            buf.clean();
-            format_enum_complete(buf, ENUM_LIST_enum(el));
-            note(g_logmgr, "%s\n", buf.buf);
-            el = ENUM_LIST_next(el);
-        }
-        g_logmgr->decIndent(2);
+    EnumTab * el = s->getEnumTab();
+    if (el == nullptr) { return; }
+
+    StrBuf buf(64);
+    note(g_logmgr, "\nENUM Tab:");
+    g_logmgr->incIndent(2);
+    note(g_logmgr, "\n");
+
+    EnumTabIter it;
+    for (Enum * e = el->get_first(it);
+         e != nullptr; e = el->get_next(it)) {
+        buf.clean();
+        format_enum_complete(buf, e);
+        note(g_logmgr, "%s\n", buf.buf);
     }
+    g_logmgr->decIndent(2);
 }
 
 
@@ -251,7 +368,7 @@ static void dump_user_defined_type(Scope * s)
         note(g_logmgr, "\n");
         while (utl != nullptr) {
             buf.clean();
-            format_user_type_spec(buf, USER_TYPE_LIST_utype(utl));
+            format_user_type(buf, USER_TYPE_LIST_utype(utl));
             note(g_logmgr, "%s\n", buf.buf);
             utl = USER_TYPE_LIST_next(utl);
         }
@@ -307,7 +424,7 @@ static void dump_unions(Scope * s)
 static void dump_declarations(Scope * s, UINT flag)
 {
     //declarations
-    Decl * dcl = SCOPE_decl_list(s);
+    Decl * dcl = s->getDeclList();
     if (dcl == nullptr) { return; }
 
     StrBuf buf(64);
@@ -319,7 +436,7 @@ static void dump_declarations(Scope * s, UINT flag)
         note(g_logmgr, "\n%s", buf.buf);
 
         g_logmgr->incIndent(2);
-        dump_decl(dcl);
+        dcl->dump();
 
         //Dump function body
         if (DECL_is_fun_def(dcl) && HAVE_FLAG(flag, DUMP_SCOPE_FUNC_BODY)) {

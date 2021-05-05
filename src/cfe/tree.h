@@ -115,9 +115,9 @@ public:
     TokenList * next;
     TOKEN token;
     union {
-        Sym * id_name;
-        Sym * chars;
-        Sym * string;
+        Sym const* id_name;
+        Sym const* chars;
+        Sym const* string;
         UINT imm;
     } u1;
 };
@@ -173,7 +173,7 @@ public:
 #define TREE_cvt_type(tn) ((tn)->fld[0])
 #define TREE_type_name(tn) ((tn)->u1.type_name)
 //#define TREE_ct_type(tn) ((tn)->u1.ty)
-#define TREE_cast_exp(tn) ((tn)->fld[1])
+#define TREE_cvt_exp(tn) ((tn)->fld[1])
 
 //array referecne
 #define TREE_array_base(tn) (tn)->fld[0]
@@ -250,11 +250,11 @@ public:
 
     union {
         struct {
-            Enum * e;
+            Enum const* e;
             INT indx;
         } u11; //record a enum constant
         struct {
-            Sym * id; //record id in SymTab
+            Sym const* id; //record id in SymTab
             Decl * id_decl; //record legal declaration
         } u12;
         Sym const* sval; //record a string in SymTab

@@ -76,24 +76,21 @@ Tree * buildIndmem(Tree * base, Decl const* fld)
 //  The accessing to m's fldvec is <2, 0>, whereas e's fldvec is <3>.
 Tree * buildAggrFieldRef(Decl const* decl, xcom::Vector<UINT> & fldvec)
 {
-    ASSERT0(is_struct(decl) || is_union(decl));
+    ASSERT0(decl->is_aggr());
     ASSERTN(fldvec.get_last_idx() >= 0, ("miss field index"));
     Tree * base = buildId(decl);
     Decl const* basedecl = decl;
     for (INT i = 0; i <= fldvec.get_last_idx(); i++) {
         Decl * flddecl = nullptr;
-        if (is_struct(basedecl)) {
-            Struct * spec = get_struct_spec(basedecl);
-            get_aggr_field(spec, fldvec.get(i), &flddecl);
-        } else if (is_union(basedecl)) {
-            Union * spec = get_union_spec(basedecl);
-            get_aggr_field(spec, fldvec.get(i), &flddecl);
+        if (basedecl->is_aggr()) {
+            get_aggr_field(basedecl->getTypeAttr(), fldvec.get(i),
+                           &flddecl, nullptr);
         } else {
             ASSERTN(0, ("the function only handle aggregate reference"));
         }
         ASSERTN(flddecl, ("not find field"));
 
-        if (is_pointer(basedecl)) {
+        if (basedecl->is_pointer()) {
             base = buildIndmem(base, flddecl);
         } else {
             base = buildDmem(base, flddecl);
@@ -121,7 +118,7 @@ Tree * buildId(Decl const* decl)
 {
     Tree * t = NEWTN(TR_ID);
     TREE_token(t) = T_ID;
-    Sym * sym = get_decl_sym(decl);
+    Sym const* sym = decl->get_decl_sym();
     ASSERT0(sym);
     TREE_id(t) = sym;
     TREE_id_decl(t) = const_cast<Decl*>(decl);
@@ -131,7 +128,7 @@ Tree * buildId(Decl const* decl)
 
 Tree * buildAggrRef(Tree * base, Decl const* fld)
 {
-    if (is_pointer(fld)) {
+    if (fld->is_pointer()) {
         return buildIndmem(base, fld);
     }
     return buildDmem(base, fld);
@@ -431,7 +428,7 @@ static void append_c_head(size_t v)
 static void append_tok_tail(TOKEN tok, CHAR * tokname, INT lineno)
 {
     TokenInfo * tki = (TokenInfo*)xmalloc(sizeof(TokenInfo));
-    Sym * s = g_fe_sym_tab->add(tokname);
+    Sym const* s = g_fe_sym_tab->add(tokname);
     TOKEN_INFO_name(tki) = SYM_name(s);
     TOKEN_INFO_token(tki) = tok;
     TOKEN_INFO_lineno(tki) = lineno;
@@ -441,10 +438,10 @@ static void append_tok_tail(TOKEN tok, CHAR * tokname, INT lineno)
 
 //Append current token info descripte by 'g_cur_token','g_cur_token_string'
 //and 'g_src_line_num'
-static void append_tok_head(TOKEN tok, CHAR * tokname, INT lineno)
+static void append_tok_head(TOKEN tok, CHAR const* tokname, INT lineno)
 {
     TokenInfo * tki = (TokenInfo*)xmalloc(sizeof(TokenInfo));
-    Sym * s = g_fe_sym_tab->add(tokname);
+    Sym const* s = g_fe_sym_tab->add(tokname);
     TOKEN_INFO_name(tki) = SYM_name(s);
     TOKEN_INFO_token(tki) = tok;
     TOKEN_INFO_lineno(tki) = lineno;
@@ -479,16 +476,23 @@ void dump_tok_list()
 }
 
 
-bool is_in_first_set_of_declarator()
+//Return true if parsing have to terminate.
+bool isTerminateToken()
+{
+    return g_real_token == T_END || g_real_token == T_NUL;
+}
+
+
+bool inFirstSetOfDeclarator()
 {
     if (g_real_token == T_ID) {
         Decl * ut = nullptr;
         Struct * s = nullptr;
         Union * u = nullptr;
-        if (is_user_type_exist_in_outer_scope(g_real_token_string, &ut) ||
-            is_struct_exist_in_outer_scope(g_cur_scope,
+        if (isUserTypeExistInOuterScope(g_real_token_string, &ut) ||
+            isStructExistInOuterScope(g_cur_scope,
                 g_real_token_string, &s) ||
-            is_union_exist_in_outer_scope(g_cur_scope,
+            isUnionExistInOuterScope(g_cur_scope,
                 g_real_token_string, &u)) {
             return true;
         }
@@ -510,12 +514,12 @@ static INT is_compound_terminal()
 
 
 //Return true if 'tok' indicate terminal charactor, otherwise false.
-bool is_in_first_set_of_exp_list(TOKEN tok)
+bool inFirstSetOfExp(TOKEN tok)
 {
     Decl * ut = nullptr;
     switch (tok) {
     case T_ID:
-        if (is_user_type_exist_in_outer_scope(g_real_token_string, &ut)) {
+        if (isUserTypeExistInOuterScope(g_real_token_string, &ut)) {
             //If there is a type-name, then it
             //belongs to first-set of declarator.
             return false;
@@ -604,11 +608,11 @@ static bool is_c_stor_spec(TOKEN tok)
 }
 
 
-bool is_user_type_exist_in_outer_scope(CHAR * cl, OUT Decl ** ut)
+bool isUserTypeExistInOuterScope(CHAR const* cl, OUT Decl ** ut)
 {
     Scope * sc = g_cur_scope;
     while (sc != nullptr) {
-        if (is_user_type_exist(SCOPE_user_type_list(sc), cl, ut)) {
+        if (isUserTypeExist(SCOPE_user_type_list(sc), cl, ut)) {
             return true;
         }
         sc = SCOPE_parent(sc);
@@ -617,20 +621,10 @@ bool is_user_type_exist_in_outer_scope(CHAR * cl, OUT Decl ** ut)
 }
 
 
-INT is_user_type_exist_in_cur_scope(CHAR * cl, OUT Decl ** ut)
-{
-    Scope * sc = g_cur_scope;
-    if (is_user_type_exist(SCOPE_user_type_list(sc), cl, ut)) {
-        return 1;
-    }
-    return 0;
-}
-
-
 //Find if ID with named 'cl' exists and return the Decl.
-static inline INT is_id_exist_in_outer_scope(CHAR * cl, OUT Decl ** d)
+static inline INT is_id_exist_in_outer_scope(CHAR const* cl, OUT Decl ** d)
 {
-    return is_decl_exist_in_outer_scope(cl, d);
+    return isDeclExistInOuterScope(cl, d);
 }
 
 
@@ -703,11 +697,11 @@ void suck_tok_to(INT placeholder, ...)
     TOKEN tok;
     ASSERT0(sizeof(TOKEN) == sizeof(INT));
     for (;;) {
-        if (g_real_token == T_END || g_real_token == T_NUL) break;
+        if (isTerminateToken()) { break; }
         va_start(arg, placeholder);
         tok = (TOKEN)va_arg(arg, INT);
         while (tok != T_NUL) {
-            if (tok == g_real_token) goto FIN;
+            if (tok == g_real_token) { goto FIN; }
             tok = (TOKEN)va_arg(arg, INT);
         }
         suck_tok();
@@ -715,16 +709,22 @@ void suck_tok_to(INT placeholder, ...)
     va_end(arg);
 FIN:
     va_end(arg);
-    return ;
+    return;
 }
 
 
 Tree * id()
 {
+    Sym const* sym = g_fe_sym_tab->add(g_real_token_string);
+    return id(sym, g_real_token);
+}
+
+
+Tree * id(Sym const* name, TOKEN tok)
+{
     Tree * t = NEWTN(TR_ID);
-    TREE_token(t) = g_real_token;
-    Sym * sym = g_fe_sym_tab->add(g_real_token_string);
-    TREE_id(t) = sym;
+    TREE_token(t) = tok;
+    TREE_id(t) = name;
     return t;
 }
 
@@ -835,12 +835,11 @@ static TOKEN look_next_token(INT n,
             //get new token from file
             gettok();
             tok = g_real_token;
-            if (g_real_token == T_END || g_real_token == T_NUL) {
+            if (isTerminateToken()) {
                 reset_tok();
                 return g_real_token;
             }
-            append_tok_tail(g_real_token,
-                            g_real_token_string, g_real_line_num);
+            append_tok_tail(g_real_token, g_real_token_string, g_real_line_num);
             n--;
         }
 
@@ -860,7 +859,7 @@ static TOKEN look_next_token(INT n,
         if (tok_line_num != nullptr) {
             *tok_line_num = g_real_line_num;
         }
-        if (g_real_token == T_END || g_real_token == T_NUL) {
+        if (isTerminateToken()) {
             reset_tok();
             return g_real_token;
         }
@@ -964,7 +963,7 @@ static Tree * primary_exp(IN OUT UINT * st)
     case T_ID: {
         Enum * e = nullptr;
         INT idx = 0;
-        if (findEnumConst(g_real_token_string, &e, &idx)) {
+        if (findEnumVal(g_real_token_string, &e, &idx)) {
             t = NEWTN(TR_ENUM_CONST);
             TREE_enum(t) = e;
             TREE_enum_val_idx(t) = idx;
@@ -1035,7 +1034,7 @@ static Tree * primary_exp(IN OUT UINT * st)
         TREE_token(t) = g_real_token;
         CHAR * tbuf = nullptr;
         UINT tbuflen = 0;
-        Sym * sym = g_fe_sym_tab->add(g_real_token_string);
+        Sym const* sym = g_fe_sym_tab->add(g_real_token_string);
         match(T_STRING);
 
         //Concatenate string.
@@ -1276,7 +1275,7 @@ static Tree * unary_or_LP_typename_RP()
             //Record a User defined type
             Decl * ut = nullptr;
             ASSERT0(tok_string != nullptr);
-            if (is_user_type_exist_in_outer_scope(tok_string, &ut)) {
+            if (isUserTypeExistInOuterScope(tok_string, &ut)) {
                 //User defined Type via 'typedef'.
                 t = NEWTN(TR_TYPE_NAME);
                 if (match(T_LPAREN) != ST_SUCC) {
@@ -1446,9 +1445,9 @@ Tree * gen_cvt(Tree * tgt_type, Tree * src)
     ASSERT0(tgt_type && TREE_type(tgt_type) == TR_TYPE_NAME && src);
     Tree * t = NEWTN(TR_CVT);
     TREE_cvt_type(t) = tgt_type;
-    TREE_cast_exp(t) = src;
+    TREE_cvt_exp(t) = src;
     setParent(t, TREE_cvt_type(t));
-    setParent(t, TREE_cast_exp(t));
+    setParent(t, TREE_cvt_exp(t));
     return t;
 }
 
@@ -1456,7 +1455,7 @@ Tree * gen_cvt(Tree * tgt_type, Tree * src)
 Tree * gen_cvt(Decl const* tgt_type, Tree * src)
 {
     ASSERT0(tgt_type && src);
-    Decl * dup = cp_typename(tgt_type);
+    Decl * dup = genTypeName(tgt_type);
     return gen_cvt(gen_typename(dup), src);
 }
 
@@ -1491,7 +1490,7 @@ static Tree * cast_exp()
             goto FAILED;
         }
         t = gen_cvt(p, srcexp);
-        if (TREE_cast_exp(t) == nullptr) {
+        if (TREE_cvt_exp(t) == nullptr) {
             err(g_real_line_num, "cast expression cannot be nullptr");
             goto FAILED;
         }
@@ -2379,23 +2378,22 @@ static Tree * select_stmt()
 
 
 //Append parameters to declaration list of function body scope.
-static bool append_parameters(Scope * cur_scope, Decl * para_list)
+static bool append_parameters(Scope * cur_scope, Decl const* para_list)
 {
-    Decl * lastdcl = xcom::get_last(SCOPE_decl_list(cur_scope));
+    Decl * lastdcl = xcom::get_last(cur_scope->getDeclList());
     UINT pos = 0;
     for (; para_list != nullptr; para_list = DECL_next(para_list), pos++) {
-        if (DECL_dt(para_list) == DCL_VARIABLE) {
-            //VARIABLE parameter should be the last parameter.
-            ASSERT0(DECL_next(para_list) == nullptr);
+        if (para_list->is_dt_var()) {
+            ASSERTN(DECL_next(para_list) == nullptr,
+                    ("VARIABLE parameter should be the last parameter."));
             continue;
         }
 
-        Decl * declaration = new_decl(DCL_DECLARATION);
+        Decl * declaration = newDecl(DCL_DECLARATION);
         DECL_spec(declaration) = DECL_spec(para_list);
-        DECL_decl_list(declaration) = cp_decl(DECL_decl_list(para_list));
-        PURE_DECL(declaration) = PURE_DECL(para_list);
-
-        if (is_array(declaration)) {
+        DECL_decl_list(declaration) = dupDecl(DECL_decl_list(para_list));
+        DECL_trait(declaration) = DECL_trait(para_list);
+        if (declaration->is_array()) {
             //Array type formal parameter is always be treated
             //as pointer type.
             //Convert ARRAY of ID to ARRAY of POINTER.
@@ -2403,7 +2401,7 @@ static bool append_parameters(Scope * cur_scope, Decl * para_list)
             //'int a[10]' is not really array of a, but is a pointer
             //that pointed to array 'a', and should be 'int (*a)[10].
             //e.g: Convert 'void f(int a[10])' -> 'void f(int (*a)[10])'.
-            declaration = trans_to_pointer(declaration, true);
+            declaration = convertToPointerType(declaration, true);
         }
 
         DECL_is_formal_para(declaration) = true;
@@ -2414,8 +2412,8 @@ static bool append_parameters(Scope * cur_scope, Decl * para_list)
         lastdcl = declaration;
 
         //Append parameter list to symbol list of function body scope.
-        Sym * sym = get_decl_sym(declaration);
-        if (add_to_symtab_list(&SCOPE_sym_tab_list(cur_scope), sym)) {
+        Sym const* sym = declaration->get_decl_sym();
+        if (g_cur_scope->addToSymList(sym) != nullptr) {
             err(g_real_line_num, "'%s' already defined",
                 g_real_token_string);
             return false;
@@ -2430,25 +2428,24 @@ static bool statement_list(Scope * cur_scope)
     INT cerr = g_err_msg_list.get_elem_count();
     Tree * last = nullptr;
     for (;;) {
-        if (g_real_token == T_END || g_real_token == T_NUL) {
+        if (isTerminateToken()) {
             break;
-        } else if (g_err_msg_list.get_elem_count() >= TOO_MANY_ERR) {
+        }
+        if (g_err_msg_list.get_elem_count() >= TOO_MANY_ERR) {
             return false;
-        } else if (is_compound_terminal()) {
+        }
+        if (is_compound_terminal()) {
             break;
         }
 
         Tree * t = statement();
-
         ASSERT0(verify(t));
-
         if (last == nullptr) {
-            last = xcom::get_last(SCOPE_stmt_list(cur_scope));
+            last = xcom::get_last(cur_scope->getStmtList());
         }
         xcom::add_next(&SCOPE_stmt_list(cur_scope), &last, t);
 
         last = xcom::get_last(t);
-
         if ((cerr != (INT)g_err_msg_list.get_elem_count()) ||
             (cerr > 0 && t == nullptr)) {
             suck_tok_to(0, T_SEMI, T_RLPAREN, T_END, T_NUL);
@@ -2479,7 +2476,9 @@ Scope * compound_stmt(Decl * para_list)
 
     //Function local variable declaration list.
     t = declaration_list();
-    xcom::add_next(&SCOPE_stmt_list(cur_scope), t);
+    if (t != nullptr) {
+        cur_scope->addStmt(t);
+    }
 
     //Statement list.
     if (!statement_list(cur_scope)) {
@@ -2615,7 +2614,7 @@ static Tree * statement()
         return label_stmt();
     }
 
-    if (is_in_first_set_of_exp_list(g_real_token)) {
+    if (inFirstSetOfExp(g_real_token)) {
         return exp_stmt();
     }
 
@@ -2655,7 +2654,7 @@ static Tree * statement()
     default:;
     }
 
-    if (is_in_first_set_of_declarator()) {
+    if (inFirstSetOfDeclarator()) {
         //It may be varirable or type declaration.
         if (!g_enable_c99_declaration) {
             //C89 options.
@@ -2677,7 +2676,6 @@ static Tree * dispatch()
 {
     Enum * e = nullptr;
     INT idx = -1;
-    Decl * ut = nullptr;
     Tree * t = nullptr;
     switch (g_real_token) {
     case T_ID: // ID = (A-Z|a-z)( A-Z|a-z|0-9 )*
@@ -2711,11 +2709,10 @@ static Tree * dispatch()
         //    This enforce parser has to look ahead many tokens.
         //    In order to keep parser succinct, we only
         //    support the latter, int foo() { ... }.
-        if (is_user_type_exist_in_outer_scope(g_real_token_string, &ut)) {
+        if (inFirstSetOfDeclarator()) {
             //reduce to variable declaration
             declaration();
-        } else if (findEnumConst(g_real_token_string,
-                                                      &e, &idx)) {
+        } else if (findEnumVal(g_real_token_string, &e, &idx)) {
             t = exp_stmt();
         } else {
             // effective method
@@ -2797,7 +2794,6 @@ static Tree * dispatch()
         break;
     case T_END:      // end of file
         return ST_SUCC;
-        break;
     case T_NUL:
         err(g_real_line_num, "unrecognized token :%s", g_real_token_string);
         return t;
@@ -2892,21 +2888,18 @@ INT Parser()
     //enum_constant:
     //     id
     ASSERT0(g_hsrc);
-    gettok(); //Get first token.
+    gettok(); //Get the first token.
 
     //Create outermost scope for top region.
     g_cur_scope = new_scope();
     SCOPE_level(g_cur_scope) = GLOBAL_SCOPE; //First global scope
     for (;;) {
         if (g_real_token == T_END) {
-            //dump_scope(g_cur_scope, DUMP_SCOPE_FUNC_BODY|DUMP_SCOPE_STMT_TREE);
             return ST_SUCC;
-        } else if (g_real_token == T_NUL) {
-            return ST_ERR;
-        } else if (is_too_many_err()) {
+        }
+        if (g_real_token == T_NUL || is_too_many_err()) {
             return ST_ERR;
         }
-
         if (dispatch() == nullptr && g_err_msg_list.get_elem_count() != 0) {
             return ST_ERR;
         }

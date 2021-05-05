@@ -59,15 +59,15 @@ static LONGLONG popv()
 
 static bool compute_enum_const(Tree * t)
 {
-    Enum * e = TREE_enum(t);
+    Enum const* e = TREE_enum(t);
     INT i = TREE_enum_val_idx(t);
-    EnumValueList * evl = ENUM_vallist(e);
-    for (; i > 0; i--, evl = EVAL_LIST_next(evl)) {
+    EnumValueList const* evl = e->getValList();
+    for (; i > 0; i--, evl = EVAL_next(evl)) {
         ASSERT0(evl);
     }
 
     ASSERT0(evl);
-    pushv(EVAL_LIST_val(evl));
+    pushv(EVAL_val(evl));
     return true;
 }
 
@@ -83,16 +83,16 @@ static bool compute_sizeof(Tree * t)
         ASSERT0(dcl && DECL_dt(dcl) == DCL_TYPE_NAME);
         ASSERT0(DECL_spec(dcl));
 
-        if (is_user_type_ref(dcl)) {
-            dcl = factor_user_type(dcl);
+        if (dcl->is_user_type_ref()) {
+            dcl = makeupAndExpandUserType(dcl);
             TREE_type_name(p) = dcl;
         }
 
-        ULONG sz = get_decl_size(dcl);
-        //if (is_complex_type(abs_decl) || is_user_type_ref(dcl)) {
+        ULONG sz = dcl->get_decl_size();
+        //if (is_complex_type(abs_decl) || dcl->is_user_type_ref()) {
         //    sz = getComplexTypeSize(dcl);
         //} else {
-        //    sz = getSimplyTypeSize(type_spec);
+        //    sz = getSimplyTypeSize(attr);
         //}
 
         if (sz != 0) {
@@ -202,11 +202,11 @@ static bool compute_binary_op(Tree * t)
     case TR_SHIFT:   // >> <<
         switch (TREE_token(t)) {
         case T_LSHIFT:
-            l = (l >> r);
+            l = (l << r);
             pushv(l);
             break;
         case T_RSHIFT:
-            l = (l << r);
+            l = (l >> r);
             pushv(l);
             break;
         default: UNREACHABLE();
@@ -291,10 +291,9 @@ static bool compute_conditional_exp(IN Tree * t)
         break;
     case TR_SIZEOF:
         return compute_sizeof(t);
-    case TR_ID:
-        {
+    case TR_ID: {
             Decl * dcl = nullptr;
-            if (!is_decl_exist_in_outer_scope(SYM_name(TREE_id(t)), &dcl)) {
+            if (!isDeclExistInOuterScope(SYM_name(TREE_id(t)), &dcl)) {
                 err(TREE_lineno(t), "'%s' undefined");
                 return false;
             }
@@ -303,19 +302,20 @@ static bool compute_conditional_exp(IN Tree * t)
 
             //TODO: infer the constant value of ID.
             //pushv(get_decl_size(dcl));
+        break;
+    }
+    case TR_COND: {
+        if (!compute_conditional_exp(TREE_det(t))) { return false; }
+        LONGLONG v = popv();
+        if (v != 0) {
+            return compute_conditional_exp(TREE_true_part(t));
+        } else {
+            return compute_conditional_exp(TREE_false_part(t));
         }
         break;
-    case TR_COND:
-        {
-            if (!compute_conditional_exp(TREE_det(t))) { return false; }
-            LONGLONG v = popv();
-            if (v != 0) {
-                return compute_conditional_exp(TREE_true_part(t));
-            } else {
-                return compute_conditional_exp(TREE_false_part(t));
-            }
-        }
-        break;
+    }
+    case TR_CVT:
+        return compute_conditional_exp(TREE_cvt_exp(t));
     default:
         err(TREE_lineno(t), "expected constant expression");
         return false;

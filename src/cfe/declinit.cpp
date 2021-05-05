@@ -37,8 +37,8 @@ static INT processArrayInitRecur(Decl const* dcl, Tree * initval, UINT curdim,
                                  OUT Tree ** stmts)
 {
     if (TREE_type(initval) == TR_INITVAL_SCOPE) {
-        Decl const* dummy_elemdcl = get_array_elem_decl(dcl);
-        if (is_aggr(dummy_elemdcl)) {
+        Decl const* dummy_elemdcl = dcl->get_array_elem_decl();
+        if (dummy_elemdcl->is_aggr()) {
             Tree * inittree = nullptr;
             //If element of array is Aggregate type.
             processAggrInit(dummy_elemdcl, initval, &inittree);
@@ -50,7 +50,7 @@ static INT processArrayInitRecur(Decl const* dcl, Tree * initval, UINT curdim,
             return ST_SUCC;
         }
 
-        if (is_array(dummy_elemdcl)) {
+        if (dummy_elemdcl->is_array()) {
             curdim++;
             UINT pos_in_curdim = 0;
             for (Tree * t = TREE_initval_scope(initval);
@@ -74,11 +74,11 @@ static INT processArrayInitRecur(Decl const* dcl, Tree * initval, UINT curdim,
 }
 
 
-//dcl: the declaration of array.
+//dcl: the declaration of array, it may be modifed.
 //initval: the initial-value tree to array.
 //stmts: records generated tree to perform initialization of array if it is
 //       not NULL, otherwise append the genereted stmt after placeholder.
-static INT processArrayInit(Decl const* dcl, Tree * initval, OUT Tree ** stmts)
+static INT processArrayInit(Decl * dcl, Tree * initval, OUT Tree ** stmts)
 {
     ASSERT0(initval && TREE_type(initval) == TR_INITVAL_SCOPE);
 
@@ -88,7 +88,7 @@ static INT processArrayInit(Decl const* dcl, Tree * initval, OUT Tree ** stmts)
     xcom::Vector<UINT> dimvec;
     //TBD:Could 'dcl' be declared as zero dimension array? May be it is true
     //in dynamic-type language.
-    for (INT i = get_array_dim(dcl) - 1; i >= 0; i--) {
+    for (INT i = dcl->getArrayDim() - 1; i >= 0; i--) {
         dimvec.set(i, 0);
     }
     UINT pos_in_curdim = 0;
@@ -117,13 +117,13 @@ static INT processArrayInit(Decl const* dcl, Tree * initval, OUT Tree ** stmts)
 
 static Tree * canonArrayInitVal(Decl const* dcl, Tree * initval)
 {
-    ASSERT0(is_array(dcl) && DECL_dt(dcl) == DCL_DECLARATION);
+    ASSERT0(dcl->is_array() && DECL_dt(dcl) == DCL_DECLARATION);
     if (TREE_type(initval) == TR_INITVAL_SCOPE) {
         return initval;
     }
 
-    TypeSpec const* ty = get_decl_spec(dcl);
-    if (IS_TYPE(ty, T_SPEC_CHAR)) {
+    TypeAttr const* ty = dcl->getTypeAttr();
+    if (ty->is_char()) {
         //In C lang, char array can be initialied by string.
         //e.g: char arr[] = "hello";
         ASSERT0(TREE_type(initval) == TR_STRING);
@@ -149,13 +149,13 @@ static Tree * canonArrayInitVal(Decl const* dcl, Tree * initval)
 
 //Note the function does not check whether initval scope matchs the
 //declaration. It should be diagnosticed before.
-static INT processArrayInit(Decl const* dcl, OUT Tree ** stmts)
+static INT processArrayInit(Decl * dcl, OUT Tree ** stmts)
 {
-    ASSERT0(is_array(dcl));
-    Tree * initval = get_decl_init_tree(dcl);
+    ASSERT0(dcl->is_array());
+    Tree * initval = dcl->get_decl_init_tree();
     Tree * new_initval = canonArrayInitVal(dcl, initval);
     if (new_initval != initval) {
-        set_decl_init_tree(dcl, new_initval);
+        dcl->set_decl_init_tree(new_initval);
     }
     return processArrayInit(dcl, new_initval, stmts);
 }
@@ -179,20 +179,21 @@ static void replaceBaseWith(Tree const* newbase, Tree * stmts)
 }
 
 
-static INT processAggrInitRecur(Decl const* dcl, Decl const* flddecl,
+//dcl: it may be modifed
+static INT processAggrInitRecur(Decl const* dcl, Decl * flddecl,
                                 Tree * initval, UINT curdim,
                                 xcom::Vector<UINT> & fldvec,
                                 OUT Tree ** stmts)
 {
     if (TREE_type(initval) == TR_INITVAL_SCOPE) {
-        if (is_aggr(flddecl)) {
+        if (flddecl->is_aggr()) {
             curdim++;
             UINT pos_in_curdim = 0;
             for (Tree * t = TREE_initval_scope(initval);
                  t != nullptr; t = TREE_nsib(t), pos_in_curdim++) {
                 Decl * flddecl_of_fld = nullptr;
-                get_aggr_field(get_aggr_spec(flddecl), (INT)pos_in_curdim,
-                               &flddecl_of_fld);
+                get_aggr_field(flddecl->getTypeAttr(), (INT)pos_in_curdim,
+                               &flddecl_of_fld, nullptr);
                 ASSERT0(flddecl_of_fld);
                 fldvec.set(curdim, pos_in_curdim);
                 processAggrInitRecur(dcl, flddecl_of_fld, t,
@@ -201,7 +202,7 @@ static INT processAggrInitRecur(Decl const* dcl, Decl const* flddecl,
             return ST_SUCC;
         }
 
-        if (is_array(flddecl)) {
+        if (flddecl->is_array()) {
             Tree * inittree = nullptr;
             if (ST_SUCC != processArrayInit(flddecl, initval, &inittree)) {
                 return ST_ERR;
@@ -247,7 +248,7 @@ static INT processAggrInit(Decl const* dcl, Tree * initval,
     for (Tree * t = TREE_initval_scope(initval);
          t != nullptr; t = TREE_nsib(t), pos_in_curdim++) {
         Decl * flddecl = nullptr;
-        get_aggr_field(get_aggr_spec(dcl), pos_in_curdim, &flddecl);
+        get_aggr_field(dcl->getTypeAttr(), pos_in_curdim, &flddecl, nullptr);
         ASSERT0(flddecl);
         fieldvec.clean();
         fieldvec.set(curdim, pos_in_curdim);
@@ -271,8 +272,8 @@ static INT processAggrInit(Decl const* dcl, Tree * initval,
 
 static INT processAggrInit(Decl const* dcl, OUT Tree ** stmts)
 {
-    ASSERT0(is_struct(dcl) || is_union(dcl));
-    Tree * initval = get_decl_init_tree(dcl);
+    ASSERT0(dcl->is_aggr());
+    Tree * initval = dcl->get_decl_init_tree();
     return processAggrInit(dcl, initval, stmts);
 }
 
@@ -281,7 +282,7 @@ static INT processAggrInit(Decl const* dcl, OUT Tree ** stmts)
 //genereted stmt after placeholder.
 static INT processScalarInit(Decl const* dcl, OUT Tree ** stmts)
 {
-    Tree * initval = get_decl_init_tree(dcl);
+    Tree * initval = dcl->get_decl_init_tree();
     Tree * assign = buildAssign(dcl, initval);
     TREE_lineno(assign) = TREE_lineno(initval);
     if (stmts != nullptr) {
@@ -297,19 +298,19 @@ static INT processScalarInit(Decl const* dcl, OUT Tree ** stmts)
 }
 
 
-static INT processDeclList(Decl const* decl, OUT Tree ** stmts)
+static INT processDeclList(Decl * decl, OUT Tree ** stmts)
 {
-    for (Decl const* dcl = decl; dcl != nullptr; dcl = DECL_next(dcl)) {
-        if (!is_initialized(dcl)) { continue; }
-        if (is_pointer(dcl)) {
+    for (Decl * dcl = decl; dcl != nullptr; dcl = DECL_next(dcl)) {
+        if (!dcl->is_initialized()) { continue; }
+        if (dcl->is_pointer()) {
             if (ST_SUCC != processScalarInit(dcl, stmts)) { return ST_ERR; }
             continue;
         }
-        if (is_array(dcl)) {
+        if (dcl->is_array()) {
             if (ST_SUCC != processArrayInit(dcl, stmts)) { return ST_ERR; }
             continue;
         }
-        if (is_struct(dcl) || is_union(dcl)) {
+        if (dcl->is_aggr()) {
             if (ST_SUCC != processAggrInit(dcl, stmts)) { return ST_ERR; }
             continue;
         }
@@ -358,7 +359,7 @@ static INT processStmt(Tree ** head, bool is_collect_stmt)
         case TR_FOR: {
             Tree * stmts = nullptr;
             if (TREE_for_scope(t) != nullptr) {
-                Decl const* decllist = SCOPE_decl_list(TREE_for_scope(t));
+                Decl * decllist = TREE_for_scope(t)->getDeclList();
                 if (ST_SUCC != processDeclList(decllist, is_collect_stmt ?
                                                          &stmts : nullptr)) {
                     return ST_ERR;
@@ -391,7 +392,7 @@ static INT processStmt(Tree ** head, bool is_collect_stmt)
 //                 otherwise these stmts will be append to placeholder.
 static INT processScope(Scope * scope, bool is_collect_stmt)
 {
-    Decl * decl_list = SCOPE_decl_list(scope);
+    Decl * decl_list = scope->getDeclList();
     Tree * stmts = nullptr;
     if (ST_SUCC != processDeclList(decl_list, is_collect_stmt ?
                                               &stmts : nullptr)) {
@@ -432,7 +433,7 @@ INT processDeclInit()
 {
     if (get_global_scope() == nullptr) { return ST_SUCC; }
 
-    for (Decl * dcl = SCOPE_decl_list(get_global_scope());
+    for (Decl * dcl = get_global_scope()->getDeclList();
          dcl != nullptr; dcl = DECL_next(dcl)) {
         if (DECL_is_fun_def(dcl)) {
             if (ST_SUCC != processFuncDef(dcl)) { return ST_ERR; }

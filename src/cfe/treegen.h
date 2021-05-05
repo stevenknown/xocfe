@@ -76,9 +76,13 @@ Tree * gen_typename(Decl * decl);
 Tree * gen_cvt(Decl const* tgt_type, Tree * src);
 
 Tree * id();
-bool is_in_first_set_of_exp_list(TOKEN tok);
-bool is_user_type_exist_in_outer_scope(CHAR * cl, OUT Decl ** ut);
-bool is_in_first_set_of_declarator();
+Tree * id(Sym const* name, TOKEN tok);
+bool inFirstSetOfDeclarator();
+bool inFirstSetOfExp(TOKEN tok);
+bool isUserTypeExistInOuterScope(CHAR const* cl, OUT Decl ** ut);
+
+//Return true if parsing have to terminate.
+bool isTerminateToken();
 
 Tree * exp();
 Tree * exp_list();

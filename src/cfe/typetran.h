@@ -31,7 +31,7 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 bool isConsistentWithPointer(Tree * t);
 void initTypeTran();
 INT process_init_by_extra_val(Decl * decl, Tree ** init);
-INT process_init(Decl * decl);
+INT process_init_of_declaration(Decl * decl);
 INT TypeTransform();
 
 #endif

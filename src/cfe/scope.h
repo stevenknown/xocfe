@@ -28,7 +28,7 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef __SCOPE_H__
 #define __SCOPE_H__
 
-class EnumList;
+class EnumTab;
 class UserTypeList;
 class Struct;
 class Union;
@@ -39,7 +39,7 @@ class SymList {
 public:
     SymList * next;
     SymList * prev;
-    Sym * sym;
+    Sym const* sym;
 };
 #define SYM_LIST_sym(syml) (syml)->sym
 #define SYM_LIST_next(syml) (syml)->next
@@ -48,7 +48,7 @@ public:
 
 //Scope
 // |
-// |--EnumList
+// |--EnumTab
 // |--SYM_LIST
 // |--TYPE_LIST
 // |--SUB_SCOPE
@@ -66,7 +66,8 @@ public:
 #define SCOPE_sub(sc) ((sc)->sub) //sub scope
 #define SCOPE_level(sc) ((sc)->level)
 #define SCOPE_enum_list(sc) ((sc)->enum_list)
-#define SCOPE_sym_tab_list(sc) ((sc)->sym_tab_list)
+#define SCOPE_enum_tab(sc) ((sc)->enum_tab)
+#define SCOPE_sym_list(sc) ((sc)->sym_tab_list)
 #define SCOPE_user_type_list(sc) ((sc)->utl_list)
 #define SCOPE_label_list(sc) ((sc)->li_list)
 #define SCOPE_ref_label_list(sc) ((sc)->lref_list)
@@ -75,6 +76,7 @@ public:
 #define SCOPE_union_list(sc) ((sc)->union_list)
 #define SCOPE_stmt_list(sc) ((sc)->stmt_list)
 class Scope {
+    COPY_CONSTRUCTOR(Scope);
 public:
     UINT is_tmp_scope:1;
     UINT id:31; //unique id
@@ -83,7 +85,7 @@ public:
     Scope * next;
     Scope * prev;
     Scope * sub;
-    EnumList * enum_list; //enum-type list
+    EnumTab * enum_tab; //enum-type tab
     UserTypeList * utl_list; //record type defined with 'typedef'
     Decl * decl_list; //record identifier declaration info
     SymList * sym_tab_list; //record identifier name
@@ -94,27 +96,37 @@ public:
     List<Union*> union_list; //union list of current scope
 
 public:
-    void init(UINT & sc)
-    {
-        li_list.init();
-        lref_list.init();
-        struct_list.init();
-        union_list.init();
+    Scope(UINT & sc) { SCOPE_enum_tab(this) = nullptr; init(sc); }
+    ~Scope() { destroy(); }
 
-        SCOPE_id(this) = sc++;
-        SCOPE_level(this) = -1;
-        SCOPE_parent(this) = nullptr;
-        SCOPE_nsibling(this) = nullptr;
-        SCOPE_sub(this)  = nullptr;
-    }
+    void init(UINT & sc);
+    void destroy();
 
-    void destroy()
-    {
-        li_list.destroy();
-        lref_list.destroy();
-        struct_list.destroy();
-        union_list.destroy();
-    }
+    //Return nullptr indicate we haven't found it in 'ut_list', and
+    //append 'ut' to tail of the list as correct, otherwise return
+    //the finded one.
+    Decl * addToUserTypeList(Decl * decl);
+
+    //Be usually used in scope process.
+    //Return nullptr if this function do not find 'sym' in 'sym_list', and
+    //'sym' will be appended into list, otherwise return 'sym'.
+    Sym const* addToSymList(Sym const* sym);
+    Enum * addEnum(Enum * e);
+    void addStruct(Struct * s);
+    void addUnion(Union * u);
+    void addDecl(Decl * decl);
+    void addStmt(Tree * t);
+
+    Tree * getStmtList() const { return SCOPE_stmt_list(this); }
+    SymList * getSymList() const { return SCOPE_sym_list(this); }
+    EnumTab * getEnumTab() const { return SCOPE_enum_tab(this); }
+    Decl * getDeclList() const { return SCOPE_decl_list(this); }
+    List<Struct*> * getStructList() { return &SCOPE_struct_list(this); }
+    List<Union*> * getUnionList() { return &SCOPE_union_list(this); }
+
+    //Return true if enum-value existed in current scope.
+    //idx: the index that indicates the position of pacticular Item in Enum.
+    bool isEnumExist(CHAR const* vname, OUT Enum ** e, OUT INT * idx) const;
 };
 
 
@@ -158,7 +170,4 @@ bool is_lab_used(LabelInfo * li);
 extern Scope * g_cur_scope;
 extern LabelTab g_labtab;
 
-//Export Functions
-Sym * add_to_symtab_list(SymList ** sym_list , Sym * sym);
 #endif
-

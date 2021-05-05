@@ -46,7 +46,7 @@ static bool checkParam(Decl * formalp, Decl * realp)
 static INT checkDeclaration(Decl const* d)
 {
     ASSERT0(DECL_dt(d) == DCL_DECLARATION);
-    Decl const* dclor = get_pure_declarator(d);
+    Decl const* dclor = d->getTraitList();
     ASSERT0(dclor);
     while (dclor != nullptr) {
         if (DECL_dt(dclor) == DCL_FUN) {
@@ -80,18 +80,18 @@ static bool checkCall(Tree * t, TYCtx * cont)
 
     //Return type is the call type.
     //And here constructing return value type.
-    //TypeSpec * ty = DECL_spec(fun_decl);
-    Decl * pure_decl = PURE_DECL(fun_decl);
+    //TypeAttr * ty = DECL_spec(fun_decl);
+    Decl * pure_decl = DECL_trait(fun_decl);
     if (DECL_dt(pure_decl) == DCL_FUN) {
         pure_decl = DECL_next(pure_decl);
     }
 
     //Do legality checking first for the return value type.
     if (pure_decl) {
-        if (is_array(pure_decl)) {
+        if (pure_decl->is_array()) {
             err(TREE_lineno(t), "function cannot returns array");
         }
-        if (is_fun_decl(pure_decl)) {
+        if (pure_decl->is_fun_decl()) {
             err(TREE_lineno(t), "function cannot returns function");
         }
     }
@@ -114,7 +114,7 @@ static bool checkCall(Tree * t, TYCtx * cont)
             real_param = TREE_nsib(real_param);
 
             if (formal_param_decl &&
-                DECL_dt(formal_param_decl) == DCL_VARIABLE) {
+                DECL_dt(formal_param_decl) == DCL_VARIADIC) {
                 ASSERTN(!DECL_next(formal_param_decl),
                        ("DCL_VARIABLE must be last formal-parameter"));
                 formal_param_decl = nullptr;
@@ -171,7 +171,7 @@ bool isConsistentWithPointer(Tree * t)
         return false;
     default: break;
     }
-    if (is_scalar(decl)) {
+    if (decl->is_scalar()) {
         return false;
     }
 
@@ -202,9 +202,9 @@ static bool checkAssign(Tree * t, TYCtx * cont)
 {
     checkTreeList(TREE_lchild(t), cont);
     checkTreeList(TREE_rchild(t), cont);
-    if ((is_pointer(TREE_result_type(TREE_lchild(t))) &&
+    if ((TREE_result_type(TREE_lchild(t))->is_pointer() &&
          !isConsistentWithPointer(TREE_rchild(t))) ||
-        (is_pointer(TREE_result_type(TREE_rchild(t))) &&
+        (TREE_result_type(TREE_rchild(t))->is_pointer() &&
          !isConsistentWithPointer(TREE_lchild(t)))) {
         xcom::StrBuf bufl(64);
         xcom::StrBuf bufr(64);
@@ -242,25 +242,26 @@ static bool checkLda(Tree * t, TYCtx * cont)
 
 static bool checkCvt(Tree * t, TYCtx * cont)
 {
-    bool res = checkTreeList(TREE_cast_exp(t), cont);
-    Decl const* srcty = TREE_result_type(TREE_cast_exp(t));
+    bool res = checkTreeList(TREE_cvt_exp(t), cont);
+    Decl const* srcty = TREE_result_type(TREE_cvt_exp(t));
     Decl const* tgtty = TREE_result_type(t);
     ASSERT0(srcty && tgtty);
-
-    bool src_is_arr = is_array(srcty);
-    bool tgt_is_arr = is_array(tgtty);
-    bool src_is_aggr = is_aggr(srcty);
-    bool tgt_is_aggr = is_aggr(tgtty);
-    bool src_is_sc = is_scalar(srcty);
-    bool tgt_is_sc = is_scalar(tgtty);
-    bool src_is_pt = is_pointer(srcty);
-    bool tgt_is_pt = is_pointer(tgtty);
-    bool src_is_fp = is_fp(srcty);
-    bool tgt_is_fp = is_fp(tgtty);
+    bool src_is_arr = srcty->is_array();
+    bool tgt_is_arr = tgtty->is_array();
+    bool src_is_aggr = srcty->is_aggr();
+    bool tgt_is_aggr = tgtty->is_aggr();
+    bool src_is_sc = srcty->is_scalar();
+    bool tgt_is_sc = tgtty->is_scalar();
+    bool src_is_pt = srcty->isPointer();
+    bool tgt_is_pt = tgtty->isPointer();
+    bool src_is_fp = srcty->is_fp();
+    bool tgt_is_fp = tgtty->is_fp();
     xcom::StrBuf bufsrc(64);
     xcom::StrBuf buftgt(64);
 
-    if ((src_is_arr || src_is_aggr) && (tgt_is_arr || tgt_is_aggr)) {
+    if ((src_is_arr && tgt_is_aggr) ||
+        (src_is_aggr && tgt_is_arr) ||
+        (src_is_arr && tgt_is_arr)) {
         format_declaration(bufsrc, srcty);
         format_declaration(buftgt, tgtty);
         err(TREE_lineno(t),
@@ -291,8 +292,8 @@ static bool checkCvt(Tree * t, TYCtx * cont)
 static void checkDeclInit(Decl const* decl, TYCtx * cont)
 {
     for (Decl const* dcl = decl; dcl != nullptr; dcl = DECL_next(dcl)) {
-        if (!is_initialized(dcl)) { continue; }
-        Tree * inittree = get_decl_init_tree(dcl);
+        if (!dcl->is_initialized()) { continue; }
+        Tree * inittree = dcl->get_decl_init_tree();
         ASSERT0(inittree);
         checkTreeList(inittree, cont);
     }
@@ -344,8 +345,8 @@ bool checkTreeList(Tree * t, TYCtx * cont)
             checkTreeList(TREE_rchild(t), cont);
             break;
         case TR_SCOPE:
-            checkDeclInit(SCOPE_decl_list(TREE_scope(t)), cont);
-            checkTreeList(SCOPE_stmt_list(TREE_scope(t)), cont);
+            checkDeclInit(TREE_scope(t)->getDeclList(), cont);
+            checkTreeList(TREE_scope(t)->getStmtList(), cont);
             break;
         case TR_INITVAL_SCOPE:
             checkInitValScope(t, cont);
@@ -437,15 +438,14 @@ bool checkTreeList(Tree * t, TYCtx * cont)
 INT TypeCheck()
 {
     Scope * s = get_global_scope();
-    Decl * dcl = SCOPE_decl_list(s);
+    Decl * dcl = s->getDeclList();
     INT st = ST_SUCC;
     while (dcl != nullptr) {
         ASSERT0(DECL_decl_scope(dcl) == s);
         checkDeclaration(dcl);
         if (DECL_is_fun_def(dcl)) {
-            checkDeclInit(SCOPE_decl_list(DECL_fun_body(dcl)), nullptr);
-            Tree * stmt = SCOPE_stmt_list(DECL_fun_body(dcl));
-            checkTreeList(stmt, nullptr);
+            checkDeclInit(DECL_fun_body(dcl)->getDeclList(), nullptr);
+            checkTreeList(DECL_fun_body(dcl)->getStmtList(), nullptr);
             if (g_err_msg_list.get_elem_count() > 0) {
                 st = ST_ERR;
                 break;

@@ -111,8 +111,8 @@ void dump_tree(Tree const* t)
         if (TREE_id_decl(t) != nullptr) {
             sbuf.strcat("-- ");
             if (DECL_is_sub_field(TREE_id_decl(t))) {
-                TypeSpec * ty = DECL_base_type_spec(TREE_id_decl(t));
-                format_decl_spec(sbuf, ty, is_pointer(TREE_id_decl(t)));
+                TypeAttr * ty = DECL_base_type_spec(TREE_id_decl(t));
+                format_attr(sbuf, ty, TREE_id_decl(t)->is_pointer());
                 note(g_logmgr, "\n%s(id:%u) base-type:%s",
                      name, TREE_uid(t), sbuf.buf);
             } else {
@@ -350,7 +350,7 @@ void dump_tree(Tree const* t)
 
         g_logmgr->incIndent(dn);
         dump_trees(TREE_cvt_type(t));
-        dump_trees(TREE_cast_exp(t));
+        dump_trees(TREE_cvt_exp(t));
         g_logmgr->decIndent(dn);
         break;
     case TR_TYPE_NAME: //user defined type ord C standard type
@@ -568,7 +568,7 @@ void dump_tree(Tree const* t)
         dump_line(t);
 
         g_logmgr->incIndent(dn);
-        dump_decl(TREE_decl(t));
+        TREE_decl(t)->dump();
         g_logmgr->decIndent(dn);
         break;
     default:
