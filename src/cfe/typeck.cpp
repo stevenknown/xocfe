@@ -49,15 +49,15 @@ static INT checkDeclaration(Decl const* d)
     Decl const* dclor = d->getTraitList();
     ASSERT0(dclor);
     while (dclor != nullptr) {
-        if (DECL_dt(dclor) == DCL_FUN) {
+        if (dclor->is_dt_fun()) {
             Decl * ret_value_type = DECL_next(dclor);
             if (ret_value_type) {
-                if (DECL_dt(ret_value_type) == DCL_FUN) {
+                if (ret_value_type->is_dt_fun()) {
                     err(g_real_line_num,
                         "return value type of function can not be a function");
                     return ST_ERR;
                 }
-                if (DECL_dt(ret_value_type) == DCL_ARRAY) {
+                if (ret_value_type->is_dt_array()) {
                     err(g_real_line_num,
                         "return value type of function can not be an array");
                     return ST_ERR;
@@ -76,7 +76,7 @@ static bool checkCall(Tree * t, TYCtx * cont)
         return false;
     }
     if (!checkTreeList(TREE_fun_exp(t), cont)) { return false; }
-    Decl * fun_decl = TREE_result_type(TREE_fun_exp(t));
+    Decl * fun_decl = TREE_fun_exp(t)->getResultType();
 
     //Return type is the call type.
     //And here constructing return value type.
@@ -89,24 +89,24 @@ static bool checkCall(Tree * t, TYCtx * cont)
     //Do legality checking first for the return value type.
     if (pure_decl) {
         if (pure_decl->is_array()) {
-            err(TREE_lineno(t), "function cannot returns array");
+            err(t->getLineno(), "function cannot returns array");
         }
         if (pure_decl->is_fun_decl()) {
-            err(TREE_lineno(t), "function cannot returns function");
+            err(t->getLineno(), "function cannot returns function");
         }
     }
 
     //Check parameter list
     Decl * formal_param_decl = get_parameter_list(
-        TREE_result_type(TREE_fun_exp(t)));
+        TREE_fun_exp(t)->getResultType());
     Tree * real_param = TREE_para_list(t);
     INT count = 0;
     if (formal_param_decl != nullptr) {
         while (formal_param_decl != nullptr && real_param != nullptr) {
             count++;
-            Decl * pld = TREE_result_type(real_param);
+            Decl * pld = real_param->getResultType();
             if (!checkParam(formal_param_decl, pld)) {
-                err(TREE_lineno(t), "%dth parameter type incompatible", count);
+                err(t->getLineno(), "%dth parameter type incompatible", count);
                 return false;
             }
 
@@ -125,11 +125,11 @@ static bool checkCall(Tree * t, TYCtx * cont)
 
     if (formal_param_decl != nullptr || real_param != nullptr) {
         CHAR * name = nullptr;
-        if (TREE_type(TREE_fun_exp(t)) == TR_ID) {
-            name = SYM_name(TREE_id(TREE_fun_exp(t)));
+        if (TREE_fun_exp(t)->getCode() == TR_ID) {
+            name = SYM_name(TREE_id_name(TREE_fun_exp(t)));
         }
 
-        Decl * p = get_parameter_list(TREE_result_type(TREE_fun_exp(t)));
+        Decl * p = get_parameter_list(TREE_fun_exp(t)->getResultType());
         UINT c = 0;
         while (p != nullptr) {
             c++;
@@ -137,11 +137,11 @@ static bool checkCall(Tree * t, TYCtx * cont)
         }
 
         if (count == 0) {
-            err(TREE_lineno(t),
+            err(t->getLineno(),
                 "function '%s' cannot take any parameter",
                 name != nullptr ? name : "");
         } else {
-            err(TREE_lineno(t),
+            err(t->getLineno(),
                 "function '%s' should take %d parameters",
                 name != nullptr ? name : "", c);
         }
@@ -156,10 +156,10 @@ static bool checkCall(Tree * t, TYCtx * cont)
 bool isConsistentWithPointer(Tree * t)
 {
     ASSERT0(t);
-    Decl * decl = TREE_result_type(t);
+    Decl * decl = t->getResultType();
     ASSERT0(decl);
 
-    switch (TREE_type(t)) {
+    switch (t->getCode()) {
     case TR_IMM:
     case TR_IMMU:
     case TR_IMML:
@@ -183,7 +183,7 @@ bool isConsistentWithPointer(Tree * t)
 static void checkAssignLHS(Tree * t)
 {
     ASSERT0(t);
-    switch (TREE_type(TREE_lchild(t))) {
+    switch (TREE_lchild(t)->getCode()) {
     case TR_ID:
     case TR_DEREF:
     case TR_DMEM:
@@ -191,7 +191,7 @@ static void checkAssignLHS(Tree * t)
     case TR_ARRAY:
         break;
     default:
-        err(TREE_lineno(t),
+        err(t->getLineno(),
             "'%s': the left operand must be left-value",
             TOKEN_INFO_name(get_token_info(TREE_token(t))));
     }
@@ -202,15 +202,15 @@ static bool checkAssign(Tree * t, TYCtx * cont)
 {
     checkTreeList(TREE_lchild(t), cont);
     checkTreeList(TREE_rchild(t), cont);
-    if ((TREE_result_type(TREE_lchild(t))->is_pointer() &&
+    if ((TREE_lchild(t)->getResultType()->is_pointer() &&
          !isConsistentWithPointer(TREE_rchild(t))) ||
-        (TREE_result_type(TREE_rchild(t))->is_pointer() &&
+        (TREE_rchild(t)->getResultType()->is_pointer() &&
          !isConsistentWithPointer(TREE_lchild(t)))) {
         xcom::StrBuf bufl(64);
         xcom::StrBuf bufr(64);
-        format_declaration(bufl, TREE_result_type(TREE_lchild(t)));
-        format_declaration(bufr, TREE_result_type(TREE_rchild(t)));
-        warn(TREE_lineno(t),
+        format_declaration(bufl, TREE_lchild(t)->getResultType(), true);
+        format_declaration(bufr, TREE_rchild(t)->getResultType(), true);
+        warn(t->getLineno(),
              "should not assign '%s' to '%s'", bufr.buf, bufl.buf);
     }
     //Check lhs of assignment.
@@ -222,7 +222,7 @@ static bool checkAssign(Tree * t, TYCtx * cont)
 static bool checkLda(Tree * t, TYCtx * cont)
 {
     bool res = checkTreeList(TREE_lchild(t), cont);
-    switch (TREE_type(TREE_lchild(t))) {
+    switch (TREE_lchild(t)->getCode()) {
     case TR_ID:
     case TR_ARRAY:
     case TR_DEREF:
@@ -233,7 +233,7 @@ static bool checkLda(Tree * t, TYCtx * cont)
     case TR_DEC:
         return true;
     default:
-        err(TREE_lineno(t), "'&' needs l-value");
+        err(t->getLineno(), "'&' needs l-value");
         return false;
     }
     return res;
@@ -243,8 +243,8 @@ static bool checkLda(Tree * t, TYCtx * cont)
 static bool checkCvt(Tree * t, TYCtx * cont)
 {
     bool res = checkTreeList(TREE_cvt_exp(t), cont);
-    Decl const* srcty = TREE_result_type(TREE_cvt_exp(t));
-    Decl const* tgtty = TREE_result_type(t);
+    Decl const* srcty = TREE_cvt_exp(t)->getResultType();
+    Decl const* tgtty = t->getResultType();
     ASSERT0(srcty && tgtty);
     bool src_is_arr = srcty->is_array();
     bool tgt_is_arr = tgtty->is_array();
@@ -262,26 +262,26 @@ static bool checkCvt(Tree * t, TYCtx * cont)
     if ((src_is_arr && tgt_is_aggr) ||
         (src_is_aggr && tgt_is_arr) ||
         (src_is_arr && tgt_is_arr)) {
-        format_declaration(bufsrc, srcty);
-        format_declaration(buftgt, tgtty);
-        err(TREE_lineno(t),
+        format_declaration(bufsrc, srcty, true);
+        format_declaration(buftgt, tgtty, true);
+        err(t->getLineno(),
             "can not convert '%s' to '%s'", bufsrc.buf, buftgt.buf);
         return false;
     }
 
     if (((src_is_arr || src_is_aggr) && tgt_is_sc) ||
         ((tgt_is_arr || tgt_is_aggr) && src_is_sc)) {
-        format_declaration(bufsrc, srcty);
-        format_declaration(buftgt, tgtty);
-        err(TREE_lineno(t),
+        format_declaration(bufsrc, srcty, true);
+        format_declaration(buftgt, tgtty, true);
+        err(t->getLineno(),
             "can not convert '%s' to '%s'", bufsrc.buf, buftgt.buf);
         return false;
     }
 
     if ((src_is_pt && tgt_is_fp) || (tgt_is_pt && src_is_fp)) {
-        format_declaration(bufsrc, srcty);
-        format_declaration(buftgt, tgtty);
-        err(TREE_lineno(t),
+        format_declaration(bufsrc, srcty, true);
+        format_declaration(buftgt, tgtty, true);
+        err(t->getLineno(),
             "can not convert '%s' to '%s'", bufsrc.buf, buftgt.buf);
         return false;
     }
@@ -316,8 +316,8 @@ bool checkTreeList(Tree * t, TYCtx * cont)
     }
 
     for (; t != nullptr; t = TREE_nsib(t)) {
-        g_src_line_num = TREE_lineno(t);
-        switch (TREE_type(t)) {
+        g_src_line_num = t->getLineno();
+        switch (t->getCode()) {
         case TR_ASSIGN:
             checkAssign(t, cont);
             break;
@@ -428,7 +428,7 @@ bool checkTreeList(Tree * t, TYCtx * cont)
         case TR_PREP:
         case TR_DECL:
             break;
-        default: ASSERTN(0, ("unknown tree type:%d", TREE_type(t)));
+        default: ASSERTN(0, ("unknown tree type:%d", t->getCode()));
         }
     }
     return true;
@@ -438,20 +438,24 @@ bool checkTreeList(Tree * t, TYCtx * cont)
 INT TypeCheck()
 {
     Scope * s = get_global_scope();
-    Decl * dcl = s->getDeclList();
-    INT st = ST_SUCC;
-    while (dcl != nullptr) {
-        ASSERT0(DECL_decl_scope(dcl) == s);
+    if (s == nullptr) { return ST_SUCC; }
+
+    for (Decl * dcl = s->getDeclList(); dcl != nullptr; dcl = DECL_next(dcl)) {
+        ASSERT0(dcl->getDeclScope() == s);
         checkDeclaration(dcl);
-        if (DECL_is_fun_def(dcl)) {
-            checkDeclInit(DECL_fun_body(dcl)->getDeclList(), nullptr);
-            checkTreeList(DECL_fun_body(dcl)->getStmtList(), nullptr);
-            if (g_err_msg_list.get_elem_count() > 0) {
-                st = ST_ERR;
-                break;
+        if (dcl->is_fun_def()) {
+            checkDeclInit(dcl->getFunBody()->getDeclList(), nullptr);
+            checkTreeList(dcl->getFunBody()->getStmtList(), nullptr);
+            if (g_err_msg_list.has_msg()) {
+                return ST_ERR;
             }
         }
-        dcl = DECL_next(dcl);
     }
-    return st;
+
+    checkTreeList(s->getStmtList(), nullptr);
+    if (g_err_msg_list.has_msg()) {
+        return ST_ERR;
+    }
+
+    return ST_SUCC;
 }

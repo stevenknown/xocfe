@@ -28,6 +28,7 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef __DECLINIT_H__
 #define __DECLINIT_H__
 
+//Infer type to tree nodes.
 INT processDeclInit();
 
 #endif

@@ -26,32 +26,54 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 @*/
-#ifndef _REGION_DEPS_H_
-#define _REGION_DEPS_H_
 
-//_USE_GCC_ will be defined if host C++ compiler is gcc.
-#ifdef _USE_GCC_
-//Suppress gcc warning about array boundary checking. The accessing to
-//IR's padding operand violates the checking.
-#pragma GCC diagnostic ignored "-Warray-bounds"
-#endif
+#ifndef __TREECANON_H__
+#define __TREECANON_H__
 
-#include "data_type.h"
-#include "const.h"
-//Middle level included files
-#include "dbg.h"
-#include "var.h"
-#include "md.h"
-#include "pass.h"
-#include "ai.h"
-#include "du.h"
-#include "ir.h"
-#include "ir_helper.h"
-#include "ir_bb.h"
-#include "loop.h"
-#include "pass_mgr.h"
-#include "attachinfo_mgr.h"
-#include "region_mgr.h"
-#include "analysis_instr.h"
-#include "region.h"
+#define TCC_change(p) ((p)->m_change)
+
+//This class represents the context informatin during tree canonicalization.
+class TreeCanonCtx {
+public:
+    bool m_change;
+
+public:
+    TreeCanonCtx() { clean(); }
+
+    void clean() { TCC_change(this) = false; }
+
+    //Unify informations which propagated bottom up
+    //during processing tree.
+    void unionInfoBottomUp(TreeCanonCtx const& src)
+    { TCC_change(this) |= TCC_change(&src); }    
+};
+
+
+//This class represents tree canonicalization.
+class TreeCanon {
+    COPY_CONSTRUCTOR(TreeCanon);
+
+    //Return original tree if there is no change, or new tree.
+    bool handleParam(Decl * formalp, Decl * realp);
+    Tree * handleAssign(Tree * t, TreeCanonCtx * ctx);
+    Tree * handleLda(Tree * t, TreeCanonCtx * ctx);
+    Tree * handleCvt(Tree * t, TreeCanonCtx * ctx);
+    Tree * handleCall(Tree * t, TreeCanonCtx * ctx);
+    Tree * handleTree(Tree * t, TreeCanonCtx * ctx);
+    Tree * handleId(Tree * t, TreeCanonCtx * ctx);
+    Tree * handleString(Tree * t, TreeCanonCtx * ctx);
+    Tree * handleAggrAccess(Tree * t, TreeCanonCtx * ctx);
+    Tree * handleArray(Tree * t, TreeCanonCtx * ctx);
+
+public:
+    TreeCanon() {}
+    ~TreeCanon() {}
+
+    //Return true if there is no error occur during handling tree list.
+    Tree * handleTreeList(Tree * tl, TreeCanonCtx * ctx);
+};
+
+
+INT TreeCanonicalize();
+
 #endif

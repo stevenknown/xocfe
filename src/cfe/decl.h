@@ -85,7 +85,8 @@ public:
     //idx: index in enum 'e' constant list, start at 0.
     bool isEnumValExist(CHAR const* vname, OUT INT * idx) const;
 
-    //Retrieve constant value of Enum Iterm and Index in Enum List by given name.
+    //Retrieve constant value of Enum Iterm and Index in Enum List
+    //by given name.
     //idx: index in enum 'e' constant list, start at 0.
     bool isEnumValExistAndEvalValue(CHAR const* vname,
                                     OUT INT * eval, OUT INT * idx) const;
@@ -120,6 +121,7 @@ public:
 
 
 //Aggregation
+#define AGGR_id(s) ((s)->m_id)
 #define AGGR_decl_list(s) ((s)->m_decl_list)
 #define AGGR_is_complete(s) ((s)->m_is_aggr_complete)
 #define AGGR_tag(s) ((s)->m_tag)
@@ -129,44 +131,39 @@ public:
 #define AGGR_scope(s) ((s)->m_scope)
 class Aggr {
 public:
-    bool m_is_aggr_complete;
-    Decl * m_decl_list;
-    xoc::Sym const* m_tag;
+    UINT m_id:31;
+    UINT m_is_aggr_complete:1;
     UINT m_align; //alignment that whole structure have to align.
     UINT m_field_align; //alignment that each fields in structure have to align.
                       //0 indicates there is requirement to field align.
     UINT m_pack_align; //User declared field alignment.
+    Decl * m_decl_list;
+    xoc::Sym const* m_tag;
     Scope * m_scope;
 
 public:
+    //Compute new alignment size according to given 'size' and 'max_field_size'.
+    UINT computeAlignedSize(UINT size, UINT max_field_size) const;
+
     Decl * getDeclList() const { return AGGR_decl_list(this); }
     xoc::Sym const* getTag() const { return AGGR_tag(this); }
     UINT getAlign() const { return AGGR_align(this); }
     UINT getPackAlign() const { return AGGR_pack_align(this); }
     Scope * getScope() const { return AGGR_scope(this); }
 
+    UINT id() const { return AGGR_id(this); }
     bool is_equal(Aggr const& src) const;
     bool is_complete() const { return AGGR_is_complete(this); }
 };
 
 
 //Struct
-#define STRUCT_decl_list(s) AGGR_decl_list(s)
-#define STRUCT_tag(s) AGGR_tag(s)
-#define STRUCT_is_complete(s) AGGR_is_complete(s)
-#define STRUCT_align(s) AGGR_align(s)
-#define STRUCT_scope(s) AGGR_scope(s)
 class Struct : public Aggr {
 public:
 };
 
 
 //Union
-#define UNION_decl_list(s) AGGR_decl_list(s)
-#define UNION_tag(s) AGGR_tag(s)
-#define UNION_is_complete(s) AGGR_is_complete(s)
-#define UNION_align(s) AGGR_align(s)
-#define UNION_scope(s) AGGR_scope(s)
 class Union : public Aggr {
 public:
 };
@@ -214,13 +211,15 @@ public:
 
 #define IS_TYPE(des,T) HAVE_FLAG((des), T)
 
+typedef ULONG DesSet;
+
 //This class represents memory location modifier, basic type, and user defined
 //type, such as: const, volatile, void, char, short, int, long, longlong,
 //float, double, bool, signed, unsigned, struct, union, enum-specifier,
 //typedef-name, auto, register, static, extern, typedef.
 class TypeAttr {
 public:
-    ULONG m_descriptor; //records the attributes.
+    DesSet m_descriptor; //records the attributes.
     union {
         void * anony; //records an anonymous pointer that is used internally.
         Decl * m_user_type; //record user defined type.
@@ -248,6 +247,8 @@ public:
             m_sub_field[i] = ty.m_sub_field[i];
         }
     }
+    static UINT computeStructTypeSize(Aggr const* s);
+    static UINT computeUnionTypeSize(Aggr const* s);
     static UINT computeScalarTypeBitSize(UINT des);
 
     void dump() const;
@@ -265,6 +266,11 @@ public:
     Aggr * getAggrType() const { return TYPE_aggr_type(this); }
     Decl * getUserType() const { return TYPE_user_type(this); }
     CHAR const* getAggrTypeName() const;
+    DesSet getDes() const { return TYPE_des(this); }
+
+    //If current type-attr is a user-defined type, return the real type-spec.
+    //Real type-spec could be obtained by expanding user-type.
+    TypeAttr * getPureTypeAttr();
 
     bool is_const() const { return HAVE_FLAG(TYPE_des(this), T_QUA_CONST); }
     bool is_volatile() const
@@ -274,6 +280,7 @@ public:
     bool is_aggr() const { return is_struct() || is_union(); }
     bool is_struct() const { return HAVE_FLAG(TYPE_des(this), T_SPEC_STRUCT); }
     bool is_union() const { return HAVE_FLAG(TYPE_des(this), T_SPEC_UNION); }
+    bool is_auto() const { return HAVE_FLAG(TYPE_des(this), T_STOR_AUTO); }
     bool is_reg() const { return HAVE_FLAG(TYPE_des(this), T_STOR_REG); }
     bool is_static() const { return HAVE_FLAG(TYPE_des(this), T_STOR_STATIC); }
     bool is_extern() const { return HAVE_FLAG(TYPE_des(this), T_STOR_EXTERN); }
@@ -320,6 +327,12 @@ public:
         }
         return true;
     }
+
+    //Return true if aggregation definition is complete.
+    bool isAggrComplete() const;
+    bool isAggrExpanded() const;
+    bool isStructExpanded() const;
+    bool isUnionExpanded() const;
 
     static bool isSimpleType(INT des)
     {
@@ -444,57 +457,55 @@ public:
 //    |->DCL_DECLARATOR | DCL_ABS_DECLARATOR
 //        |->DCL_ID(optional)->DCL_FUN->DCL_POINTER->...
 
-#ifdef _DEBUG_
-#define DECL_id(d) (d)->uid
-#endif
+#define DECL_id(d) ((d)->m_id)
 //ONLY used in DCL_DECLARATION
-#define DECL_is_formal_para(d) (d)->is_formal_para
-#define DECL_is_anony_aggr(d) (d)->is_anony_aggregate
-#define DECL_dt(d) (d)->decl_type
-#define DECL_next(d) (d)->next
-#define DECL_prev(d) (d)->prev
-#define DECL_is_paren(d) (d)->is_paren
-#define DECL_is_bit_field(d) (d)->is_bit_field
-#define DECL_is_sub_field(d) (d)->is_sub_field
-#define DECL_is_fun_def(d) (d)->is_fun_def //ONLY used in DCL_DECLARATION
-#define DECL_is_init(d) (d)->is_init //ONLY used in DCL_DECLARATOR
-#define DECL_fieldno(d) (d)->fieldno
-#define DECL_align(d) (d)->align
-#define DECL_base_type_spec(d) (d)->base_type_spec
+#define DECL_is_formal_param(d) ((d)->m_is_formal_param)
+#define DECL_is_anony_aggr(d) ((d)->m_is_anony_aggregate)
+#define DECL_dt(d) ((d)->decl_type)
+#define DECL_next(d) ((d)->next)
+#define DECL_prev(d) ((d)->prev)
+#define DECL_is_paren(d) ((d)->m_is_paren)
+#define DECL_is_bit_field(d) ((d)->m_is_bit_field)
+#define DECL_is_sub_field(d) ((d)->m_is_sub_field)
+#define DECL_is_fun_def(d) ((d)->m_is_fun_def) //ONLY used in DCL_DECLARATION
+#define DECL_is_init(d) ((d)->m_is_init) //ONLY used in DCL_DECLARATOR
+#define DECL_fieldno(d) ((d)->fieldno)
+#define DECL_align(d) ((d)->align)
+#define DECL_base_type_spec(d) ((d)->base_type_spec)
 
 //If current 'decl' is DCL_DECLARATION, it must include 'type attribute' and
 //'declarator'. Because one type-attribute could decorate multiple declarators,
-//there is a list of declarators, namely, 'declarator_list'.
+//there is a list of declarators actually, namely, 'declarator_list'.
 //Type attribute includes type-specifier, type-qualifier, storage-specifier.
 //Type Specifier describes the first-class type of C such as int, char,
 //struct/union, etc.
-//Declarator-list records and describes the compound type, such as identifier,
-//pointer, array, function, variadic, etc.
-#define DECL_spec(d) (d)->u0.type_attribute
-#define DECL_decl_list(d) (d)->u0.declarator_list
-#define DECL_decl_scope(d) (d)->u0.scope
+//Declarator-list records and describes the compound type, which is consist of
+//identifier, pointer, array, function, variadic, etc.
+#define DECL_spec(d) ((d)->u0.type_attribute)
+#define DECL_decl_list(d) ((d)->u0.declarator_list)
+#define DECL_decl_scope(d) ((d)->u0.scope)
 
 //If current 'decl' is a function define, the followed member record its body.
-#define DECL_fun_body(d) (d)->u2.fun_body
+#define DECL_fun_body(d) ((d)->u2.fun_body)
 
 //Record the formal parameter position if Decl is a parameter.
-#define DECL_formal_param_pos(d) (d)->u1.formal_param_pos
+#define DECL_formal_param_pos(d) ((d)->u1.formal_param_pos)
 
 //Record qualification of DCL.
 //If current 'decl' is DCL_POINTER or DCL_ID, the
 //followed member record its quanlifier specicfier.
 //qualifier include const, volatile, restrict.
-#define DECL_qua(d) (d)->qualifier
+#define DECL_qua(d) ((d)->qualifier)
 
 //Line number
-#define DECL_lineno(d) (d)->lineno
+#define DECL_lineno(d) ((d)->lineno)
 
 //If current 'decl' is a DCL_DECLARATOR, the followed member
 //record it initializing tree
-#define DECL_init_tree(d) (d)->u2.init
+#define DECL_init_tree(d) ((d)->u2.init)
 
 //If current 'decl' is DCL_ID , the followed member record it
-#define DECL_id_tree(d) (d)->u1.id_tree
+#define DECL_id_tree(d) ((d)->u1.id_tree)
 
 //If current 'decl' is DCL_ARRAY, the followed members record its
 //base and index value/expression, which may be nullptr.
@@ -504,28 +515,28 @@ public:
 //and the actually dimension value will be calculated after parsing array type
 //finished, and compute_array_dim() will be invoked to compute the integer value.
 //Meanwile, DECL_array_dim() is avaiable.
-#define DECL_array_dim(d) (d)->u1.u12.u121.dimval
-#define DECL_array_dim_exp(d) (d)->u1.u12.u121.dimexp
+#define DECL_array_dim(d) ((d)->u1.u12.u121.dimval)
+#define DECL_array_dim_exp(d) ((d)->u1.u12.u121.dimexp)
 
 //If current 'decl' is DCL_FUN, the followed members record its
 //base and parameter list declaration, which may be nullptr
 //#define DECL_fun_base(d) (d)->u1.u13.fbase
-#define DECL_fun_para_list(d) (d)->u1.u13.para_list
+#define DECL_fun_para_list(d) ((d)->u1.u13.para_list)
 
 //Record content if current 'decl' is DCL_DECLARATOR or DCL_ABS_DECLARATOR
-#define DECL_child(d) (d)->child
+#define DECL_child(d) ((d)->child)
 
 //Bit field ONLY used in DCL_DECLARATOR, and record in decl.cpp
 //checking in typeck.cpp
 //It will not be zero if current decl record a bit field
-#define DECL_bit_len(d) (d)->u1.u16.bit_len
-//#define DECL_bit_exp(d) (d)->u1.u16.bit_exp
+#define DECL_bit_len(d) ((d)->u1.u16.bit_len)
+//#define DECL_bit_exp(d) ((d)->u1.u16.bit_exp)
 
 //Record the placeholder in stmt list of scope.
 //The placeholder is used to mark the lexicographical order of declarataion.
 //The order is often used to determine where should to
 //insert initialization code.
-#define  DECL_placeholder(d) (d)->placeholder
+#define  DECL_placeholder(d) ((d)->placeholder)
 
 //'d' must be DECLARATION or TYPE-NAME, get pure declarator list
 //The macro without validation check, plz call
@@ -535,7 +546,7 @@ public:
 //END Decl
 
 //Format Decl to dump
-#define DECL_FMT_INDENT_INTERVAL 4
+#define DECL_FMT_INDENT_INTERVAL 2
 
 //Define type of Decl.
 typedef enum {
@@ -554,21 +565,19 @@ typedef enum {
 
 class Decl {
 public:
-    #ifdef _DEBUG_
-    UINT uid;
-    #endif
     //1 indicates that the Decl enclosed with a pair of '(' ')'.
-    BYTE is_paren:1;
-    BYTE is_bit_field:1; //descripte a bit field.
+    BYTE m_is_paren:1;
+    BYTE m_is_bit_field:1; //descripte a bit field.
 
     //descripte a function's property: 1: definition, 0:declaration.
-    BYTE is_fun_def:1;
-    BYTE is_init:1; //has a initializing expression.
-    BYTE is_sub_field:1; //Decl is a sub field of struct/union.
-    BYTE is_formal_para:1; //Decl is a formal parameter.
-    BYTE is_anony_aggregate:1; //Decl is an anonymous aggregate, which means it
-                               //does NOT have identifier.
+    BYTE m_is_fun_def:1;
+    BYTE m_is_init:1; //has a initializing expression.
+    BYTE m_is_sub_field:1; //Decl is a sub field of struct/union.
+    BYTE m_is_formal_param:1; //Decl is a formal parameter.
+    BYTE m_is_anony_aggregate:1; //Decl is an anonymous aggregate, which
+                                 //means it does NOT have identifier.
 
+    UINT m_id;
     UINT lineno; //record line number of declaration.
 
     //record the num of fields while the base of Decl is Struct/Union.
@@ -638,6 +647,14 @@ public:
     } u2;
 
 public:
+    //Converts current declaration into pointer type from its origin type.
+    //NOTCIE: 'this' cannot be pointer.
+    //This function transform to pointer type by appending a DCL_POINTER.
+    //In order to achieve, insert DCL_POINTER type before
+    //the first array type.
+    //e.g: ID->ARRAY->ARRAY => ID->POINTER->ARRAY->ARRAY
+    void convertToPointerType();
+
     void dump() const;
     void dump(StrBuf & buf) const;
 
@@ -645,16 +662,17 @@ public:
     Sym const* get_decl_sym() const;
     CHAR const* get_decl_name() const;
     Tree * get_decl_init_tree() const;
+    Decl * getDeclarator() const { return DECL_decl_list(this); }
     Decl const* get_return_type() const;
     Decl const* get_decl_id_tree() const;
 
-    //Pick out the pure declarator specification list
+    //Pick out the trait declarator specification list
     //    e.g:
     //        int * a [10];
-    //        the pure declarator list is :  a->[10]->*
+    //        the trait list is :  a->[10]->*
     //
     //        int (*) [10];
-    //        the pure declarator list is :  *->[10]
+    //        the trait list is :  *->[10]
     Decl const* getTraitList() const;
 
     //Compute byte size to complex type.
@@ -796,6 +814,14 @@ public:
     //                 |->a->[10]->*
     Decl const* get_declarator() const;
 
+    //Get the function body scope.
+    Scope * getFunBody() const { return DECL_fun_body(this); }
+
+    //Return the scope that current declaration is resided in.
+    Scope * getDeclScope() const { return DECL_decl_scope(this); }
+    UINT getLineno() const { return DECL_lineno(this); }
+
+    UINT id() const { return DECL_id(this); }
     bool is_dt_array() const { return get_decl_type() == DCL_ARRAY; }
     bool is_dt_pointer() const { return get_decl_type() == DCL_POINTER; }
     bool is_dt_fun() const { return get_decl_type() == DCL_FUN; }
@@ -931,8 +957,6 @@ public:
         return is_scalar() && getTypeAttr()->is_integer();
     }
 
-    bool isPointer() const { return is_pointer() || is_fun_return_pointer(); }
-
     //What is 'complex type'? Non-pointer and non-array type.
     //e.g: int * a;
     //     int a[];
@@ -941,7 +965,7 @@ public:
     bool is_array() const;
     bool is_declaration() const;
     bool is_initialized() const;
-    bool isPointerPointToArray() const;
+    bool is_fun_def() const { return DECL_is_fun_def(this); }
     bool is_fun_decl() const;
     bool is_fun_return_void() const;
     bool is_fun_return_pointer() const;    
@@ -949,20 +973,28 @@ public:
     bool is_local_variable() const;
     bool is_global_variable() const;
     bool is_anony_aggr() const { return DECL_is_anony_aggr(this); }
+    //Return true if current declaration/type-name indicates a reference of
+    //function type, except function definition.
+    bool isFunTypeRef() const
+    { return is_fun_pointer() || is_fun_decl() || is_fun_def(); }
+    bool isPointerPointToArray() const;
+    bool isPointer() const { return is_pointer() || is_fun_return_pointer(); }
+    bool is_formal_param() const
+    {
+        ASSERT0(is_dt_declaration());
+        return DECL_is_formal_param(this);
+    }
     static bool is_decl_equal(Decl const* d1, Decl const* d2);
+
+    //Note VOID type can not be regarded as pointer because it does not have
+    //base-pointee-type.
+    bool regardAsPointer() const { return isPointer() || isFunTypeRef(); }
 
     void set_decl_init_tree(Tree * initval);
 };
 
-//Converts 'decl' into pointer type from its origin type.
-//NOTCIE: 'decl' cannot be pointer.
-//
-//'decl': a declarator, not a pointer type.
-//'is_append': transform to pointer type by appending a DCL_POINTER.
-//    In order to achieve, insert DCL_POINTER type before
-//    the first array type.
-//    e.g: ID->ARRAY->ARRAY => ID->POINTER->ARRAY->ARRAY.
-Decl * convertToPointerType(Decl * decl, bool is_append);
+//The function generate type-name, and convert it to pointer type.
+Decl * convertToPointerTypeName(Decl const* decl);
 
 //Duplicate src and generate new type-name.
 Decl * dupTypeName(Decl const* src);
@@ -980,6 +1012,11 @@ Decl * dupDeclBeginAt(Decl const* header);
 Tree * declaration();
 Tree * declaration_list();
 
+//The function will change 'ut' and expand user-defined type that declared
+//with 'typedef' in C, and remove the 'typedef' attribute from type-specifier.
+//The result type is only consist of the first-class type defined in C.
+//The function will modify 'ut' by replacing type-name with the first-class
+//type.
 Decl * expandUserType(Decl * ut);
 
 //Dump C style type-info
@@ -987,12 +1024,26 @@ INT format_enum_complete(StrBuf & buf, Enum const* e);
 INT format_aggr_complete(StrBuf & buf, TypeAttr const* ty);
 INT format_struct_complete(StrBuf & buf, Struct const* s);
 INT format_union_complete(StrBuf & buf, Union const* u);
-INT format_attr(StrBuf & buf, TypeAttr const* ty, bool is_ptr);
 INT format_parameter_list(StrBuf & buf, Decl const* decl);
 INT format_user_type(StrBuf & buf, TypeAttr const* ty);
 INT format_user_type(StrBuf & buf, Decl const* ut);
 INT format_declarator(StrBuf & buf, TypeAttr const* ty, Decl const* decl);
-INT format_declaration(StrBuf & buf, Decl const* decl);
+
+//To avoid recursive aggregate type, format field
+//only with incomplete aggregate type.
+//e.g:union node;
+//    typedef union node * nodeptr;
+//    struct vector {
+//      nodeptr a[1]; //union node includes struct vector.
+//    };
+//    union node {
+//      struct vector vec; //struct vector includes union node.
+//    }
+//is_complete: true to dump aggregate's declarations list recursively.
+//             Note this might leading to infinite invocation of current
+//             function if meeting recursive struct.
+INT format_attr(StrBuf & buf, TypeAttr const* ty, bool is_complete);
+INT format_declaration(StrBuf & buf, Decl const* decl, bool is_complete);
 
 //Dump Decl-Tree style type-info
 INT format_dcrl(Decl const* decl, INT indent);
@@ -1000,49 +1051,42 @@ INT format_parameter_list(Decl const* decl, INT indent);
 INT format_user_type(TypeAttr const* ty, INT indent);
 INT format_user_type(Decl const* ut, INT indent);
 INT format_declarator(IN Decl const* decl, TypeAttr const* ty, INT indent);
-INT format_declaration(IN Decl const* decl, INT indent);
+INT format_declaration(IN Decl const* decl, INT indent, bool is_complete);
 bool findEnumVal(CHAR const* name, OUT Enum ** e, OUT INT * idx);
 
 bool isDeclExistInOuterScope(CHAR const* name, OUT Decl ** dcl);
 bool isAbsDeclaraotr(Decl const* declarator);
-//Return true if aggregation definition is complete.
-bool isAggrComplete(TypeAttr const* type);
-bool isStructComplete(TypeAttr const* attr);
-bool isUnionComplete(TypeAttr const* attr);
 bool isUniqueDecl(Decl const* decl_list, Decl const* decl);
 bool isUnionExistInOuterScope(Scope * scope, CHAR const* tag,
-                              OUT Union ** s);
+                              bool is_complete, OUT Union ** s);
 //Return true if the union typed declaration have already existed in both
 //current and all of outer scopes.
-bool isUnionExistInOuterScope(Scope * scope, Sym const* tag, OUT Union ** s);
-bool isStructTypeExistInCurScope(CHAR const* tag, OUT Struct ** s);
+bool isUnionExistInOuterScope(Scope * scope, Sym const* tag,
+                              bool is_complete, OUT Union ** s);
+bool isStructTypeExistInCurScope(CHAR const* tag, bool is_complete,
+                                 OUT Struct ** s);
 //Return true if the struct typed declaration have already existed in both
 //current and all of outer scopes.
-bool isAggrExistInOuterScope(Scope * scope, Sym const* tag,
+bool isAggrExistInOuterScope(Scope * scope, Sym const* tag, bool is_complete,
                              TypeAttr const* spec, OUT Aggr ** s);
-bool isAggrExistInOuterScope(Scope * scope, CHAR const* tag,
+bool isAggrExistInOuterScope(Scope * scope, CHAR const* tag, bool is_complete,
                              TypeAttr const* spec, OUT Aggr ** s);
-bool isStructExistInOuterScope(Scope * scope, Sym const* tag, OUT Struct ** s);
-bool isStructExistInOuterScope(Scope * scope, CHAR const* tag, OUT Struct ** s);
+bool isStructExistInOuterScope(Scope * scope, Sym const* tag, bool is_complete,
+                               OUT Struct ** s);
+bool isStructExistInOuterScope(Scope * scope, CHAR const* tag, bool is_complete,
+                               OUT Struct ** s);
 bool isEnumTagExistInOuterScope(CHAR const* cl, OUT Enum ** e);
 
+bool isUserTypeExistInOuterScope(CHAR const* cl, OUT Decl ** ut);
 //Return true if enum-value existed in current scope.
 bool isUserTypeExist(UserTypeList const* ut_list, CHAR const* ut_name,
                      Decl ** ut);
-bool isStructTypeExist(List<Struct*> const* struct_list, Sym const* tag,
-                       OUT Struct ** s);
-bool isStructTypeExist(List<Struct*> const* struct_list, CHAR const* tag,
-                       OUT Struct ** s);
-bool isUnionTypeExist(List<Union*> const* u_list, CHAR const* tag,
-                      OUT Union ** s);
-//Seach Union list accroding to the 'tag' of union-type.
-bool isUnionTypeExist(List<Union*> const* u_list, Sym const* tag,
-                      OUT Union ** u);
-bool isAggrExpanded(TypeAttr const* type);
-bool isUnionExpanded(TypeAttr const* type);
-bool isStructExpanded(TypeAttr const* type);
+bool isAggrTypeExist(List<Aggr*> const* aggrs, Sym const* tag,
+                     bool is_complete, OUT Aggr ** s);
+bool isAggrTypeExist(List<Aggr*> const* aggrs, CHAR const* tag,
+                     bool is_complete, OUT Aggr ** s);
+bool inFirstSetOfDeclaration();
 
-TypeAttr * get_pure_type_spec(TypeAttr * type);
 Decl * get_parameter_list(Decl * dcl, OUT Decl ** fun_dclor = nullptr);
 Decl * get_decl_in_scope(CHAR const* name, Scope const* scope);
 INT get_enum_const_val(Enum const* e, INT idx);

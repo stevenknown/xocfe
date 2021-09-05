@@ -51,3 +51,4 @@ using namespace xoc;
 #include "cell.h"
 #include "treegen.h"
 #include "exectree.h"
+#include "treecanon.h"

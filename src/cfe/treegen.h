@@ -43,11 +43,13 @@ extern bool g_dump_token;
 void initParser();
 void finiParser();
 
+Tree * buildDeref(Tree * base);
 Tree * buildInitvalScope(Tree * exp_list);
 Tree * buildString(Sym const* str);
 Tree * buildInt(HOST_INT val);
 Tree * buildUInt(HOST_UINT val);
 Tree * buildId(Decl const* decl);
+Tree * buildLda(Tree * base);
 Tree * buildAssign(Decl const* decl, Tree * rhs);
 Tree * buildAssign(Tree * lhs, Tree * rhs);
 Tree * buildArray(Decl const* decl, xcom::Vector<UINT> & subexp_vec);
@@ -77,12 +79,14 @@ Tree * gen_cvt(Decl const* tgt_type, Tree * src);
 
 Tree * id();
 Tree * id(Sym const* name, TOKEN tok);
-bool inFirstSetOfDeclarator();
-bool inFirstSetOfExp(TOKEN tok);
-bool isUserTypeExistInOuterScope(CHAR const* cl, OUT Decl ** ut);
 
 //Return true if parsing have to terminate.
 bool isTerminateToken();
+//Return true if 'tok' indicate terminal charactor, otherwise false.
+bool inFirstSetOfExp(TOKEN tok);
+bool isFirstSetOfUnaryExp(TOKEN tok);
+//Find if ID with named 'cl' exists and return the Decl.
+bool isIdExistInOuterScope(CHAR const* cl, OUT Decl ** d);
 
 Tree * exp();
 Tree * exp_list();

@@ -286,6 +286,7 @@ typedef enum _REGFILE {
 #define REG_R1 2
 #define REG_R2 3
 #define REG_R3 4
+#define REG_FP 8 //R7
 #define REG_R12 13 //Scratch Register, the synonym is IP register.
 #define REG_SP 14
 #define REG_RFLAG_REGISTER 97
@@ -521,9 +522,12 @@ typedef enum _OR_TYPE {
     OR_ret4,
     OR_nop,
     OR_asm,
-    OR_spadjust,
+    OR_spadjust_i,
+    OR_spadjust_r,
     OR_label,
     OR_built_in,
+    OR_push,
+    OR_pop,
     OR_LAST,
 } OR_TYPE;
 #define OR_NUM OR_LAST

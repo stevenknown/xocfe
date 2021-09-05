@@ -34,6 +34,7 @@ class Struct;
 class Union;
 class Decl;
 class Enum;
+class Aggr;
 
 class SymList {
 public:
@@ -59,41 +60,41 @@ public:
 #define FUNCTION_SCOPE 1 //Function unit
 #define REGION_SCOPE 2 //Region unit
 
-#define SCOPE_id(sc) ((sc)->id)
-#define SCOPE_is_tmp_sc(sc) ((sc)->is_tmp_scope)
-#define SCOPE_parent(sc) ((sc)->parent) //owner scope, namely parent node
+#define SCOPE_id(sc) ((sc)->m_id)
+#define SCOPE_is_tmp_sc(sc) ((sc)->m_is_tmp_scope)
+#define SCOPE_parent(sc) ((sc)->m_parent) //owner scope, namely parent node
 #define SCOPE_nsibling(sc) ((sc)->next) //next sibling, growing to right way
-#define SCOPE_sub(sc) ((sc)->sub) //sub scope
-#define SCOPE_level(sc) ((sc)->level)
+#define SCOPE_sub(sc) ((sc)->m_sub) //sub scope
+#define SCOPE_level(sc) ((sc)->m_level)
 #define SCOPE_enum_list(sc) ((sc)->enum_list)
-#define SCOPE_enum_tab(sc) ((sc)->enum_tab)
-#define SCOPE_sym_list(sc) ((sc)->sym_tab_list)
-#define SCOPE_user_type_list(sc) ((sc)->utl_list)
-#define SCOPE_label_list(sc) ((sc)->li_list)
-#define SCOPE_ref_label_list(sc) ((sc)->lref_list)
-#define SCOPE_decl_list(sc) ((sc)->decl_list)
-#define SCOPE_struct_list(sc) ((sc)->struct_list)
-#define SCOPE_union_list(sc) ((sc)->union_list)
-#define SCOPE_stmt_list(sc) ((sc)->stmt_list)
+#define SCOPE_enum_tab(sc) ((sc)->m_enum_tab)
+#define SCOPE_sym_list(sc) ((sc)->m_sym_tab_list)
+#define SCOPE_user_type_list(sc) ((sc)->m_utl_list)
+#define SCOPE_label_list(sc) ((sc)->m_li_list)
+#define SCOPE_ref_label_list(sc) ((sc)->m_lref_list)
+#define SCOPE_decl_list(sc) ((sc)->m_decl_list)
+#define SCOPE_struct_list(sc) ((sc)->m_struct_list)
+#define SCOPE_union_list(sc) ((sc)->m_union_list)
+#define SCOPE_stmt_list(sc) ((sc)->m_stmt_list)
 class Scope {
     COPY_CONSTRUCTOR(Scope);
 public:
-    UINT is_tmp_scope:1;
-    UINT id:31; //unique id
-    INT level; //nested level
-    Scope * parent;
+    UINT m_is_tmp_scope:1;
+    UINT m_id:31; //unique id
+    INT m_level; //nested level
+    Scope * m_parent;
     Scope * next;
     Scope * prev;
-    Scope * sub;
-    EnumTab * enum_tab; //enum-type tab
-    UserTypeList * utl_list; //record type defined with 'typedef'
-    Decl * decl_list; //record identifier declaration info
-    SymList * sym_tab_list; //record identifier name
-    Tree * stmt_list; //record statement list to generate code
-    List<LabelInfo*> li_list; //label definition
-    List<LabelInfo*> lref_list;//reference label
-    List<Struct*> struct_list; //structure list of current scope
-    List<Union*> union_list; //union list of current scope
+    Scope * m_sub;
+    EnumTab * m_enum_tab; //enum-type tab
+    UserTypeList * m_utl_list; //record type defined with 'typedef'
+    Decl * m_decl_list; //record identifier declaration info
+    SymList * m_sym_tab_list; //record identifier name
+    Tree * m_stmt_list; //record statement list to generate code
+    List<LabelInfo*> m_li_list; //label definition
+    List<LabelInfo*> m_lref_list;//reference label
+    List<Struct*> m_struct_list; //structure list of current scope
+    List<Union*> m_union_list; //union list of current scope
 
 public:
     Scope(UINT & sc) { SCOPE_enum_tab(this) = nullptr; init(sc); }
@@ -101,6 +102,7 @@ public:
 
     void init(UINT & sc);
     void destroy();
+    void dump(UINT flag = (UINT)-1) const;
 
     //Return nullptr indicate we haven't found it in 'ut_list', and
     //append 'ut' to tail of the list as correct, otherwise return
@@ -123,14 +125,22 @@ public:
     Decl * getDeclList() const { return SCOPE_decl_list(this); }
     List<Struct*> * getStructList() { return &SCOPE_struct_list(this); }
     List<Union*> * getUnionList() { return &SCOPE_union_list(this); }
+    Scope * getLastSubScope() const;
+    Scope * getParent() const { return SCOPE_parent(this); }
 
+    UINT id() const { return SCOPE_id(this); }
     //Return true if enum-value existed in current scope.
     //idx: the index that indicates the position of pacticular Item in Enum.
     bool isEnumExist(CHAR const* vname, OUT Enum ** e, OUT INT * idx) const;
+
+    //Return complete aggregate if it has same tag with given 'aggr'.
+    //The function will find aggregate from current scope and all of outer
+    //scopes.
+    static Aggr const* retrieveCompleteType(Aggr const* aggr, bool is_struct);
 };
 
 
-typedef TMap<LabelInfo*, UINT> LAB2LINE_MAP;
+typedef xcom::TMap<xoc::LabelInfo const*, UINT> Label2Lineno;
 
 
 class CompareLab {
@@ -152,19 +162,20 @@ typedef TTab<LabelInfo*, CompareLab> LabelTab;
 #define DUMP_SCOPE_STMT_TREE 0x2
 #define DUMP_SCOPE_RECUR 0x4
 
+void destroy_scope_list();
+
+Scope * get_global_scope();
+
+bool is_lab_used(LabelInfo const* li);
+
 Scope * push_scope(bool is_tmp_sc);
 Scope * pop_scope();
+
+UINT map_lab2lineno(LabelInfo const* li);
 Scope * new_scope();
-Scope * get_last_sub_scope(Scope * s);
-Scope * get_global_scope();
-void dump_scope(Scope * s, UINT flag);
-void dump_scope_tree(Scope * s, INT indent);
-void dump_scope_list(Scope * s, UINT flag);
-void destroy_scope_list();
-UINT map_lab2lineno(LabelInfo * li);
-void set_map_lab2lineno(LabelInfo * li, UINT lineno);
-void set_lab_used(LabelInfo * li);
-bool is_lab_used(LabelInfo * li);
+
+void set_map_lab2lineno(LabelInfo const* li, UINT lineno);
+void set_lab_used(LabelInfo const* li);
 
 //Export Variables
 extern Scope * g_cur_scope;

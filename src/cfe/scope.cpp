@@ -30,10 +30,10 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 //The outermost scope is global region which id is 0, and the inner
 //scope scope is function body-stmt which id is 1, etc.
 Scope * g_cur_scope = nullptr;
-List<Scope*> g_scope_list;
+xcom::List<Scope*> g_scope_list;
 UINT g_scope_count = 0;
-LAB2LINE_MAP g_lab2lineno;
-xcom::TTab<LabelInfo*> g_lab_used;
+Label2Lineno g_lab2lineno;
+xcom::TTab<xoc::LabelInfo const*> g_lab_used;
 
 static void * xmalloc(size_t size)
 {
@@ -49,11 +49,10 @@ static void * xmalloc(size_t size)
 //
 void Scope::init(UINT & sc)
 {
-    li_list.init();
-    lref_list.init();
-    struct_list.init();
-    union_list.init();
-
+    SCOPE_label_list(this).init();
+    SCOPE_ref_label_list(this).init();
+    SCOPE_struct_list(this).init();
+    SCOPE_union_list(this).init();
     SCOPE_id(this) = sc++;
     SCOPE_level(this) = -1;
     SCOPE_parent(this) = nullptr;
@@ -64,10 +63,10 @@ void Scope::init(UINT & sc)
 
 void Scope::destroy()
 {
-    li_list.destroy();
-    lref_list.destroy();
-    struct_list.destroy();
-    union_list.destroy();
+    SCOPE_label_list(this).destroy();
+    SCOPE_ref_label_list(this).destroy();
+    SCOPE_struct_list(this).destroy();
+    SCOPE_union_list(this).destroy();
     delete SCOPE_enum_tab(this);
     SCOPE_enum_tab(this) = nullptr;
 }
@@ -247,21 +246,18 @@ Scope * pop_scope()
 // Get GLOBAL_SCOPE level scope
 Scope * get_global_scope()
 {
-    Scope * s = g_cur_scope;
-    while (s) {
+    for (Scope * s = g_cur_scope; s != nullptr; s = SCOPE_parent(s)) {
         if (SCOPE_level(s) == GLOBAL_SCOPE) {
             return s;
         }
-        s = SCOPE_parent(s);
     }
     return nullptr;
 }
 
 
-Scope * get_last_sub_scope(Scope * s)
+Scope * Scope::getLastSubScope() const
 {
-    ASSERT0(s);
-    Scope * sub = SCOPE_sub(s);
+    Scope * sub = SCOPE_sub(this);
     while (SCOPE_nsibling(sub) != nullptr) {
         sub = SCOPE_nsibling(sub);
     }
@@ -270,7 +266,7 @@ Scope * get_last_sub_scope(Scope * s)
 
 
 //Dump scope in a cascade of tree.
-void dump_scope_tree(Scope * s, INT indent)
+static void dump_scope_tree(Scope * s, INT indent)
 {
     if (g_logmgr == nullptr || s == nullptr) { return; }
     note(g_logmgr, "\n");
@@ -282,7 +278,7 @@ void dump_scope_tree(Scope * s, INT indent)
 }
 
 
-static void dump_symbols(Scope * s)
+static void dump_symbols(Scope const* s)
 {
     SymList * sym_list = SCOPE_sym_list(s);
     if (sym_list != nullptr) {
@@ -303,15 +299,16 @@ static void dump_symbols(Scope * s)
 }
 
 
-static void dump_labels(Scope * s)
+static void dump_labels(Scope const* s)
 {
     //All of customer defined labels in scope.
-    LabelInfo * li = SCOPE_label_list(s).get_head();
+    C<LabelInfo*> * it;
+    LabelInfo * li = SCOPE_label_list(s).get_head(&it);
     if (li != nullptr) {
         note(g_logmgr, "\nDEFINED LABEL:");
         g_logmgr->incIndent(2);
         note(g_logmgr, "\n");
-        for (; li != nullptr; li = SCOPE_label_list(s).get_next()) {
+        for (; li != nullptr; li = SCOPE_label_list(s).get_next(&it)) {
             ASSERT0(map_lab2lineno(li) != 0);
             note(g_logmgr, "%s (def in line:%d)\n",
                  SYM_name(LABELINFO_name(li)),
@@ -321,12 +318,12 @@ static void dump_labels(Scope * s)
     }
 
     //All of refered labels in scope.
-    li = SCOPE_ref_label_list(s).get_head();
+    li = SCOPE_ref_label_list(s).get_head(&it);
     if (li != nullptr) {
         note(g_logmgr, "\nREFED LABEL:");
         g_logmgr->incIndent(2);
         note(g_logmgr, "\n");
-        for (; li != nullptr; li = SCOPE_ref_label_list(s).get_next()) {
+        for (; li != nullptr; li = SCOPE_ref_label_list(s).get_next(&it)) {
             note(g_logmgr, "%s (use in line:%d)\n",
                  SYM_name(LABELINFO_name(li)),
                  map_lab2lineno(li));
@@ -336,7 +333,7 @@ static void dump_labels(Scope * s)
 }
 
 
-static void dump_enums(Scope * s)
+static void dump_enums(Scope const* s)
 {
     EnumTab * el = s->getEnumTab();
     if (el == nullptr) { return; }
@@ -358,70 +355,72 @@ static void dump_enums(Scope * s)
 
 
 //Dump user defined type, declared by 'typedef'.
-static void dump_user_defined_type(Scope * s)
+static void dump_user_defined_type(Scope const* s)
 {
     UserTypeList * utl = SCOPE_user_type_list(s);
-    if (utl != nullptr) {
-        StrBuf buf(64);
-        note(g_logmgr, "\nUSER Type:");
-        g_logmgr->incIndent(2);
-        note(g_logmgr, "\n");
-        while (utl != nullptr) {
-            buf.clean();
-            format_user_type(buf, USER_TYPE_LIST_utype(utl));
-            note(g_logmgr, "%s\n", buf.buf);
-            utl = USER_TYPE_LIST_next(utl);
-        }
-        g_logmgr->decIndent(2);
+    if (utl == nullptr) { return; }
+
+    note(g_logmgr, "\nUSER Type:");
+    g_logmgr->incIndent(2);
+
+    StrBuf buf(64);
+    while (utl != nullptr) {
+        buf.clean();
+        format_user_type(buf, USER_TYPE_LIST_utype(utl));
+        note(g_logmgr, "\n%s", buf.buf);
+        utl = USER_TYPE_LIST_next(utl);
     }
+    g_logmgr->decIndent(2);
+    note(g_logmgr, "\n");
 }
 
 
 //structs
-static void dump_structs(Scope * s)
+static void dump_structs(Scope const* s)
 {
-    if (SCOPE_struct_list(s).get_elem_count() != 0) {
-        note(g_logmgr, "\nSTRUCT:");
-        g_logmgr->incIndent(2);
-        note(g_logmgr, "\n");
+    if (SCOPE_struct_list(s).get_elem_count() == 0) { return; }
 
-        StrBuf buf(64);
-        xcom::C<Struct*> * ct;
-        for (Struct * st = SCOPE_struct_list(s).get_head(&ct);
-             st != nullptr; st = SCOPE_struct_list(s).get_next(&ct)) {
-            buf.clean();
-            format_struct_complete(buf, st);
-            note(g_logmgr, "%s\n", buf.buf);
-        }
+    note(g_logmgr, "\nSTRUCT:");
+    g_logmgr->incIndent(2);
 
-        g_logmgr->decIndent(2);
+    StrBuf buf(64);
+    xcom::C<Struct*> * ct;
+    for (Struct * st = SCOPE_struct_list(s).get_head(&ct);
+         st != nullptr; st = SCOPE_struct_list(s).get_next(&ct)) {
+        buf.clean();
+        format_struct_complete(buf, st);
+        note(g_logmgr, "\n%s", buf.buf);
     }
+
+    g_logmgr->decIndent(2);
+    note(g_logmgr, "\n");
 }
 
 
 //unions
-static void dump_unions(Scope * s)
+static void dump_unions(Scope const* s)
 {
-    if (SCOPE_union_list(s).get_elem_count() != 0) {
-        note(g_logmgr, "\nUNION:");
-        g_logmgr->incIndent(2);
-        note(g_logmgr, "\n");
+    if (SCOPE_union_list(s).get_elem_count() == 0) { return; }
 
-        StrBuf buf(64);
-        xcom::C<Union*> * ct;
-        for (Union * st = SCOPE_union_list(s).get_head(&ct);
-             st != nullptr; st = SCOPE_union_list(s).get_next(&ct)) {
-            buf.clean();
-            format_union_complete(buf, st);
-            note(g_logmgr, "%s\n", buf.buf);
-        }
+    note(g_logmgr, "\nUNION:");
+    g_logmgr->incIndent(2);
+    note(g_logmgr, "\n");
 
-        g_logmgr->decIndent(2);
+    StrBuf buf(64);
+    xcom::C<Union*> * ct;
+    for (Union * st = SCOPE_union_list(s).get_head(&ct);
+         st != nullptr; st = SCOPE_union_list(s).get_next(&ct)) {
+        buf.clean();
+        format_union_complete(buf, st);
+        note(g_logmgr, "\n%s", buf.buf);
     }
+
+    g_logmgr->decIndent(2);
+    note(g_logmgr, "\n");
 }
 
 
-static void dump_declarations(Scope * s, UINT flag)
+static void dump_declarations(Scope const* s, UINT flag)
 {
     //declarations
     Decl * dcl = s->getDeclList();
@@ -432,7 +431,7 @@ static void dump_declarations(Scope * s, UINT flag)
     g_logmgr->incIndent(2);
     while (dcl != nullptr) {
         buf.clean();
-        format_declaration(buf, dcl);
+        format_declaration(buf, dcl, true);
         note(g_logmgr, "\n%s", buf.buf);
 
         g_logmgr->incIndent(2);
@@ -441,7 +440,7 @@ static void dump_declarations(Scope * s, UINT flag)
         //Dump function body
         if (DECL_is_fun_def(dcl) && HAVE_FLAG(flag, DUMP_SCOPE_FUNC_BODY)) {
             g_logmgr->incIndent(2);
-            dump_scope(DECL_fun_body(dcl), flag);
+            DECL_fun_body(dcl)->dump(flag);
             g_logmgr->decIndent(2);
         }
 
@@ -449,7 +448,7 @@ static void dump_declarations(Scope * s, UINT flag)
         if (DECL_is_init(DECL_decl_list(dcl))) {
             prt(g_logmgr, " = ");
             g_logmgr->incIndent(8);
-            dump_tree(DECL_init_tree(DECL_decl_list(dcl)));
+            DECL_init_tree(DECL_decl_list(dcl))->dump();
             g_logmgr->decIndent(8);
         }
 
@@ -461,7 +460,7 @@ static void dump_declarations(Scope * s, UINT flag)
 }
 
 
-static void dump_stmts(Scope * s)
+static void dump_stmts(Scope const* s)
 {
     Tree * t = SCOPE_stmt_list(s);
     if (t != nullptr) {
@@ -474,10 +473,10 @@ static void dump_stmts(Scope * s)
 }
 
 
-void dump_scope_list(Scope * s, UINT flag)
+static void dump_scope_list(Scope * s, UINT flag)
 {
     while (s != nullptr) {
-        dump_scope(s, flag);
+        s->dump(flag);
         s = SCOPE_nsibling(s);
     }
 }
@@ -485,9 +484,11 @@ void dump_scope_list(Scope * s, UINT flag)
 
 //Recusively dump Scope information, include symbol,
 //label, type info, and trees.
-void dump_scope(Scope * s, UINT flag)
+void Scope::dump(UINT flag) const
 {
     if (g_logmgr == nullptr) { return; }
+
+    Scope const* s = this;
     StrBuf buf(64);
     note(g_logmgr, "\nSCOPE(id:%d, level:%d)", SCOPE_id(s), SCOPE_level(s));
     g_logmgr->incIndent(2);
@@ -517,25 +518,51 @@ void destroy_scope_list()
 }
 
 
-UINT map_lab2lineno(LabelInfo * li)
+UINT map_lab2lineno(LabelInfo const* li)
 {
     return g_lab2lineno.get(li);
 }
 
 
-void set_map_lab2lineno(LabelInfo * li, UINT lineno)
+void set_map_lab2lineno(LabelInfo const* li, UINT lineno)
 {
     g_lab2lineno.set(li, lineno);
 }
 
 
-void set_lab_used(LabelInfo * li)
+void set_lab_used(LabelInfo const* li)
 {
     g_lab_used.append(li);
 }
 
 
-bool is_lab_used(LabelInfo * li)
+bool is_lab_used(LabelInfo const* li)
 {
     return g_lab_used.find(li);
+}
+
+
+//Return complete aggregate if it has same tag with given 'aggr'.
+//The function will find aggregate from current scope and all of outer scopes.
+Aggr const* Scope::retrieveCompleteType(Aggr const* aggr, bool is_struct)
+{
+    if (aggr->is_complete()) { return aggr; }
+    Aggr * findone = nullptr;
+    if (is_struct) {
+        ASSERT0(aggr->getScope());
+        if (isStructExistInOuterScope(aggr->getScope(), aggr->getTag(),
+                                      true, (Struct**)&findone)) {
+            ASSERT0(findone && findone->is_complete());
+            return findone;
+        }
+        return nullptr;
+    }
+
+    ASSERT0(aggr->getScope());
+    if (isUnionExistInOuterScope(aggr->getScope(), aggr->getTag(),
+                                 true, (Union**)&findone)) {
+        ASSERT0(findone && findone->is_complete());
+        return findone;
+    }
+    return nullptr;
 }

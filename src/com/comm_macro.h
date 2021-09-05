@@ -82,6 +82,9 @@ namespace xcom {
 #undef OUT
 #define OUT //indicate output argument
 
+#undef MOD
+#define MOD //indicate modified argument
+
 //This macro declare copy constructor for class.
 #define COPY_CONSTRUCTOR(class_name) \
     class_name(class_name const&);   \

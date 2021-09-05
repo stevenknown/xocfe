@@ -29,9 +29,6 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "cfecommacro.h"
 
 static Tree * statement();
-static bool is_c_type_spec(TOKEN tok);
-static bool is_c_type_quan(TOKEN tok);
-static bool is_c_stor_spec(TOKEN tok);
 static Tree * cast_exp();
 static Tree * unary_exp();
 static Tree * exp_stmt();
@@ -57,9 +54,20 @@ static void * xmalloc(size_t size)
 }
 
 
+Tree * buildDeref(Tree * base)
+{
+    //The basetype of pointer is an array. Convert a[] to (*a)[].
+    Tree * deref = allocTreeNode(TR_DEREF, base->getLineno());
+    TREE_lchild(deref) = base;
+    setParent(deref, TREE_lchild(deref));
+    return deref;
+}
+
+
 Tree * buildIndmem(Tree * base, Decl const* fld)
 {
     Tree * t = NEWTN(TR_INDMEM);
+    TREE_lineno(t) = fld->getLineno();
     TREE_token(t) = T_ARROW;
     TREE_base_region(t) = base;
     TREE_field(t) = buildId(fld);
@@ -105,6 +113,7 @@ Tree * buildAggrFieldRef(Decl const* decl, xcom::Vector<UINT> & fldvec)
 Tree * buildDmem(Tree * base, Decl const* fld)
 {
     Tree * t = NEWTN(TR_DMEM);
+    TREE_lineno(t) = fld->getLineno();
     TREE_token(t) = T_DOT;
     TREE_base_region(t) = base;
     TREE_field(t) = buildId(fld);
@@ -114,13 +123,24 @@ Tree * buildDmem(Tree * base, Decl const* fld)
 }
 
 
+Tree * buildLda(Tree * base)
+{
+    Tree * t = NEWTN(TR_LDA);
+    TREE_token(t) = T_BITAND;
+    TREE_lchild(t) = base;
+    setParent(t, TREE_lchild(t));
+    return t;
+}
+
+
 Tree * buildId(Decl const* decl)
 {
     Tree * t = NEWTN(TR_ID);
+    TREE_lineno(t) = decl->getLineno();
     TREE_token(t) = T_ID;
     Sym const* sym = decl->get_decl_sym();
     ASSERT0(sym);
-    TREE_id(t) = sym;
+    TREE_id_name(t) = sym;
     TREE_id_decl(t) = const_cast<Decl*>(decl);
     return t;
 }
@@ -150,6 +170,7 @@ Tree * buildInitvalScope(Tree * exp_list)
 {
     Tree * t = NEWTN(TR_INITVAL_SCOPE);
     TREE_initval_scope(t) = exp_list;
+    TREE_lineno(t) = exp_list->getLineno();
     return t;
 }
 
@@ -182,6 +203,7 @@ Tree * buildAssign(Decl const* decl, Tree * rhs)
     TREE_lchild(p) = id;
     setParent(p, TREE_lchild(p));
     TREE_rchild(p) = rhs;
+    TREE_lineno(p) = rhs->getLineno();
     setParent(p, TREE_rchild(p));
     return p;
 }
@@ -190,6 +212,7 @@ Tree * buildAssign(Decl const* decl, Tree * rhs)
 Tree * buildAssign(Tree * lhs, Tree * rhs)
 {
     Tree * p = NEWTN(TR_ASSIGN);
+    TREE_lineno(p) = rhs->getLineno();
     TREE_token(p) = T_ASSIGN;
     TREE_lchild(p) = lhs;
     setParent(p, TREE_lchild(p));
@@ -204,6 +227,7 @@ Tree * buildArray(Tree * base, xcom::Vector<UINT> & subexp_vec)
     ASSERTN(subexp_vec.get_last_idx() >= 0, ("miss dimension exp"));
     for (INT i = 0; i <= subexp_vec.get_last_idx(); i++) {
         Tree * array = NEWTN(TR_ARRAY);
+        TREE_lineno(array) = base->getLineno();
         TREE_array_base(array) = base;
         setParent(array, base);
         TREE_array_indx(array) = buildInt(subexp_vec.get(i));
@@ -240,10 +264,10 @@ Tree * copyTreeList(Tree const* t)
 Tree * copyTree(Tree const* t)
 {
     if (t == nullptr) { return nullptr; }
-    Tree * newt = NEWTN(TREE_type(t));
-    UINT id = TREE_uid(newt);
+    Tree * newt = NEWTN(t->getCode());
+    UINT id = newt->id();
     ::memcpy(newt, t, sizeof(Tree));
-    TREE_uid(newt) = id;
+    TREE_id(newt) = id;
     TREE_parent(newt) = nullptr;
     TREE_psib(newt) = nullptr;
     TREE_nsib(newt) = nullptr;
@@ -266,7 +290,7 @@ Tree * copyTree(Tree const* t)
 static bool verify(Tree * t)
 {
     if (t == nullptr) { return true; }
-    switch (TREE_type(t)) {
+    switch (t->getCode()) {
     case TR_SCOPE:
     case TR_CALL:
     case TR_ARRAY:
@@ -279,7 +303,7 @@ static bool verify(Tree * t)
     default: ASSERT0(TREE_token(t) != T_NUL && getTokenName(TREE_token(t)));
     }
 
-    switch (TREE_type(t)) {
+    switch (t->getCode()) {
     case TR_ASSIGN:
     case TR_ID:
     case TR_IMM:
@@ -335,7 +359,7 @@ static bool verify(Tree * t)
     case TR_PREP:
     case TR_DECL:
         break;
-    default: ASSERTN(0, ("unknown tree type:%d", TREE_type(t)));
+    default: ASSERTN(0, ("unknown tree type:%d", t->getCode()));
     } //end switch
     return true;
 }
@@ -483,30 +507,6 @@ bool isTerminateToken()
 }
 
 
-bool inFirstSetOfDeclarator()
-{
-    if (g_real_token == T_ID) {
-        Decl * ut = nullptr;
-        Struct * s = nullptr;
-        Union * u = nullptr;
-        if (isUserTypeExistInOuterScope(g_real_token_string, &ut) ||
-            isStructExistInOuterScope(g_cur_scope,
-                g_real_token_string, &s) ||
-            isUnionExistInOuterScope(g_cur_scope,
-                g_real_token_string, &u)) {
-            return true;
-        }
-        return false;
-    }
-    if (is_c_type_spec(g_real_token) ||
-        is_c_type_quan(g_real_token) ||
-        is_c_stor_spec(g_real_token)) {
-        return true;
-    }
-    return false;
-}
-
-
 static INT is_compound_terminal()
 {
     return (g_real_token == T_RLPAREN);
@@ -554,7 +554,7 @@ bool inFirstSetOfExp(TOKEN tok)
 }
 
 
-static bool is_c_type_quan(TOKEN tok)
+bool Tree::is_type_quan(TOKEN tok)
 {
     switch (tok) {
     //scalar-type-spec
@@ -567,7 +567,7 @@ static bool is_c_type_quan(TOKEN tok)
 }
 
 
-static bool is_c_type_spec(TOKEN tok)
+bool Tree::is_type_spec(TOKEN tok)
 {
     switch (tok) {
     //scalar-type-spec
@@ -592,7 +592,7 @@ static bool is_c_type_spec(TOKEN tok)
 }
 
 
-static bool is_c_stor_spec(TOKEN tok)
+bool Tree::is_stor_spec(TOKEN tok)
 {
     switch (tok) {
     case T_AUTO:
@@ -608,27 +608,14 @@ static bool is_c_stor_spec(TOKEN tok)
 }
 
 
-bool isUserTypeExistInOuterScope(CHAR const* cl, OUT Decl ** ut)
-{
-    Scope * sc = g_cur_scope;
-    while (sc != nullptr) {
-        if (isUserTypeExist(SCOPE_user_type_list(sc), cl, ut)) {
-            return true;
-        }
-        sc = SCOPE_parent(sc);
-    }
-    return false;
-}
-
-
 //Find if ID with named 'cl' exists and return the Decl.
-static inline INT is_id_exist_in_outer_scope(CHAR const* cl, OUT Decl ** d)
+bool isIdExistInOuterScope(CHAR const* cl, OUT Decl ** d)
 {
     return isDeclExistInOuterScope(cl, d);
 }
 
 
-static inline INT is_first_set_of_unary_exp(TOKEN tok)
+bool isFirstSetOfUnaryExp(TOKEN tok)
 {
     switch (tok) {
     case T_LPAREN:
@@ -724,7 +711,7 @@ Tree * id(Sym const* name, TOKEN tok)
 {
     Tree * t = NEWTN(TR_ID);
     TREE_token(t) = tok;
-    TREE_id(t) = name;
+    TREE_id_name(t) = name;
     return t;
 }
 
@@ -956,7 +943,7 @@ static Tree * param_list()
 //Process the first part of postfix expression:
 //e.g:  a[10].u1.s++,  where a[10] is the first part,
 //    .u1.s++ is the second part.
-static Tree * primary_exp(IN OUT UINT * st)
+static Tree * primary_exp(MOD UINT * st)
 {
     Tree * t = nullptr;
     switch (g_real_token) {
@@ -972,7 +959,7 @@ static Tree * primary_exp(IN OUT UINT * st)
             //parsed during declaration().
             Decl * dcl = nullptr;
             t = id();
-            if (!is_id_exist_in_outer_scope(g_real_token_string, &dcl)) {
+            if (!isIdExistInOuterScope(g_real_token_string, &dcl)) {
                 err(g_real_line_num, "'%s' undeclared identifier",
                     g_real_token_string);
                 match(T_ID);
@@ -1132,6 +1119,14 @@ AGAIN:
             setParent(tp, t);
             setParent(tp, TREE_para_list(tp));
             t = tp;
+            if (g_real_token == T_LSPAREN ||
+                g_real_token == T_LPAREN ||
+                g_real_token == T_DOT ||
+                g_real_token == T_ARROW ||
+                g_real_token == T_SUBSUB ||
+                g_real_token == T_ADDADD) {
+                goto AGAIN;
+            }
         }
         break;
     case T_DOT: //direct struct member reference
@@ -1254,9 +1249,10 @@ static Tree * unary_or_LP_typename_RP()
         //Next exp either (exp) or (type_name), so after several '(', there
         //must be T_ID appearing .
         tok = look_next_token(1, &tok_string, nullptr);
-        if (is_c_type_spec(tok) ||
-            is_c_type_quan(tok) ||
-            is_c_stor_spec(tok)) {
+
+        if (Tree::is_type_spec(tok) ||
+            Tree::is_type_quan(tok) ||
+            Tree::is_stor_spec(tok)) {
             t = NEWTN(TR_TYPE_NAME);
             if (match(T_LPAREN) != ST_SUCC) {
                 err(g_real_line_num, "except '('");
@@ -1300,7 +1296,7 @@ static Tree * unary_or_LP_typename_RP()
             //It's a general token, so need to pry continue, let's go!
             t = unary_exp();
         }
-    } else if (is_first_set_of_unary_exp(g_real_token)) {
+    } else if (isFirstSetOfUnaryExp(g_real_token)) {
         t = unary_exp();
     }
     return t;
@@ -1327,12 +1323,12 @@ static Tree * unary_exp()
     case T_IMML:
     case T_IMMU:
     case T_IMMUL:
-    case T_FP:        //decimal e.g 3.14
-    case T_FPF:       //decimal e.g 3.14
-    case T_FPLD:      //decimal e.g 3.14
-    case T_STRING:    //"abcd"
+    case T_FP: //decimal e.g 3.14
+    case T_FPF: //decimal e.g 3.14
+    case T_FPLD: //decimal e.g 3.14
+    case T_STRING: //"abcd"
     case T_CHAR_LIST: //'abcd'
-    case T_LPAREN:    //(exp)
+    case T_LPAREN: //(exp)
     case T_ID:
         t = postfix_exp();
         break;
@@ -1343,13 +1339,12 @@ static Tree * unary_exp()
         TREE_lchild(t) = cast_exp();
         setParent(t, TREE_lchild(t));
         break;
-    case T_BITAND:
-        t = NEWTN(TR_LDA);
-        TREE_token(t) = g_real_token;
+    case T_BITAND: {
         match(T_BITAND);
-        TREE_lchild(t) = cast_exp();
-        setParent(t, TREE_lchild(t));
+        Tree * base = cast_exp(); 
+        t = buildLda(base);
         break;
+    }
     case T_ADDADD:
         t = NEWTN(TR_INC);
         TREE_token(t) = g_real_token;
@@ -1442,7 +1437,7 @@ Tree * gen_typename(Decl * decl)
 
 Tree * gen_cvt(Tree * tgt_type, Tree * src)
 {
-    ASSERT0(tgt_type && TREE_type(tgt_type) == TR_TYPE_NAME && src);
+    ASSERT0(tgt_type && tgt_type->getCode() == TR_TYPE_NAME && src);
     Tree * t = NEWTN(TR_CVT);
     TREE_cvt_type(t) = tgt_type;
     TREE_cvt_exp(t) = src;
@@ -1483,7 +1478,7 @@ static Tree * cast_exp()
     //    goto FAILED;
     //}
 
-    if (TREE_type(p) == TR_TYPE_NAME) {
+    if (p->getCode() == TR_TYPE_NAME) {
         Tree * srcexp = cast_exp();
         if (srcexp == nullptr) {
             err(g_real_line_num, "cast expression cannot be nullptr");
@@ -1968,34 +1963,12 @@ static Tree * jump_stmt()
 }
 
 
-static Tree * sharp_start_stmt()
+static TokenList * matchTokenTillNewLine()
 {
-    Tree * t = nullptr;
-    ASSERT0(g_real_token == T_SHARP);
-    match(T_SHARP);
-    switch (g_real_token) {
-    case T_PRAGMA:
-        t = NEWTN(TR_PRAGMA);
-        TREE_token(t) = g_real_token;
-        match(T_PRAGMA);
-        break;
-    case T_IMM:
-        //Current line generated by preprocessor.
-        //e.g: # 1 "test/compile/prc.c"
-        g_disgarded_line_num++;
-        t = NEWTN(TR_PREP);
-        TREE_token(t) = g_real_token;
-        match(T_IMM);
-        break;
-    default:
-        err(g_real_line_num,
-            "illegal use '#', its followed keyword should be 'pragma'");
-        return nullptr;
-    }
-
-    TokenList * last = nullptr;
     //Match token till NEWLINE.
     g_enable_newline_token = true;
+    TokenList * last = nullptr;
+    TokenList * head = nullptr;
     while (g_real_token != T_NEWLINE && g_real_token != T_NUL) {
         TokenList * tl = (TokenList*)xmalloc(sizeof(TokenList));
         TL_tok(tl) = g_real_token;
@@ -2017,7 +1990,7 @@ static Tree * sharp_start_stmt()
             break;
         default: break;
         }
-        xcom::add_next(&TREE_token_lst(t), &last, tl);
+        xcom::add_next(&head, &last, tl);
         if (match(g_real_token) == ST_ERR) {
             break;
         }
@@ -2027,6 +2000,37 @@ static Tree * sharp_start_stmt()
     if (g_real_token == T_NEWLINE) {
         match(T_NEWLINE);
     }
+    return head;
+}
+
+
+static Tree * sharp_start_stmt()
+{
+    Tree * t = nullptr;
+    ASSERT0(g_real_token == T_SHARP);
+    match(T_SHARP);
+    switch (g_real_token) {
+    case T_PRAGMA:
+        t = NEWTN(TR_PRAGMA);
+        TREE_token(t) = g_real_token;
+        match(T_PRAGMA);
+        break;
+    case T_IMM:
+        //Current line generated by preprocessor.
+        //e.g: # 1 "test/compile/prc.c"
+        g_disgarded_line_num++;
+        t = NEWTN(TR_PREP);
+        TREE_token(t) = g_real_token;
+        match(T_IMM);
+        break;
+    default:
+        err(g_real_line_num,
+            "illegal use '#', unknown command");
+        return nullptr;
+    }
+
+    TokenList * h = matchTokenTillNewLine();
+    xcom::add_next(&TREE_token_lst(t), h);
     return t;
 }
 
@@ -2397,14 +2401,14 @@ static bool append_parameters(Scope * cur_scope, Decl const* para_list)
             //Array type formal parameter is always be treated
             //as pointer type.
             //Convert ARRAY of ID to ARRAY of POINTER.
-            //In C, the parameter of function that declarated as
+            //In C language, the parameter of function that declarated as
             //'int a[10]' is not really array of a, but is a pointer
             //that pointed to array 'a', and should be 'int (*a)[10].
             //e.g: Convert 'void f(int a[10])' -> 'void f(int (*a)[10])'.
-            declaration = convertToPointerType(declaration, true);
+            declaration->convertToPointerType();
         }
 
-        DECL_is_formal_para(declaration) = true;
+        DECL_is_formal_param(declaration) = true;
         xcom::add_next(&SCOPE_decl_list(cur_scope), &lastdcl, declaration);
         DECL_decl_scope(declaration) = cur_scope;
         DECL_formal_param_pos(declaration) = pos;
@@ -2584,7 +2588,7 @@ static bool process_pragma_align(TokenList const** tl)
 
 static void process_pragma(Tree const* t)
 {
-    ASSERT0(TREE_type(t) == TR_PRAGMA);
+    ASSERT0(t->getCode() == TR_PRAGMA);
     TokenList const* tl = TREE_token_lst(t);
     switch (TL_tok(tl)) {
     case T_ID:
@@ -2644,17 +2648,19 @@ static Tree * statement()
         return nullptr;
     case T_SHARP: {
         Tree * t = sharp_start_stmt();
-        if (TREE_type(t) == TR_PRAGMA) {
+        if (t->getCode() == TR_PRAGMA) {
             process_pragma(t);
+        } else if (t->getCode() == TR_PREP) {
+            ; //nothing to do
         } else {
-            ASSERTN(TREE_type(t) == TR_PREP, ("NEED SUPPORT"));
+            ASSERTN(0, ("NEED SUPPORT"));
         }
         return t;
     }
     default:;
     }
 
-    if (inFirstSetOfDeclarator()) {
+    if (inFirstSetOfDeclaration()) {
         //It may be varirable or type declaration.
         if (!g_enable_c99_declaration) {
             //C89 options.
@@ -2709,7 +2715,7 @@ static Tree * dispatch()
         //    This enforce parser has to look ahead many tokens.
         //    In order to keep parser succinct, we only
         //    support the latter, int foo() { ... }.
-        if (inFirstSetOfDeclarator()) {
+        if (inFirstSetOfDeclaration()) {
             //reduce to variable declaration
             declaration();
         } else if (findEnumVal(g_real_token_string, &e, &idx)) {
@@ -2900,7 +2906,7 @@ INT Parser()
         if (g_real_token == T_NUL || is_too_many_err()) {
             return ST_ERR;
         }
-        if (dispatch() == nullptr && g_err_msg_list.get_elem_count() != 0) {
+        if (dispatch() == nullptr && g_err_msg_list.has_msg()) {
             return ST_ERR;
         }
     }

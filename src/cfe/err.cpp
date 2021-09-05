@@ -27,8 +27,8 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 @*/
 #include "cfeinc.h"
 
-List<ERR_MSG*> g_err_msg_list;
-List<WARN_MSG*> g_warn_msg_list;
+ErrList g_err_msg_list;
+WarnList g_warn_msg_list;
 
 static void * xmalloc(size_t size)
 {
@@ -41,9 +41,10 @@ static void * xmalloc(size_t size)
 
 void show_err()
 {
-    if (g_err_msg_list.get_elem_count() == 0) { return; }
+    if (!g_err_msg_list.has_msg()) { return; }
+
     fprintf(stdout,"\n");
-    for (ERR_MSG * e = g_err_msg_list.get_head();
+    for (ErrMsg * e = g_err_msg_list.get_head();
          e != nullptr; e = g_err_msg_list.get_next()) {
         fprintf(stdout, "\nerror(%d):%s", ERR_MSG_lineno(e), ERR_MSG_msg(e));
     }
@@ -53,9 +54,10 @@ void show_err()
 
 void show_warn()
 {
-    if (g_warn_msg_list.get_elem_count() == 0) { return; }
+    if (!g_warn_msg_list.has_msg()) { return; }
+
     fprintf(stdout,"\n");
-    for (WARN_MSG * e = g_warn_msg_list.get_head();
+    for (WarnMsg * e = g_warn_msg_list.get_head();
          e != nullptr; e = g_warn_msg_list.get_next()) {
         fprintf(stdout, "\nwarning(%d):%s",
                 WARN_MSG_lineno(e), WARN_MSG_msg(e));
@@ -69,13 +71,13 @@ void warn(INT line_num, CHAR const* msg, ...)
 {
     if (msg == nullptr) { return; }
 
-    WARN_MSG * p = nullptr;
+    WarnMsg * p = nullptr;
     StrBuf sbuf(64);
 
     va_list arg;
     va_start(arg, msg);
     sbuf.vsprint(msg, arg);
-    p = (WARN_MSG*)xmalloc(sizeof(WARN_MSG));
+    p = (WarnMsg*)xmalloc(sizeof(WarnMsg));
     p->msg = (CHAR*)xmalloc(sbuf.strlen() + 1);
     ::memcpy(p->msg, sbuf.buf, sbuf.strlen() + 1);
     p->lineno = line_num;
@@ -89,13 +91,13 @@ void err(INT line_num, CHAR const* msg, ...)
 {
     if (msg == nullptr) { return; }
 
-    ERR_MSG * p = nullptr;
+    ErrMsg * p = nullptr;
     StrBuf sbuf(64);
 
     va_list arg;
     va_start(arg, msg);
     sbuf.vsprint(msg, arg);
-    p = (ERR_MSG*)xmalloc(sizeof(ERR_MSG));
+    p = (ErrMsg*)xmalloc(sizeof(ErrMsg));
     p->msg = (CHAR*)xmalloc(sbuf.strlen() + 1);
     ::memcpy(p->msg, sbuf.buf, sbuf.strlen() + 1);
     p->lineno = line_num;

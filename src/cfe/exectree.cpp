@@ -78,7 +78,7 @@ static bool compute_enum_const(Tree * t)
 static bool compute_sizeof(Tree * t)
 {
     Tree * p = TREE_sizeof_exp(t);
-    if (TREE_type(p) == TR_TYPE_NAME) {
+    if (p->getCode() == TR_TYPE_NAME) {
         Decl * dcl = TREE_type_name(p);
         ASSERT0(dcl && DECL_dt(dcl) == DCL_TYPE_NAME);
         ASSERT0(DECL_spec(dcl));
@@ -103,7 +103,7 @@ static bool compute_sizeof(Tree * t)
         return compute_conditional_exp(p);
     }
 
-    err(TREE_lineno(p), "'sizeof' requires type-name");
+    err(p->getLineno(), "'sizeof' requires type-name");
 
     return false;
 }
@@ -115,7 +115,7 @@ static bool compute_unary_op(Tree * t)
         return false;
     }
     LONGLONG l = popv();
-    switch (TREE_type(t)) {
+    switch (t->getCode()) {
     case TR_PLUS: // +123
         pushv(l);
         break;
@@ -129,7 +129,7 @@ static bool compute_unary_op(Tree * t)
         pushv(!l);
         break;
     default:
-        err(TREE_lineno(t),"illegal duality expression");
+        err(t->getLineno(),"illegal duality expression");
         return false;
     }
     return true;
@@ -144,7 +144,7 @@ static bool compute_binary_op(Tree * t)
     if (!compute_conditional_exp(TREE_rchild(t))) { return false; }
     r = popv();
     l = popv();
-    switch (TREE_type(t)) {
+    switch (t->getCode()) {
     case TR_LOGIC_OR: //logical or
         l = l || r;
         pushv(l);
@@ -234,18 +234,18 @@ static bool compute_binary_op(Tree * t)
         case T_DIV:
             l = (l / r);
             pushv(l);
-            if (r == 0) { warn(TREE_lineno(t), "divisor is zero"); }
+            if (r == 0) { warn(t->getLineno(), "divisor is zero"); }
             break;
         case T_MOD:
             l = (l % r);
             pushv(l);
-            if (r == 0) { warn(TREE_lineno(t), "divisor is zero"); }
+            if (r == 0) { warn(t->getLineno(), "divisor is zero"); }
             break;
         default: UNREACHABLE();
         }
         break;
     default:
-        err(TREE_lineno(t),"illegal duality expression");
+        err(t->getLineno(),"illegal duality expression");
         return false;
     }
     return true;
@@ -255,7 +255,7 @@ static bool compute_binary_op(Tree * t)
 static bool compute_conditional_exp(IN Tree * t)
 {
     if (t == nullptr) { return true;}
-    switch (TREE_type(t)) {
+    switch (t->getCode()) {
     case TR_ENUM_CONST:
         return compute_enum_const(t);
     case TR_PLUS: // +123
@@ -284,7 +284,7 @@ static bool compute_conditional_exp(IN Tree * t)
     case TR_FPF:
     case TR_FPLD:
         if (!g_is_allow_float) {
-            err(TREE_lineno(t),"constant expression is not integral");
+            err(t->getLineno(),"constant expression is not integral");
             return false;
         }
         pushv((LONGLONG)atof(SYM_name(TREE_fp_str_val(t))));
@@ -293,11 +293,11 @@ static bool compute_conditional_exp(IN Tree * t)
         return compute_sizeof(t);
     case TR_ID: {
             Decl * dcl = nullptr;
-            if (!isDeclExistInOuterScope(SYM_name(TREE_id(t)), &dcl)) {
-                err(TREE_lineno(t), "'%s' undefined");
+            if (!isDeclExistInOuterScope(SYM_name(TREE_id_name(t)), &dcl)) {
+                err(t->getLineno(), "'%s' undefined");
                 return false;
             }
-            err(TREE_lineno(t), "expected constant expression");
+            err(t->getLineno(), "expected constant expression");
             return false;
 
             //TODO: infer the constant value of ID.
@@ -317,7 +317,7 @@ static bool compute_conditional_exp(IN Tree * t)
     case TR_CVT:
         return compute_conditional_exp(TREE_cvt_exp(t));
     default:
-        err(TREE_lineno(t), "expected constant expression");
+        err(t->getLineno(), "expected constant expression");
         return false;
     }
     return true;

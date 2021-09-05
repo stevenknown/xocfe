@@ -32,6 +32,10 @@ bool isConsistentWithPointer(Tree * t);
 void initTypeTran();
 INT process_init_by_extra_val(Decl * decl, Tree ** init);
 INT process_init_of_declaration(Decl * decl);
+
+//Transfering type declaration for all AST nodes.
+INT TypeTranList(Tree * t, TYCtx * cont);
+INT TypeTran(Tree * t, TYCtx * cont);
 INT TypeTransform();
 
 #endif

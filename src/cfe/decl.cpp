@@ -44,24 +44,22 @@ static INT format_aggr(StrBuf & buf, TypeAttr const* ty);
 static INT format_aggr(StrBuf & buf, Aggr const* s);
 static INT format_aggr_complete(StrBuf & buf, Aggr const* s);
 static UINT computeArrayByteSize(TypeAttr const* spec, Decl const* decl);
-static UINT computeStructTypeSize(TypeAttr const* ty);
 static UINT computeUnionTypeSize(TypeAttr const* ty);
 static void process_enum(TypeAttr const* ty);
 static void type_spec_aggr_field(Aggr * aggr, TypeAttr * ty);
 static void add_and_infer_enum(TypeAttr * ta);
 static bool parse_function_definition(Decl * declaration);
-static bool check_aggr_complete(Decl * decl);
-static bool check_bitfield(Decl * decl);
-static void fix_extern_array_size(Decl * declaration);
+static bool checkAggrComplete(Decl * decl);
+static bool checkBitfield(Decl * decl);
+static void fixExternArraySize(Decl * declaration);
 static bool post_process_of_init_declarator(TypeAttr * attr,
                                             Decl * declarator,
                                             UINT lineno,
                                             bool * is_last_decl,
                                             Tree ** dcl_tree_list);
 
-#ifdef _DEBUG_
 UINT g_decl_counter = 1;
-#endif
+UINT g_aggr_counter = 1;
 static UINT g_aggr_anony_name_count = 1; //the counter for anonymous name
                                          //of aggregate.
 INT g_alignment = PRAGMA_ALIGN; //default alignment.
@@ -130,7 +128,7 @@ static UINT compute_field_ofst_consider_pad(Aggr const* st, UINT ofst,
                                             UINT field_size, UINT elemnum,
                                             UINT field_align)
 {
-    //return ofst + (UINT)xcom::ceil_align(field_size, STRUCT_align(st));
+    //return ofst + (UINT)xcom::ceil_align(field_size, st->getAlign());
     if (field_align != 0) {
         ofst = pad_align(ofst, field_align);
     } else {
@@ -286,7 +284,7 @@ void TypeAttr::dump() const
 
 CHAR const* TypeAttr::getAggrTypeName() const
 {
-    return isStructExpanded(this) ? "struct" : "union";
+    return isStructExpanded() ? "struct" : "union";
 }
 
 
@@ -310,10 +308,10 @@ UINT TypeAttr::getSpecTypeSize() const
     if (HAVE_FLAG(TYPE_des(this), T_SPEC_FLOAT)) { return BYTE_PER_FLOAT; }
     if (HAVE_FLAG(TYPE_des(this), T_SPEC_DOUBLE)) { return BYTE_PER_DOUBLE; }
     if (HAVE_FLAG(TYPE_des(this), T_SPEC_STRUCT)) {
-        return computeStructTypeSize(this);
+        return computeStructTypeSize(getAggrType());
     }
     if (HAVE_FLAG(TYPE_des(this), T_SPEC_UNION)) {
-        return computeUnionTypeSize(this);
+        return computeUnionTypeSize(getAggrType());
     }
     if (HAVE_FLAG(TYPE_des(this), T_SPEC_ENUM)) { return BYTE_PER_ENUM; }
     if (HAVE_FLAG(TYPE_des(this), T_SPEC_SIGNED)) { return BYTE_PER_INT; }
@@ -418,7 +416,8 @@ bool Decl::is_equal(Decl const& src) const
     case DCL_FUN:
         return true;
     case DCL_ID:
-        if (TREE_id(DECL_id_tree(this)) != TREE_id(DECL_id_tree(&src))) {
+        if (TREE_id_name(DECL_id_tree(this)) !=
+            TREE_id_name(DECL_id_tree(&src))) {
             return false;
         }
         if ((DECL_qua(this) != nullptr) ^ (DECL_qua(&src) != nullptr)) {
@@ -463,7 +462,7 @@ bool Decl::is_equal(Decl const& src) const
 
 bool Decl::is_restrict() const
 {
-    ASSERTN(this->is_dt_declaration(), ("needs declaration"));
+    ASSERTN(is_dt_declaration(), ("needs declaration"));
     if (is_pointer()) {
         Decl const* x = get_pointer_decl();
         ASSERT0(x);
@@ -502,7 +501,7 @@ bool Decl::is_scalar() const
 
 bool Decl::is_local_variable() const
 {
-    ASSERTN(this->is_dt_declaration(), ("needs declaration"));
+    ASSERTN(is_dt_declaration(), ("needs declaration"));
     Scope const* sc = DECL_decl_scope(this);
     ASSERTN(sc, ("variable must be allocated within a scope."));
     if (SCOPE_level(sc) >= FUNCTION_SCOPE && !is_static()) {
@@ -514,7 +513,7 @@ bool Decl::is_local_variable() const
 
 bool Decl::is_global_variable() const
 {
-    ASSERTN(this->is_dt_declaration(), ("needs declaration"));
+    ASSERTN(is_dt_declaration(), ("needs declaration"));
     Scope const* sc = DECL_decl_scope(this);
     ASSERTN(sc, ("variable must be allocated within a scope."));
     if (SCOPE_level(sc) == GLOBAL_SCOPE) {
@@ -529,8 +528,8 @@ bool Decl::is_global_variable() const
 //Return true if dcl has initial value.
 bool Decl::is_initialized() const
 {
-    ASSERTN((this->is_dt_declaration() ||
-             DECL_dt(this) == DCL_DECLARATOR), ("requires declaration"));
+    ASSERTN(is_dt_declaration() || is_dt_declarator(),
+            ("requires declaration"));
     Decl const* dcl = this;
     if (dcl->is_dt_declaration()) {
         dcl = DECL_decl_list(dcl); //get DCRLARATOR
@@ -559,7 +558,7 @@ Decl const* Decl::get_decl_id_tree() const
 
 Decl const* Decl::get_return_type() const
 {
-    ASSERT0(this->is_dt_declaration());
+    ASSERT0(is_dt_declaration());
     Decl const* retty = genTypeName(getTypeAttr());
     Decl const* tylst = getTraitList();
 
@@ -589,7 +588,7 @@ Sym const* Decl::get_decl_sym() const
 {
     Decl const* dcl = get_decl_id_tree();
     if (dcl != nullptr) {
-        return TREE_id(DECL_id_tree(dcl));
+        return TREE_id_name(DECL_id_tree(dcl));
     }
     return nullptr;
 }
@@ -597,7 +596,7 @@ Sym const* Decl::get_decl_sym() const
 
 void Decl::set_decl_init_tree(Tree * initval)
 {
-    ASSERT0(this->is_dt_declaration());
+    ASSERT0(is_dt_declaration());
     Decl * dclor = DECL_decl_list(this); //get DCRLARATOR
     ASSERTN(DECL_dt(dclor) == DCL_DECLARATOR ||
             dclor->is_dt_abs_declarator(), ("requires declaration"));
@@ -626,12 +625,13 @@ Tree * Decl::get_decl_init_tree() const
 
 
 //Return true if 'd1' and 'd2' are the same identifier.
+//Note d1 and d2's identifier may be NULL.
 bool Decl::is_decl_equal(Decl const* d1, Decl const* d2)
 {
     Scope const* s1 = DECL_decl_scope(d1);
     Scope const* s2 = DECL_decl_scope(d2);
     if (s1 == s2) {
-        if (d1->get_decl_sym()->getStr() == d2->get_decl_sym()->getStr()) {
+        if (d1->get_decl_sym() == d2->get_decl_sym()) {
             return true;
         }
     }
@@ -700,7 +700,7 @@ Decl const* Decl::getTraitList() const
 //Note array should be DCL_DECLARATION or DCL_TYPE_NAME.
 UINT Decl::getArrayDim() const
 {
-    ASSERT0(this->is_dt_declaration() || this->is_dt_typename());
+    ASSERT0(is_dt_declaration() || is_dt_typename());
     ASSERT0(is_array());
     Decl * dclr = const_cast<Decl*>(getTraitList());
     //Get the first ARRAY decl-type.
@@ -725,14 +725,14 @@ UINT Decl::getArrayDim() const
 //available after compute_array_dim() invoked, and
 //it compute the really number of array element via
 //DECL_array_dim_exp, that is a constant expression.
-//'arr': array declaration.
-//'dim': given dimension to compute, start at 0 which is the closest dimension
-//    to leading ID, in decl-type list.
-//    e.g: int arr[8][12][24];
-//    In C language, [24] is the lowest dimension.
-//    where decl-type list will be:
-//      ID:'arr' -> ARRAY[8] -> ARRAY[12] -> ARRAY[24]
-//    dim 0 indicates ARRAY[8], the highest dimension of 'arr'.
+//arr: array declaration.
+//dim: given dimension to compute, start at 0 which is the closest and
+//     highest dimension to leading ID, in decl-type list.
+//     e.g: int arr[8][12][24];
+//     In C language, [24] is the lowest dimension.
+//     where decl-type list will be:
+//       ID:'arr' -> ARRAY[8] -> ARRAY[12] -> ARRAY[24]
+//     dim 0 indicates ARRAY[8], the highest dimension of 'arr'.
 ULONG Decl::getArrayElemnumToDim(UINT dim) const
 {
     Decl const* dcl = const_cast<Decl*>(this)->get_first_array_decl();
@@ -756,14 +756,14 @@ ULONG Decl::getArrayElemnumToDim(UINT dim) const
 void Decl::dump(StrBuf & buf) const
 {
     if (g_logmgr == nullptr) { return; }
-    format_declaration(buf, this);
+    format_declaration(buf, this, true);
     note(g_logmgr, "\n%s\n", buf.buf);
 }
 
 
 void Decl::dump() const
 {
-    format_declaration(this, g_logmgr->getIndent());
+    format_declaration(this, g_logmgr->getIndent(), true);
 }
 
 
@@ -780,8 +780,7 @@ bool Decl::is_complex_type() const
 
 bool Decl::is_bitfield() const
 {
-    ASSERTN(this->is_dt_typename() ||
-            this->is_dt_declaration(),
+    ASSERTN(is_dt_typename() || is_dt_declaration(),
             ("need TypeAttr-NAME or DCRLARATION"));
     Decl const* dcl = get_declarator();
     return dcl != nullptr && DECL_is_bit_field(dcl);
@@ -790,8 +789,7 @@ bool Decl::is_bitfield() const
 
 bool Decl::is_struct() const
 {
-    ASSERTN(this->is_dt_typename() ||
-            this->is_dt_declaration(),
+    ASSERTN(is_dt_typename() || is_dt_declaration(),
             ("need TypeAttr-NAME or DCRLARATION"));
     if (is_pointer() || is_array()) {
         //Complex type is consist of type-specifier and declarator.
@@ -878,7 +876,7 @@ ULONG Decl::getComplexTypeSize() const
 {
     TypeAttr const* spec = getTypeAttr();
     Decl const* d = nullptr;
-    if (this->is_dt_declaration() || this->is_dt_typename()) {
+    if (is_dt_declaration() || is_dt_typename()) {
         d = getTraitList();
         ASSERTN(d != nullptr, ("composing type expected decl-spec"));
     } else {
@@ -912,7 +910,7 @@ ULONG Decl::getComplexTypeSize() const
 UINT Decl::get_decl_size() const
 {
     TypeAttr const* spec = getTypeAttr();
-    if (this->is_dt_declaration() || this->is_dt_typename()) {
+    if (is_dt_declaration() || is_dt_typename()) {
         Decl const* d = DECL_decl_list(this); //get declarator
         ASSERTN(d && (DECL_dt(d) == DCL_DECLARATOR ||
                       d->is_dt_abs_declarator()),
@@ -976,7 +974,7 @@ Decl * Decl::get_array_base_decl() const
 
 Decl * Decl::get_first_array_decl() const
 {
-    ASSERTN(this->is_dt_typename() || this->is_dt_declaration() ,
+    ASSERTN(is_dt_typename() || is_dt_declaration(),
             ("expect DCRLARATION"));
     ASSERTN(is_array(), ("expect pointer type"));
     Decl * x = const_cast<Decl*>(getTraitList());
@@ -1006,10 +1004,9 @@ Decl * Decl::get_first_array_decl() const
 
 Decl const* Decl::get_return_value_decl() const
 {
-    ASSERTN(this->is_dt_typename() ||
-            this->is_dt_declaration() ,
+    ASSERTN(is_dt_typename() || is_dt_declaration(),
             ("expect DCRLARATION"));
-    ASSERT0(is_fun_decl() || is_fun_pointer()); 
+    ASSERT0(is_fun_decl() || is_fun_pointer());
     for (Decl const* dcl = getTraitList();
          dcl != nullptr; dcl = DECL_next(dcl)) {
         if (dcl->is_dt_fun()) {
@@ -1036,8 +1033,7 @@ Decl const* Decl::get_return_value_decl() const
 
 Decl const* Decl::get_pointer_decl() const
 {
-    ASSERTN(this->is_dt_typename() ||
-            this->is_dt_declaration() ,
+    ASSERTN(is_dt_typename() || is_dt_declaration(),
             ("expect DCRLARATION"));
     ASSERTN(is_pointer(), ("expect pointer type"));
     Decl const* x = getTraitList();
@@ -1075,7 +1071,7 @@ Decl const* Decl::get_pointer_decl() const
 //Get base type of POINTER.
 Decl * Decl::get_pointer_base_decl(TypeAttr ** ty) const
 {
-    ASSERTN(this->is_dt_typename() || this->is_dt_declaration(),
+    ASSERTN(is_dt_typename() || is_dt_declaration(),
             ("expect DCRLARATION"));
     ASSERTN(is_pointer() || is_fun_return_pointer(), ("expect pointer type"));
 
@@ -1110,19 +1106,36 @@ Decl * Decl::get_pointer_base_decl(TypeAttr ** ty) const
 //e.g: Given 'int *(*p)[3]', the pointer-base is 'int * [3]'.
 UINT Decl::get_pointer_base_size() const
 {
-    ASSERT0(this->is_dt_declaration() ||
-            this->is_dt_typename());
+    ASSERT0(is_dt_declaration() || is_dt_typename());
+    if (isFunTypeRef()) {
+        //Base size of function-pointer is the size of pointer.
+        return BYTE_PER_POINTER;
+    }
+
     TypeAttr * ty = nullptr;
     Decl * d = get_pointer_base_decl(&ty);
     if (d == nullptr) {
-        //base type of pointer must be resided in TypeAttr.
-        if (ty != nullptr && ty->is_aggr() && !isAggrComplete(ty)) {
-            //The aggregate is incomplete. Thus the bytesize is 0.
-            return 0;
+        if (ty == nullptr) { return 0; }
+
+        //Base-type of pointer must be recoreded in TypeAttr.
+        TypeAttr const* pure = ty->getPureTypeAttr();
+        if (pure->is_aggr()) {
+            //Try finding complete aggregate definition.
+            Aggr const* aggr = Scope::retrieveCompleteType(
+                pure->getAggrType(), true);
+            if (aggr == nullptr || !aggr->is_complete()) {
+                //The aggregate is incomplete, and bytesize is 0.
+                return 0;
+            }
+
+            //Compute bytesize of complete aggregate.
+            UINT s = TypeAttr::computeStructTypeSize(aggr);
+            ASSERTN(s != 0, ("base-type size should not be zero"));
+            return s;
         }
 
-        UINT s = ty->getSpecTypeSize();
-        ASSERTN(s != 0, ("simply type size cannot be zero"));
+        UINT s = pure->getSpecTypeSize();
+        ASSERTN(s != 0, ("base-type size should not be zero"));
         return s;
     }
 
@@ -1138,8 +1151,7 @@ UINT Decl::get_pointer_base_size() const
 
 bool Decl::is_union() const
 {
-    ASSERTN(this->is_dt_typename() ||
-            this->is_dt_declaration(),
+    ASSERTN(is_dt_typename() || is_dt_declaration(),
             ("need TypeAttr-NAME or DCRLARATION"));
     if (is_pointer() || is_array()) {
         //Complex type is consist of type-specifier and declarator.
@@ -1219,15 +1231,17 @@ bool Decl::is_fun_pointer() const
     while (dcl != nullptr) {
         switch (DECL_dt(dcl)) {
         case DCL_FUN:
-            //CASE:
-            //    ID->FUN is func-decl,
-            //    e.g: void f()
+            //  e.g: void f();
+            //  Trait is: ID->FUN is func-declaration.
             //
-            //    ID->FUN->... is func-decl
-            //    e.g: void ( * f() ) [], ID->FUN->*->[]
+            //  e.g: void ( * f() ) [];
+            //  Trait is: ID->FUN->*->[]
+            //  ID->FUN->... is func-declaration, where '...' is the
+            //  return-value-type of function.
             //
-            //    ID->*->FUN->... is func-pointer
-            //    e.g: void (* (* f)() ) [], ID->*->FUN->*->[]
+            //  e.g: void (* (* f)() ) [];
+            //  Trait is: ID->*->FUN->*->[]
+            //  ID->*->FUN->... is func-pointer.
             if (DECL_prev(dcl) != nullptr &&
                 DECL_dt(DECL_prev(dcl)) == DCL_POINTER) {
                 return true;
@@ -1238,10 +1252,10 @@ bool Decl::is_fun_pointer() const
             break;
         default:
             ASSERTN(!dcl->is_dt_declaration() &&
-                   !dcl->is_dt_declarator() &&
-                   !dcl->is_dt_abs_declarator() &&
-                   !dcl->is_dt_typename(),
-                   ("\nunsuitable Decl type locate here in is_fun()\n"));
+                    !dcl->is_dt_declarator() &&
+                    !dcl->is_dt_abs_declarator() &&
+                    !dcl->is_dt_typename(),
+                    ("\nunsuitable Decl type locate here in is_fun()\n"));
             return false;
         }
         dcl = DECL_next(dcl);
@@ -1407,10 +1421,26 @@ Decl * newDecl(DCL dcl_type)
 {
     Decl * d = (Decl*)xmalloc(sizeof(Decl));
     DECL_dt(d) = dcl_type;
-    #ifdef _DEBUG_
     DECL_id(d) = g_decl_counter++;
-    #endif
     return d;
+}
+
+
+static Struct * newStruct(CHAR const* tag, bool is_complete)
+{
+    Struct * s = (Struct*)xmalloc(sizeof(Struct));
+    if (tag != nullptr) {
+        AGGR_tag(s) = g_fe_sym_tab->add(tag);
+    }
+    AGGR_is_complete(s) = false;
+    AGGR_id(s) = g_aggr_counter++;
+    return s;
+}
+
+
+static Union * newUnion(CHAR const* tag, bool is_complete)
+{
+    return (Union*)newStruct(tag, is_complete);
 }
 
 
@@ -1448,7 +1478,7 @@ Decl * newVarDecl(IN Scope * scope, CHAR const* name)
     //Make Tree node.
     Tree * tree = allocTreeNode(TR_ID, 0);
     Sym const* sym = g_fe_sym_tab->add(name);
-    TREE_id(tree) = sym;
+    TREE_id_name(tree) = sym;
 
     //Make DCL_DECLARATOR.
     Decl * declor = newDecl(DCL_DECLARATOR);
@@ -1476,40 +1506,22 @@ bool isAbsDeclaraotr(Decl const* declarator)
 }
 
 
-//Return true if struct definition is complete.
-bool isStructComplete(TypeAttr const* type)
-{
-    type = get_pure_type_spec(const_cast<TypeAttr*>(type));
-    ASSERT0(type->is_struct());
-    return TYPE_aggr_type(type) != nullptr &&
-           STRUCT_is_complete(TYPE_aggr_type(type));
-}
-
-
 //Return true if aggregation definition is complete.
-bool isAggrComplete(TypeAttr const* type)
+bool TypeAttr::isAggrComplete() const
 {
-    type = get_pure_type_spec(const_cast<TypeAttr*>(type));
-    ASSERT0(type->is_aggr());
+    ASSERT0(is_aggr());
+    TypeAttr * type = const_cast<TypeAttr*>(this)->getPureTypeAttr();
     return TYPE_aggr_type(type) != nullptr &&
-           AGGR_is_complete(TYPE_aggr_type(type));
+           TYPE_aggr_type(type)->is_complete();
 }
 
 
-//Return true if union definition is complete.
-bool isUnionComplete(TypeAttr const* type)
-{
-    type = get_pure_type_spec(const_cast<TypeAttr*>(type));
-    ASSERT0(type->is_union());
-    return TYPE_aggr_type(type) != nullptr &&
-           UNION_is_complete(TYPE_aggr_type(type));
-}
-
-
-bool isStructTypeExistInCurScope(CHAR const* tag, OUT Struct ** s)
+bool isStructTypeExistInCurScope(CHAR const* tag, bool is_complete,
+                                 Struct ** s)
 {
     Scope * sc = g_cur_scope;
-    if (isStructTypeExist(sc->getStructList(), tag, s)) {
+    if (isAggrTypeExist((List<Aggr*>*)sc->getStructList(),
+                        tag, is_complete, (Aggr**)s)) {
         return true;
     }
     return false;
@@ -1881,10 +1893,8 @@ static TypeAttr * type_spec_struct(TypeAttr * ty)
         //version and refill the declaration if there are requirments to
         //access its field.
         if (!isStructExistInOuterScope(g_cur_scope,
-                                       g_real_token_string, &s)) {
-            s = (Struct*)xmalloc(sizeof(Struct));
-            AGGR_tag(s) = g_fe_sym_tab->add(g_real_token_string);
-            AGGR_is_complete(s) = false;
+                                       g_real_token_string, false, &s)) {
+            s = newStruct(g_real_token_string, false);
             g_cur_scope->addStruct(s);
             //Note we do not append anonymous aggregate into scope list because
             //user can not find the aggregate through tag name. Thus there will
@@ -1897,12 +1907,10 @@ static TypeAttr * type_spec_struct(TypeAttr * ty)
         if (s == nullptr) {
             //Struct format as either struct TAG {} or struct {}.
             //The struct declarated without TAG.
-            s = (Struct*)xmalloc(sizeof(Struct));
-            AGGR_tag(s) = nullptr;
-            AGGR_is_complete(s) = false;
+            s = newStruct(nullptr, false);
             AGGR_scope(s) = g_cur_scope;
         }
-        if (AGGR_is_complete(s)) {
+        if (s->is_complete()) {
             //Report error if there exist a previous declaration.
             ASSERT0(AGGR_tag(s));
             err(g_real_line_num, "struct '%s' redefined", 
@@ -1993,11 +2001,9 @@ static TypeAttr * type_spec_union(TypeAttr * ty)
         //Here, we make an incomplete struct/union, then find the complete
         //versionand refill the declaration if there are requirments to
         //access its field.
-        if (!isUnionExistInOuterScope(g_cur_scope,
-                                      g_real_token_string, &s)) {
-            s = (Union*)xmalloc(sizeof(Union));
-            AGGR_tag(s) = g_fe_sym_tab->add(g_real_token_string);
-            AGGR_is_complete(s) = false;
+        if (!isUnionExistInOuterScope(g_cur_scope, g_real_token_string,
+                                      false, &s)) {
+            s = newUnion(g_real_token_string, false);
             g_cur_scope->addUnion(s);
         }
         match(T_ID);
@@ -2010,15 +2016,13 @@ static TypeAttr * type_spec_union(TypeAttr * ty)
         if (s == nullptr) {
             //Union format as either union TAG {} or union {}.
             //The union declarated without TAG.
-            s = (Union*)xmalloc(sizeof(Union));
-            AGGR_tag(s) = nullptr;
-            AGGR_is_complete(s) = false;
+            s = newUnion(nullptr, false);
             AGGR_scope(s) = g_cur_scope;
             //Note we do not append anonymous aggregate into scope list because
             //user can not find the aggregate through tag name. Thus there will
             //multiple aggregates that have same data structure layout.
         }
-        if (AGGR_is_complete(s)) {
+        if (s->is_complete()) {
             //Report error if there exist a previous declaration.
             ASSERT0(AGGR_tag(s));
             err(g_real_line_num, "union '%s' redefined", AGGR_tag(s)->getStr());
@@ -2371,6 +2375,7 @@ static TypeAttr * stor_spec(IN TypeAttr * ty)
 //Parse user defined type.
 static TypeAttr * parseUserType(TypeAttr * ty, bool * parse_finish)
 {
+    //Do some prechecking of TypeAttr.
     if (ty != nullptr) {
         if (ty->is_user_type_ref()) {
             err(g_real_line_num, "redeclared user defined type.");
@@ -2386,13 +2391,10 @@ static TypeAttr * parseUserType(TypeAttr * ty, bool * parse_finish)
         }
     }
 
+    //Process user-defined-type.
     TypeAttr * p = typedef_name(ty);
-    if (p == nullptr) {
-        *parse_finish = true;
-        return ty;
-    }
-    ty = p;
-    return ty;
+    ASSERT0(p);
+    return p;
 }
 
 
@@ -2443,23 +2445,133 @@ static TypeAttr * parseAggrType(TypeAttr * ty, bool * parse_finish,
 static TypeAttr * parseSpecifierOrId(TypeAttr * ty, bool * parse_finish)
 {
     Decl * ut = nullptr;
-    Struct * s = nullptr;
-    Union * u = nullptr;
     if (isUserTypeExistInOuterScope(g_real_token_string, &ut)) {
         return parseUserType(ty, parse_finish);
     }
 
-    if (isStructExistInOuterScope(g_cur_scope, g_real_token_string, &s)) {
+    Struct * s = nullptr;
+    if (isStructExistInOuterScope(g_cur_scope, g_real_token_string,
+                                  false, &s)) {
         return parseAggrType(ty, parse_finish, s, true);
     }
 
-    if (isUnionExistInOuterScope(g_cur_scope, g_real_token_string, &u)) {
+    Union * u = nullptr;
+    if (isUnionExistInOuterScope(g_cur_scope, g_real_token_string,
+                                 false, &u)) {
         return parseAggrType(ty, parse_finish, u, false);
     }
 
-    //g_real_token is not a specifier.
+    //g_real_token is not a specifier, may be error occurred, the
+    //current parsing have to finish.
     *parse_finish = true;
+
     return ty;
+}
+
+
+static bool isLegalTypeAttr(TypeAttr const* ty)
+{
+    ASSERT0(ty);
+    DesSet basic_scalar_ds = T_SPEC_VOID|T_SPEC_CHAR|T_SPEC_SHORT|T_SPEC_INT|
+                             T_SPEC_LONGLONG|
+                             T_SPEC_BOOL|T_SPEC_LONG|T_SPEC_FLOAT|T_SPEC_DOUBLE|
+                             T_SPEC_SIGNED|T_SPEC_UNSIGNED;
+    DesSet scalar_ds = T_SPEC_VOID|T_SPEC_CHAR|T_SPEC_SHORT|T_SPEC_INT|
+                       T_SPEC_LONGLONG|
+                       T_SPEC_BOOL|T_SPEC_LONG|T_SPEC_FLOAT|T_SPEC_DOUBLE|
+                       T_SPEC_SIGNED|T_SPEC_UNSIGNED|T_SPEC_ENUM;
+    DesSet aggr_ds = T_SPEC_STRUCT|T_SPEC_UNION;
+    DesSet stor_ds = T_STOR_AUTO|T_STOR_REG|T_STOR_STATIC|
+                     T_STOR_EXTERN|T_STOR_INLINE|T_STOR_TYPEDEF;
+
+    switch (g_real_token) {
+    case T_AUTO:
+    case T_REGISTER:
+    case T_STATIC:
+    case T_EXTERN:
+    case T_INLINE:
+    case T_TYPEDEF:
+        if (HAVE_FLAG(ty->getDes(), stor_ds)) {
+            err(g_real_line_num, "multiple '%s' used", g_real_token_string);
+            return false;
+        }
+        break;
+    case T_VOID:
+    case T_CHAR:
+    case T_SHORT:
+    case T_INT:
+    case T_LONGLONG:
+    case T_BOOL:
+    case T_LONG:
+    case T_FLOAT:
+    case T_DOUBLE:
+    case T_SIGNED:
+    case T_UNSIGNED:
+        if (HAVE_FLAG(ty->getDes(), aggr_ds) ||
+            HAVE_FLAG(ty->getDes(), T_SPEC_ENUM) ||
+            ty->is_user_type_ref()) {
+            StrBuf buf(16);
+            format_attr(buf, ty, true);
+            err(g_real_line_num, "'%s' is conflict with '%s'",
+                g_real_token_string, buf.buf);
+            return false;
+        }
+        break;
+    case T_STRUCT:
+    case T_UNION:
+        if (HAVE_FLAG(ty->getDes(), scalar_ds) || ty->is_user_type_ref()) {
+            StrBuf buf(16);
+            format_attr(buf, ty, true);
+            err(g_real_line_num, "'%s' is conflict with '%s'",
+                g_real_token_string, buf.buf);
+            return false;
+        }
+        break;
+    case T_ENUM:
+        if (HAVE_FLAG(ty->getDes(), basic_scalar_ds) ||
+            HAVE_FLAG(ty->getDes(), aggr_ds) ||
+            ty->is_user_type_ref()) {
+            StrBuf buf(16);
+            format_attr(buf, ty, true);
+            err(g_real_line_num, "'%s' is conflict with '%s'",
+                g_real_token_string, buf.buf);
+            return false;
+        }
+        break;
+    case T_CONST:
+        if (HAVE_FLAG(ty->getDes(), T_QUA_VOLATILE)) {
+            StrBuf buf(16);
+            format_attr(buf, ty, true);
+            err(g_real_line_num, "'%s' is conflict with '%s'",
+                g_real_token_string, buf.buf);
+            return false;
+        }
+        break;
+    case T_VOLATILE:
+        if (HAVE_FLAG(ty->getDes(), T_QUA_CONST)) {
+            StrBuf buf(16);
+            format_attr(buf, ty, true);
+            err(g_real_line_num, "'%s' is conflict with '%s'",
+                g_real_token_string, buf.buf);
+            return false;
+        }
+        break;
+    case T_RESTRICT:        
+        break;
+    case T_ID:
+        if (HAVE_FLAG(ty->getDes(), scalar_ds) ||
+            HAVE_FLAG(ty->getDes(), aggr_ds) ||
+            ty->is_user_type_ref()) {
+            StrBuf buf(16);
+            format_attr(buf, ty, true);
+            err(g_real_line_num, "'%s' is conflict with '%s'",
+                g_real_token_string, buf.buf);
+            return false;
+        }
+        break;
+    default:;
+    }
+    return true;
 }
 
 
@@ -2474,6 +2586,12 @@ static TypeAttr * declaration_spec()
 {
     TypeAttr * ty = nullptr;
     for (;;) {
+        if (ty != nullptr && ty->is_user_type_ref() && g_real_token == T_ID) {
+            //Complete type-attr parsing.
+            return ty;
+        }
+        if (ty != nullptr && !isLegalTypeAttr(ty)) { return ty; }
+
         switch (g_real_token) {
         case T_AUTO:
         case T_REGISTER:
@@ -2962,7 +3080,7 @@ static INT compute_array_dim(Decl * dclr, bool allow_dim0_is_empty)
         } else {
             //Recompute dim size for next array type:
             //e.g: int (*(a[1][2]))[3][4];
-            //pure dclr: ID(a)->[1]->[2]->PTR->[3]->[4]
+            //trait dclr: ID(a)->[1]->[2]->PTR->[3]->[4]
             dim = 0;
         }
 
@@ -3035,7 +3153,16 @@ static Decl * init_declarator(TypeAttr const* ts, TypeAttr * qua)
 
     //dclr_list is DCL_DECLARATOR node
     Decl * declarator = buildDeclarator(dclr_list, g_alignment);
-    if (g_real_token != T_ASSIGN) { return declarator; }
+    return declarator;
+}
+
+
+static bool process_initializer(Decl * declaration, TypeAttr * qua)
+{ 
+    if (g_real_token != T_ASSIGN) { return true; }
+
+    ASSERT0(declaration);
+    Decl * declarator = declaration->getDeclarator();
 
     match(T_ASSIGN);
     DECL_init_tree(declarator) = initializer(qua);
@@ -3052,7 +3179,7 @@ static Decl * init_declarator(TypeAttr const* ts, TypeAttr * qua)
         DECL_init_tree(declarator) = buildInitvalScope(buildInt(0));
     }
 
-    if (TREE_type(DECL_init_tree(declarator)) == TR_INITVAL_SCOPE &&
+    if (DECL_init_tree(declarator)->getCode() == TR_INITVAL_SCOPE &&
         TREE_initval_scope(DECL_init_tree(declarator)) == nullptr) {
         warn(g_real_line_num, "initial value is empty");
 
@@ -3066,8 +3193,8 @@ static Decl * init_declarator(TypeAttr const* ts, TypeAttr * qua)
         TREE_initval_scope(DECL_init_tree(declarator)) = buildInt(0);
     }
 
-    DECL_is_init(declarator) = 1;
-    return declarator;
+    DECL_is_init(declarator) = true;
+    return true;
 }
 
 
@@ -3099,80 +3226,105 @@ static bool assembleDeclaration(TypeAttr * attr, Decl * declarator,
     Tree * t = appendInitPlaceholder(*declaration, dcl_tree_list);
 
     if (attr->is_user_type_ref()) {
+        //Current declaration reference user-defined-type.
+        //Expand user type recursively with the first-class type of C.        
         *declaration = makeupAndExpandUserType(*declaration);
         DECL_placeholder(*declaration) = t;
         DECL_align(*declaration) = g_alignment;
         DECL_decl_scope(*declaration) = g_cur_scope;
         DECL_lineno(*declaration) = lineno;
     }
+    return true;
+}
 
-    if ((*declaration)->is_fun_decl()) {
+
+static bool process_declaration(OUT Decl * declaration)
+{
+    if (declaration->is_fun_decl()) {
         if (g_real_token == T_LLPAREN) {
             //Function Definition.
-            if (!parse_function_definition(*declaration)) {
+            //The function will add declaration into scope.
+            if (!parse_function_definition(declaration)) {
                 return false;
             }
         } else if (isFollowSetOfDeclaration(g_real_token)) {
-            //End of Function Declaration.
-            g_cur_scope->addDecl(*declaration);
-            DECL_is_fun_def(*declaration) = false;
+            //End of Function Declaration.            
+            DECL_is_fun_def(declaration) = false;
+
+            //Current declaration is variable/function declaration.
+            g_cur_scope->addDecl(declaration);
         } else {
             //Nothing at all.
             err(g_real_line_num,
                 "illegal function definition/declaration, "
-                "might be miss ';'");
+                "might be miss ';' or '{'");
             return false;
         }
     } else {
-        //Check the declarator that should be unique at current scope.
-        //Common variable definition/declaration.
-        if (!isUniqueDecl(g_cur_scope->getDeclList(), *declaration)) {
+        //Check the declaration that should be unique at current scope.
+        //Variable definition/declaration.
+        if (!isUniqueDecl(g_cur_scope->getDeclList(), declaration)) {
             err(g_real_line_num, "'%s' already defined",
-                (*declaration)->get_decl_sym()->getStr());
+                declaration->get_decl_sym()->getStr());
             return false;
         }
-        g_cur_scope->addDecl(*declaration);
+
+        //Current declaration is variable/function declaration.
+        g_cur_scope->addDecl(declaration);
     }
 
-    if ((*declaration)->is_user_type_decl()) {
+    if (declaration->is_user_type_decl()) {
         //Current declaration is user typedef declaration.
         //As the preivous parsing in 'declarator()' has recoginzed that
         //current identifier is identical exactly in current scope,
         //it is dispensable to warry about the redefinition, even if
         //invoking isUserTypeExist().
-        g_cur_scope->addToUserTypeList(*declaration);
+        g_cur_scope->addToUserTypeList(declaration);
     }
     return true;
 }
 
 
-static bool post_process_of_init_declarator(TypeAttr * attr,
-                                            Decl * declarator,
-                                            UINT lineno,
-                                            bool * is_last_decl,
-                                            Tree ** dcl_tree_list)
+static bool post_process_of_declarator(TypeAttr * attr,
+                                       Decl * declarator,
+                                       UINT lineno,
+                                       OUT Decl ** declaration,
+                                       OUT Tree ** dcl_tree_list)
 {
-    Decl * declaration = nullptr;
-    if (!assembleDeclaration(attr, declarator, lineno, &declaration,
+    if (!assembleDeclaration(attr, declarator, lineno, declaration,
                              dcl_tree_list)) {
         return false;
     }
+    ASSERT0(*declaration);
 
-    ASSERT0(declaration);
-    if (!check_aggr_complete(declaration)) {
+    if (!process_declaration(*declaration)) {
         return false;
     }
 
-    if (!check_bitfield(declaration)) {
+    if (!checkAggrComplete(*declaration)) {
         return false;
     }
 
+    if (!checkBitfield(*declaration)) {
+        return false;
+    }
+
+    return true;
+}
+
+
+static bool post_process_of_initializer(TypeAttr * attr,
+                                        Decl * declaration,
+                                        UINT lineno,
+                                        bool * is_last_decl,
+                                        Tree ** dcl_tree_list)
+{
     if (declaration->is_initialized()) {
         process_init_of_declaration(declaration);
     } else {
         //Check the size of array dimension.
         if (declaration->is_array()) {
-            fix_extern_array_size(declaration);
+            fixExternArraySize(declaration);
 
             //This function also do check in addition to compute array size.
             declaration->get_decl_size();
@@ -3192,25 +3344,41 @@ static bool init_declarator_list(TypeAttr * ts, TypeAttr * qua,
                                  Tree ** dcl_tree_list)
 {
     do {
-        Decl * dclr = init_declarator(ts, qua);
-        if (dclr == nullptr) {
+        Decl * declarator = init_declarator(ts, qua);
+        if (declarator == nullptr) {
             //For enum type, there is no enum variable declared, such as:
             //  enum {X, Y, Z};
             //  enum _tag {X, Y, Z};
             //return nullptr; //no variable declared
             if (g_real_token == T_COMMA) {
                 match(T_COMMA);
-                continue; //no variable declared
-            } else { break; }
+                //There is no variable/type-name declared.
+                continue;
+            } else {
+                //Current token is not belong to declaration. Thus
+                //declaration may finish.
+                break;
+            }
         }
 
-        if (dclr->getTraitList() == nullptr) {
+        Decl * declaration = nullptr;
+        if (!post_process_of_declarator(ts, declarator, lineno,
+                                        &declaration, dcl_tree_list)) {
+            return false;
+        }
+
+        ASSERT0(declaration);
+        process_initializer(declaration, qua);
+
+        Decl * dclor = declaration->getDeclarator();
+        ASSERTN(dclor, ("declaration misses declarator"));
+        if (dclor->getTraitList() == nullptr) {
             err(g_real_line_num, "declaration expected identifier");
             return false;
         }
 
-        if (!post_process_of_init_declarator(ts, dclr, lineno, is_last_decl,
-            dcl_tree_list)) {
+        if (!post_process_of_initializer(ts, declaration, lineno, is_last_decl,
+                                         dcl_tree_list)) {
             return false;
         }
 
@@ -3354,7 +3522,7 @@ static Decl * pointer(TypeAttr ** qua)
         }
         xcom::add_next(&ndcl, dcl);
     }
-    qualifier(new_qua); //match qualifier for followed ID.
+    qualifier(new_qua); //match qualifiers for what are following identifier.
     *qua = new_qua;
     return ndcl;
 }
@@ -3379,7 +3547,7 @@ static Decl * declarator(TypeAttr const* ts, TypeAttr * qua)
 }
 
 
-static INT label_ck(Scope * s)
+static INT checkLabel(Scope * s)
 {
     if (s == nullptr) { return ST_ERR; }
     LabelInfo * lref = SCOPE_ref_label_list(s).get_head();
@@ -3387,7 +3555,7 @@ static INT label_ck(Scope * s)
     while (lref != nullptr) {
         CHAR const* name = lref->getOrgName()->getStr();
         ASSERT0(name);
-        LabelInfo * li = SCOPE_label_list(s).get_head();
+        LabelInfo const* li = SCOPE_label_list(s).get_head();
         for (; li != nullptr; li = SCOPE_label_list(s).get_next()) {
             if (::strcmp(li->getOrgName()->getStr(), name) == 0) {
                 set_lab_used(li);
@@ -3401,22 +3569,23 @@ static INT label_ck(Scope * s)
         lref = SCOPE_ref_label_list(s).get_next();
     }
 
-    lj = SCOPE_label_list(s).get_head();
-    for (; lj != nullptr; lj = SCOPE_label_list(s).get_next()) {
+    for (LabelInfo const* lj = SCOPE_label_list(s).get_head();
+         lj != nullptr; lj = SCOPE_label_list(s).get_next()) {
         if (!is_lab_used(lj)) {
-            warn(0, "'%s' unreferenced label", lj->getOrgName()->getStr());
+            warn(g_real_line_num, "'%s' unreferenced label",
+                 lj->getOrgName()->getStr());
         }
     }
     return ST_SUCC;
 }
 
 
-static void fix_para_array_index(Decl * decl)
+static void fixParamArrayIndex(Decl * decl)
 {
     ASSERT0(decl->is_dt_declaration());
-    TypeAttr * ty = nullptr;
-    ASSERT0(DECL_is_formal_para(decl));
+    ASSERT0(decl->is_formal_param());
     ASSERT0(decl->is_pointer());
+    TypeAttr * ty = nullptr;
     Decl * d = decl->get_pointer_base_decl(&ty);
     if (d == nullptr || d->is_dt_pointer()) { return; }
 
@@ -3424,7 +3593,7 @@ static void fix_para_array_index(Decl * decl)
         //Fix array index, it can not be 0.
         //C allows the first dimension of parameter be zero.
         //e.g: void foo (char p[][20]) is legal syntax, but
-        //    the declaration is char p[1][20].
+        //     the declaration is char p[1][20].
         DECL_array_dim(d) = 1;
     }
 
@@ -3436,30 +3605,17 @@ static void fix_para_array_index(Decl * decl)
 }
 
 
-//Change array to pointer if it is formal parameter.
-//Fulfill the first dimension to at least 1 if it is a parameter.
-static Tree * refineArray(Tree * t)
+//Refine the parameter which is array type.
+static Tree * refineArrayParam(Tree * t, Tree * base, Decl * base_decl)
 {
-    ASSERT0(TREE_type(t) == TR_ARRAY);
-
-    //Formal parameter of array type is a pointer in actually.
-    //Insert a Dereference to comfort the C specification.
-    Tree * base = TREE_array_base(t);
-    if (TREE_type(base) != TR_ID) { return t; }
-
-    //ID is unique to its scope.
-    CHAR const* name = TREE_id(base)->getStr();
-    ASSERT0(TREE_id_decl(base));
-    Scope * s = DECL_decl_scope(TREE_id_decl(base));
-    Decl * decl = get_decl_in_scope(name, s);
-    ASSERT0(decl != nullptr);
-    if (!DECL_is_formal_para(decl)) { return t; }
+    ASSERT0(t->getCode() == TR_ARRAY && base->getCode() == TR_ID &&
+            base_decl->is_formal_param());
 
     //Verfiy and fix formal parameters with array type.
     //Check if decl is pointer that pointed to an array.
     //e.g: 'int (*p)[]'
     //the referrence should do same operation as its declaration.
-    Decl const* base_of_pt = decl->getTraitList();
+    Decl const* base_of_pt = base_decl->getTraitList();
     if (DECL_dt(base_of_pt) == DCL_ID) {
         base_of_pt = DECL_next(base_of_pt);
     }
@@ -3471,14 +3627,40 @@ static Tree * refineArray(Tree * t)
         }
     }
 
-    if (base_of_pt != nullptr && DECL_dt(base_of_pt) == DCL_ARRAY) {
-        //The base of pointer is an array. Convert a[] to (*a)[].
-        Tree * deref = allocTreeNode(TR_DEREF, TREE_lineno(base));
-        TREE_lchild(deref) = base;
-        setParent(deref, TREE_lchild(deref));
+    if (base_of_pt != nullptr && base_of_pt->is_dt_array()) {
+        //The basetype of pointer is an array.
+        //e.g:Given a[] to (*a)[], the decl-list is:
+        //    ID(a)->ARR 
+        //Convert to (*a)[], the decl-list is:
+        //    ID(a)->PTR->ARR         
+        Tree * deref = buildDeref(base);
         TREE_array_base(t) = deref;
-        setParent(t, TREE_array_base(t));
-        fix_para_array_index(decl);
+        setParent(t, deref);
+        fixParamArrayIndex(base_decl);
+    }
+    return t;
+}
+
+
+//Change array to pointer if it is formal parameter.
+//Fulfill the first dimension to at least 1 if it is a parameter.
+static Tree * refineArray(Tree * t)
+{
+    ASSERT0(t->getCode() == TR_ARRAY);
+
+    //Formal parameter of array type is a pointer in actually.
+    //Insert a Dereference to comfort the C specification.
+    Tree * base = TREE_array_base(t);
+    if (base->getCode() != TR_ID) { return t; }
+
+    //ID is unique to its scope.
+    CHAR const* name = TREE_id_name(base)->getStr();
+    ASSERT0(TREE_id_decl(base));
+    Scope * s = TREE_id_decl(base)->getDeclScope();
+    Decl * decl = get_decl_in_scope(name, s);
+    ASSERT0(decl != nullptr);
+    if (decl->is_formal_param()) {
+        return refineArrayParam(t, base, decl);
     }
     return t;
 }
@@ -3490,9 +3672,9 @@ static Tree * refineArray(Tree * t)
 static Tree * refine_tree(Tree * t)
 {
     if (t == nullptr) { return nullptr; }
-    if (TREE_type(t) == TR_ARRAY) {
+    if (t->getCode() == TR_ARRAY) {
         t = refineArray(t);
-    } else if (TREE_type(t) == TR_SCOPE) {
+    } else if (t->getCode() == TR_SCOPE) {
         Scope * s = TREE_scope(t);
         SCOPE_stmt_list(s) = refine_tree_list(s->getStmtList());
     }
@@ -3523,36 +3705,34 @@ static void refine_func(Decl * func)
 {
     Scope * scope = DECL_fun_body(func);
     Tree * t = scope->getStmtList();
-    if (t != nullptr) {
-        t = refine_tree_list(t);
-        if (g_err_msg_list.get_elem_count() == 0) {
-            ASSERTN(TREE_parent(t) == nullptr,
-                    ("parent node of Tree is nullptr"));
-        }
-        SCOPE_stmt_list(scope) = t;
+    if (t == nullptr) { return; }
+
+    t = refine_tree_list(t);
+    if (!g_err_msg_list.has_msg()) {
+        ASSERTN(TREE_parent(t) == nullptr,
+                ("parent node of Tree is nullptr"));
     }
+    SCOPE_stmt_list(scope) = t;
 }
 
 
-//Converts 'decl' into pointer type from its origin type.
-//NOTCIE: 'decl' cannot be pointer.
-//
-//'decl': a declarator, not a pointer type.
+//Converts current declaration into pointer type from its origin type.
+//NOTCIE: 'this' cannot be pointer.
 //'is_append': transform to pointer type by appending a DCL_POINTER.
-//    In order to achieve, insert DCL_POINTER type before
+//    In order to achieve inserting DCL_POINTER type before
 //    the first array type.
 //    e.g: ID->ARRAY->ARRAY => ID->POINTER->ARRAY->ARRAY
-Decl * convertToPointerType(Decl * decl, bool is_append)
+void Decl::convertToPointerType()
 {
-    ASSERTN(decl->is_dt_declaration(), ("only DCRLARATION is valid"));
-    ASSERTN(!decl->is_pointer(), ("only DCRLARATION is valid"));
-    Decl * pure = const_cast<Decl*>(decl->getTraitList());
-    Decl * p = pure;
-    Decl * new_pure = nullptr;
+    ASSERTN(is_dt_declaration(), ("only DCRLARATION is allowed"));
+    ASSERTN(!is_pointer(), ("only DCRLARATION is allowed"));
+    Decl const* trait = getTraitList(); //TODO: old trait should be free.
+    Decl * new_trait = nullptr;
     bool isdo = true;
     INT count = 0;
-    while (pure != nullptr) {
-        switch (DECL_dt(pure)) {
+    bool is_append = true;
+    while (trait != nullptr) {
+        switch (DECL_dt(trait)) {
         case DCL_FUN: //Function declarator
         case DCL_ID: //Identifier
         case DCL_VARIADIC: //Variable length parameter
@@ -3560,76 +3740,68 @@ Decl * convertToPointerType(Decl * decl, bool is_append)
             if (count > 0) {
                 isdo = false;
             }
-            p = dupDecl(pure);
-            xcom::add_next(&new_pure, p);
+            xcom::add_next(&new_trait, dupDecl(trait));
             break;
         }
         case DCL_ARRAY: { //ARRAY declarator        
             if (is_append) {
                 is_append = false;
-                p = newDecl(DCL_POINTER);
-                xcom::add_next(&new_pure, p);
+                xcom::add_next(&new_trait, newDecl(DCL_POINTER));
                 isdo = false;
             }
 
             if (!isdo) {
-                p = dupDecl(pure);
+                Decl * p = dupDecl(trait);
                 DECL_is_paren(p) = 1;
-                xcom::add_next(&new_pure, p);
+                xcom::add_next(&new_trait, p);
             } else {
-                count++;
-                p = newDecl(DCL_POINTER);
-                xcom::add_next(&new_pure, p);
+                ASSERT0(0); //hack remove
+                //count++;
+                //xcom::add_next(&new_trait, newDecl(DCL_POINTER));
             }
             break;
+        }        
+        default: ASSERTN(0, ("unexpected Decl type"));
         }
-        case DCL_TYPE_NAME:
-            ; //if current decl is TYPE_NAME,  it descript a declarator
-        case DCL_DECLARATOR:  //declarator
-        case DCL_DECLARATION: //declaration
-        case DCL_ABS_DECLARATOR: //abstract declarator
-        default:
-            ASSERTN(0, ("unexpected Decl type over here"));
-        }
-        pure = DECL_next(pure);
+        trait = DECL_next(trait);
     }
 
-    DECL_trait(decl) = new_pure;
-    ASSERTN(decl->is_pointer(), ("transform failed!"));
-    return decl;
+    DECL_trait(this) = new_trait;
+    ASSERT0(is_pointer());
 }
 
 
-bool isAggrExistInOuterScope(Scope * scope, CHAR const* tag,
-                             TypeAttr const* spec, OUT Aggr ** s)
+bool isAggrExistInOuterScope(Scope * scope, CHAR const* tag, bool is_complete,
+                             TypeAttr const* ta, OUT Aggr ** s)
 {
-    if (isStructExpanded(spec)) {
-        return isStructExistInOuterScope(scope, tag, (Struct**)s);
+    if (ta->isStructExpanded()) {
+        return isStructExistInOuterScope(scope, tag, is_complete, (Struct**)s);
     }
-    ASSERT0(isUnionExpanded(spec));
-    return isUnionExistInOuterScope(scope, tag, (Union**)s);
+    ASSERT0(ta->isUnionExpanded());
+    return isUnionExistInOuterScope(scope, tag, is_complete, (Union**)s);
 }
 
 
-bool isAggrExistInOuterScope(Scope * scope, Sym const* tag,
-                             TypeAttr const* spec, OUT Aggr ** s)
+bool isAggrExistInOuterScope(Scope * scope, Sym const* tag, bool is_complete,
+                             TypeAttr const* ta, OUT Aggr ** s)
 {
-    if (isStructExpanded(spec)) {
-        return isStructExistInOuterScope(scope, tag, (Struct**)s);
+    if (ta->isStructExpanded()) {
+        return isStructExistInOuterScope(scope, tag, is_complete, (Struct**)s);
     }
-    ASSERT0(isUnionExpanded(spec));
-    return isUnionExistInOuterScope(scope, tag, (Union**)s);
+    ASSERT0(ta->isUnionExpanded());
+    return isUnionExistInOuterScope(scope, tag, is_complete, (Union**)s);
 }
 
 
 //Return true if the struct typed declaration have already existed in both
 //current and all of outer scopes.
 bool isStructExistInOuterScope(Scope * scope, CHAR const* tag,
-                               OUT Struct ** s)
+                               bool is_complete, OUT Struct ** s)
 {
     ASSERT0(scope);
     for (Scope * sc = scope; sc != nullptr; sc = SCOPE_parent(sc)) {
-        if (isStructTypeExist(sc->getStructList(), tag, s)) {
+        if (isAggrTypeExist((List<Aggr*>*)sc->getStructList(),
+                            tag, is_complete, (Aggr**)s)) {
             return true;
         }
     }
@@ -3640,11 +3812,12 @@ bool isStructExistInOuterScope(Scope * scope, CHAR const* tag,
 //Return true if the struct typed declaration have already existed in both
 //current and all of outer scopes.
 bool isStructExistInOuterScope(Scope * scope, Sym const* tag,
-                               OUT Struct ** s)
+                               bool is_complete, OUT Struct ** s)
 {
     ASSERT0(scope);
     for (Scope * sc = scope; sc != nullptr; sc = SCOPE_parent(sc)) {
-        if (isStructTypeExist(sc->getStructList(), tag, s)) {
+        if (isAggrTypeExist((List<Aggr*>*)sc->getStructList(),
+                            tag, is_complete, (Aggr**)s)) {
             return true;
         }
     }
@@ -3654,11 +3827,13 @@ bool isStructExistInOuterScope(Scope * scope, Sym const* tag,
 
 //Return true if the union typed declaration have already existed in both
 //current and all of outer scopes.
-bool isUnionExistInOuterScope(Scope * scope, CHAR const* tag, OUT Union ** s)
+bool isUnionExistInOuterScope(Scope * scope, CHAR const* tag,
+                              bool is_complete, OUT Union ** s)
 {
     Scope * sc = scope;
     while (sc != nullptr) {
-        if (isUnionTypeExist(sc->getUnionList(), tag, s)) {
+        if (isAggrTypeExist((List<Aggr*>*)sc->getUnionList(), tag,
+                            is_complete, (Aggr**)s)) {
             return true;
         }
         sc = SCOPE_parent(sc);
@@ -3669,14 +3844,16 @@ bool isUnionExistInOuterScope(Scope * scope, CHAR const* tag, OUT Union ** s)
 
 //Return true if the union typed declaration have already existed in both
 //current and all of outer scopes.
-bool isUnionExistInOuterScope(Scope * scope, Sym const* tag, OUT Union ** s)
+bool isUnionExistInOuterScope(Scope * scope, Sym const* tag,
+                              bool is_complete, OUT Union ** s)
 {
     Scope * sc = scope;
     while (sc != nullptr) {
-        if (isUnionTypeExist(sc->getUnionList(), tag, s)) {
+        if (isAggrTypeExist((List<Aggr*>*)sc->getUnionList(), tag,
+                            is_complete, (Aggr**)s)) {
             return true;
         }
-        sc = SCOPE_parent(sc);
+        sc = sc->getParent();
     }
     return false;
 }
@@ -3798,14 +3975,27 @@ bool isUserTypeExist(UserTypeList const* ut_list, CHAR const* ut_name,
 }
 
 
-bool isStructTypeExist(List<Struct*> const* struct_list, Sym const* tag,
-                       OUT Struct ** s)
+bool isUserTypeExistInOuterScope(CHAR const* ut_name, OUT Decl ** decl)
+{
+    Scope * sc = g_cur_scope;
+    while (sc != nullptr) {
+        if (isUserTypeExist(SCOPE_user_type_list(sc), ut_name, decl)) {
+            return true;
+        }
+        sc = SCOPE_parent(sc);
+    }
+    return false;
+}
+
+
+bool isAggrTypeExist(List<Aggr*> const* aggrs, Sym const* tag,
+                     bool is_complete, OUT Aggr ** s)
 {
     if (tag == nullptr) { return false; }
-    xcom::C<Struct*> * ct;
-    for (Struct * st = struct_list->get_head(&ct);
-         ct != nullptr; st = struct_list->get_next(&ct)) {
-        if (STRUCT_tag(st) == tag) {
+    xcom::C<Aggr*> * ct;
+    for (Aggr * st = aggrs->get_head(&ct);
+         ct != nullptr; st = aggrs->get_next(&ct)) {
+        if (st->getTag() == tag && (!is_complete || st->is_complete())) {
             *s = st;
             return true;
         }
@@ -3814,16 +4004,17 @@ bool isStructTypeExist(List<Struct*> const* struct_list, Sym const* tag,
 }
 
 
-bool isStructTypeExist(List<Struct*> const* struct_list, CHAR const* tag,
-                       OUT Struct ** s)
+bool isAggrTypeExist(List<Aggr*> const* aggrs, CHAR const* tag,
+                     bool is_complete, OUT Aggr ** s)
 {
     if (tag == nullptr) { return false; }
-    xcom::C<Struct*> * ct;
-    for (Struct * st = struct_list->get_head(&ct);
-         ct != nullptr; st = struct_list->get_next(&ct)) {
-        Sym const* sym = STRUCT_tag(st);
+    xcom::C<Aggr*> * ct;
+    for (Aggr * st = aggrs->get_head(&ct);
+         ct != nullptr; st = aggrs->get_next(&ct)) {
+        Sym const* sym = st->getTag();
         if (sym == nullptr) { continue; }
-        if (::strcmp(sym->getStr(), tag) == 0) {
+        if (::strcmp(sym->getStr(), tag) == 0 &&
+            (!is_complete || st->is_complete())) {
             *s = st;
             return true;
         }
@@ -3832,38 +4023,26 @@ bool isStructTypeExist(List<Struct*> const* struct_list, CHAR const* tag,
 }
 
 
-//Seach Union list accroding to the 'tag' of union-type.
-bool isUnionTypeExist(List<Union*> const* u_list, CHAR const* tag,
-                      OUT Union ** u)
+bool inFirstSetOfDeclaration()
 {
-    if (tag == nullptr) { return false; }
-    xcom::C<Union*> * ct;
-    for (Union * st = u_list->get_head(&ct);
-         st != nullptr; st = u_list->get_next(&ct)) {
-        Sym const* sym = UNION_tag(st);
-        if (sym == nullptr) { continue; }
-        if (::strcmp(sym->getStr(), tag) == 0) {
-            *u = st;
+    if (g_real_token == T_ID) {
+        Decl * ut = nullptr;
+        //Note the tag of aggregate type should not belong to the first-set of
+        //decaration.
+        //e.g: typedef struct tagS S;
+        //     S is belong to the first-set, whereas tagS is not.
+        if (isUserTypeExistInOuterScope(g_real_token_string, &ut)) {
             return true;
         }
+        return false;
     }
-    return false;
-}
 
-
-//Seach Union list accroding to the 'tag' of union-type.
-bool isUnionTypeExist(List<Union*> const* u_list, Sym const* tag,
-                      OUT Union ** u)
-{
-    if (tag == nullptr) { return false; }
-    xcom::C<Union*> * ct;
-    for (Union * st = u_list->get_head(&ct);
-         st != nullptr; st = u_list->get_next(&ct)) {
-        if (UNION_tag(st) == tag) {
-            *u = st;
-            return true;
-        }
+    if (Tree::is_type_spec(g_real_token) ||
+        Tree::is_type_quan(g_real_token) ||
+        Tree::is_stor_spec(g_real_token)) {
+        return true;
     }
+
     return false;
 }
 
@@ -3921,8 +4100,8 @@ static UINT computeArrayByteSize(TypeAttr const* spec, Decl const* decl)
             if (spec->is_extern()) {
                 dimsz = 1;
             } else {
-                err(g_src_line_num,
-                    "size of %dth dimension can not be zero", dim);
+                warn(g_src_line_num,
+                     "size of %dth dimension should not be zero", dim);
                 return 0;
             }
         }
@@ -3946,7 +4125,8 @@ static UINT computeArrayByteSize(TypeAttr const* spec, Decl const* decl)
 
 
 //Return byte size of a group of bit fields that consisted of integer type.
-UINT computeBitFieldByteSize(Decl const** dcl)
+//Note the function will update dcl to next declaration.
+static UINT computeBitFieldByteSize(Decl const** dcl)
 {
     ASSERTN((*dcl)->is_integer(), ("must be handled in aggr_declarator()"));
     ASSERT0(DECL_spec(*dcl));
@@ -3989,22 +4169,23 @@ UINT computeBitFieldByteSize(Decl const** dcl)
 }
 
 
-UINT computeAggrAlignedSize(Aggr const* aggr, UINT aggr_size,
-                            UINT max_field_size)
+//Compute new alignment size according to given 'size' and 'max_field_size'.
+UINT Aggr::computeAlignedSize(UINT size, UINT max_field_size) const
 {
-    if (AGGR_align(aggr) < max_field_size) {
+    if (AGGR_align(this) < max_field_size) {
         //Ensure field alignment is compatible with target machine's
         //alignment constraint.
-        max_field_size = pad_align(max_field_size, AGGR_align(aggr));
+        max_field_size = pad_align(max_field_size, AGGR_align(this));
     }
-    if (AGGR_pack_align(aggr) != 0) {
-        aggr_size = pad_align(aggr_size, AGGR_align(aggr));
+
+    if (AGGR_pack_align(this) != 0) {
+        size = pad_align(size, AGGR_align(this));
     } else {
         //There is no user declared constraint on struct alignment,
         //thus aligning the struct in its natural alignment.
-        aggr_size = pad_align(aggr_size, max_field_size);
+        size = pad_align(size, max_field_size);
     }
-    return aggr_size;
+    return size;
 }
 
 
@@ -4016,8 +4197,13 @@ static UINT compute_field_ofst(Aggr const* s, UINT ofst,
         Decl const* elem_dcl = dcl->get_array_base_decl();
         *elem_bytesize = elem_dcl->get_decl_size();
         UINT elem_num = dcl->get_array_elemnum();
-        ofst = compute_field_ofst_consider_pad(s, ofst, *elem_bytesize,
-                                               elem_num, AGGR_field_align(s));
+        if (elem_num != 0) {
+            //C-language allows the lowest dimension of array to be zero.
+            //e.g:struct { int a; char cc[]; };
+            ofst = compute_field_ofst_consider_pad(s, ofst, *elem_bytesize,
+                                                   elem_num,
+                                                   AGGR_field_align(s));
+        }
     } else {
         *elem_bytesize = dcl->get_decl_size();
         ofst = compute_field_ofst_consider_pad(s, ofst, *elem_bytesize,
@@ -4027,52 +4213,47 @@ static UINT compute_field_ofst(Aggr const* s, UINT ofst,
 }
 
 
-static UINT computeStructTypeSize(TypeAttr const* ty)
+UINT TypeAttr::computeStructTypeSize(Aggr const* s)
 {
-    ASSERT0(ty->is_struct());
-    ASSERT0(isStructComplete(ty));
-    Aggr const* s = TYPE_aggr_type(ty);
-    Decl const* dcl = STRUCT_decl_list(s);
     UINT ofst = 0;
     UINT max_field_sz = 0;
-    while (dcl != nullptr) {
+    for (Decl const* dcl = s->getDeclList(); dcl != nullptr;) {
         if (dcl->is_bitfield()) {
+            //dcl will be updated to next declaration in
+            //computeBitFieldByteSize().
             UINT bytesize = computeBitFieldByteSize(&dcl);
             ofst = compute_field_ofst_consider_pad(s, ofst, bytesize, 1,
                                                    AGGR_field_align(s));
             max_field_sz = MAX(max_field_sz, bytesize);
             continue;
         }
+
         UINT elem_bytesize = 0;
         UINT newofst = compute_field_ofst(s, ofst, dcl, AGGR_field_align(s),
                                           &elem_bytesize);
-        if (newofst <= ofst) {
+        if (newofst < ofst) {
             err(g_real_line_num, "field size may be too large");
             //Error recovery: to avoid ASSERTION in size verification.
             newofst += 4;
         }
         ofst = newofst;
-        max_field_sz = MAX(max_field_sz, elem_bytesize);
+        max_field_sz = MAX(max_field_sz, elem_bytesize);        
         dcl = DECL_next(dcl);
     }
 
     UINT size = ofst;
-    return computeAggrAlignedSize(s, size, max_field_sz);
+    return s->computeAlignedSize(size, max_field_sz);
 }
 
 
-static UINT computeUnionTypeSize(TypeAttr const* ty)
+UINT TypeAttr::computeUnionTypeSize(Aggr const* s)
 {
-    ASSERT0(ty->is_union());
-    ASSERT0(isUnionComplete(ty));
-    Aggr const* s = TYPE_aggr_type(ty);
-    Decl const* dcl = UNION_decl_list(s);
     UINT size = 0;
-    while (dcl != nullptr) {
+    for (Decl const* dcl = s->getDeclList();
+         dcl != nullptr; dcl = DECL_next(dcl)) {
         size = MAX(size, dcl->get_decl_size());
-        dcl = DECL_next(dcl);
     }
-    return computeAggrAlignedSize(s, size, size);
+    return s->computeAlignedSize(size, size);
 }
 
 
@@ -4128,20 +4309,22 @@ INT format_union_complete(StrBuf & buf, Union const* u)
 {
     if (u == nullptr) { return ST_SUCC; }
     buf.strcat("union ");
-    Decl * member = UNION_decl_list(u);
-    if (UNION_tag(u)) {
-        buf.strcat(UNION_tag(u)->getStr());
-    }
+    return format_aggr_complete(buf, u);
 
-    //Printf members.
-    buf.strcat("{");
-    while (member != nullptr) {
-        format_declaration(buf, member);
-        buf.strcat("; ");
-        member = DECL_next(member);
-    }
-    buf.strcat("}");
-    return ST_SUCC;
+    //if (u->getTag()) {
+    //    buf.strcat(u->getTag()->getStr());
+    //}
+
+    ////dump members.
+    //Decl * member = u->getDeclList();
+    //buf.strcat("{");
+    //while (member != nullptr) {
+    //    format_declaration(buf, member);
+    //    buf.strcat("; ");
+    //    member = DECL_next(member);
+    //}
+    //buf.strcat("}");
+    //return ST_SUCC;
 }
 
 
@@ -4150,31 +4333,33 @@ INT format_struct_complete(StrBuf & buf, Struct const* s)
 {
     if (s == nullptr) { return ST_SUCC; }
     buf.strcat("struct ");
-    Decl * member = STRUCT_decl_list(s);
-    if (STRUCT_tag(s)) {
-        buf.strcat(STRUCT_tag(s)->getStr());
-    }
+    return format_aggr_complete(buf, s);
 
-    //Printf members.
-    buf.strcat("{");
-    while (member != nullptr) {
-        ASSERT0(member->is_dt_declaration());
-        if (member->is_aggr() && TYPE_aggr_type(DECL_spec(member)) == s) {
-            //It will be recursive definition of struction/union,
-            //e.g:
-            //struct S {
-            //    struct S {
-            //        ...
-            //    }
-            //}
-            ASSERT0(member->is_pointer());
-        }
-        format_declaration(buf, member);
-        buf.strcat("; ");
-        member = DECL_next(member);
-    }
-    buf.strcat("}");
-    return ST_SUCC;
+    //if (s->getTag() != nullptr) {
+    //    buf.strcat(s->getTag()->getStr());
+    //}
+
+    ////dump members.
+    //Decl * member = s->getDeclList();
+    //buf.strcat("{");
+    //while (member != nullptr) {
+    //    ASSERT0(member->is_dt_declaration());
+    //    if (member->is_aggr() && TYPE_aggr_type(DECL_spec(member)) == s) {
+    //        //It will be recursive definition of struction/union,
+    //        //e.g:
+    //        //struct S {
+    //        //    struct S {
+    //        //        ...
+    //        //    }
+    //        //}
+    //        ASSERT0(member->is_pointer());
+    //    }
+    //    format_declaration(buf, member);
+    //    buf.strcat("; ");
+    //    member = DECL_next(member);
+    //}
+    //buf.strcat("}");
+    //return ST_SUCC;
 }
 
 
@@ -4184,11 +4369,35 @@ static INT format_aggr_complete(StrBuf & buf, Aggr const* s)
     if (s == nullptr) { return ST_SUCC; }
     format_aggr(buf, s);
 
-    //Printf members.
-    Decl * member = AGGR_decl_list(s);
+    if (!s->is_complete()) { return ST_SUCC; }
+
+    //dump members.
+    Decl * member = s->getDeclList();
     buf.strcat("{");
     while (member != nullptr) {
-        format_declaration(buf, member);
+        ASSERTN(member->is_dt_declaration(), ("illegal member"));
+        if (member->is_aggr() && member->getTypeAttr()->getAggrType() == s) {
+            //It will be recursive definition of struction/union,
+            //e.g:
+            //struct S {
+            //    struct S {
+            //        ...
+            //    }
+            //}
+            ASSERT0(member->is_pointer());
+        }
+
+        //To avoid recursive aggregate type, format field
+        //only with incomplete aggregate type.
+        //e.g:union node;
+        //    typedef union node * nodeptr;
+        //    struct vector {
+        //      nodeptr a[1]; //union node includes struct vector.
+        //    };
+        //    union node {
+        //      struct vector vec; //struct vector includes union node.
+        //    };
+        format_declaration(buf, member, false);
         buf.strcat("; ");
         member = DECL_next(member);
     }
@@ -4201,7 +4410,7 @@ static INT format_aggr_complete(StrBuf & buf, Aggr const* s)
 INT format_aggr_complete(StrBuf & buf, TypeAttr const* ty)
 {
     if (ty == nullptr) { return ST_SUCC; }
-    return format_aggr_complete(buf, TYPE_aggr_type(ty));
+    return format_aggr_complete(buf, ty->getAggrType());
 }
 
 
@@ -4216,11 +4425,13 @@ static INT format_aggr(StrBuf & buf, Aggr const* s)
         return ST_SUCC;
     }
 
-    //printf tag
-    if (AGGR_tag(s) != nullptr) {
-        //CHAR const* p = buf + strlen(buf);
-        buf.strcat("%s ", AGGR_tag(s)->getStr());
+    //dump tag
+    if (s->getTag() != nullptr) {
+        buf.strcat("%s ", s->getTag()->getStr());
     }
+
+    //dump id
+    buf.strcat("id:%d ", s->id());
     return ST_SUCC;
 }
 
@@ -4259,27 +4470,46 @@ INT format_qualifier(StrBuf & buf, TypeAttr const* ty)
 }
 
 
-INT format_attr(StrBuf & buf, TypeAttr const* ty, bool is_ptr)
+//To avoid recursive aggregate type, format field
+//only with incomplete aggregate type.
+//e.g:union node;
+//    typedef union node * nodeptr;
+//    struct vector {
+//      nodeptr a[1]; //union node includes struct vector.
+//    };
+//    union node {
+//      struct vector vec; //struct vector includes union node.
+//    }
+//is_complete: true to dump aggregate's declarations list recursively.
+//             Note this might leading to infinite invocation of current
+//             function if meeting recursive struct.
+INT format_attr(StrBuf & buf, TypeAttr const* ty, bool is_complete)
 {
     if (ty == nullptr) { return ST_SUCC; }
-    BYTE is_su = (BYTE)(ty->is_struct() || ty->is_union()),
-         is_enum = (BYTE)ty->is_enum() ,
-         is_base = (ty->isSimpleType()) != 0 ,
-         is_ut = (BYTE)ty->is_user_type_ref();
+    bool is_aggr = (BYTE)(ty->is_struct() || ty->is_union());
+    bool is_enum = (BYTE)ty->is_enum();
+    bool is_base = (ty->isSimpleType()) != 0;
+    bool is_ut = (BYTE)ty->is_user_type_ref();
     format_storage(buf, ty);
     format_qualifier(buf, ty);
-    if (is_su) {
-        if (is_ptr) {
-            format_aggr(buf, ty);
-        } else {
+    if (is_aggr) {
+        if (is_complete) {
             format_aggr_complete(buf, ty);
+        } else {
+            format_aggr(buf, ty);
         }
         return ST_SUCC;
-    } else if (is_enum) {
+    }
+
+    if (is_enum) {
         return format_enum_complete(buf, ty);
-    } else if (is_base) {
+    }
+
+    if (is_base) {
         return format_base_spec(buf, ty);
-    } else if (is_ut) {
+    }
+
+    if (is_ut) {
         return format_user_type(buf, ty);
     }
     return ST_ERR;
@@ -4290,7 +4520,7 @@ INT format_parameter_list(StrBuf & buf, Decl const* decl)
 {
     if (decl == nullptr) { return ST_SUCC; }
     while (decl != nullptr) {
-        format_declaration(buf, decl);
+        format_declaration(buf, decl, true);
         buf.strcat(",");
         decl = DECL_next(decl);
     }
@@ -4347,7 +4577,7 @@ static INT format_dcrl_reverse(StrBuf & buf, TypeAttr const* ty,
             }
         }
         if (!blank) { buf.strcat(" "); }
-        buf.strcat("%s ", TREE_id(t)->getStr());
+        buf.strcat("%s ", TREE_id_name(t)->getStr());
         if (DECL_is_paren(decl)) {
             buf.strcat("(");
             //p = p + strlen(p);
@@ -4441,18 +4671,30 @@ INT format_user_type(StrBuf & buf, TypeAttr const* ty)
 INT format_user_type(StrBuf & buf, Decl const* ut)
 {
     if (ut == nullptr) { return ST_SUCC; }
-    return format_declaration(buf, ut);
+    return format_declaration(buf, ut, true);
 }
 
 
-INT format_declaration(StrBuf & buf, Decl const* decl)
+//To avoid recursive aggregate type, format field
+//only with incomplete aggregate type.
+//e.g:union node;
+//    typedef union node * nodeptr;
+//    struct vector {
+//      nodeptr a[1]; //union node includes struct vector.
+//    };
+//    union node {
+//      struct vector vec; //struct vector includes union node.
+//    }
+//is_complete: true to dump aggregate's declarations list recursively.
+//             Note this might leading to infinite invocation of current
+//             function if meeting recursive struct.
+INT format_declaration(StrBuf & buf, Decl const* decl, bool is_complete)
 {
     if (decl == nullptr) { return ST_SUCC; }
-    if (decl->is_dt_declaration() ||
-        decl->is_dt_typename()) {
+    if (decl->is_dt_declaration() || decl->is_dt_typename()) {
         TypeAttr * ty = decl->getTypeAttr();
         Decl * dcl = DECL_decl_list(decl);
-        format_attr(buf, ty, decl->is_pointer());
+        format_attr(buf, ty, !decl->is_pointer() && is_complete);
         format_declarator(buf, ty, dcl);
         return ST_SUCC;
     }
@@ -4479,9 +4721,8 @@ INT format_declaration(StrBuf & buf, Decl const* decl)
 
 INT format_parameter_list(Decl const* decl, INT indent)
 {
-    if (decl == nullptr) { return ST_SUCC; }
-    while (decl != nullptr) {
-        format_declaration(decl, indent);
+    for (; decl != nullptr; ) {
+        format_declaration(decl, indent, true);
         decl = DECL_next(decl);
         if (decl != nullptr) prt(g_logmgr, ", \n");
     }
@@ -4521,7 +4762,7 @@ INT format_dcrl(Decl const* decl, INT indent)
             if (quan->is_const()) prt(g_logmgr, "const ");
             if (quan->is_volatile()) prt(g_logmgr, "volatile ");
         }
-        prt(g_logmgr, "ID:'%s'", TREE_id(t)->getStr());
+        prt(g_logmgr, "ID:'%s'", TREE_id_name(t)->getStr());
         if (DECL_next(decl) != nullptr) { prt(g_logmgr, " -> ");    }
         format_dcrl(DECL_next(decl), indent);
         break;
@@ -4577,9 +4818,7 @@ INT format_declarator(Decl const* decl, TypeAttr const* ty, INT indent)
     if (decl->is_dt_abs_declarator()||
         DECL_dt(decl) == DCL_DECLARATOR) {
         prt(g_logmgr, "%s", g_dcl_name[DECL_dt(decl)]);
-        #ifdef _DEBUG_
         prt(g_logmgr, "(uid:%d)", DECL_id(decl));
-        #endif
         if (DECL_bit_len(decl)) {
             prt(g_logmgr, ",bitfield:%d", DECL_bit_len(decl));
         }
@@ -4620,11 +4859,11 @@ INT format_user_type(Decl const* ut, INT indent)
     if (ut == nullptr) {
         return ST_SUCC;
     }
-    return format_declaration(ut, indent);
+    return format_declaration(ut, indent, true);
 }
 
 
-INT format_declaration(Decl const* decl, INT indent)
+INT format_declaration(Decl const* decl, INT indent, bool is_complete)
 {
     if (decl == nullptr || g_logmgr == nullptr) { return ST_SUCC; }
     note(g_logmgr, "\n");
@@ -4634,13 +4873,11 @@ INT format_declaration(Decl const* decl, INT indent)
         TypeAttr * ty = decl->getTypeAttr();
         Decl * dcl = DECL_decl_list(decl);
         prt(g_logmgr, "%s", g_dcl_name[DECL_dt(decl)]);
-        #ifdef _DEBUG_
         prt(g_logmgr, "(id:%d)", DECL_id(decl));
-        #endif
         prt(g_logmgr, "[%d]", DECL_lineno(decl));
         note(g_logmgr, "\n");
 
-        format_attr(sbuf, ty, decl->is_pointer());
+        format_attr(sbuf, ty, !decl->is_pointer() && is_complete);
 
         g_logmgr->incIndent(DECL_FMT_INDENT_INTERVAL);
 
@@ -4724,35 +4961,57 @@ CHAR const* get_enum_const_name(Enum const* e, INT idx)
 }
 
 
-//If type is a user-defined type, return the real type-spec.
-TypeAttr * get_pure_type_spec(TypeAttr * type)
+//If current type-attr is a user-defined type, return the real type-spec.
+//Real type-spec could be obtained by expanding user-type.
+TypeAttr * TypeAttr::getPureTypeAttr()
 {
-    ASSERT0(type);
-    if (type->is_user_type_ref()) {
-        return get_pure_type_spec(DECL_spec(TYPE_user_type(type)));
+    if (is_user_type_ref()) {
+        return getUserType()->getTypeAttr()->getPureTypeAttr();
     }
-    return type;
+    return this;
 }
 
 
-bool isStructExpanded(TypeAttr const* type)
+bool TypeAttr::isStructExpanded() const
 {
-    type = get_pure_type_spec(const_cast<TypeAttr*>(type));
+    TypeAttr const* type = const_cast<TypeAttr*>(this)->getPureTypeAttr();
     return type != nullptr && type->is_struct();
 }
 
 
-bool isAggrExpanded(TypeAttr const* type)
+bool TypeAttr::isAggrExpanded() const
 {
-    type = get_pure_type_spec(const_cast<TypeAttr*>(type));
+    TypeAttr const* type = const_cast<TypeAttr*>(this)->getPureTypeAttr();
     return (type != nullptr) && (type->is_struct() || type->is_union());
 }
 
 
-bool isUnionExpanded(TypeAttr const* type)
+bool TypeAttr::isUnionExpanded() const
 {
-    type = get_pure_type_spec(const_cast<TypeAttr*>(type));
+    TypeAttr const* type = const_cast<TypeAttr*>(this)->getPureTypeAttr();
     return type != nullptr && type->is_union();
+}
+
+
+//The function generate type-name, and convert it to pointer type.
+Decl * convertToPointerTypeName(Decl const* decl)
+{
+    ASSERT0(decl);
+    Decl * tn = dupTypeName(decl);
+    Decl * declor = tn->getDeclarator();
+    if (declor->is_dt_abs_declarator()) {
+        ASSERTN(tn->getTraitList() == nullptr ||
+                !tn->getTraitList()->is_dt_id(), ("invalid abs-declarator"));
+        xcom::insertbefore_one(&DECL_trait(tn), DECL_trait(tn),
+                               newDecl(DCL_POINTER));
+        return tn;
+    }
+
+    ASSERTN(tn->getTraitList() ||
+            tn->getTraitList()->is_dt_id(), ("invalid abs-declarator"));
+    xcom::insertafter_one(&DECL_trait(tn), newDecl(DCL_POINTER));
+    ASSERT0(tn->is_pointer());
+    return tn;
 }
 
 
@@ -4877,14 +5136,14 @@ static void remove_redundant_para(Decl * declaration)
 
 //Check struct/union completeness if decl is struct/union.
 //Return true if there is no error occur.
-static bool check_aggr_complete(Decl * decl)
+static bool checkAggrComplete(Decl * decl)
 {
     if (decl->is_pointer() || decl->is_fun_return_pointer()) {
         //Pointer does not require aggragate to be complete.
         return true;
     }
     TypeAttr * attr = decl->getTypeAttr();
-    if (!isAggrExpanded(attr)) {
+    if (!attr->isAggrExpanded()) {
         return true;
     }
     if (attr->is_typedef()) {
@@ -4894,9 +5153,9 @@ static bool check_aggr_complete(Decl * decl)
     }
 
     bool errs = false; //claim error
-    if (isStructExpanded(attr) && !isStructComplete(attr)) {
+    if (attr->isStructExpanded() && !attr->isAggrComplete()) {
         errs = true;
-    } else if (isUnionExpanded(attr) && !isUnionComplete(attr)) {
+    } else if (attr->isUnionExpanded() && !attr->isAggrComplete()) {
         errs = false;
     }
     if (!errs) { return true; }
@@ -4905,7 +5164,7 @@ static bool check_aggr_complete(Decl * decl)
     StrBuf buf(64);
     Sym const* sym = decl->get_decl_sym();
     if (sym != nullptr) {
-        format_aggr_complete(buf, get_pure_type_spec(attr));
+        format_aggr_complete(buf, attr->getPureTypeAttr());
         err(g_real_line_num, "'%s' uses incomplete defined %s : %s",
             sym->getStr(), attr->getAggrTypeName(), buf.buf);
         return false;
@@ -4917,7 +5176,7 @@ static bool check_aggr_complete(Decl * decl)
 }
 
 
-static bool check_bitfield(Decl * decl)
+static bool checkBitfield(Decl * decl)
 {
     if (decl->is_bitfield() && decl->is_pointer()) {
         err(g_real_line_num, "pointer type can not assign bit length");
@@ -4962,14 +5221,13 @@ static bool parse_function_definition(Decl * declaration)
     remove_redundant_para(declaration);
     Decl * para_list = get_parameter_list(declaration);
     DECL_fun_body(declaration) = compound_stmt(para_list);
-    //dump_scope(DECL_fun_body(declaration), 0xfffFFFF);
 
     DECL_is_fun_def(declaration) = true;
     ASSERTN(SCOPE_level(g_cur_scope) == GLOBAL_SCOPE,
             ("Funtion declaration should in global scope"));
 
     refine_func(declaration);
-    if (ST_SUCC != label_ck(get_last_sub_scope(g_cur_scope))) {
+    if (ST_SUCC != checkLabel(g_cur_scope->getLastSubScope())) {
         err(g_real_line_num, "illegal label used");
         return false;
     }
@@ -5004,8 +5262,8 @@ static Decl * factor_user_type_rec(Decl const* decl, TypeAttr ** new_spec)
 }
 
 
-//The function expands user-defined type that declared with 'typedef' in C,
-//and remove the 'typedef' attribute from type-specifier.
+//The function will change 'ut' and expand user-defined type that declared
+//with 'typedef' in C, and remove the 'typedef' attribute from type-specifier.
 //The result type is only consist of the first-class type defined in C.
 //The function will modify 'ut' by replacing type-name with the first-class
 //type.
@@ -5123,7 +5381,7 @@ static void add_and_infer_enum(TypeAttr * ta)
 
 
 //Reshape zero-dimension array declaration to be including at least one element.
-static void fix_extern_array_size(Decl * declaration)
+static void fixExternArraySize(Decl * declaration)
 {
     ASSERT0(declaration->is_dt_declaration());
     ASSERT0(declaration->is_array());
@@ -5223,11 +5481,11 @@ static bool post_init_declarator_list(Decl * dcl_list, TypeAttr * attr,
             g_cur_scope->addToUserTypeList(declaration);
         }
 
-        if (!check_aggr_complete(declaration)) {
+        if (!checkAggrComplete(declaration)) {
             return false;
         }
 
-        if (!check_bitfield(declaration)) {
+        if (!checkBitfield(declaration)) {
             return false;
         }
 
@@ -5236,7 +5494,7 @@ static bool post_init_declarator_list(Decl * dcl_list, TypeAttr * attr,
         } else {
             //Check the size of array dimension.
             if (declaration->is_array()) {
-                fix_extern_array_size(declaration);
+                fixExternArraySize(declaration);
 
                 //This function also do check in addition to compute array size.
                 declaration->get_decl_size();
@@ -5270,7 +5528,6 @@ Tree * declaration()
     if (attr->is_enum()) {
         add_and_infer_enum(attr);
     }
-
     bool is_last_decl = false;
     Tree * dcl_tree_list = nullptr;
     init_declarator_list(attr, qualifier, lineno, &is_last_decl,
@@ -5296,7 +5553,7 @@ Tree * declaration_list()
 {
     Tree * decl_list = nullptr;
     Tree * last = nullptr;
-    while (inFirstSetOfDeclarator()) {
+    while (inFirstSetOfDeclaration()) {
         Tree * decl = declaration();
         xcom::add_next(&decl_list, &last, decl);
     }

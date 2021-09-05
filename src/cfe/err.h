@@ -28,34 +28,43 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _ERR_H_
 #define _ERR_H_
 
-//record each error msg
-class WARN_MSG {
-public:
-    CHAR * msg;
-    INT lineno;
-};
-#define WARN_MSG_msg(e) (e)->msg
-#define WARN_MSG_lineno(e) (e)->lineno
-
-
-//record each error msg
-class ERR_MSG {
-public:
-    CHAR * msg;
-    INT lineno;
-};
-#define ERR_MSG_msg(e) (e)->msg
-#define ERR_MSG_lineno(e) (e)->lineno
-
 #define TOO_MANY_ERR 10
 #define ERR_SHOW 1
 #define WARN_SHOW 2
-#endif
 
+//Record each error msg
+#define WARN_MSG_msg(e) (e)->msg
+#define WARN_MSG_lineno(e) (e)->lineno
+class WarnMsg {
+public:
+    CHAR * msg;
+    INT lineno;
+};
+
+
+//Record each error msg
+#define ERR_MSG_msg(e) (e)->msg
+#define ERR_MSG_lineno(e) (e)->lineno
+class ErrMsg {
+public:
+    CHAR * msg;
+    INT lineno;
+};
+
+
+class ErrList : public xcom::List<ErrMsg*> {
+public:
+    bool has_msg() const { return get_elem_count() != 0; }
+};
+
+class WarnList: public xcom::List<WarnMsg*> {
+public:
+    bool has_msg() const { return get_elem_count() != 0; }
+};
 
 //Exported Variables
-extern List<ERR_MSG*> g_err_msg_list;
-extern List<WARN_MSG*> g_warn_msg_list;
+extern ErrList g_err_msg_list;
+extern WarnList g_warn_msg_list;
 
 //Exported Functions
 void warn(INT line_num, CHAR const* msg, ...);
@@ -63,3 +72,5 @@ void err(INT line_num, CHAR const* msg, ...);
 void show_err();
 void show_warn();
 INT is_too_many_err();
+
+#endif
