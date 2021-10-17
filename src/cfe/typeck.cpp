@@ -70,32 +70,9 @@ static INT checkDeclaration(Decl const* d)
 }
 
 
-static bool checkCall(Tree * t, TYCtx * cont)
+static bool checkCallParamList(Tree * t, TYCtx * cont)
 {
-    if (!checkTreeList(TREE_para_list(t), cont)) {
-        return false;
-    }
-    if (!checkTreeList(TREE_fun_exp(t), cont)) { return false; }
-    Decl * fun_decl = TREE_fun_exp(t)->getResultType();
-
-    //Return type is the call type.
-    //And here constructing return value type.
-    //TypeAttr * ty = DECL_spec(fun_decl);
-    Decl * pure_decl = DECL_trait(fun_decl);
-    if (DECL_dt(pure_decl) == DCL_FUN) {
-        pure_decl = DECL_next(pure_decl);
-    }
-
-    //Do legality checking first for the return value type.
-    if (pure_decl) {
-        if (pure_decl->is_array()) {
-            err(t->getLineno(), "function cannot returns array");
-        }
-        if (pure_decl->is_fun_decl()) {
-            err(t->getLineno(), "function cannot returns function");
-        }
-    }
-
+    ASSERT0(t->getCode() == TR_CALL);
     //Check parameter list
     Decl * formal_param_decl = get_parameter_list(
         TREE_fun_exp(t)->getResultType());
@@ -146,6 +123,42 @@ static bool checkCall(Tree * t, TYCtx * cont)
                 name != nullptr ? name : "", c);
         }
 
+        return false;
+    }
+    return true;
+}
+
+
+static bool checkCall(Tree * t, TYCtx * cont)
+{
+    if (!checkTreeList(TREE_para_list(t), cont)) {
+        return false;
+    }
+    if (!checkTreeList(TREE_fun_exp(t), cont)) {
+        return false;
+    }
+    Decl * fun_decl = TREE_fun_exp(t)->getResultType();
+
+    //Return type is the call type.
+    //And here constructing return value type.
+    //TypeAttr * ty = DECL_spec(fun_decl);
+    Decl * pure_decl = DECL_trait(fun_decl);
+    if (DECL_dt(pure_decl) == DCL_FUN) {
+        pure_decl = DECL_next(pure_decl);
+    }
+
+    //Do legality checking for the return-value type.
+    if (pure_decl != nullptr) {
+        if (pure_decl->is_array()) {
+            err(t->getLineno(), "function cannot returns array");
+        }
+        if (pure_decl->is_fun_decl()) {
+            err(t->getLineno(), "function cannot returns function");
+        }
+    }
+
+    //Do legality checking for parameter list type matching.
+    if (!checkCallParamList(t, cont)) {
         return false;
     }
     return true;
@@ -235,6 +248,23 @@ static bool checkLda(Tree * t, TYCtx * cont)
     default:
         err(t->getLineno(), "'&' needs l-value");
         return false;
+    }
+    return res;
+}
+
+
+static bool checkReturn(Tree * t, TYCtx * cont)
+{
+    bool res = checkTreeList(TREE_ret_exp(t), cont);
+    Decl const* funcdecl = cont->current_func_declaration;
+    ASSERT0(funcdecl);
+    if (funcdecl->is_fun_return_void() && TREE_ret_exp(t) != nullptr) {
+        //The current function does not have a return
+        //value accroding to its declaration. But in C language, this is
+        //NOT an error, just a warning. Thus we still give a return result.
+        //e.g: void get_bar(void) { return 10; }
+        warn(t->getLineno(),
+             "'return' with a value, in function returning void.");
     }
     return res;
 }
@@ -382,7 +412,7 @@ bool checkTreeList(Tree * t, TYCtx * cont)
         case TR_CASE:
             break;
         case TR_RETURN:
-            checkTreeList(TREE_ret_exp(t), cont);
+            if (!checkReturn(t, cont)) { return false; }
             break;
         case TR_COND:
             checkTreeList(TREE_det(t), cont);
@@ -444,8 +474,10 @@ INT TypeCheck()
         ASSERT0(dcl->getDeclScope() == s);
         checkDeclaration(dcl);
         if (dcl->is_fun_def()) {
+            TYCtx ct;
+            ct.current_func_declaration = dcl;
             checkDeclInit(dcl->getFunBody()->getDeclList(), nullptr);
-            checkTreeList(dcl->getFunBody()->getStmtList(), nullptr);
+            checkTreeList(dcl->getFunBody()->getStmtList(), &ct);
             if (g_err_msg_list.has_msg()) {
                 return ST_ERR;
             }

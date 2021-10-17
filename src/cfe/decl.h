@@ -733,17 +733,19 @@ public:
     Decl const* getArrayBaseDeclarator() const;
 
     //Get and generate array base declaration.
-    //Note if array is multiple-dimension, the funtion constructs and
-    //return the basel type of sub-dimension.
+    //Note current declaration must be array. If array is multiple-dimension,
+    //the funtion constructs return the base type by striping all dimensions.
     //e.g: given int arr[10][20];
-    //     the function construct and return decl: 'int';
+    //  the declarator is: ID(arr)->ARRAY(10)->ARRAY(20).
+    //  the function construct and return decl: 'int'.
     Decl * get_array_base_decl() const;
 
     //Get and generate array element declaration.
     //Note if array is multiple-dimension, the funtion only construct and
     //return the element type of sub-dimension.
-    //e.g: given int arr[10][20]; the declarator is: ID(arr)->ARRAY(10)->ARRAY(20).
-    //     The function constructs and returns an array decl: 'int [20]';
+    //e.g: given int arr[10][20];
+    //  the declarator is: ID(arr)->ARRAY(10)->ARRAY(20).
+    //  The function constructs and returns an array decl: 'int [20]';
     Decl * get_array_elem_decl() const;
 
     //Get the number of element to given dimension.

@@ -115,7 +115,7 @@ typedef unsigned long long UINT128;
 #define DEFAULT_MANTISSA_NUM 6
 
 //Maximum byte size of target machine stack.
-#define MAX_STACK_SPACE 16*1024*1024
+#define MAX_STACK_SPACE (16*1024*1024)
 
 //Define the order to pushing parameter before function call.
 //true: from right to left

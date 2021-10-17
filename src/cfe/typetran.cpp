@@ -696,8 +696,9 @@ static INT TypeTranIDField(Tree * t, Decl ** field_decl, TYCtx * cont)
 }
 
 
-//Return sub-dimension type of base if 'basetype' is
-//multi-dimensional array.
+//Return sub-dimension type if 'decl' is multi-dimensional array or multi-level
+//pointer.
+//e.g: given ID->ARRAY[10]->ARRAY[20], return ID->ARRAY[10].
 static void reduceDimForArrayOrPointer(Decl * decl)
 {
     ASSERT0(decl);
@@ -748,7 +749,7 @@ static INT TypeTranID(Tree * t, TYCtx * cont)
     ASSERT0(t && t->getCode() == TR_ID);
     //Construct type-name and expand user type if it was declared.
     Decl * id_decl = nullptr;
-    Tree * parent = TREE_parent(t);
+    Tree * parent = t->parent();
     if (parent != nullptr && cont->is_field &&
         (parent->getCode() == TR_DMEM || parent->getCode() == TR_INDMEM)) {
         if (ST_SUCC != TypeTranIDField(t, &id_decl, cont)) {
@@ -802,8 +803,8 @@ static INT TypeTranID(Tree * t, TYCtx * cont)
         }
 
         //Check bitfield's base type is big enough to hold it.
-        INT size = id_decl->get_decl_size() * BIT_PER_BYTE;
-        if (size < DECL_bit_len(declarator)) {
+        UINT size = id_decl->get_decl_size() * BIT_PER_BYTE;
+        if (size < (UINT)DECL_bit_len(declarator)) {
             StrBuf buf(64);
             format_declaration(buf, id_decl, true);
             err(t->getLineno(),
@@ -837,11 +838,11 @@ static INT TypeTranID(Tree * t, TYCtx * cont)
 static INT TypeTranDeref(Tree * t, TYCtx * cont)
 {
     ASSERT0(t);
-    if (ST_SUCC != TypeTranList(TREE_lchild(t), cont)) {
+    if (ST_SUCC != TypeTranList(t->lchild(), cont)) {
         return ST_ERR;
     }
 
-    Decl * ld = TREE_result_type(TREE_lchild(t));
+    Decl * ld = TREE_result_type(t->lchild());
     if (!ld->is_pointer() && !ld->is_array()) {
         err(t->getLineno(), "Illegal dereferencing operation, "
             "indirection operation should operate on pointer type.");
@@ -875,11 +876,11 @@ static INT TypeTranMulti(Tree * t, TYCtx * cont)
     ASSERT0(t);
     ASSERT0(TREE_token(t) == T_ASTERISK || TREE_token(t) == T_DIV ||
             TREE_token(t) == T_MOD);
-    if (ST_SUCC != TypeTranList(TREE_lchild(t), cont)) { return ST_ERR; }
-    if (ST_SUCC != TypeTranList(TREE_rchild(t), cont)) { return ST_ERR; }
+    if (ST_SUCC != TypeTranList(t->lchild(), cont)) { return ST_ERR; }
+    if (ST_SUCC != TypeTranList(t->rchild(), cont)) { return ST_ERR; }
 
-    Decl * ld = TREE_result_type(TREE_lchild(t));
-    Decl * rd = TREE_result_type(TREE_rchild(t));
+    Decl * ld = TREE_result_type(t->lchild());
+    Decl * rd = TREE_result_type(t->rchild());
     if (TREE_token(t) == T_ASTERISK || TREE_token(t) == T_DIV) {
         //Deal with perand type of MUL, DIV.
         if (!ld->is_arith()) {
@@ -1015,33 +1016,33 @@ static INT TypeTranPreAndPostDec(Tree * t, TYCtx * cont)
 static INT TypeTranSizeof(Tree * t, TYCtx * cont)
 {
     ASSERT0(t);
-    Tree * kid = TREE_sizeof_exp(t);
-    if (kid == nullptr) {
+    Tree * exp = TREE_sizeof_exp(t);
+    if (exp == nullptr) {
         err(t->getLineno(), "miss expression after sizeof");
         return ST_ERR;
     }
 
-    if (kid->getCode() == TR_TYPE_NAME) {
-        Decl * type_name = TREE_type_name(kid);
+    if (exp->getCode() == TR_TYPE_NAME) {
+        Decl * type_name = TREE_type_name(exp);
         if (type_name->getTypeAttr()->is_user_type_ref()) {
             //Expand the combined type here.
             type_name = expandUserType(type_name);
             ASSERTN(is_valid_type_name(type_name),
                     ("Illegal expanding user-type"));
-            TREE_type_name(kid) = type_name;
+            TREE_type_name(exp) = type_name;
         }
     }
 
-    INT size;
-    if (kid->getCode() == TR_TYPE_NAME) {
-        ASSERT0(TREE_type_name(kid));
-        size = TREE_type_name(kid)->get_decl_size();
+    UINT size;
+    if (exp->getCode() == TR_TYPE_NAME) {
+        ASSERT0(TREE_type_name(exp));
+        size = TREE_type_name(exp)->get_decl_size();
     } else {
-        if (ST_SUCC != TypeTranList(kid, cont)) {
+        if (ST_SUCC != TypeTranList(exp, cont)) {
             return ST_ERR;
         }
-        ASSERT0(TREE_result_type(kid));
-        size = TREE_result_type(kid)->get_decl_size();
+        ASSERT0(TREE_result_type(exp));
+        size = TREE_result_type(exp)->get_decl_size();
     }
     ASSERT0(size != 0);
     TREE_code(t) = TR_IMMU;
@@ -1129,23 +1130,24 @@ static INT TypeTranDMem(Tree * t, TYCtx * cont)
 
 static INT TypeTranArray(Tree * t, TYCtx * cont)
 {
+    //Note array base type can ONLY either ARRAY or POINTER.
     ASSERT0(t);
     //Under C specification, user can derefence pointer
-    //utilizing array-operator,
+    //utilizing array-operator, thus the function also transfering type for
+    //multi-level pointer, even if t is not array type.
     //e.g:
-    //    int ** p;
-    //    p[i][j] = 10;
+    //  int ** p;
+    //  p[i][j] = 10;
     if (ST_SUCC != TypeTranList(TREE_array_base(t), cont)) {
         return ST_ERR;
     }
     if (ST_SUCC != TypeTranList(TREE_array_indx(t), cont)) {
         return ST_ERR;
     }
-
     Decl * basetype = TREE_array_base(t)->getResultType();
 
-    //Return sub-dimension type of base if 'basetype' is
-    //multi-dimensional array.
+    //Return sub-dimension type if 'basetype' is
+    //multi-dimensional array or multi-level pointer.
     Decl * resty = dupTypeName(basetype);
     if (DECL_trait(resty) == nullptr) {
         err(t->getLineno(),
@@ -1199,16 +1201,16 @@ static INT TypeTranCall(Tree * t, TYCtx * cont)
 static INT TypeTranAdditive(Tree * t, TYCtx * cont)
 {
     ASSERT0(t);
-    if (ST_SUCC != TypeTranList(TREE_lchild(t), cont)) {
+    if (ST_SUCC != TypeTranList(t->lchild(), cont)) {
         return ST_ERR;
     }
 
-    if (ST_SUCC != TypeTranList(TREE_rchild(t), cont)) {
+    if (ST_SUCC != TypeTranList(t->rchild(), cont)) {
         return ST_ERR;
     }
 
-    Decl * ld = TREE_result_type(TREE_lchild(t));
-    Decl * rd = TREE_result_type(TREE_rchild(t));
+    Decl * ld = TREE_result_type(t->lchild());
+    Decl * rd = TREE_result_type(t->rchild());
     if (TREE_token(t) == T_ADD) { // '+'
         if (ld->is_pointer() && rd->is_pointer()) {
             err(t->getLineno(), "can not add two pointers");
@@ -1233,8 +1235,8 @@ static INT TypeTranAdditive(Tree * t, TYCtx * cont)
             Decl * tmp = ld;
             ld = rd;
             rd = tmp;
-            TREE_result_type(TREE_lchild(t)) = ld;
-            TREE_result_type(TREE_rchild(t)) = rd;
+            TREE_result_type(t->lchild()) = ld;
+            TREE_result_type(t->rchild()) = rd;
         }
 
         if (ld->is_array() && rd->is_integer()) {
@@ -1317,17 +1319,17 @@ static INT TypeTranAssign(Tree * t, TYCtx * cont)
     ASSERT0(t);
     // one of   '='   '*='   '/='   '%='  '+='
     //          '-='  '<<='  '>>='  '&='  '^='  '|='
-    if (ST_SUCC != TypeTranList(TREE_lchild(t), cont)) {
+    if (ST_SUCC != TypeTranList(t->lchild(), cont)) {
         return ST_ERR;
     }
-    if (ST_SUCC != TypeTranList(TREE_rchild(t), cont)) {
+    if (ST_SUCC != TypeTranList(t->rchild(), cont)) {
         return ST_ERR;
     }
-    if (!checkAssign(t, TREE_result_type(TREE_lchild(t)),
-                     TREE_result_type(TREE_rchild(t)))) {
+    if (!checkAssign(t, TREE_result_type(t->lchild()),
+                     TREE_result_type(t->rchild()))) {
         return ST_ERR;
     }
-    TREE_result_type(t) = TREE_result_type(TREE_lchild(t));
+    TREE_result_type(t) = TREE_result_type(t->lchild());
     return ST_SUCC;
 }
 
@@ -1335,16 +1337,16 @@ static INT TypeTranAssign(Tree * t, TYCtx * cont)
 static INT TypeTranBinaryLogical(Tree * t, TYCtx * cont)
 {
     ASSERT0(t);
-    if (ST_SUCC != TypeTranList(TREE_lchild(t), cont)) { return ST_ERR; }
-    if (ST_SUCC != TypeTranList(TREE_rchild(t), cont)) { return ST_ERR; }
+    if (ST_SUCC != TypeTranList(t->lchild(), cont)) { return ST_ERR; }
+    if (ST_SUCC != TypeTranList(t->rchild(), cont)) { return ST_ERR; }
 
-    Decl * ld = TREE_result_type(TREE_lchild(t));
-    Decl * rd = TREE_result_type(TREE_rchild(t));
+    Decl * ld = TREE_result_type(t->lchild());
+    Decl * rd = TREE_result_type(t->rchild());
     if (ld->is_pointer() || ld->is_array()) {
         StrBuf buf(64);
         format_declaration(buf, ld, true);
         err(t->getLineno(), "illegal '%s', left operand has type '%s'",
-            getTokenName(TREE_token(TREE_lchild(t))), buf.buf);
+            getTokenName(TREE_token(t->lchild())), buf.buf);
         return ST_ERR;
     }
 
@@ -1352,7 +1354,7 @@ static INT TypeTranBinaryLogical(Tree * t, TYCtx * cont)
         StrBuf buf(64);
         format_declaration(buf, rd, true);
         err(t->getLineno(), "illegal '%s', right operand has type '%s'",
-            getTokenName(TREE_token(TREE_rchild(t))), buf.buf);
+            getTokenName(TREE_token(t->rchild())), buf.buf);
         return ST_ERR;
     }
 
@@ -1361,7 +1363,7 @@ static INT TypeTranBinaryLogical(Tree * t, TYCtx * cont)
         ld->getTypeAttr()->isUnionExpanded() ||
         rd->getTypeAttr()->isUnionExpanded()) {
         err(t->getLineno(), "illegal '%s' for struct/union",
-            getTokenName(TREE_token(TREE_rchild(t))));
+            getTokenName(TREE_token(t->rchild())));
         return ST_ERR;
     }
     TREE_result_type(t) = buildBinaryOpType(t->getCode(), ld, rd);
@@ -1372,11 +1374,11 @@ static INT TypeTranBinaryLogical(Tree * t, TYCtx * cont)
 static INT TypeTranBinaryRelation(Tree * t, TYCtx * cont)
 {
     ASSERT0(t);
-    if (ST_SUCC != TypeTranList(TREE_lchild(t), cont)) { return ST_ERR; }
-    if (ST_SUCC != TypeTranList(TREE_rchild(t), cont)) { return ST_ERR; }
+    if (ST_SUCC != TypeTranList(t->lchild(), cont)) { return ST_ERR; }
+    if (ST_SUCC != TypeTranList(t->rchild(), cont)) { return ST_ERR; }
 
-    Decl * ld = TREE_result_type(TREE_lchild(t));
-    Decl * rd = TREE_result_type(TREE_rchild(t));
+    Decl * ld = TREE_result_type(t->lchild());
+    Decl * rd = TREE_result_type(t->rchild());
     ASSERT0(ld && rd);
     if (ld->getTypeAttr()->isAggrExpanded() && !ld->is_pointer()) {
         err(t->getLineno(),
@@ -1400,9 +1402,9 @@ static INT TypeTranBinaryRelation(Tree * t, TYCtx * cont)
 static INT TypeTranInitValScope(Tree * t, TYCtx * cont)
 {
     ASSERT0(t);
-    ASSERT0(TREE_parent(t)->getCode() == TR_ASSIGN);
-    ASSERT0(TREE_lchild(TREE_parent(t))->getCode() == TR_ID);
-    Decl * decl = TREE_id_decl(TREE_lchild(TREE_parent(t)));
+    ASSERT0(t->parent()->getCode() == TR_ASSIGN);
+    ASSERT0(TREE_lchild(t->parent())->getCode() == TR_ID);
+    Decl * decl = TREE_id_decl(TREE_lchild(t->parent()));
     ASSERT0(decl);
     ASSERT0(decl->is_array() || decl->is_struct() || decl->is_union());
     TypeTranList(TREE_initval_scope(t), nullptr);
@@ -1484,8 +1486,8 @@ INT TypeTran(Tree * t, TYCtx * cont)
     }
     case TR_LOGIC_OR: //logical or ||
     case TR_LOGIC_AND: //logical and &&
-        if (ST_SUCC != TypeTranList(TREE_lchild(t), cont)) { goto FAILED; }
-        if (ST_SUCC != TypeTranList(TREE_rchild(t), cont)) { goto FAILED; }
+        if (ST_SUCC != TypeTranList(t->lchild(), cont)) { goto FAILED; }
+        if (ST_SUCC != TypeTranList(t->rchild(), cont)) { goto FAILED; }
         TREE_result_type(t) = BUILD_TYNAME(T_SPEC_UNSIGNED|T_SPEC_CHAR);
         break;
     case TR_INCLUSIVE_OR: //inclusive or |
@@ -1600,12 +1602,9 @@ INT TypeTran(Tree * t, TYCtx * cont)
         ASSERTN(0, ("Should not be arrival"));
         break;
     case TR_LDA: {  // &a get address of 'a'
-        if (ST_SUCC != TypeTranList(TREE_lchild(t), cont)) { goto FAILED; }
-        Decl * ld = TREE_result_type(TREE_lchild(t));
-        Decl * td = convertToPointerTypeName(ld);
-        //Decl * td = dupTypeName(ld);
-        //xcom::insertafter(&DECL_trait(td), newDecl(DCL_POINTER));
-        TREE_result_type(t) = td;
+        if (ST_SUCC != TypeTranList(t->lchild(), cont)) { goto FAILED; }
+        TREE_result_type(t) = convertToPointerTypeName(
+            t->lchild()->getResultType());
         break;
     }
     case TR_DEREF: // *p dereferencing the pointer 'p'
@@ -1613,8 +1612,8 @@ INT TypeTran(Tree * t, TYCtx * cont)
         break;
     case TR_PLUS: // +123
     case TR_MINUS: { // -123
-        if (ST_SUCC != TypeTranList(TREE_lchild(t), cont)) { goto FAILED; }
-        Decl * ld = TREE_result_type(TREE_lchild(t));
+        if (ST_SUCC != TypeTranList(t->lchild(), cont)) { goto FAILED; }
+        Decl * ld = t->lchild()->getResultType();
         if (!ld->is_arith() || ld->is_array() || ld->is_pointer()) {
             StrBuf buf(64);
             format_declaration(buf, ld, true);
@@ -1630,9 +1629,9 @@ INT TypeTran(Tree * t, TYCtx * cont)
         break;
     }
     case TR_REV: { // reverse
-        if (ST_SUCC != TypeTranList(TREE_lchild(t), cont)) { goto FAILED; }
+        if (ST_SUCC != TypeTranList(t->lchild(), cont)) { goto FAILED; }
 
-        Decl * ld = TREE_result_type(TREE_lchild(t));
+        Decl * ld = t->lchild()->getResultType();
         if (!ld->is_integer() || ld->is_array() || ld->is_pointer()) {
             StrBuf buf(64);
             format_declaration(buf, ld, true);
@@ -1643,9 +1642,9 @@ INT TypeTran(Tree * t, TYCtx * cont)
         break;
     }
     case TR_NOT: { // get non-value
-        if (ST_SUCC != TypeTranList(TREE_lchild(t), cont)) goto FAILED;
+        if (ST_SUCC != TypeTranList(t->lchild(), cont)) goto FAILED;
 
-        Decl * ld = TREE_result_type(TREE_lchild(t));
+        Decl * ld = t->lchild()->getResultType();
         if (!ld->is_arith() && !ld->is_pointer() && !ld->is_bool()) {
             StrBuf buf(64);
             format_declaration(buf, ld, true);

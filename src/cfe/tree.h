@@ -292,6 +292,7 @@ public:
     TREE_CODE getCode() const { return TREE_code(this); }
     TOKEN getToken() const { return TREE_token(this); }
     Decl * getResultType() const { return TREE_result_type(this); }
+    Decl * getTypeName() const { return TREE_type_name(this); }
     INT getLineno() const { return TREE_lineno(this); }
     Tree * getArrayBase() const;
 
@@ -305,6 +306,12 @@ public:
     static bool is_type_spec(TOKEN tok);
     static bool is_type_quan(TOKEN tok);
     static bool is_stor_spec(TOKEN tok);    
+
+    Tree * lchild() const { return TREE_lchild(this); }
+    Tree * rchild() const { return TREE_rchild(this); }
+    Tree * parent() const { return TREE_parent(this); }
+    Tree * nsib() const { return TREE_nsib(this); }
+    Tree * psib() const { return TREE_psib(this); }
 
     void setParentForKid();
 };

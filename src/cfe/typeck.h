@@ -45,7 +45,17 @@ public:
     //e.g: it records the struct/union name if we meet a field.
     Tree * base_tree_node;
 
-    TYCtx() { is_lvalue = false; is_field = false; base_tree_node = nullptr; }
+    //The property propagated top down.
+    //Record the current function declaration.
+    Decl * current_func_declaration;
+public:
+    TYCtx()
+    {
+        is_lvalue = false;
+        is_field = false;
+        base_tree_node = nullptr;
+        current_func_declaration = nullptr;
+    }
 };
 
 bool isConsistentWithPointer(Tree * t);

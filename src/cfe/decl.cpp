@@ -57,6 +57,8 @@ static bool post_process_of_init_declarator(TypeAttr * attr,
                                             UINT lineno,
                                             bool * is_last_decl,
                                             Tree ** dcl_tree_list);
+static void add_enum(TypeAttr * ta);
+static void inferAndSetEValue(EnumValueList * evals);
 
 UINT g_decl_counter = 1;
 UINT g_aggr_counter = 1;
@@ -87,30 +89,45 @@ static void * xmalloc(unsigned long size)
 
 
 //Complement the INT specifier.
-//e.g: unsigned a => unsigned int a
-//    register a => register int a
-static void complement_qualifier(TypeAttr * ty)
+//e.g: unsigned => unsigned int
+//    register => register int
+//    char => unsigned char
+static void complement_qualifier(TypeAttr * attr, TypeAttr * qua)
 {
-    ASSERT0(ty);
+    ASSERT0(attr);
 
     //Note C language supports declaring variable with INT if there is
     //no specifer.
     //e.g: extern a; will complement to extern int a;
-    INT des = TYPE_des(ty);
+    INT des = TYPE_des(attr);
     if (des == T_SPEC_UNSIGNED ||
         des == T_SPEC_SIGNED ||
         des == T_STOR_STATIC || //C supports declaring default type with INT
         des == T_STOR_EXTERN || //C supports declaring default type with INT
         des == T_STOR_REG ||
+        des == T_STOR_INLINE ||
         des == T_STOR_AUTO) {
-        SET_FLAG(TYPE_des(ty), T_SPEC_INT);
+        //These types default to 'int' in C.
+        SET_FLAG(TYPE_des(attr), T_SPEC_INT);
+    }
+
+    if (HAVE_FLAG(TYPE_des(attr), T_SPEC_CHAR) &&
+        !HAVE_FLAG(TYPE_des(attr), T_SPEC_SIGNED)) {
+        //char => unsigned char
+        SET_FLAG(TYPE_des(attr), T_SPEC_UNSIGNED);
+    }
+
+    if ((qua->is_volatile() || qua->is_const()) &&
+        !attr->isSimpleType()) {
+        //volatile => volatile int
+        SET_FLAG(TYPE_des(attr), T_SPEC_INT);
     }
 }
 
 
 //size: byte size.
 //align: the alignment of 'size' should conform.
-//       Note 0 indicates there is requirement to field align.
+//       Note 0 indicates there is NO requirement to field align.
 static UINT pad_align(UINT size, UINT align)
 {
     ASSERT0(align > 0);
@@ -123,7 +140,7 @@ static UINT pad_align(UINT size, UINT align)
 
 //The function computes the byte offset after appending a field that size is
 //'field_size'.
-//field_align: 0 indicates there is requirement to field align.
+//field_align: 0 indicates there is NO requirement to field align.
 static UINT compute_field_ofst_consider_pad(Aggr const* st, UINT ofst,
                                             UINT field_size, UINT elemnum,
                                             UINT field_align)
@@ -911,9 +928,8 @@ UINT Decl::get_decl_size() const
 {
     TypeAttr const* spec = getTypeAttr();
     if (is_dt_declaration() || is_dt_typename()) {
-        Decl const* d = DECL_decl_list(this); //get declarator
-        ASSERTN(d && (DECL_dt(d) == DCL_DECLARATOR ||
-                      d->is_dt_abs_declarator()),
+        Decl const* d = getDeclarator(); //get declarator
+        ASSERTN(d && (d->is_dt_declarator() || d->is_dt_abs_declarator()),
                 ("illegal declarator"));
         if (d->is_complex_type()) {
             return getComplexTypeSize();
@@ -947,25 +963,28 @@ Decl * Decl::get_array_elem_decl() const
 }
 
 
+//Get and generate array base declaration.
+//Note current declaration must be array. If array is multiple-dimension,
+//the funtion constructs return the base type by striping all dimensions.
+//e.g: given int arr[10][20];
+//     the function construct and return decl: 'int'.
 Decl * Decl::get_array_base_decl() const
 {
-    ASSERT0(is_array());
-    //Return sub-dimension of base if 'decl' is
-    //multi-dimensional array.
+    ASSERT0(is_array());    
     Decl * newdecl = dupDeclFully(this);
     ASSERT0(DECL_trait(newdecl));
 
-    //Given declator list, we elide the most outside ARRAY, and keep the rest
-    //and the declator of base type.
-    //e.g: If td is: ID->ARRAY1->POINTER->ARRAY2->ARRAY3.
-    //  We elide ARRAY1, the returned declator
-    //  is: ID->POINTER->ARRAY2->ARRAY3.
+    //Given declator list, we elide the most outside multiple-dimension ARRAY,
+    //and keep the rest and the declator of base type.
+    //e.g: If trait list is: ID->ARRAY0->ARRAY1->POINTER->ARRAY2->ARRAY3.
+    //  We elide ARRAY0->ARRAY1, the returned declator will be:
+    //  ID->POINTER->ARRAY2->ARRAY3.
     Decl * dclor = newdecl->get_first_array_decl();
-    Decl * prev = nullptr;
+    Decl * next = nullptr;
     while (dclor != nullptr && dclor->is_dt_array()) {
-        prev = DECL_prev(dclor);
+        next = DECL_next(dclor);
         xcom::remove(&DECL_trait(newdecl), dclor);
-        dclor = prev;
+        dclor = next;
     }
 
     return newdecl;
@@ -1377,17 +1396,13 @@ Decl const* Decl::get_declarator() const
 //
 bool CompareEnumTab::is_less(Enum const* t1, Enum const* t2) const
 {
-    Sym const* t1name = t1->getName();
-    Sym const* t2name = t1->getName();
-    return t1name != nullptr && t2name != nullptr && t1name < t2name;
+    return t1 < t2;
 }
 
 
 bool CompareEnumTab::is_equ(Enum const* t1, Enum const* t2) const
 {
-    Sym const* t1name = t1->getName();
-    Sym const* t2name = t1->getName();
-    return t1name != nullptr && t2name != nullptr && t1name == t2name;
+    return t1 == t2;
 }
 
 
@@ -2128,7 +2143,7 @@ static TypeAttr * type_spec(TypeAttr * ty)
 //enumerator:
 //  identifier
 //  identifier = constant_expression
-static EnumValueList * enumrator(Enum const* en)
+static EnumValueList * enumrator(Enum * en)
 {
     if (g_real_token != T_ID) { return nullptr; }
 
@@ -2143,24 +2158,15 @@ static EnumValueList * enumrator(Enum const* en)
         return evl;
     }
 
+    xcom::add_next(&ENUM_vallist(en), evl);
+ 
     match(T_ID);
-    if (g_real_token != T_ASSIGN) { return evl; }
+    if (g_real_token != T_ASSIGN) {
+        inferAndSetEValue(en->getValList());
+        return evl;
+    }
 
     match(T_ASSIGN);
-
-    //idx = 0;
-    //INT eval = 0;
-    //if (g_real_token == T_ID &&
-    //    en->isEnumValExistAndEvalValue(g_real_token_string, &eval, 
-    //                                   (INT*)&idx)) {
-    //    Tree * t = NEWTN(TR_ENUM_CONST);
-    //    TREE_enum(t) = en;
-    //    TREE_enum_val_idx(t) = (INT)idx;
-    //    EVAL_val(evl) = eval;
-    //    EVAL_is_evaluated(evl) = true;
-    //    match(T_ID);
-    //    return evl;
-    //}
 
     //constant expression
     if (inFirstSetOfExp(g_real_token)) {
@@ -2190,13 +2196,10 @@ static void enumerator_list(Enum * en)
     EnumValueList * ev = enumrator(en);
     if (ev == nullptr) { return; }
 
-    EnumValueList * last = xcom::get_last(en->getValList());
-    xcom::add_next(&ENUM_vallist(en), &last, ev);
     while (g_real_token == T_COMMA) {
         match(T_COMMA);
         EnumValueList * nev = enumrator(en);
         if (nev == nullptr) { break; }
-        xcom::add_next(&ENUM_vallist(en), &last, nev);
     }
 }
 
@@ -2219,41 +2222,41 @@ static TypeAttr * enum_spec(TypeAttr * ty)
         match(T_ID);
     }
 
-    if (g_real_token == T_LLPAREN) {
-        match(T_LLPAREN);
+    if (g_real_token != T_LLPAREN) { return ty; }
 
-        //Check enum-name if meet enumerator definition.
-        //Note the enum-name is optional.
-        //In C, enum-name redeclaration is allowed. e.g:enum A; ... enum A;
-        //However, enum redefinition is illegal. e.g:enum A{}; ... enum A{};
-        Enum * e = nullptr;
-        Sym const* enumname = ty->getEnumType()->getName();
-        if (enumname != nullptr &&
-            isEnumTagExistInOuterScope(enumname->getStr(), &e)) {
-            ASSERT0(e);
-            if (e->is_complete()) {
-                err(g_real_line_num, "'%s' : enum type redefinition",
-                    enumname->getStr());
-                return ty;
-            } else {
-                //enum declaration.
-                //e.g: typedef enum tagX X;
-            }
-        }
+    match(T_LLPAREN);
 
-        add_and_infer_enum(ty);
-
-        //Because enum-item may referrence the value that declared
-        //just before, thus passing whole enumertor to parse new enum-item.
-        //e.g: enum { v1, v2, v3=v1; }; //v3 referred value of v1.
-        enumerator_list(ty->getEnumType());
-
-        ENUM_is_complete(ty->getEnumType()) = true;
-
-        if (match(T_RLPAREN) != ST_SUCC) {
-            err(g_real_line_num, "miss '}' during enum type declaring");
+    //Check enum-name if meet enumerator definition.
+    //Note the enum-name is optional.
+    //In C, enum-name redeclaration is allowed. e.g:enum A; ... enum A;
+    //However, enum redefinition is illegal. e.g:enum A{}; ... enum A{};
+    Enum * e = nullptr;
+    Sym const* enumname = ty->getEnumType()->getName();
+    if (enumname != nullptr &&
+        isEnumTagExistInOuterScope(enumname->getStr(), &e)) {
+        ASSERT0(e);
+        if (e->is_complete()) {
+            err(g_real_line_num, "'%s' : enum type redefinition",
+                enumname->getStr());
             return ty;
+        } else {
+            //enum declaration.
+            //e.g: typedef enum tagX X;
         }
+    }
+
+    //Infer the enum-value after parsing whole enum-item rather than now.
+    add_enum(ty);
+
+    //Because enum-item may referrence the value that declared
+    //before, passing whole enumertor to parse new enum-item.
+    //e.g: enum { v1, v2, v3=v1; }; //v3 referred value of v1.
+    enumerator_list(ty->getEnumType());
+
+    ENUM_is_complete(ty->getEnumType()) = true;
+
+    if (match(T_RLPAREN) != ST_SUCC) {
+        err(g_real_line_num, "miss '}' during enum type declaring");
     }
     return ty;
 }
@@ -2667,13 +2670,12 @@ static Decl * parameter_declaration()
         return nullptr;
     }
 
-    complement_qualifier(attr);
-
     TypeAttr * qualifier = newTypeAttr();
 
     //Extract qualifier, and regarded it as the qualifier
     //to the subsequently POINTER or ID.
     extract_qualifier(attr, qualifier);
+    complement_qualifier(attr, qualifier);
 
     //'DCL_ID' should be the list-head if it exist.
     Decl * dcl_list = reverse_list(abstract_declarator(qualifier));
@@ -2927,7 +2929,7 @@ Decl * type_name()
     DECL_spec(type_name) = attr;
     DECL_decl_list(type_name) = newDecl(DCL_ABS_DECLARATOR);
     DECL_trait(type_name) = xcom::reverse_list(abs_decl);
-    complement_qualifier(attr);
+    complement_qualifier(attr, qualifier);
     compute_array_dim(type_name, false);
     return type_name;
 }
@@ -3169,7 +3171,7 @@ static bool process_initializer(Decl * declaration, TypeAttr * qua)
     if (DECL_init_tree(declarator) == nullptr) {
         warn(g_real_line_num, "initial value is empty");
 
-        //TO BE CONFIRMED: Do we allow an empty initialization?
+        //TBD: Do we allow an empty initialization?
         //err(g_real_line_num, "initial value is nullptr");
         //Give up parsing subsequent tokens if initialization is empty.
         //suck_tok_to(0, T_SEMI, T_END, T_NUL);
@@ -3183,7 +3185,7 @@ static bool process_initializer(Decl * declaration, TypeAttr * qua)
         TREE_initval_scope(DECL_init_tree(declarator)) == nullptr) {
         warn(g_real_line_num, "initial value is empty");
 
-        //TO BE CONFIRMED: Do we allow an empty initialization?
+        //TBD: Do we allow an empty initialization?
         //err(g_real_line_num, "initial value is nullptr");
         //Give up parsing subsequent tokens if initialization is empty.
         //suck_tok_to(0, T_SEMI, T_END, T_NUL);
@@ -3717,11 +3719,7 @@ static void refine_func(Decl * func)
 
 
 //Converts current declaration into pointer type from its origin type.
-//NOTCIE: 'this' cannot be pointer.
-//'is_append': transform to pointer type by appending a DCL_POINTER.
-//    In order to achieve inserting DCL_POINTER type before
-//    the first array type.
-//    e.g: ID->ARRAY->ARRAY => ID->POINTER->ARRAY->ARRAY
+//Note 'this' cannot be pointer.
 void Decl::convertToPointerType()
 {
     ASSERTN(is_dt_declaration(), ("only DCRLARATION is allowed"));
@@ -3730,6 +3728,11 @@ void Decl::convertToPointerType()
     Decl * new_trait = nullptr;
     bool isdo = true;
     INT count = 0;
+
+   //is_append: transform to pointer type by inserting a DCL_POINTER.
+    //  In order to achieve inserting DCL_POINTER type before
+    //  the first array type.
+    //  e.g: ID->ARRAY->ARRAY => ID->POINTER->ARRAY->ARRAY
     bool is_append = true;
     while (trait != nullptr) {
         switch (DECL_dt(trait)) {
@@ -3750,15 +3753,10 @@ void Decl::convertToPointerType()
                 isdo = false;
             }
 
-            if (!isdo) {
-                Decl * p = dupDecl(trait);
-                DECL_is_paren(p) = 1;
-                xcom::add_next(&new_trait, p);
-            } else {
-                ASSERT0(0); //hack remove
-                //count++;
-                //xcom::add_next(&new_trait, newDecl(DCL_POINTER));
-            }
+            ASSERT0(!isdo);
+            Decl * p = dupDecl(trait);
+            DECL_is_paren(p) = 1;
+            xcom::add_next(&new_trait, p);
             break;
         }        
         default: ASSERTN(0, ("unexpected Decl type"));
@@ -4198,17 +4196,18 @@ static UINT compute_field_ofst(Aggr const* s, UINT ofst,
         *elem_bytesize = elem_dcl->get_decl_size();
         UINT elem_num = dcl->get_array_elemnum();
         if (elem_num != 0) {
-            //C-language allows the lowest dimension of array to be zero.
+            //C-language allows the highest dimension of array to be zero.
             //e.g:struct { int a; char cc[]; };
             ofst = compute_field_ofst_consider_pad(s, ofst, *elem_bytesize,
                                                    elem_num,
                                                    AGGR_field_align(s));
         }
-    } else {
-        *elem_bytesize = dcl->get_decl_size();
-        ofst = compute_field_ofst_consider_pad(s, ofst, *elem_bytesize,
-                                               1, AGGR_field_align(s));
+        return ofst;
     }
+
+    *elem_bytesize = dcl->get_decl_size();
+    ofst = compute_field_ofst_consider_pad(s, ofst, *elem_bytesize,
+                                           1, AGGR_field_align(s));
     return ofst;
 }
 
@@ -4431,7 +4430,7 @@ static INT format_aggr(StrBuf & buf, Aggr const* s)
     }
 
     //dump id
-    buf.strcat("id:%d ", s->id());
+    buf.strcat("(id:%d) ", s->id());
     return ST_SUCC;
 }
 
@@ -4874,7 +4873,7 @@ INT format_declaration(Decl const* decl, INT indent, bool is_complete)
         Decl * dcl = DECL_decl_list(decl);
         prt(g_logmgr, "%s", g_dcl_name[DECL_dt(decl)]);
         prt(g_logmgr, "(id:%d)", DECL_id(decl));
-        prt(g_logmgr, "[%d]", DECL_lineno(decl));
+        prt(g_logmgr, "LOC:%d", DECL_lineno(decl));
         note(g_logmgr, "\n");
 
         format_attr(sbuf, ty, !decl->is_pointer() && is_complete);
@@ -5368,15 +5367,21 @@ static void inferAndSetEValue(EnumValueList * evals)
 }
 
 
+//The function add the enumerator into current scope.
+//Enumerator value always be retrieved as compilation time constant.
+static void add_enum(TypeAttr * ta)
+{
+    TYPE_enum_type(ta) = g_cur_scope->addEnum(ta->getEnumType());
+    ASSERT0(TYPE_enum_type(ta));
+}
+
+
 //The function infers and assigns the value of each item in enumerator.
 //And add the enumerator into current scope.
 static void add_and_infer_enum(TypeAttr * ta)
 {
-    TYPE_enum_type(ta) = g_cur_scope->addEnum(ta->getEnumType());
-    ASSERT0(TYPE_enum_type(ta));
-    EnumValueList * evals = ta->getEnumType()->getValList();
-    if (evals == nullptr) { return; }
-    inferAndSetEValue(evals);
+    add_enum(ta);
+    inferAndSetEValue(ta->getEnumType()->getValList());
 }
 
 
@@ -5522,12 +5527,15 @@ Tree * declaration()
     //Note, In C language, type-attribute includes qualifier.
     TypeAttr * qualifier = newTypeAttr();
     extract_qualifier(attr, qualifier);
-    complement_qualifier(attr);
+    complement_qualifier(attr, qualifier);
 
-    //Deal with enumerator.
     if (attr->is_enum()) {
-        add_and_infer_enum(attr);
+        //Deal with enumerator value.
+        //Note enumerator should have been added into scope's enum-table.
+        //The function infers and assigns the value of each item in enumerator.
+        inferAndSetEValue(attr->getEnumType()->getValList());
     }
+
     bool is_last_decl = false;
     Tree * dcl_tree_list = nullptr;
     init_declarator_list(attr, qualifier, lineno, &is_last_decl,

@@ -47,23 +47,31 @@ Tree * TreeCanon::handleAssign(Tree * t, TreeCanonCtx * ctx)
 Tree * TreeCanon::handleString(Tree * t, TreeCanonCtx * ctx)
 {
     ASSERT0(t->getCode() == TR_STRING);
-    Decl * ty = t->getResultType();
-    ASSERT0(ty);
-    if (TREE_parent(t)->getCode() == TR_ARRAY) {
-        if (t == TREE_array_base(TREE_parent(t)) && ty->is_array()) {
+    if (t->parent()->getCode() == TR_ARRAY) {
+        //e.g: ... = "abcd"[3];
+        Decl * ty = t->getResultType();
+        ASSERT0(ty);
+        if (t == TREE_array_base(t->parent()) && ty->is_array()) {
             //In C language, string can be accessed via array operator.
             //The reference of the string should be represented as LDA.
             //e.g: ... = "abcd"[3];
-            //     = ARRAY(STR(abcd)) will be handled to :
-            //     = ARRAY(LDA(STR(abcd)))
-            Tree * tparent = TREE_parent(t);
-            t = buildLda(t);
-            setParent(tparent, t);
-            TypeTran(t, nullptr);
+            //     ... = ARRAY(STR(abcd)) will be transfomed to :
+            //     ... = ARRAY(LDA(STR(abcd)))
+            Tree * tparent = t->parent();
+            Tree * newt = buildLda(t);
+
+            //Do NOT call TypeTran() to compute the result-type of newt, because
+            //TreeCanon will insert LDA prior to original tree node, which will
+            //confuse the TypeTran() and generate the wrong result-type.
+            TREE_result_type(newt) = convertToPointerTypeName(
+                t->getResultType());
+
+            setParent(tparent, newt);
             TCC_change(ctx) = true;
-            return t;
+            return newt;
         }
-        //t may be subscript.
+
+        //t may be array subscript exp.
         return t;
     }
     return t;
@@ -75,37 +83,49 @@ Tree * TreeCanon::handleId(Tree * t, TreeCanonCtx * ctx)
     ASSERT0(t->getCode() == TR_ID);
     Decl const* decl = TREE_id_decl(t);
     ASSERT0(decl);
-    Decl * idty = t->getResultType();
-    ASSERT0(idty);
-    if (TREE_parent(t) != nullptr && //Enum ID does not have parent.
-        TREE_parent(t)->getCode() == TR_ARRAY) {
-        if (t == TREE_array_base(TREE_parent(t)) && idty->is_array()) {
+    if (t->parent() != nullptr && //Enum ID does not have parent.
+        t->parent()->getCode() == TR_ARRAY) {
+        if (t == TREE_array_base(t->parent()) &&
+            t->getResultType()->is_array()) {
             //In C language, identifier of array is just a label.
             //The reference of the label should be represented as LDA.
             //e.g: int * p; int a[10]; p = a[10];
             //     ARRAY(ID(a)) will be handled to : p = ARRAY(LDA(ID(a)))
-            Tree * tparent = TREE_parent(t);
-            t = buildLda(t);
-            TypeTran(t, nullptr);
-            setParent(tparent, t);
+            Tree * tparent = t->parent();
+            Tree * newt = buildLda(t);
+
+            //Do NOT call TypeTran() to compute the result-type of newt, because
+            //TreeCanon will insert LDA prior to original tree node, which will
+            //confuse the TypeTran() and generate the wrong result-type.
+            TREE_result_type(newt) = convertToPointerTypeName(
+                t->getResultType());
+
+            setParent(tparent, newt);
             TCC_change(ctx) = true;
-            return t;
+            return newt;
         }
-        //t may be subscript.
+
+        //t may be array subscript exp.
         return t;
     }
 
-    if (idty->is_array()) {
+    if (t->getResultType()->is_array()) {
         //In C language, identifier of array is just a label.
         //The reference of the label should be represented as LDA.
         //e.g: int * p; int a[10]; p = ID(a);
         //     will be handled to : p = LDA(ID(a)
-        Tree * tparent = TREE_parent(t);
-        t = buildLda(t);
-        TypeTran(t, nullptr);
-        setParent(tparent, t);
+        Tree * tparent = t->parent();
+        Tree * newt = buildLda(t);
+
+        //Do NOT call TypeTran() to compute the result-type of newt, because
+        //TreeCanon will insert LDA prior to original tree node, which will
+        //confuse the TypeTran() and generate the wrong result-type.
+        TREE_result_type(newt) = convertToPointerTypeName(
+            t->getResultType());
+
+        setParent(tparent, newt);
         TCC_change(ctx) = true;
-        return t;
+        return newt;
     }
 
     return t;
@@ -221,8 +241,6 @@ Tree * TreeCanon::handleCall(Tree * t, TreeCanonCtx * ctx)
                 "function '%s' should take %d parameters",
                 name != nullptr ? name : "", c);
         }
-
-        return t;
     }
     return t;
 }
@@ -238,30 +256,36 @@ Tree * TreeCanon::handleAggrAccess(Tree * t, TreeCanonCtx * ctx)
     ASSERT0(field->getResultType());
     if (field->getCode() == TR_ID && field->getResultType()->is_array()) {
         //Field is an array identifier.
-        //In C language, identifier of array is just a label.
+        //In C language, array identifier is just a label.
         //The reference of the label should be represented as LDA.
         //e.g1: b = s.arr;
-        //     will be handled to: p = LDA(s.arr)
+        //  will be transformed to: b = LDA(s.arr)
         //
-        //e.g2:s.bg[3] = ...
+        //e.g2: s.bg[3] = ...
         //  ARRAY
-        //   |---3
-        //   |----DMEM/INDMEM
-        //             |----s
-        //             |----bg
-        // will be handled to:
+        //    |--3
+        //    |--DMEM/INDMEM
+        //         |--s
+        //         |--bg
+
         //  ARRAY
-        //   |---3
-        //   |---LDA
-        //        |----DMEM/INDMEM
-        //                  |----s
-        //                  |----bg
-        Tree * tparent = TREE_parent(t);
-        t = buildLda(t);
-        TypeTran(t, nullptr);
-        setParent(tparent, t);
+        //    |--3
+        //    |--LDA
+        //         |--DMEM/INDMEM
+        //              |--s
+        //              |--bg
+        Tree * tparent = t->parent();
+        Tree * newt = buildLda(t);
+
+        //Do NOT call TypeTran() to compute the result-type of newt, because
+        //TreeCanon will insert LDA prior to original tree node, which will
+        //confuse the TypeTran() and generate the wrong result-type.
+        TREE_result_type(newt) = convertToPointerTypeName(
+            t->getResultType());
+
+        setParent(tparent, newt);
         TCC_change(ctx) = true;
-        return t; 
+        return newt; 
     }
 
     TREE_field(t) = handleTreeList(TREE_field(t), ctx);
@@ -282,14 +306,19 @@ Tree * TreeCanon::handleArray(Tree * t, TreeCanonCtx * ctx)
         //CASE: array parameter will be converted from 'a[]' to '(*a)[]'.
         //However type of '*a' is array. We have to convert the type
         //to pointer to suffice for the prerequisite of tree2ir.
-        //Because tree2ir demands the base type of array must to be pointer.
+        //Because tree2ir demands the base type of array must be pointer.
         ASSERT0(base->getCode() == TR_DEREF);
-        Tree * baseparent = TREE_parent(base);
-        ASSERT0(baseparent->getCode() == TR_ARRAY);
+        Tree * parent = base->parent();
+        ASSERT0(parent->getCode() == TR_ARRAY);
         Tree * lda = buildLda(base);
-        TREE_array_base(baseparent) = lda;
-        setParent(baseparent, lda);
-        TypeTran(lda, nullptr);
+        TREE_array_base(parent) = lda;
+        setParent(parent, lda);
+
+        //Do NOT call TypeTran() to compute the result-type of newt, because
+        //TreeCanon will insert LDA prior to original tree node, which will
+        //confuse the TypeTran() and generate the wrong result-type.
+        TREE_result_type(lda) = convertToPointerTypeName(
+            base->getResultType());
     }
     return t;
 }
