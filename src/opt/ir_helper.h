@@ -260,21 +260,6 @@ inline IR * iterRhsNext(MOD IRIter & it)
     return iterNext(it);
 }
 
-
-inline IR_TYPE invertIRType(IR_TYPE src)
-{
-    switch(src) {
-    case IR_LT: return IR_GE;
-    case IR_LE: return IR_GT;
-    case IR_GT: return IR_LE;
-    case IR_GE: return IR_LT;
-    case IR_EQ: return IR_NE;
-    case IR_NE: return IR_EQ;
-    default: ASSERTN(0, ("unsupport"));
-    }
-    return IR_UNDEF;
-}
-
 bool allBeExp(IR * irlst);
 bool allBeStmt(IR * irlst);
 
