@@ -66,7 +66,7 @@ Tree * TreeCanon::handleString(Tree * t, TreeCanonCtx * ctx)
             TREE_result_type(newt) = convertToPointerTypeName(
                 t->getResultType());
 
-            setParent(tparent, newt);
+            Tree::setParent(tparent, newt);
             TCC_change(ctx) = true;
             return newt;
         }
@@ -100,7 +100,7 @@ Tree * TreeCanon::handleId(Tree * t, TreeCanonCtx * ctx)
             TREE_result_type(newt) = convertToPointerTypeName(
                 t->getResultType());
 
-            setParent(tparent, newt);
+            Tree::setParent(tparent, newt);
             TCC_change(ctx) = true;
             return newt;
         }
@@ -123,7 +123,7 @@ Tree * TreeCanon::handleId(Tree * t, TreeCanonCtx * ctx)
         TREE_result_type(newt) = convertToPointerTypeName(
             t->getResultType());
 
-        setParent(tparent, newt);
+        Tree::setParent(tparent, newt);
         TCC_change(ctx) = true;
         return newt;
     }
@@ -250,7 +250,7 @@ Tree * TreeCanon::handleAggrAccess(Tree * t, TreeCanonCtx * ctx)
 {
     ASSERT0(t->getCode() == TR_DMEM || t->getCode() == TR_INDMEM);
     TREE_base_region(t) = handleTreeList(TREE_base_region(t), ctx);
-    setParent(t, TREE_base_region(t));
+    Tree::setParent(t, TREE_base_region(t));
 
     Tree * field = TREE_field(t);
     ASSERT0(field->getResultType());
@@ -283,13 +283,13 @@ Tree * TreeCanon::handleAggrAccess(Tree * t, TreeCanonCtx * ctx)
         TREE_result_type(newt) = convertToPointerTypeName(
             t->getResultType());
 
-        setParent(tparent, newt);
+        Tree::setParent(tparent, newt);
         TCC_change(ctx) = true;
         return newt; 
     }
 
     TREE_field(t) = handleTreeList(TREE_field(t), ctx);
-    setParent(t, TREE_field(t));
+    Tree::setParent(t, TREE_field(t));
     return t;
 }
 
@@ -312,7 +312,7 @@ Tree * TreeCanon::handleArray(Tree * t, TreeCanonCtx * ctx)
         ASSERT0(parent->getCode() == TR_ARRAY);
         Tree * lda = buildLda(base);
         TREE_array_base(parent) = lda;
-        setParent(parent, lda);
+        Tree::setParent(parent, lda);
 
         //Do NOT call TypeTran() to compute the result-type of newt, because
         //TreeCanon will insert LDA prior to original tree node, which will

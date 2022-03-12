@@ -40,11 +40,11 @@ class SymList {
 public:
     SymList * next;
     SymList * prev;
-    Sym const* sym;
+    xoc::Sym const* sym;
 };
-#define SYM_LIST_sym(syml) (syml)->sym
-#define SYM_LIST_next(syml) (syml)->next
-#define SYM_LIST_prev(syml) (syml)->prev
+#define SYM_LIST_sym(syml) ((syml)->sym)
+#define SYM_LIST_next(syml) ((syml)->next)
+#define SYM_LIST_prev(syml) ((syml)->prev)
 
 
 //Scope
@@ -112,7 +112,7 @@ public:
     //Be usually used in scope process.
     //Return nullptr if this function do not find 'sym' in 'sym_list', and
     //'sym' will be appended into list, otherwise return 'sym'.
-    Sym const* addToSymList(Sym const* sym);
+    xoc::Sym const* addToSymList(Sym const* sym);
     Enum * addEnum(Enum * e);
     void addStruct(Struct * s);
     void addUnion(Union * u);
@@ -145,15 +145,15 @@ typedef xcom::TMap<xoc::LabelInfo const*, UINT> Label2Lineno;
 
 class CompareLab {
 public:
-    bool is_less(LabelInfo * t1, LabelInfo * t2) const
+    bool is_less(xoc::LabelInfo * t1, xoc::LabelInfo * t2) const
     { return computeLabelHashValue(t1) < computeLabelHashValue(t2); }
 
-    bool is_equ(LabelInfo * t1, LabelInfo * t2) const
+    bool is_equ(xoc::LabelInfo * t1, xoc::LabelInfo * t2) const
     { return isSameLabel(t1, t2); }
 
-    LabelInfo * createKey(LabelInfo * t) { return t; }
+    LabelInfo * createKey(xoc::LabelInfo * t) { return t; }
 };
-typedef TTab<LabelInfo*, CompareLab> LabelTab;
+typedef TTab<xoc::LabelInfo*, CompareLab> LabelTab;
 
 
 //Exported functions
@@ -180,5 +180,6 @@ void set_lab_used(LabelInfo const* li);
 //Export Variables
 extern Scope * g_cur_scope;
 extern LabelTab g_labtab;
+extern UINT g_scope_count;
 
 #endif

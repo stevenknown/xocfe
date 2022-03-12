@@ -33,8 +33,8 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define WARN_SHOW 2
 
 //Record each error msg
-#define WARN_MSG_msg(e) (e)->msg
-#define WARN_MSG_lineno(e) (e)->lineno
+#define WARN_MSG_msg(e) ((e)->msg)
+#define WARN_MSG_lineno(e) ((e)->lineno)
 class WarnMsg {
 public:
     CHAR * msg;
@@ -43,8 +43,8 @@ public:
 
 
 //Record each error msg
-#define ERR_MSG_msg(e) (e)->msg
-#define ERR_MSG_lineno(e) (e)->lineno
+#define ERR_MSG_msg(e) ((e)->msg)
+#define ERR_MSG_lineno(e) ((e)->lineno)
 class ErrMsg {
 public:
     CHAR * msg;

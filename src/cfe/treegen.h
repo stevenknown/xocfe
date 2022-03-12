@@ -37,11 +37,7 @@ extern SMemPool * g_pool_general_used;
 extern SMemPool * g_pool_tree_used; //front end
 extern SMemPool * g_pool_st_used;
 extern SymTab * g_fe_sym_tab;
-extern bool g_dump_token;
-
-//Exported Functions
-void initParser();
-void finiParser();
+extern LogMgr * g_logmgr; //the file handler of log file.
 
 Tree * buildDeref(Tree * base);
 Tree * buildInitvalScope(Tree * exp_list);
@@ -63,41 +59,12 @@ Tree * buildDmem(Tree * base, Decl const* fld);
 //  m's fldvec is <2, 1>, e's fldvec is <3>.
 Tree * buildAggrFieldRef(Decl const* decl, xcom::Vector<UINT> & fldvec);
 Tree * buildAggrRef(Tree * base, Decl const* fld);
+Tree * buildCvt(Decl const* tgt_type, Tree * src);
+Tree * buildCvt(Tree * tgt_type, Tree * src);
+Tree * buildTypeName(Decl * decl);
 
 //Duplicate 't' and its kids, but without ir's sibiling node.
 Tree * copyTree(Tree const* t);
 Tree * copyTreeList(Tree const* t);
 
-INT Parser();
-Scope * compound_stmt(Decl * para_list);
-Tree * conditional_exp();
-
-void dump_tok_list();
-
-Tree * gen_typename(Decl * decl);
-Tree * gen_cvt(Decl const* tgt_type, Tree * src);
-
-Tree * id();
-Tree * id(Sym const* name, TOKEN tok);
-
-//Return true if parsing have to terminate.
-bool isTerminateToken();
-//Return true if 'tok' indicate terminal charactor, otherwise false.
-bool inFirstSetOfExp(TOKEN tok);
-bool isFirstSetOfUnaryExp(TOKEN tok);
-//Find if ID with named 'cl' exists and return the Decl.
-bool isIdExistInOuterScope(CHAR const* cl, OUT Decl ** d);
-
-Tree * exp();
-Tree * exp_list();
-
-bool look_forward_token(INT num, ...);
-
-INT match(TOKEN tok);
-UINT mapRealLineToSrcLine(UINT realline);
-
-void setParent(Tree * parent, Tree * child);
-void setLogMgr(LogMgr * lm);
-INT suck_tok();
-void suck_tok_to(INT placeholder, ...);
 #endif

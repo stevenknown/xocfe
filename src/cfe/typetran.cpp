@@ -594,7 +594,7 @@ static void insertCvtForParams(Tree * t)
         ASSERT0(realp_decl);
         if (realp_decl->is_double() && formalp_decl->is_float()) {
             //Insert convertion operation: truncate double to float.
-            realp = gen_cvt(formalp_decl, realp);
+            realp = buildCvt(formalp_decl, realp);
             TypeTranList(realp, nullptr);
         }
         xcom::add_next(&newparamlist, &last, realp);

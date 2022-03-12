@@ -28,6 +28,8 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef __TREE_H__
 #define __TREE_H__
 
+#define TREE_ID_UNDEF 0
+
 //EnumList
 // |
 // |--ENUM1
@@ -305,7 +307,7 @@ public:
     bool is_aggr_field_access() const;
     static bool is_type_spec(TOKEN tok);
     static bool is_type_quan(TOKEN tok);
-    static bool is_stor_spec(TOKEN tok);    
+    static bool is_stor_spec(TOKEN tok);
 
     Tree * lchild() const { return TREE_lchild(this); }
     Tree * rchild() const { return TREE_rchild(this); }
@@ -314,6 +316,14 @@ public:
     Tree * psib() const { return TREE_psib(this); }
 
     void setParentForKid();
+    static void setParent(Tree * parent, Tree * child)
+    {
+        if (child == nullptr) { return; }
+        while (child != nullptr) {
+            TREE_parent(child) = parent;
+            child = TREE_nsib(child);
+        }
+    }
 };
 
 //Exported Functions
@@ -328,4 +338,6 @@ Tree * get_aggr_base(Tree * t);
 //Get base of aggregate/array if exist.
 Tree * get_base(Tree * t);
 
+//Exported Variables
+extern UINT g_tree_count;
 #endif

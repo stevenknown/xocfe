@@ -32,37 +32,35 @@ WarnList g_warn_msg_list;
 
 static void * xmalloc(size_t size)
 {
-    void * p = smpoolMalloc(size, g_pool_general_used);
+    BYTE * p = (BYTE*)smpoolMalloc(size, g_pool_general_used);
     if (p == nullptr) { return nullptr; }
     ::memset(p, 0, size);
-    return p;
+    return (void*)p;
 }
 
 
 void show_err()
 {
     if (!g_err_msg_list.has_msg()) { return; }
-
-    fprintf(stdout,"\n");
+    fprintf(stdout, "\n");
     for (ErrMsg * e = g_err_msg_list.get_head();
          e != nullptr; e = g_err_msg_list.get_next()) {
-        fprintf(stdout, "\nerror(%d):%s", ERR_MSG_lineno(e), ERR_MSG_msg(e));
+        fprintf(stdout, "\nerror(%d):%s", ERR_MSG_lineno(e), ERR_MSG_msg(e));        
     }
-    fprintf(stdout,"\n");
+    fprintf(stdout, "\n");
 }
 
 
 void show_warn()
 {
     if (!g_warn_msg_list.has_msg()) { return; }
-
-    fprintf(stdout,"\n");
+    fprintf(stdout, "\n");
     for (WarnMsg * e = g_warn_msg_list.get_head();
          e != nullptr; e = g_warn_msg_list.get_next()) {
         fprintf(stdout, "\nwarning(%d):%s",
                 WARN_MSG_lineno(e), WARN_MSG_msg(e));
     }
-    fprintf(stdout,"\n");
+    fprintf(stdout, "\n");
 }
 
 
@@ -70,16 +68,16 @@ void show_warn()
 void warn(INT line_num, CHAR const* msg, ...)
 {
     if (msg == nullptr) { return; }
-
     WarnMsg * p = nullptr;
     StrBuf sbuf(64);
-
     va_list arg;
     va_start(arg, msg);
     sbuf.vsprint(msg, arg);
     p = (WarnMsg*)xmalloc(sizeof(WarnMsg));
-    p->msg = (CHAR*)xmalloc(sbuf.strlen() + 1);
-    ::memcpy(p->msg, sbuf.buf, sbuf.strlen() + 1);
+    size_t l = sbuf.strlen();
+    p->msg = (CHAR*)xmalloc(l + 1);
+    ::memcpy(p->msg, sbuf.buf, l);
+    p->msg[l] = 0;
     p->lineno = line_num;
     g_warn_msg_list.append_tail(p);
     va_end(arg);
@@ -90,16 +88,16 @@ void warn(INT line_num, CHAR const* msg, ...)
 void err(INT line_num, CHAR const* msg, ...)
 {
     if (msg == nullptr) { return; }
-
     ErrMsg * p = nullptr;
     StrBuf sbuf(64);
-
     va_list arg;
     va_start(arg, msg);
     sbuf.vsprint(msg, arg);
     p = (ErrMsg*)xmalloc(sizeof(ErrMsg));
-    p->msg = (CHAR*)xmalloc(sbuf.strlen() + 1);
-    ::memcpy(p->msg, sbuf.buf, sbuf.strlen() + 1);
+    size_t l = sbuf.strlen();
+    p->msg = (CHAR*)xmalloc(l + 1);
+    ::memcpy(p->msg, sbuf.buf, l);
+    p->msg[l] = 0;
     p->lineno = line_num;
     g_err_msg_list.append_tail(p);
     va_end(arg);

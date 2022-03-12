@@ -60,10 +60,9 @@ static bool post_process_of_init_declarator(TypeAttr * attr,
 static void add_enum(TypeAttr * ta);
 static void inferAndSetEValue(EnumValueList * evals);
 
-UINT g_decl_counter = 1;
-UINT g_aggr_counter = 1;
-static UINT g_aggr_anony_name_count = 1; //the counter for anonymous name
-                                         //of aggregate.
+UINT g_decl_count = DECL_ID_UNDEF + 1;
+UINT g_aggr_count = AGGR_ID_UNDEF + 1;
+UINT g_aggr_anony_name_count = AGGR_ANONY_ID_UNDEF + 1;
 INT g_alignment = PRAGMA_ALIGN; //default alignment.
 CHAR const* g_dcl_name [] = { //character of DCL enum-type.
     "",
@@ -1436,7 +1435,7 @@ Decl * newDecl(DCL dcl_type)
 {
     Decl * d = (Decl*)xmalloc(sizeof(Decl));
     DECL_dt(d) = dcl_type;
-    DECL_id(d) = g_decl_counter++;
+    DECL_id(d) = g_decl_count++;
     return d;
 }
 
@@ -1448,7 +1447,7 @@ static Struct * newStruct(CHAR const* tag, bool is_complete)
         AGGR_tag(s) = g_fe_sym_tab->add(tag);
     }
     AGGR_is_complete(s) = false;
-    AGGR_id(s) = g_aggr_counter++;
+    AGGR_id(s) = g_aggr_count++;
     return s;
 }
 
@@ -1641,7 +1640,7 @@ static TypeAttr * typedef_name(TypeAttr * ty)
     }
     TYPE_des(ty) |= T_SPEC_USER_TYPE;
     TYPE_user_type(ty)= ut;
-    match(T_ID);
+    CParser::match(T_ID);
     return ty;
 }
 
@@ -1768,10 +1767,10 @@ static void consume_tok_to_semi()
     while (g_real_token != T_SEMI &&
            g_real_token != T_END &&
            g_real_token != T_NUL) {
-        match(g_real_token);
+        CParser::match(g_real_token);
     }
     if (g_real_token == T_SEMI) {
-        match(g_real_token);
+        CParser::match(g_real_token);
     }
 }
 
@@ -1785,7 +1784,7 @@ static Decl * buildAnonyDeclarator()
     Sym const* sym = g_fe_sym_tab->add(tmpbuf);
     g_cur_scope->addToSymList(sym);
     Decl * dcl = newDecl(DCL_ID);
-    DECL_id_tree(dcl) = id(sym, T_ID);
+    DECL_id_tree(dcl) = CParser::id(sym, T_ID);
     DECL_qua(dcl) = nullptr;
 
     DECL_child(anony_declarator) = dcl;
@@ -1866,7 +1865,7 @@ static Decl * aggr_declaration()
             "meet illegal '%s', expected ';' after struct field declaration",
             g_real_token_string);
     } else {
-        match(T_SEMI);
+        CParser::match(T_SEMI);
     }
     return g_cur_scope->getDeclList();
 }
@@ -1876,7 +1875,7 @@ static Decl * aggr_declaration()
 static Decl * aggr_declaration_list()
 {
     while (g_real_token != T_RLPAREN) {
-        if (isTerminateToken() || is_too_many_err()) {
+        if (CParser::isTerminateToken() || is_too_many_err()) {
             return g_cur_scope->getDeclList();
         }
         aggr_declaration();
@@ -1888,7 +1887,7 @@ static Decl * aggr_declaration_list()
 static TypeAttr * type_spec_struct(TypeAttr * ty)
 {
     TYPE_des(ty) |= T_SPEC_STRUCT;
-    match(T_STRUCT);
+    CParser::match(T_STRUCT);
     if (ck_type_spec_legally(ty) != ST_SUCC) {
         err(g_real_line_num, "type specifier is illegal");
         return ty;
@@ -1915,7 +1914,7 @@ static TypeAttr * type_spec_struct(TypeAttr * ty)
             //user can not find the aggregate through tag name. Thus there will
             //multiple aggregates that have same data structure layout.
         }
-        match(T_ID);
+        CParser::match(T_ID);
     }
 
     if (g_real_token == T_LLPAREN) {
@@ -1960,7 +1959,7 @@ static TypeAttr * type_spec_struct(TypeAttr * ty)
 static void type_spec_aggr_field(Aggr * aggr, TypeAttr * ty)
 {
     ASSERT0(aggr);
-    match(T_LLPAREN);
+    CParser::match(T_LLPAREN);
     push_scope(false);
 
     //UINT errn = g_err_msg_list.get_elem_count();
@@ -1984,7 +1983,7 @@ static void type_spec_aggr_field(Aggr * aggr, TypeAttr * ty)
         DECL_base_type_spec(field) = ty;
     }
 
-    if (match(T_RLPAREN) != ST_SUCC) {
+    if (CParser::match(T_RLPAREN) != ST_SUCC) {
         err(g_real_line_num, "expected '}' after %s definition",
             ty->getAggrTypeName());
         return;
@@ -1996,7 +1995,7 @@ static void type_spec_aggr_field(Aggr * aggr, TypeAttr * ty)
 static TypeAttr * type_spec_union(TypeAttr * ty)
 {
     TYPE_des(ty) |= T_SPEC_UNION;
-    match(T_UNION);
+    CParser::match(T_UNION);
     if (ck_type_spec_legally(ty) != ST_SUCC) {
         err(g_real_line_num, "type specifier is illegal");
         return ty;
@@ -2021,7 +2020,7 @@ static TypeAttr * type_spec_union(TypeAttr * ty)
             s = newUnion(g_real_token_string, false);
             g_cur_scope->addUnion(s);
         }
-        match(T_ID);
+        CParser::match(T_ID);
     }
 
     if (g_real_token == T_LLPAREN) {
@@ -2076,23 +2075,23 @@ static TypeAttr * type_spec(TypeAttr * ty)
     }
     switch (g_real_token) {
     case T_VOID:
-        match(T_VOID);
+        CParser::match(T_VOID);
         SET_FLAG(TYPE_des(ty), T_SPEC_VOID);
         break;
     case T_CHAR:
-        match(T_CHAR);
+        CParser::match(T_CHAR);
         SET_FLAG(TYPE_des(ty), T_SPEC_CHAR);
         break;
     case T_SHORT:
-        match(T_SHORT);
+        CParser::match(T_SHORT);
         SET_FLAG(TYPE_des(ty), T_SPEC_SHORT);
         break;
     case T_INT:
-        match(T_INT);
+        CParser::match(T_INT);
         SET_FLAG(TYPE_des(ty), T_SPEC_INT);
         break;
     case T_LONG:
-        match(T_LONG);
+        CParser::match(T_LONG);
         if (ty->is_long()) {
             //It seems longlong might confuse user.
             //warn("'long long' is not ANSI C89, "
@@ -2107,27 +2106,27 @@ static TypeAttr * type_spec(TypeAttr * ty)
         }
         break;
     case T_LONGLONG:
-        match(T_LONGLONG);
+        CParser::match(T_LONGLONG);
         SET_FLAG(TYPE_des(ty), T_SPEC_LONGLONG);
         break;
     case T_BOOL:
-        match(T_BOOL);
+        CParser::match(T_BOOL);
         SET_FLAG(TYPE_des(ty), T_SPEC_BOOL);
         break;
     case T_FLOAT:
-        match(T_FLOAT);
+        CParser::match(T_FLOAT);
         SET_FLAG(TYPE_des(ty), T_SPEC_FLOAT);
         break;
     case T_DOUBLE:
-        match(T_DOUBLE);
+        CParser::match(T_DOUBLE);
         SET_FLAG(TYPE_des(ty), T_SPEC_DOUBLE);
         break;
     case T_SIGNED:
-        match(T_SIGNED);
+        CParser::match(T_SIGNED);
         SET_FLAG(TYPE_des(ty), T_SPEC_SIGNED);
         break;
     case T_UNSIGNED:
-        match(T_UNSIGNED);
+        CParser::match(T_UNSIGNED);
         SET_FLAG(TYPE_des(ty), T_SPEC_UNSIGNED);
         break;
     case T_STRUCT:
@@ -2160,17 +2159,17 @@ static EnumValueList * enumrator(Enum * en)
 
     xcom::add_next(&ENUM_vallist(en), evl);
  
-    match(T_ID);
+    CParser::match(T_ID);
     if (g_real_token != T_ASSIGN) {
         inferAndSetEValue(en->getValList());
         return evl;
     }
 
-    match(T_ASSIGN);
+    CParser::match(T_ASSIGN);
 
     //constant expression
-    if (inFirstSetOfExp(g_real_token)) {
-        Tree * t = conditional_exp();
+    if (CParser::inFirstSetOfExp(g_real_token)) {
+        Tree * t = CParser::conditional_exp();
         LONGLONG val;
         if (t == nullptr || !computeConstExp(t, &val, 0)) {
             err(g_real_line_num, "expected constant expression");
@@ -2197,7 +2196,7 @@ static void enumerator_list(Enum * en)
     if (ev == nullptr) { return; }
 
     while (g_real_token == T_COMMA) {
-        match(T_COMMA);
+        CParser::match(T_COMMA);
         EnumValueList * nev = enumrator(en);
         if (nev == nullptr) { break; }
     }
@@ -2214,17 +2213,17 @@ static TypeAttr * enum_spec(TypeAttr * ty)
     if (ty->getEnumType() == nullptr) { TYPE_enum_type(ty) = newEnum(); }
 
     TYPE_des(ty) |= T_SPEC_ENUM;
-    match(T_ENUM);
+    CParser::match(T_ENUM);
 
     if (g_real_token == T_ID) {
         //Parse enumerator's name. Note the name is optional.
         ENUM_name(ty->getEnumType()) = g_fe_sym_tab->add(g_real_token_string);
-        match(T_ID);
+        CParser::match(T_ID);
     }
 
     if (g_real_token != T_LLPAREN) { return ty; }
 
-    match(T_LLPAREN);
+    CParser::match(T_LLPAREN);
 
     //Check enum-name if meet enumerator definition.
     //Note the enum-name is optional.
@@ -2255,7 +2254,7 @@ static TypeAttr * enum_spec(TypeAttr * ty)
 
     ENUM_is_complete(ty->getEnumType()) = true;
 
-    if (match(T_RLPAREN) != ST_SUCC) {
+    if (CParser::match(T_RLPAREN) != ST_SUCC) {
         err(g_real_line_num, "miss '}' during enum type declaring");
     }
     return ty;
@@ -2272,7 +2271,7 @@ static TypeAttr * qualifier(IN TypeAttr * ty)
     }
     switch (g_real_token) {
     case T_CONST:
-        match(T_CONST);
+        CParser::match(T_CONST);
         if (ty->is_const()) {
             err(g_real_line_num, "same type qualifier used more than once");
             return ty;
@@ -2289,7 +2288,7 @@ static TypeAttr * qualifier(IN TypeAttr * ty)
         #endif
         break;
     case T_VOLATILE:
-        match(T_VOLATILE);
+        CParser::match(T_VOLATILE);
         if (ty->is_volatile()) {
             err(g_real_line_num, "same type qualifier used more than once");
             return ty;
@@ -2306,7 +2305,7 @@ static TypeAttr * qualifier(IN TypeAttr * ty)
         #endif
         break;
     case T_RESTRICT:
-        match(T_RESTRICT);
+        CParser::match(T_RESTRICT);
         SET_FLAG(TYPE_des(ty), T_QUA_RESTRICT);
         break;
     default:;
@@ -2346,27 +2345,27 @@ static TypeAttr * stor_spec(IN TypeAttr * ty)
 
     switch (g_real_token) {
     case T_AUTO:
-        match(T_AUTO);
+        CParser::match(T_AUTO);
         SET_FLAG(TYPE_des(ty), T_STOR_AUTO);
         break;
     case T_REGISTER:
-        match(T_REGISTER);
+        CParser::match(T_REGISTER);
         SET_FLAG(TYPE_des(ty), T_STOR_REG);
         break;
     case T_STATIC:
-        match(T_STATIC);
+        CParser::match(T_STATIC);
         SET_FLAG(TYPE_des(ty), T_STOR_STATIC);
         break;
     case T_EXTERN:
-        match(T_EXTERN);
+        CParser::match(T_EXTERN);
         SET_FLAG(TYPE_des(ty), T_STOR_EXTERN);
         break;
     case T_INLINE:
-        match(T_INLINE);
+        CParser::match(T_INLINE);
         SET_FLAG(TYPE_des(ty), T_STOR_INLINE);
         break;
     case T_TYPEDEF:
-        match(T_TYPEDEF);
+        CParser::match(T_TYPEDEF);
         SET_FLAG(TYPE_des(ty), T_STOR_TYPEDEF);
         break;
     default:;
@@ -2438,7 +2437,7 @@ static TypeAttr * parseAggrType(TypeAttr * ty, bool * parse_finish,
     }
     TYPE_des(ty) |= is_struct ? T_SPEC_STRUCT : T_SPEC_UNION;
     TYPE_aggr_type(ty) = s;
-    match(T_ID);
+    CParser::match(T_ID);
     return ty;
 }
 
@@ -2729,16 +2728,16 @@ static Decl * parameter_type_list()
         xcom::add_next(&declaration, t);
 
         if (g_real_token == T_COMMA) {
-            match(T_COMMA);
+            CParser::match(T_COMMA);
         } else if (g_real_token == T_RPAREN ||
-                   isTerminateToken() ||
+                   CParser::isTerminateToken() ||
                    is_too_many_err()) {
             break;
         }
 
         //'...' must be the last parameter-declarator
         if (g_real_token == T_DOTDOTDOT) {
-            match(T_DOTDOTDOT);
+            CParser::match(T_DOTDOTDOT);
             t = newDecl(DCL_VARIADIC);
             xcom::add_next(&declaration, t);
             break;
@@ -2763,10 +2762,10 @@ static Decl * direct_abstract_declarator(TypeAttr * qua)
     Decl * dcl = nullptr, * ndcl = nullptr;
     switch (g_real_token) {
     case T_LPAREN: //'(' abstract_declarator ')'
-        match(T_LPAREN);
+        CParser::match(T_LPAREN);
         dcl = abstract_declarator(qua);
         //Here 'dcl' can be NUL L
-        if (match(T_RPAREN) != ST_SUCC) {
+        if (CParser::match(T_RPAREN) != ST_SUCC) {
             err(g_real_line_num, "miss ')'");
             return dcl;
         }
@@ -2776,9 +2775,9 @@ static Decl * direct_abstract_declarator(TypeAttr * qua)
         Sym const* sym = g_fe_sym_tab->add(g_real_token_string);
         g_cur_scope->addToSymList(sym);
         dcl = newDecl(DCL_ID);
-        DECL_id_tree(dcl) = id();
+        DECL_id_tree(dcl) = CParser::id();
         DECL_qua(dcl) = qua;
-        match(T_ID);
+        CParser::match(T_ID);
         break;
     }
     default:;
@@ -2788,10 +2787,10 @@ static Decl * direct_abstract_declarator(TypeAttr * qua)
     case T_LSPAREN: { //outer level operator is ARRAY
         Tree * t = nullptr;
         while (g_real_token == T_LSPAREN) {
-            match(T_LSPAREN);
+            CParser::match(T_LSPAREN);
             Decl * ndcl2 = newDecl(DCL_ARRAY);
-            t = conditional_exp();
-            if (match(T_RSPAREN) != ST_SUCC) {
+            t = CParser::conditional_exp();
+            if (CParser::match(T_RSPAREN) != ST_SUCC) {
                 err(g_real_line_num, "miss ']'");
                 return dcl;
             }
@@ -2805,7 +2804,7 @@ static Decl * direct_abstract_declarator(TypeAttr * qua)
     case T_LPAREN: {
         //current level operator is function-pointer/function-definition
         //Parameter list.
-        match(T_LPAREN);
+        CParser::match(T_LPAREN);
         ndcl = newDecl(DCL_FUN);
         //DECL_fun_base(ndcl) = dcl;
         push_scope(true);
@@ -2822,7 +2821,7 @@ static Decl * direct_abstract_declarator(TypeAttr * qua)
 
         pop_scope();
         xcom::insertbefore_one(&dcl, dcl, ndcl);
-        if (match(T_RPAREN) != ST_SUCC) {
+        if (CParser::match(T_RPAREN) != ST_SUCC) {
             err(g_real_line_num, "miss ')'");
             return dcl;
         }
@@ -2945,7 +2944,7 @@ static Tree * initializer_list(TypeAttr * qua)
 
     Tree * last = get_last(t);
     while (g_real_token == T_COMMA) {
-        match(T_COMMA);
+        CParser::match(T_COMMA);
         if (g_real_token == T_RLPAREN) { break; }
 
         Tree * nt = initializer(qua);
@@ -2968,15 +2967,15 @@ static Tree * initializer(TypeAttr * qua)
     switch (g_real_token) {
     case T_LLPAREN: {
         UINT lineno = g_real_line_num;
-        match(T_LLPAREN);
+        CParser::match(T_LLPAREN);
         t = initializer_list(qua);
         if (g_real_token == T_COMMA) {
-            match(T_COMMA);
-            if (match(T_RLPAREN) != ST_SUCC) {
+            CParser::match(T_COMMA);
+            if (CParser::match(T_RLPAREN) != ST_SUCC) {
                 err(g_real_line_num, "syntax error '%s'", g_real_token_string);
                 return t;
             }
-        } else if (match(T_RLPAREN) != ST_SUCC) {
+        } else if (CParser::match(T_RLPAREN) != ST_SUCC) {
             err(g_real_line_num, "syntax error : '%s'", g_real_token_string);
             return t;
         }
@@ -2986,8 +2985,8 @@ static Tree * initializer(TypeAttr * qua)
         return t;
     }
     default:
-        if (inFirstSetOfExp(g_real_token)) {
-            return exp();
+        if (CParser::inFirstSetOfExp(g_real_token)) {
+            return CParser::exp();
         }
         if (g_real_token == T_RLPAREN) {
             //An empty {}.
@@ -3031,8 +3030,8 @@ static Decl * aggr_declarator(TypeAttr const* ts, TypeAttr * qua)
                 "'%s' : pointer type cannot assign bit length", s->getStr());
             return declarator;
         }
-        match(T_COLON);
-        t = conditional_exp();
+        CParser::match(T_COLON);
+        t = CParser::conditional_exp();
         if (!computeConstExp(t, &idx, 0)) {
             err(g_real_line_num, "expected constant expression");
             return declarator;
@@ -3056,7 +3055,7 @@ static Decl * aggr_declarator_list(TypeAttr const* ts, TypeAttr * qua)
     if (dclr == nullptr) { return nullptr; }
 
     while (g_real_token == T_COMMA) {
-        match(T_COMMA);
+        CParser::match(T_COMMA);
         ndclr = aggr_declarator(ts, qua);
         xcom::add_next(&dclr, ndclr);
     }
@@ -3166,7 +3165,7 @@ static bool process_initializer(Decl * declaration, TypeAttr * qua)
     ASSERT0(declaration);
     Decl * declarator = declaration->getDeclarator();
 
-    match(T_ASSIGN);
+    CParser::match(T_ASSIGN);
     DECL_init_tree(declarator) = initializer(qua);
     if (DECL_init_tree(declarator) == nullptr) {
         warn(g_real_line_num, "initial value is empty");
@@ -3353,7 +3352,7 @@ static bool init_declarator_list(TypeAttr * ts, TypeAttr * qua,
             //  enum _tag {X, Y, Z};
             //return nullptr; //no variable declared
             if (g_real_token == T_COMMA) {
-                match(T_COMMA);
+                CParser::match(T_COMMA);
                 //There is no variable/type-name declared.
                 continue;
             } else {
@@ -3384,9 +3383,9 @@ static bool init_declarator_list(TypeAttr * ts, TypeAttr * qua,
             return false;
         }
 
-        if (g_real_token == T_COMMA) { match(T_COMMA); }
+        if (g_real_token == T_COMMA) { CParser::match(T_COMMA); }
         else { break; }
-    } while (!isTerminateToken());
+    } while (!CParser::isTerminateToken());
     return true;
 }
 
@@ -3409,9 +3408,9 @@ static Decl * direct_declarator(TypeAttr const* ts, TypeAttr * qua)
     Decl * dcl = nullptr;
     switch (g_real_token) {
     case T_LPAREN: //'(' declarator ')'
-        match(T_LPAREN);
+        CParser::match(T_LPAREN);
         dcl = declarator(ts, qua);
-        if (match(T_RPAREN) != ST_SUCC) {
+        if (CParser::match(T_RPAREN) != ST_SUCC) {
             err(g_real_line_num, "miss ')'");
             goto FAILED;
         }
@@ -3430,9 +3429,9 @@ static Decl * direct_declarator(TypeAttr const* ts, TypeAttr * qua)
         Sym const* sym = g_fe_sym_tab->add(g_real_token_string);
         g_cur_scope->addToSymList(sym);
         dcl = newDecl(DCL_ID);
-        DECL_id_tree(dcl) = id();
+        DECL_id_tree(dcl) = CParser::id();
         DECL_qua(dcl) = qua;
-        match(T_ID);
+        CParser::match(T_ID);
         break;
     }
     default:;
@@ -3444,10 +3443,10 @@ static Decl * direct_declarator(TypeAttr const* ts, TypeAttr * qua)
     case T_LSPAREN: { //'[', the declarator is an array.
         Tree * t = nullptr;
         while (g_real_token == T_LSPAREN) {
-            match(T_LSPAREN);
+            CParser::match(T_LSPAREN);
             Decl * ndcl = newDecl(DCL_ARRAY);
-            t = conditional_exp();
-            if (match(T_RSPAREN) != ST_SUCC) {
+            t = CParser::conditional_exp();
+            if (CParser::match(T_RSPAREN) != ST_SUCC) {
                 err(g_real_line_num,
                     "meet '%s', illegal array declaration, may be miss ']'",
                     g_real_token_string);
@@ -3462,7 +3461,7 @@ static Decl * direct_declarator(TypeAttr const* ts, TypeAttr * qua)
         break;
     }
     case T_LPAREN: { //'(', the declarator is a function decl/def.
-        match(T_LPAREN);
+        CParser::match(T_LPAREN);
         Decl * ndcl = newDecl(DCL_FUN);
         push_scope(true);
 
@@ -3480,7 +3479,7 @@ static Decl * direct_declarator(TypeAttr const* ts, TypeAttr * qua)
         DECL_is_paren(ndcl) = is_paren;
         xcom::insertbefore_one(&dcl, dcl, ndcl);
 
-        if (match(T_RPAREN) != ST_SUCC) {
+        if (CParser::match(T_RPAREN) != ST_SUCC) {
             err(g_real_line_num,
                 "meet '%s', illegal parameter declaration, may be miss ')'",
                 g_real_token_string);
@@ -3513,7 +3512,7 @@ static Decl * pointer(TypeAttr ** qua)
     Decl * ndcl = nullptr;
     TypeAttr * new_qua = *qua;
     while (g_real_token == T_ASTERISK) {
-        match(T_ASTERISK);
+        CParser::match(T_ASTERISK);
         Decl * dcl = newDecl(DCL_POINTER);
         DECL_qua(dcl) = new_qua;
         new_qua = newTypeAttr();
@@ -3524,7 +3523,7 @@ static Decl * pointer(TypeAttr ** qua)
         }
         xcom::add_next(&ndcl, dcl);
     }
-    qualifier(new_qua); //match qualifiers for what are following identifier.
+    qualifier(new_qua); //CParser::match qualifiers for what are following identifier.
     *qua = new_qua;
     return ndcl;
 }
@@ -3637,7 +3636,7 @@ static Tree * refineArrayParam(Tree * t, Tree * base, Decl * base_decl)
         //    ID(a)->PTR->ARR         
         Tree * deref = buildDeref(base);
         TREE_array_base(t) = deref;
-        setParent(t, deref);
+        Tree::setParent(t, deref);
         fixParamArrayIndex(base_decl);
     }
     return t;
@@ -5219,7 +5218,7 @@ static bool parse_function_definition(Decl * declaration)
 
     remove_redundant_para(declaration);
     Decl * para_list = get_parameter_list(declaration);
-    DECL_fun_body(declaration) = compound_stmt(para_list);
+    DECL_fun_body(declaration) = CParser::compound_stmt(para_list);
 
     DECL_is_fun_def(declaration) = true;
     ASSERTN(SCOPE_level(g_cur_scope) == GLOBAL_SCOPE,
@@ -5548,7 +5547,7 @@ Tree * declaration()
                 "meet '%s', expected ';' after declaration",
                 g_real_token_string);
         } else {
-            match(T_SEMI);
+            CParser::match(T_SEMI);
         }
     }
     

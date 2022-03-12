@@ -27,7 +27,7 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 @*/
 #include "cfeinc.h"
 
-static UINT g_tree_count = 1;
+UINT g_tree_count = TREE_ID_UNDEF + 1;
 
 static void * xmalloc(size_t size)
 {

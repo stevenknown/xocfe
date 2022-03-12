@@ -12,4 +12,5 @@ CFE_OBJS +=\
 ../cfe/declinit.o\
 ../cfe/typetran.o\
 ../cfe/cell.o\
-../cfe/treecanon.o
+../cfe/treecanon.o\
+../cfe/parse.o

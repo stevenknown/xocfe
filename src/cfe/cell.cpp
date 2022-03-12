@@ -65,6 +65,13 @@ Cell * get_free_cell()
 }
 
 
+void clean_free_cell_list()
+{
+    g_cell_free_list.destroy();
+    g_cell_free_list.init();
+}
+
+
 Cell * newcell(INT type)
 {
     Cell * c = get_free_cell();

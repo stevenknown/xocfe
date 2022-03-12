@@ -197,7 +197,6 @@ extern LONG * g_ofst_tab; //record the byte offset of each line in src file.
 extern LONG g_ofst_tab_byte_size;//record entry number of offset table.
 extern bool g_enable_newline_token; //set true to regard '\n' as token.
 extern FILE * g_hsrc; //the file handler of source file.
-extern LogMgr * g_logmgr; //the file handler of log file.
 extern INT g_real_line_num;
 //Record the number of disgarded line, that always
 //sparking by preprecossor.
@@ -205,7 +204,8 @@ extern UINT g_disgarded_line_num;
 
 //Exported Functions
 //This is the first function you should invoke before start lex scanning.
-void initKeyWordTab();
+void initLexer();
+void finiLexer();
 
 //Get current token.
 TOKEN getNextToken();

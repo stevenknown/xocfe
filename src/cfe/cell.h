@@ -28,11 +28,15 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _CELL_H_
 #define _CELL_H_
 
-#define C_NUM      0
-#define C_STRING   1
-#define C_ID_ADDR  3
-#define C_SST      4
+#define C_NUM 0
+#define C_STRING 1
+#define C_ID_ADDR 3
+#define C_SST 4
 
+#define CELL_type(ct) ((ct)->v_type)
+#define CELL_val(ct) ((ct)->val)
+#define CELL_line_no(ct) ((ct)->u1.lineno)
+#define CELL_flag(ct) ((ct)->u1.flag)
 class Cell {
 public:
     LONGLONG val;
@@ -42,15 +46,11 @@ public:
     } u1;
     INT v_type;
 };
-#define CELL_type(ct)            (ct)->v_type
-#define CELL_val(ct)            (ct)->val
-#define CELL_line_no(ct)        (ct)->u1.lineno
-#define CELL_flag(ct)            (ct)->u1.flag
-
 
 //Exported Functions
 Cell * newcell(INT t);
 void free_cell(Cell * c);
 Cell * get_free_cell();
+void clean_free_cell_list();
 #endif
 

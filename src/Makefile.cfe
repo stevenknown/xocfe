@@ -12,7 +12,8 @@ cfe/typetran.o \
 cfe/declinit.o \
 cfe/typeck.o \
 cfe/cfeutil.o \
-cfe/cell.o 
+cfe/cell.o\
+cfe/parse.o 
 
 COM_OBJS +=\
 com/smempool.o \

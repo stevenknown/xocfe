@@ -515,6 +515,8 @@ void destroy_scope_list()
          sc != nullptr; sc = g_scope_list.get_next()) {
         sc->destroy();
     }
+    g_scope_list.destroy();
+    g_scope_list.init();
 }
 
 

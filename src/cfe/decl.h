@@ -29,6 +29,9 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define __DECL_H__
 
 #define ALLOW_CONST_VOLATILE 1
+#define DECL_ID_UNDEF 0
+#define AGGR_ID_UNDEF 0
+#define AGGR_ANONY_ID_UNDEF 0
 
 class Scope;
 
@@ -1118,5 +1121,10 @@ Decl * type_name();
 
 //Exported Variables
 extern INT g_alignment;
+extern UINT g_decl_count;
+extern UINT g_aggr_count;
+//The counter for anonymous name of aggregate.
+extern UINT g_aggr_anony_name_count;
 extern CHAR const* g_dcl_name[];
+
 #endif

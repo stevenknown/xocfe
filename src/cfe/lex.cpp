@@ -42,15 +42,15 @@ static INT  g_last_read_num = 0;
 
 //Set true to return the newline charactors as normal character.
 static bool g_use_newline_char = true;
-static UINT g_cur_src_ofst = 0;  //Record current file offset of src file
+static UINT g_cur_src_ofst = 0; //Record current file offset of src file
 
 UINT g_src_line_num = 0; //line number of src file
+TOKEN g_cur_token = T_NUL;
 
 //The string buffer which token were reside.
 CHAR g_cur_token_string[MAX_BUF_LINE] = {0};
-CHAR * g_cur_line; //Current parsing line of src file
+CHAR * g_cur_line = nullptr; //Current parsing line of src file
 UINT g_cur_line_len = 0; //The current line buf length ,than read from file buf
-TOKEN g_cur_token = T_NUL;
 LONG * g_ofst_tab = nullptr; //Record offset of each line in src file
 LONG g_ofst_tab_byte_size = 0; //Record byte size position of Offset Table
 bool g_enable_newline_token = false; //Set true to regard '\n' as token.
@@ -58,8 +58,7 @@ bool g_enable_newline_token = false; //Set true to regard '\n' as token.
 //If true, recognize the true and false token.
 bool g_enable_true_false_token = true;
 FILE * g_hsrc = nullptr;
-xoc::LogMgr * g_logmgr = nullptr;
-INT g_real_line_num;
+INT g_real_line_num = 0;
 
 //Record the number of disgarded line, that always
 //sparking by preprecossor.
@@ -278,8 +277,8 @@ static INT getLine()
     bool is_some_chars_in_cur_line = false;
     for (;;) {
         if (g_cur_line == nullptr) {
-            g_cur_line = (CHAR*)::malloc(MAX_BUF_LINE);
             g_cur_line_len = MAX_BUF_LINE;
+            g_cur_line = (CHAR*)::malloc(g_cur_line_len);
             if (g_cur_line == nullptr) {
                 goto FAILED;
             }
@@ -288,7 +287,7 @@ static INT getLine()
         //Read MAX_BUF_LINE characters from src file.
         if (g_file_buf_pos >= g_last_read_num) {
             ASSERT0(g_hsrc != nullptr);
-            INT dw = (INT)fread(g_file_buf, 1, MAX_BUF_LINE, g_hsrc);
+            INT dw = (INT)::fread(g_file_buf, 1, MAX_BUF_LINE, g_hsrc);
             if (dw == 0) {
                 if (!is_some_chars_in_cur_line) {
                     //Some characters had been put into 'g_cur_line', but the
@@ -376,7 +375,7 @@ static INT getLine()
             if (pos >= g_cur_line_len) {
                 //Escalate line buffer.
                 g_cur_line_len += MAX_BUF_LINE;
-                g_cur_line = (CHAR*)realloc(g_cur_line, g_cur_line_len);
+                g_cur_line = (CHAR*)::realloc(g_cur_line, g_cur_line_len);
             }
             g_cur_line[pos] = g_file_buf[g_file_buf_pos];
             pos++;
@@ -415,13 +414,56 @@ public:
 String2Token g_str2token(0);
 
 //This is the first function you should invoke before start lex scanning.
-void initKeyWordTab()
+static void initKeyWordTab()
 {
     g_str2token.init(64); //Must be power of 2 since we use HashFuncString2.
     for (UINT i = 0; i < g_keyword_num; i++) {
         g_str2token.set(KEYWORD_INFO_name(&g_keyword_info[i]),
                         KEYWORD_INFO_token(&g_keyword_info[i]));
     }
+}
+
+
+static void finiKeyWordTab()
+{
+    g_str2token.destroy(); //Must be power of 2 since we use HashFuncString2.
+}
+
+
+void initLexer()
+{
+    g_cur_token_string_pos = 0;
+    g_cur_char = 0;
+    g_is_dos = true;
+    g_cur_line_pos = 0;
+    g_cur_line_num = 0;
+    g_file_buf[0] = 0;
+    g_last_read_num = 0;
+    g_cur_src_ofst = 0; //record current file offset of src file
+    g_src_line_num = 0; //record line number of src file
+    g_cur_token = T_NUL;
+    g_real_line_num = 0;
+    g_disgarded_line_num = 0;
+    ASSERT0(g_cur_line == nullptr && g_cur_line_len == 0);
+    ASSERT0(g_ofst_tab == nullptr && g_ofst_tab_byte_size == 0);
+    ASSERTN(g_hsrc, ("src file handler not initialized"));
+    initKeyWordTab();
+}
+
+
+void finiLexer()
+{
+    if (g_ofst_tab != nullptr) {
+        ::free(g_ofst_tab);
+        g_ofst_tab = nullptr;
+        g_ofst_tab_byte_size = 0;
+    }
+    if (g_cur_line != nullptr) {
+        ::free(g_cur_line);
+        g_cur_line = nullptr;
+        g_cur_line_len = 0;
+    }
+    finiKeyWordTab();
 }
 
 
