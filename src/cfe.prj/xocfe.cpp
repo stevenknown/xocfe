@@ -91,13 +91,6 @@ bool processCmdLine(INT argc, CHAR * argv[])
             }
         } else if (is_c_source_file(argv[i])) {
             g_c_file_name = argv[i];
-            g_hsrc = fopen(g_c_file_name, "rb");
-            if (g_hsrc == NULL) {
-                fprintf(stdout,
-                        "xoc: cannot open %s, error information is %s\n",
-                        g_c_file_name, strerror(errno));
-                return false;
-            }
             i++;
         }
     } //end while
