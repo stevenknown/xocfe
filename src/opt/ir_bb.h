@@ -96,6 +96,8 @@ public:
         return irit == nullptr ? nullptr : irit->val();
     }
 
+    bool is_empty() const { return get_elem_count() == 0; }
+
     //Insert 'ir' before 'marker'.
     inline IRListIter insert_before(IN IR * ir, IR const* marker)
     {
@@ -324,10 +326,19 @@ public:
     //Return true if BB has a fall through successor.
     //Note conditional branch always has fallthrough successor.
     bool is_fallthrough() const;
+
+    //Return true if BB has only fall through successor.
+    //Note the function does not take exception-edge into consider.
+    bool is_only_fallthrough() const;
     bool is_target() const { return BB_is_target(this); }
     bool is_catch_start() const { return BB_is_catch_start(this); }
     bool is_try_start() const { return BB_is_try_start(this); }
     bool is_try_end() const { return BB_is_try_end(this); }
+
+    //Return true if 'prev' is the previous BB of current BB in BBList.
+    //it: BBListIter of current BB.
+    bool isPrevBB(IRBB const* prev, BBListIter const it,
+                  BBList const* bblst) const;
 
     //Return true if BB is an entry BB of TRY block.
     inline bool isTryStart() const
@@ -466,7 +477,7 @@ public:
 
     //Return true if ir1 dominates ir2 in current bb.
     //Function will modify the IR container of bb.
-    //'is_strict': true if ir1 should not equal to ir2.
+    //is_strict: true if ir1 should not equal to ir2.
     inline bool is_dom(IR const* ir1, IR const* ir2, bool is_strict) const
     {
         ASSERT0(ir1 && ir2 && ir1->is_stmt() && ir2->is_stmt() &&

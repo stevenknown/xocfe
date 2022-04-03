@@ -138,6 +138,8 @@ void CParser::init(xoc::LogMgr * lm, CHAR const* srcfile)
         return;
     }
     initLexer();
+    g_lab2lineno.init();
+    g_lab_used.init();
 }
 
 
@@ -154,6 +156,8 @@ void CParser::destroy()
     finiLexer();
     setLogMgr(nullptr);
     finiSrcFile();
+    g_lab2lineno.destroy();
+    g_lab_used.destroy();
 }
 
 
@@ -265,7 +269,6 @@ static LabelInfo * add_label(CHAR * name, INT lineno)
 
     //Allocate different LabelInfo for different lines.
     li = allocCustomerLabel(g_fe_sym_tab->add(name), g_pool_general_used);
-    //li = g_labtab.append_and_retrieve(li);
     set_map_lab2lineno(li, lineno);
     SCOPE_label_list(sc).append_tail(li);
     return li;
@@ -288,7 +291,6 @@ static LabelInfo * add_ref_label(CHAR * name, INT lineno)
 
     //Allocate different LabelInfo for different lines.
     li = allocCustomerLabel(g_fe_sym_tab->add(name), g_pool_general_used);
-    //li = g_labtab.append_and_retrieve(li);
     set_lab_used(li);
     set_map_lab2lineno(li, lineno); //ONLY for debug-info or dumping
     SCOPE_ref_label_list(sc).append_tail(li);

@@ -179,7 +179,8 @@ void set_lab_used(LabelInfo const* li);
 
 //Export Variables
 extern Scope * g_cur_scope;
-extern LabelTab g_labtab;
 extern UINT g_scope_count;
+extern Label2Lineno g_lab2lineno;
+extern xcom::TTab<xoc::LabelInfo const*> g_lab_used;
 
 #endif

@@ -34,19 +34,6 @@ author: Su Zhenyu
 //Note RegionMgr::verifyPreDefinedInfo will do
 //sanity verification before get to work.
 
-//Define signed and unsigned integer type on host machine.
-typedef signed char INT8;
-typedef signed short INT16;
-typedef signed int INT32;
-typedef signed long long INT64;
-typedef signed long long INT128;
-typedef unsigned char UINT8;
-typedef unsigned short UINT16;
-typedef unsigned int UINT32;
-typedef unsigned long long UINT64;
-typedef unsigned long long UINT128;
-
-//Define target machine word/half-word/byte/bit size
 #define BIT_PER_BYTE 8
 #define BYTE_PER_CHAR 1
 #define BYTE_PER_SHORT 2
@@ -98,9 +85,9 @@ typedef unsigned long long UINT128;
 //all local optimizations are disabled.
 #define MAX_OR_BB_OPT_BB_LEN 1000
 
-//Represent target machine word with host type.
+//Define target machine word length.
 //Note TMWORD must be unsigned.
-#define TMWORD UINT
+#define TMWORD UINT32
 
 //Define target machine memory and stack alignment.
 //The alignment is power of 2 on ARM.
