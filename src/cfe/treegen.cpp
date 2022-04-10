@@ -28,18 +28,12 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "cfeinc.h"
 #include "cfecommacro.h"
 
-static Tree * statement();
-static Tree * cast_exp();
-static Tree * unary_exp();
-static Tree * exp_stmt();
-static Tree * postfix_exp();
-
 SMemPool * g_pool_general_used = nullptr;
 SMemPool * g_pool_st_used = nullptr;
 SMemPool * g_pool_tree_used = nullptr;
 SymTab * g_fe_sym_tab = nullptr;
 CHAR * g_real_token_string = nullptr;
-TOKEN g_real_token = T_NUL;
+TOKEN g_real_token = T_UNDEF;
 
 Tree * buildDeref(Tree * base)
 {

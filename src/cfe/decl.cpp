@@ -44,19 +44,11 @@ static INT format_aggr(StrBuf & buf, TypeAttr const* ty);
 static INT format_aggr(StrBuf & buf, Aggr const* s);
 static INT format_aggr_complete(StrBuf & buf, Aggr const* s);
 static UINT computeArrayByteSize(TypeAttr const* spec, Decl const* decl);
-static UINT computeUnionTypeSize(TypeAttr const* ty);
-static void process_enum(TypeAttr const* ty);
 static void type_spec_aggr_field(Aggr * aggr, TypeAttr * ty);
-static void add_and_infer_enum(TypeAttr * ta);
 static bool parse_function_definition(Decl * declaration);
 static bool checkAggrComplete(Decl * decl);
 static bool checkBitfield(Decl * decl);
 static void fixExternArraySize(Decl * declaration);
-static bool post_process_of_init_declarator(TypeAttr * attr,
-                                            Decl * declarator,
-                                            UINT lineno,
-                                            bool * is_last_decl,
-                                            Tree ** dcl_tree_list);
 static void add_enum(TypeAttr * ta);
 static void inferAndSetEValue(EnumValueList * evals);
 
@@ -1766,7 +1758,7 @@ static void consume_tok_to_semi()
 {
     while (g_real_token != T_SEMI &&
            g_real_token != T_END &&
-           g_real_token != T_NUL) {
+           g_real_token != T_UNDEF) {
         CParser::match(g_real_token);
     }
     if (g_real_token == T_SEMI) {
@@ -3173,7 +3165,7 @@ static bool process_initializer(Decl * declaration, TypeAttr * qua)
         //TBD: Do we allow an empty initialization?
         //err(g_real_line_num, "initial value is nullptr");
         //Give up parsing subsequent tokens if initialization is empty.
-        //suck_tok_to(0, T_SEMI, T_END, T_NUL);
+        //suck_tok_to(0, T_SEMI, T_END, T_UNDEF);
 
         //Error recovery: fill in a placeholer to let the compilation
         //goes on.
@@ -3187,7 +3179,7 @@ static bool process_initializer(Decl * declaration, TypeAttr * qua)
         //TBD: Do we allow an empty initialization?
         //err(g_real_line_num, "initial value is nullptr");
         //Give up parsing subsequent tokens if initialization is empty.
-        //suck_tok_to(0, T_SEMI, T_END, T_NUL);
+        //suck_tok_to(0, T_SEMI, T_END, T_UNDEF);
 
         //Error recovery: fill in a placeholer to let the compilation
         //goes on.
@@ -3552,7 +3544,6 @@ static INT checkLabel(Scope * s)
 {
     if (s == nullptr) { return ST_ERR; }
     LabelInfo * lref = SCOPE_ref_label_list(s).get_head();
-    LabelInfo * lj = nullptr;
     while (lref != nullptr) {
         CHAR const* name = lref->getOrgName()->getStr();
         ASSERT0(name);
@@ -5375,15 +5366,6 @@ static void add_enum(TypeAttr * ta)
 }
 
 
-//The function infers and assigns the value of each item in enumerator.
-//And add the enumerator into current scope.
-static void add_and_infer_enum(TypeAttr * ta)
-{
-    add_enum(ta);
-    inferAndSetEValue(ta->getEnumType()->getValList());
-}
-
-
 //Reshape zero-dimension array declaration to be including at least one element.
 static void fixExternArraySize(Decl * declaration)
 {
@@ -5407,107 +5389,6 @@ static void fixExternArraySize(Decl * declaration)
         }
         decl = DECL_next(decl);
     }
-}
-
-
-//Postprocess init declaration list.
-//Split them into a list of declarations via generating the DCL_DECLARATION
-//accroding TypeAttr and Declarator.
-//Return true if there is no error occur, otherwise return false.
-//is_last_decl: record if current declaration is the last stuff in scope.
-static bool post_init_declarator_list(Decl * dcl_list, TypeAttr * attr,
-                                      UINT lineno, bool * is_last_decl,
-                                      Tree ** dcl_tree_list)
-{
-    *is_last_decl = false;
-    Tree * last = nullptr;
-    while (dcl_list != nullptr) {
-        Decl * dcl = dcl_list;
-        dcl_list = DECL_next(dcl_list);
-
-        //Generate the DCL_DECLARATION that composed by TypeAttr
-        //and DCL_DECLARATOR for each chained Declarators.
-        DECL_next(dcl) = DECL_prev(dcl) = nullptr;
-
-        Decl * declaration = buildDeclaration(attr, dcl, lineno);
-
-        //Record the placeholder in stmt list of scope.
-        //The placeholder is used to mark the lexicographical order
-        //of dearataion. The order is often used to determine where should to
-        //insert initialization code.
-        Tree * t = NEWTN(TR_DECL);
-        TREE_decl(t) = declaration;
-        DECL_placeholder(declaration) = t;
-        xcom::add_next(dcl_tree_list, &last, t);
-
-        if (attr->is_user_type_ref()) {
-            declaration = makeupAndExpandUserType(declaration);
-            DECL_placeholder(declaration) = t;
-            DECL_align(declaration) = g_alignment;
-            DECL_decl_scope(declaration) = g_cur_scope;
-            DECL_lineno(declaration) = lineno;
-        }
-
-        if (declaration->is_fun_decl()) {
-            if (g_real_token == T_LLPAREN) {
-                //Function Definition.
-                if (!parse_function_definition(declaration)) {
-                    return false;
-                }
-            } else if (g_real_token == T_SEMI) {
-                //Function Declaration.
-                g_cur_scope->addDecl(declaration);
-                DECL_is_fun_def(declaration) = 0;
-            } else {
-                //Nothing at all.
-                err(g_real_line_num,
-                    "illegal function definition/declaration, "
-                    "might be miss ';'");
-                return false;
-            }
-        } else {
-            //Check the declarator that should be unique at current scope.
-            //Common variable definition/declaration.
-            if (!isUniqueDecl(g_cur_scope->getDeclList(), declaration)) {
-                err(g_real_line_num, "'%s' already defined",
-                    declaration->get_decl_sym()->getStr());
-                return false;
-            }
-            g_cur_scope->addDecl(declaration);
-        }
-
-        if (declaration->is_user_type_decl()) {
-            //Current declaration is user typedef declaration.
-            //As the preivous parsing in 'declarator()' has recoginzed that
-            //current identifier is identical exactly in current scope,
-            //it is dispensable to warry about the redefinition, even if
-            //invoking isUserTypeExist().
-            g_cur_scope->addToUserTypeList(declaration);
-        }
-
-        if (!checkAggrComplete(declaration)) {
-            return false;
-        }
-
-        if (!checkBitfield(declaration)) {
-            return false;
-        }
-
-        if (declaration->is_initialized()) {
-            process_init_of_declaration(declaration);
-        } else {
-            //Check the size of array dimension.
-            if (declaration->is_array()) {
-                fixExternArraySize(declaration);
-
-                //This function also do check in addition to compute array size.
-                declaration->get_decl_size();
-            }
-        }
-
-        *is_last_decl = DECL_is_fun_def(declaration);
-    }
-    return true;
 }
 
 

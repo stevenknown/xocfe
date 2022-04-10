@@ -37,7 +37,6 @@ static bool g_dump_token = false;
 static Tree * statement();
 static Tree * cast_exp();
 static Tree * unary_exp();
-static Tree * gen_typename(Decl * decl);
 static Tree * exp_list();
 static Tree * exp_list();
 static bool look_forward_token(INT num, ...);
@@ -114,7 +113,7 @@ static void * xmalloc(size_t size)
 //Return true if parsing have to terminate.
 bool CParser::isTerminateToken()
 {
-    return g_real_token == T_END || g_real_token == T_NUL;
+    return g_real_token == T_END || g_real_token == T_UNDEF;
 }
 
 
@@ -176,7 +175,7 @@ static bool verify(Tree * t)
     case TR_LABEL:
     case TR_DECL:
         break;
-    default: ASSERT0(TREE_token(t) != T_NUL && getTokenName(TREE_token(t)));
+    default: ASSERT0(TREE_token(t) != T_UNDEF && getTokenName(TREE_token(t)));
     }
 
     switch (t->getCode()) {
@@ -531,7 +530,7 @@ static void suck_tok_to(INT placeholder, ...)
         if (CParser::isTerminateToken()) { break; }
         va_start(arg, placeholder);
         tok = (TOKEN)va_arg(arg, INT);
-        while (tok != T_NUL) {
+        while (tok != T_UNDEF) {
             if (tok == g_real_token) { goto FIN; }
             tok = (TOKEN)va_arg(arg, INT);
         }
@@ -604,8 +603,8 @@ static TOKEN look_next_token(INT n,
                              OUT CHAR ** tok_string,
                              OUT UINT * tok_line_num)
 {
-    TOKEN tok = T_NUL;
-    if (n < 0) { return T_NUL; }
+    TOKEN tok = T_UNDEF;
+    if (n < 0) { return T_UNDEF; }
 
     if (n == 0) { return g_real_token; }
 
@@ -1048,7 +1047,7 @@ static Tree * postfix_exp()
 static Tree * unary_or_LP_typename_RP()
 {
     Tree * t = nullptr;
-    TOKEN tok = T_NUL;
+    TOKEN tok = T_UNDEF;
     CHAR * tok_string = nullptr;
     if (g_real_token == T_LPAREN) {
         //Next exp either (exp) or (type_name), so after several '(', there
@@ -1744,7 +1743,7 @@ static TokenList * matchTokenTillNewLine()
     g_enable_newline_token = true;
     TokenList * last = nullptr;
     TokenList * head = nullptr;
-    while (g_real_token != T_NEWLINE && g_real_token != T_NUL) {
+    while (g_real_token != T_NEWLINE && g_real_token != T_UNDEF) {
         TokenList * tl = (TokenList*)xmalloc(sizeof(TokenList));
         TL_tok(tl) = g_real_token;
         switch (g_real_token) {
@@ -2227,7 +2226,7 @@ static bool statement_list(Scope * cur_scope)
         last = xcom::get_last(t);
         if ((cerr != (INT)g_err_msg_list.get_elem_count()) ||
             (cerr > 0 && t == nullptr)) {
-            suck_tok_to(0, T_SEMI, T_RLPAREN, T_END, T_NUL);
+            suck_tok_to(0, T_SEMI, T_RLPAREN, T_END, T_UNDEF);
         }
 
         if (g_real_token == T_SEMI) {
@@ -2575,7 +2574,7 @@ static Tree * dispatch()
         break;
     case T_END:      // end of file
         return ST_SUCC;
-    case T_NUL:
+    case T_UNDEF:
         err(g_real_line_num, "unrecognized token :%s", g_real_token_string);
         return t;
     default:
@@ -2658,7 +2657,7 @@ STATUS CParser::perform()
         if (g_real_token == T_END) {
             return ST_SUCC;
         }
-        if (g_real_token == T_NUL || is_too_many_err()) {
+        if (g_real_token == T_UNDEF || is_too_many_err()) {
             return ST_ERR;
         }
         if (dispatch() == nullptr && g_err_msg_list.has_msg()) {

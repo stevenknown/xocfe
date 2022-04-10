@@ -30,7 +30,7 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 //C language's key words.
 typedef enum _TOKEN {
-    T_NUL = 0,      // nullptr
+    T_UNDEF = 0,      // nullptr
     T_ID,           // ID = (A-Z|a-z)( A-Z|a-z|0-9 )*
     T_IMM,          // 0~9
     T_IMML,         // 0~9L
@@ -183,8 +183,8 @@ public:
 };
 
 
-#define MAX_BUF_LINE 4096
-#define MAX_OFST_BUF_LEN 1024
+#define LEX_MAX_BUF_LINE 4096
+#define LEX_MAX_OFST_BUF_LEN 1024
 #define OFST_TAB_LINE_SIZE (g_ofst_tab_byte_size / sizeof(LONG))
 
 //Exported Variables

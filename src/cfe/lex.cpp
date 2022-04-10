@@ -36,8 +36,8 @@ static CHAR g_cur_char = 0; //See details about the paper about LL1
 static bool g_is_dos = true;
 static INT g_cur_line_pos = 0;
 static INT g_cur_line_num = 0;
-static CHAR g_file_buf[MAX_BUF_LINE];
-static INT  g_file_buf_pos = MAX_BUF_LINE;
+static CHAR g_file_buf[LEX_MAX_BUF_LINE];
+static INT  g_file_buf_pos = LEX_MAX_BUF_LINE;
 static INT  g_last_read_num = 0;
 
 //Set true to return the newline charactors as normal character.
@@ -45,10 +45,10 @@ static bool g_use_newline_char = true;
 static UINT g_cur_src_ofst = 0; //Record current file offset of src file
 
 UINT g_src_line_num = 0; //line number of src file
-TOKEN g_cur_token = T_NUL;
+TOKEN g_cur_token = T_UNDEF;
 
 //The string buffer which token were reside.
-CHAR g_cur_token_string[MAX_BUF_LINE] = {0};
+CHAR g_cur_token_string[LEX_MAX_BUF_LINE] = {0};
 CHAR * g_cur_line = nullptr; //Current parsing line of src file
 UINT g_cur_line_len = 0; //The current line buf length ,than read from file buf
 LONG * g_ofst_tab = nullptr; //Record offset of each line in src file
@@ -70,7 +70,7 @@ UINT g_disgarded_line_num = 0;
 //with declarations order in lex.h.
 static TokenInfo g_token_info[] =
 {
-    { T_NUL,        "" },
+    { T_UNDEF,        "" },
     { T_ID,         "id" },
     { T_IMM,        "imme" },
     { T_IMML,       "long imme" },
@@ -262,32 +262,32 @@ static INT getLine()
 {
     //Initializing or realloc offset table.
     if (g_ofst_tab == nullptr) {
-        g_ofst_tab_byte_size = MAX_OFST_BUF_LEN * sizeof(LONG);
+        g_ofst_tab_byte_size = LEX_MAX_OFST_BUF_LEN * sizeof(LONG);
         g_ofst_tab = (LONG*)::malloc(g_ofst_tab_byte_size);
         ::memset(g_ofst_tab, 0, g_ofst_tab_byte_size);
     } else if (OFST_TAB_LINE_SIZE < (g_src_line_num + 10)) {
         g_ofst_tab = (LONG*)::realloc(g_ofst_tab, g_ofst_tab_byte_size +
-                                      MAX_OFST_BUF_LEN * sizeof(LONG));
+                                      LEX_MAX_OFST_BUF_LEN * sizeof(LONG));
         ::memset(((BYTE*)g_ofst_tab) + g_ofst_tab_byte_size,
-                 0, MAX_OFST_BUF_LEN * sizeof(LONG));
-        g_ofst_tab_byte_size += MAX_OFST_BUF_LEN * sizeof(LONG);
+                 0, LEX_MAX_OFST_BUF_LEN * sizeof(LONG));
+        g_ofst_tab_byte_size += LEX_MAX_OFST_BUF_LEN * sizeof(LONG);
     }
 
     UINT pos = 0;
     bool is_some_chars_in_cur_line = false;
     for (;;) {
         if (g_cur_line == nullptr) {
-            g_cur_line_len = MAX_BUF_LINE;
+            g_cur_line_len = LEX_MAX_BUF_LINE;
             g_cur_line = (CHAR*)::malloc(g_cur_line_len);
             if (g_cur_line == nullptr) {
                 goto FAILED;
             }
         }
 
-        //Read MAX_BUF_LINE characters from src file.
+        //Read LEX_MAX_BUF_LINE characters from src file.
         if (g_file_buf_pos >= g_last_read_num) {
             ASSERT0(g_hsrc != nullptr);
-            INT dw = (INT)::fread(g_file_buf, 1, MAX_BUF_LINE, g_hsrc);
+            INT dw = (INT)::fread(g_file_buf, 1, LEX_MAX_BUF_LINE, g_hsrc);
             if (dw == 0) {
                 if (!is_some_chars_in_cur_line) {
                     //Some characters had been put into 'g_cur_line', but the
@@ -307,7 +307,7 @@ static INT getLine()
             } else {
                 g_last_read_num = dw;
             }
-            g_last_read_num = MIN(g_last_read_num, MAX_BUF_LINE);
+            g_last_read_num = MIN(g_last_read_num, LEX_MAX_BUF_LINE);
             g_file_buf_pos = 0;
         }
 
@@ -374,7 +374,7 @@ static INT getLine()
 
             if (pos >= g_cur_line_len) {
                 //Escalate line buffer.
-                g_cur_line_len += MAX_BUF_LINE;
+                g_cur_line_len += LEX_MAX_BUF_LINE;
                 g_cur_line = (CHAR*)::realloc(g_cur_line, g_cur_line_len);
             }
             g_cur_line[pos] = g_file_buf[g_file_buf_pos];
@@ -441,7 +441,7 @@ void initLexer()
     g_last_read_num = 0;
     g_cur_src_ofst = 0; //record current file offset of src file
     g_src_line_num = 0; //record line number of src file
-    g_cur_token = T_NUL;
+    g_cur_token = T_UNDEF;
     g_real_line_num = 0;
     g_disgarded_line_num = 0;
     ASSERT0(g_cur_line == nullptr && g_cur_line_len == 0);
@@ -469,7 +469,7 @@ void finiLexer()
 
 static TOKEN getKeyWord(CHAR const* s)
 {
-    if (s == nullptr) return T_NUL;
+    if (s == nullptr) return T_UNDEF;
     return g_str2token.get(s);
 }
 
@@ -523,7 +523,7 @@ static TOKEN t_num()
 {
     CHAR c = getNextChar();
     CHAR b_is_fp = 0;
-    TOKEN t = T_NUL;
+    TOKEN t = T_UNDEF;
     if (g_cur_char == '0' && (c == 'x' || c == 'X')) {
         //hex
         g_cur_token_string[g_cur_token_string_pos++] = c;
@@ -809,7 +809,7 @@ static TOKEN t_id()
     g_cur_char = c;
     g_cur_token_string[g_cur_token_string_pos] = 0;
     TOKEN tok = getKeyWord(g_cur_token_string);
-    if (tok != T_NUL) {
+    if (tok != T_UNDEF) {
         return tok;
     }
     return T_ID;
@@ -822,7 +822,7 @@ static TOKEN t_id()
 //is_restart: record the result if lexer need to restart getNextToken().
 static TOKEN t_solidus(bool * is_restart)
 {
-    TOKEN t = T_NUL;
+    TOKEN t = T_UNDEF;
     INT st = 0;
     CHAR c = getNextChar();
     switch (c) {
@@ -866,7 +866,7 @@ static TOKEN t_solidus(bool * is_restart)
                     //getNextToken() if meeting end of comments.
                     //Avoid stack overflow.
                     //t = getNextToken();
-                    t = T_NUL;
+                    t = T_UNDEF;
                     ASSERT0(is_restart);
                     *is_restart = true;
                     goto FIN;
@@ -915,7 +915,7 @@ TOKEN t_dot()
             c = getNextChar();
         } else {
             //Here '..' is a invalid token
-            t = T_NUL;
+            t = T_UNDEF;
         }
     } else {
         //token string is '.'
@@ -942,7 +942,7 @@ TokenInfo const* get_token_info(TOKEN tok)
 
 static TOKEN t_rest(bool * is_restart)
 {
-    TOKEN token = T_NUL;
+    TOKEN token = T_UNDEF;
     switch (g_cur_char) {
     case '-':
         g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
@@ -1182,7 +1182,7 @@ static TOKEN t_rest(bool * is_restart)
             token = T_END;
         } else {
             //There may be error occurred.
-            token = T_NUL;
+            token = T_UNDEF;
         }
     } //end switch
     return token;
@@ -1195,7 +1195,7 @@ TOKEN getNextToken()
     if (g_cur_token == T_END) {
         return g_cur_token;
     }
-    TOKEN token = T_NUL;
+    TOKEN token = T_UNDEF;
     g_cur_token_string_pos = 0;
     g_cur_token_string[0] = 0;
     while (g_cur_char == 0) { g_cur_char = getNextChar(); }
@@ -1328,7 +1328,7 @@ START:
             bool is_restart = false;
             token = t_rest(&is_restart);
             if (is_restart) {
-                ASSERT0(token == T_NUL);
+                ASSERT0(token == T_UNDEF);
                 goto START;
             }
         }
@@ -1344,7 +1344,7 @@ void test_lex()
 {
     getNextToken();
     while (g_cur_token != T_END) {
-        if (g_cur_token == T_NUL) {
+        if (g_cur_token == T_UNDEF) {
             printf("ERROR in line:%u\n\t", g_src_line_num);
             printf("S:%10s, T:%10s",
                 g_cur_token_string,
