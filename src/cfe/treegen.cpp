@@ -66,10 +66,10 @@ Tree * buildIndmem(Tree * base, Decl const* fld)
 Tree * buildAggrFieldRef(Decl const* decl, xcom::Vector<UINT> & fldvec)
 {
     ASSERT0(decl->is_aggr());
-    ASSERTN(fldvec.get_last_idx() >= 0, ("miss field index"));
+    ASSERTN(fldvec.get_last_idx() != VEC_UNDEF, ("miss field index"));
     Tree * base = buildId(decl);
     Decl const* basedecl = decl;
-    for (INT i = 0; i <= fldvec.get_last_idx(); i++) {
+    for (VecIdx i = 0; i <= fldvec.get_last_idx(); i++) {
         Decl * flddecl = nullptr;
         if (basedecl->is_aggr()) {
             get_aggr_field(basedecl->getTypeAttr(), fldvec.get(i),
@@ -205,8 +205,8 @@ Tree * buildAssign(Tree * lhs, Tree * rhs)
 
 Tree * buildArray(Tree * base, xcom::Vector<UINT> & subexp_vec)
 {
-    ASSERTN(subexp_vec.get_last_idx() >= 0, ("miss dimension exp"));
-    for (INT i = 0; i <= subexp_vec.get_last_idx(); i++) {
+    ASSERTN(subexp_vec.get_last_idx() != VEC_UNDEF, ("miss dimension exp"));
+    for (VecIdx i = 0; i <= subexp_vec.get_last_idx(); i++) {
         Tree * array = NEWTN(TR_ARRAY);
         TREE_lineno(array) = base->getLineno();
         TREE_array_base(array) = base;
@@ -224,7 +224,7 @@ Tree * buildArray(Tree * base, xcom::Vector<UINT> & subexp_vec)
 //            e.g: arr[3][5], subexp_vec is <3, 5>.
 Tree * buildArray(Decl const* decl, xcom::Vector<UINT> & subexp_vec)
 {
-    ASSERTN(subexp_vec.get_last_idx() >= 0, ("miss dimension exp"));
+    ASSERTN(subexp_vec.get_last_idx() != VEC_UNDEF, ("miss dimension exp"));
     return buildArray(buildId(decl), subexp_vec);
 }
 
