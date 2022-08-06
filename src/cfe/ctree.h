@@ -25,8 +25,10 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 @*/
-#ifndef __TREE_H__
-#define __TREE_H__
+#ifndef __CTREE_H__
+#define __CTREE_H__
+
+namespace xfe {
 
 #define TREE_ID_UNDEF 0
 
@@ -340,4 +342,6 @@ Tree * get_base(Tree * t);
 
 //Exported Variables
 extern UINT g_tree_count;
+
+} //namespace xfe
 #endif

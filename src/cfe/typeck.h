@@ -28,6 +28,8 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef __TYPECK_H__
 #define __TYPECK_H__
 
+namespace xfe {
+
 class TYCtx {
 public:
     //The property propagated top down.
@@ -61,4 +63,5 @@ public:
 bool isConsistentWithPointer(Tree * t);
 INT TypeCheck();
 
+} //namespace xfe
 #endif

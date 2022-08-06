@@ -27,6 +27,8 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 @*/
 #include "cfeinc.h"
 
+namespace xfe {
+
 ErrList g_err_msg_list;
 WarnList g_warn_msg_list;
 
@@ -109,3 +111,4 @@ INT is_too_many_err()
     return g_err_msg_list.get_elem_count() > TOO_MANY_ERR;
 }
 
+} //namespace xfe

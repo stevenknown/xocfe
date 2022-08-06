@@ -28,6 +28,8 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _CELL_H_
 #define _CELL_H_
 
+namespace xfe {
+
 #define C_NUM 0
 #define C_STRING 1
 #define C_ID_ADDR 3
@@ -52,5 +54,6 @@ Cell * newcell(INT t);
 void free_cell(Cell * c);
 Cell * get_free_cell();
 void clean_free_cell_list();
-#endif
 
+} //namespace xfe
+#endif

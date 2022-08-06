@@ -28,6 +28,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "cfeinc.h"
 #include "cfecommacro.h"
 
+namespace xfe {
+
 bool TreeCanon::handleParam(Decl * formalp, Decl * realp)
 {
     return true;
@@ -503,3 +505,5 @@ INT TreeCanonicalize()
     }
     return ST_SUCC;
 }
+
+} //namespace xfe

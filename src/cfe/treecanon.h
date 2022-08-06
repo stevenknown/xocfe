@@ -30,6 +30,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef __TREECANON_H__
 #define __TREECANON_H__
 
+namespace xfe {
+
 #define TCC_change(p) ((p)->m_change)
 
 //This class represents the context informatin during tree canonicalization.
@@ -73,7 +75,7 @@ public:
     Tree * handleTreeList(Tree * tl, TreeCanonCtx * ctx);
 };
 
-
 INT TreeCanonicalize();
 
+} //namespace xfe
 #endif

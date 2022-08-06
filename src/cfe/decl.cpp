@@ -28,6 +28,8 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "cfeinc.h"
 #include "cfecommacro.h"
 
+namespace xfe {
+
 static Tree * initializer(TypeAttr * qua);
 static Decl * declarator(TypeAttr const* ts, TypeAttr * qua);
 static TypeAttr * specifier_qualifier_list();
@@ -5447,3 +5449,5 @@ Tree * declaration_list()
     }
     return decl_list;
 }
+
+} //namespace xfe

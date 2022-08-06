@@ -28,6 +28,8 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "cfeinc.h"
 #include "cfecommacro.h"
 
+namespace xfe {
+
 bool g_enable_c99_declaration = true;
 xoc::LogMgr * g_logmgr = nullptr;
 static List<Cell*> g_cell_list;
@@ -2668,3 +2670,5 @@ STATUS CParser::perform()
     return ST_SUCC;
 }
 //END CParser
+
+} //namespace xfe

@@ -27,6 +27,8 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 @*/
 #include "cfeinc.h"
 
+namespace xfe {
+
 //The outermost scope is global region which id is 0, and the inner
 //scope scope is function body-stmt which id starts at 1, etc.
 Scope * g_cur_scope = nullptr;
@@ -568,3 +570,5 @@ Aggr const* Scope::retrieveCompleteType(Aggr const* aggr, bool is_struct)
     }
     return nullptr;
 }
+
+} //namespace xfe

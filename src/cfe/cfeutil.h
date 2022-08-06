@@ -29,10 +29,13 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef __CFEUTIL_H__
 #define __CFEUTIL_H__
 
+namespace xfe {
+
 #define NIL_START 100000
 #define DUMP_INDENT_NUM 4
 
 //Print message to console.
 void prt(CHAR const* format, ...);
 
+} //namespace xfe
 #endif

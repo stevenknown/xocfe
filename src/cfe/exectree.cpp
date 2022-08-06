@@ -27,6 +27,8 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 @*/
 #include "cfeinc.h"
 
+namespace xfe {
+
 //Computing expected value in compiling period, such as constant expression.
 // 'g_is_allow_float' cannot be used via extern , it must be assigned with
 // 'compute_constant_value' absolutely.
@@ -335,3 +337,5 @@ bool computeConstExp(IN Tree * t, OUT LONGLONG * v, bool is_allow_float)
     *v = popv();
     return true;
 }
+
+} //namespace xfe

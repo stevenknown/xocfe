@@ -25,6 +25,11 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 @*/
+#ifndef __CFEXPORT_H_
+#define __CFEXPORT_H_
+
+namespace xfe {
+
 //Exported Type.
 class Scope;
 class Decl;
@@ -33,3 +38,6 @@ class Tree;
 //Exported Variable.
 extern bool g_prt_asm_horizontal;
 extern bool g_enable_c99_declaration;
+
+} //namespace xfe
+#endif

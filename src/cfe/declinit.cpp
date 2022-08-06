@@ -28,6 +28,8 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "cfeinc.h"
 #include "cfecommacro.h"
 
+namespace xfe {
+
 static void replaceBaseWith(Tree const* newbase, Tree * stmts);
 static INT processAggrInit(Decl const* dcl, Tree * initval, OUT Tree ** stmts);
 static INT processScope(Scope * scope, bool is_collect_stmt);
@@ -490,3 +492,5 @@ INT processDeclInit()
     processScope(get_global_scope(), true);
     return ST_SUCC;
 }
+
+} //namespace xfe

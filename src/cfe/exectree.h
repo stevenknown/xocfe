@@ -28,7 +28,10 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef __EXEC_TREE_H__
 #define __EXEC_TREE_H__
 
+namespace xfe {
+
 extern bool computeConstExp(IN Tree * t, OUT LONGLONG * v,
                             bool is_allow_float);
 
+} //namespace xfe
 #endif

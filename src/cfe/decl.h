@@ -28,6 +28,8 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef __DECL_H__
 #define __DECL_H__
 
+namespace xfe {
+
 #define ALLOW_CONST_VOLATILE 1
 #define DECL_ID_UNDEF 0
 #define AGGR_ID_UNDEF 0
@@ -1127,4 +1129,5 @@ extern UINT g_aggr_count;
 extern UINT g_aggr_anony_name_count;
 extern CHAR const* g_dcl_name[];
 
+} //namespace xfe
 #endif

@@ -46,10 +46,11 @@ using namespace xoc;
 #include "declinit.h"
 #include "scope.h"
 #include "decl.h"
-#include "tree.h"
+#include "ctree.h"
 #include "st.h"
 #include "cell.h"
 #include "treegen.h"
 #include "parse.h"
 #include "exectree.h"
 #include "treecanon.h"
+using namespace xfe;

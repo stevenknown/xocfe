@@ -29,6 +29,8 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "cfeinc.h"
 #include "cfecommacro.h"
 
+namespace xfe {
+
 //Print message to console.
 void prt(CHAR const* format, ...)
 {
@@ -38,3 +40,5 @@ void prt(CHAR const* format, ...)
     fflush(stdout);
     va_end(args);
 }
+
+} //namespace xfe

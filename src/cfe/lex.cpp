@@ -31,6 +31,8 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "cfecommacro.h"
 #include "lex.h"
 
+namespace xfe {
+
 static INT g_cur_token_string_pos = 0;
 static CHAR g_cur_char = 0; //See details about the paper about LL1
 static bool g_is_dos = true;
@@ -1360,3 +1362,5 @@ void test_lex()
     printf("\n\n\n");
 }
 #endif
+
+} //namespace xfe

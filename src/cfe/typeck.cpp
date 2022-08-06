@@ -28,6 +28,8 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "cfeinc.h"
 #include "cfecommacro.h"
 
+namespace xfe {
+
 static bool checkTreeList(Tree * t, TYCtx * cont);
 
 //Checking compatible between formal parameter and real parameter.
@@ -491,3 +493,5 @@ INT TypeCheck()
 
     return ST_SUCC;
 }
+
+} //namespace xfe

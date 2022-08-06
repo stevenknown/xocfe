@@ -28,6 +28,8 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "cfeinc.h"
 #include "cfecommacro.h"
 
+namespace xfe {
+
 #define BUILD_TYNAME(T)  buildTypeName(buildBaseTypeSpec(T))
 
 static TypeAttr * g_schar_type;
@@ -1289,8 +1291,9 @@ static INT TypeTranAdditive(Tree * t, TYCtx * cont)
             //Arithmetic type
             TREE_result_type(t) = buildBinaryOpType(t->getCode(), ld, rd);
         } else {
-            ASSERTN(0, ("illegal type for '%s'",
-                    getTokenName(TREE_token(t))));
+            err(t->getLineno(), "illegal operand type for '%s'",
+                getTokenName(TREE_token(t)));
+            return ST_ERR;
         }
         return ST_SUCC;
     }
@@ -1735,3 +1738,5 @@ INT TypeTransform()
 
     return ST_SUCC;
 }
+
+} //namespace xfe

@@ -5,7 +5,7 @@ CFE_OBJS +=\
 ../cfe/lex.o\
 ../cfe/scope.o\
 ../cfe/st.o\
-../cfe/tree.o\
+../cfe/ctree.o\
 ../cfe/treegen.o\
 ../cfe/typeck.o\
 ../cfe/cfeutil.o\

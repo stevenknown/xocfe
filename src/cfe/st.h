@@ -28,6 +28,8 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef __ST_H__
 #define __ST_H__
 
+namespace xfe {
+
 //We must maintenance the order of the first lex statement values as the TOKEN
 //enumeration presented.
 //e.g  the current value of lex statement is st_null, suchlike concurrence of
@@ -454,4 +456,6 @@ INT is_sst_exist(SST sst);
 SST get_top_st();
 SST get_top_nth_st(INT n);
 void dump_st_stack();
+
+} //namespace xfe
 #endif

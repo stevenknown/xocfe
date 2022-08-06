@@ -93,7 +93,7 @@ bool processCmdLine(INT argc, CHAR * argv[])
             g_c_file_name = argv[i];
             i++;
         }
-    } //end while
+    }
     return true;
 }
 

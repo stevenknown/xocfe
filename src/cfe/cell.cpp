@@ -27,6 +27,8 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 @*/
 #include "cfeinc.h"
 
+namespace xfe {
+
 static List<Cell*> g_cell_free_list;
 
 static void * xmalloc(size_t size)
@@ -81,3 +83,5 @@ Cell * newcell(INT type)
     CELL_type(c) = type;
     return c;
 }
+
+} //namespace xfe

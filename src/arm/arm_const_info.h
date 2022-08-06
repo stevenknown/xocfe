@@ -371,7 +371,7 @@ typedef enum _BUILTIN_TYPE {
 } BUILTIN_TYPE;
 
 //Instruction Operation Type.
-typedef enum _OR_TYPE {
+typedef enum _OR_CODE {
     OR_UNDEF = 0,
     OR_b, //branch to label
     OR_bl, //branch to label, update link register
@@ -516,7 +516,7 @@ typedef enum _OR_TYPE {
     OR_push,
     OR_pop,
     OR_LAST,
-} OR_TYPE;
+} OR_CODE;
 #define OR_NUM OR_LAST
 
 #endif

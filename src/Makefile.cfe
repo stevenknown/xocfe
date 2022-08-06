@@ -3,10 +3,10 @@ cfe.prj/xocfe.o \
 cfe/decl.o \
 cfe/err.o \
 cfe/exectree.o \
+cfe/ctree.o \
 cfe/lex.o \
 cfe/scope.o \
 cfe/st.o \
-cfe/tree.o \
 cfe/treegen.o \
 cfe/typetran.o \
 cfe/declinit.o \
@@ -21,6 +21,7 @@ com/comf.o \
 com/strbuf.o \
 com/bs.o \
 com/diagnostic.o \
+com/byteop.o \
 com/ltype.o
 
 OPT_OBJS +=\

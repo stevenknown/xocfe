@@ -28,6 +28,8 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _LEX_
 #define _LEX_
 
+namespace xfe {
+
 //C language's key words.
 typedef enum _TOKEN {
     T_UNDEF = 0,      // nullptr
@@ -214,4 +216,6 @@ TOKEN getNextToken();
 CHAR const* getTokenName(TOKEN tok);
 
 TokenInfo const* get_token_info(TOKEN tok);
+
+} //namespace xfe
 #endif

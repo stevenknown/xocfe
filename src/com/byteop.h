@@ -25,53 +25,43 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
 USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 @*/
-#ifndef __PARSE_H__
-#define __PARSE_H__
+#ifndef __BYTEOP_H__
+#define __BYTEOP_H__
 
-namespace xfe {
+namespace xcom {
 
-class CParser {
-    COPY_CONSTRUCTOR(CParser);
-    bool initSrcFile(CHAR const* fn);
-    void finiSrcFile();
+#if BITS_PER_BYTE == 8
+#define DIVBPB(a) ((a) >> 3)
+#define MULBPB(a) ((a) << 3)
+#define MODBPB(a) ((a) & 7)
+#else
+#define DIVBPB(a) ((a) / BITS_PER_BYTE)
+#define MULBPB(a) ((a) * BITS_PER_BYTE)
+#define MODBPB(a) ((a) % BITS_PER_BYTE)
+#endif
+
+//Count of bits in all the one byte numbers.
+extern BYTE const g_bit_count[256];
+
+//Mapping from 8 bit unsigned integers to the index of the first one bit.
+extern BYTE const g_first_one[256];
+
+//Mapping from 8 bit unsigned integers to the index of the last one bit.
+extern BYTE const g_last_one[256];
+
+class ByteOp {
 public:
-    CParser(xoc::LogMgr * lm, CHAR const* srcfile) { init(lm, srcfile); }
-    ~CParser() { destroy(); }
+    //Return the bit index of first '1', start from '0'.
+    //Return BS_UNDEF if there is no '1' in given byte buffer.
+    static BSIdx get_first_idx(BYTE const* ptr, UINT bytesize);
 
-    static Tree * conditional_exp();
-    static Scope * compound_stmt(Decl * para_list);
+    //Return the next bit index of '1' according to given 'idx'.
+    //Return BS_UNDEF if there is no other '1' in given buffer.
+    static BSIdx get_next_idx(BYTE const* ptr, UINT bytesize, BSIdx idx);
 
-    void destroy();
-    void dump_tok_list();
-
-    static Tree * exp();
-
-    void init(xoc::LogMgr * lm, CHAR const* srcfile);
-    static Tree * id();
-    static Tree * id(Sym const* name, TOKEN tok);
-    static bool isTerminateToken();
-    //Return true if 'tok' indicate terminal charactor, otherwise false.
-    static bool inFirstSetOfExp(TOKEN tok);
-
-    //Match the current token with 'tok'.
-    //Return ST_SUCC if matched, otherwise ST_ERR.
-    static STATUS match(TOKEN tok);
-    static UINT mapRealLineToSrcLine(UINT realline);
-
-    static void setLogMgr(LogMgr * logmgr);
-
-    //Start to parse a file.
-    STATUS perform();
+    //Return the number of '1' in given buffer.
+    static UINT get_elem_count(BYTE const* ptr, UINT bytesize);
 };
 
-//Exported Variables
-extern CHAR * g_real_token_string;
-extern TOKEN g_real_token;
-extern SMemPool * g_pool_general_used;
-extern SMemPool * g_pool_tree_used; //front end
-extern SMemPool * g_pool_st_used;
-extern SymTab * g_fe_sym_tab;
-extern LogMgr * g_logmgr; //the file handler of log file.
-
-} //namespace xfe
-#endif
+} //namespace xcom
+#endif //END __BYTEOP_H__

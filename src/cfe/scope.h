@@ -28,6 +28,8 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef __SCOPE_H__
 #define __SCOPE_H__
 
+namespace xfe {
+
 class EnumTab;
 class UserTypeList;
 class Struct;
@@ -183,4 +185,5 @@ extern UINT g_scope_count;
 extern Label2Lineno g_lab2lineno;
 extern xcom::TTab<xoc::LabelInfo const*> g_lab_used;
 
+} //namespace xfe
 #endif

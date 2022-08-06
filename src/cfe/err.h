@@ -28,6 +28,8 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef _ERR_H_
 #define _ERR_H_
 
+namespace xfe {
+
 #define TOO_MANY_ERR 10
 #define ERR_SHOW 1
 #define WARN_SHOW 2
@@ -73,4 +75,5 @@ void show_err();
 void show_warn();
 INT is_too_many_err();
 
+} //namespace xfe
 #endif

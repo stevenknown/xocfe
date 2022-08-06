@@ -28,7 +28,10 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef __DECLINIT_H__
 #define __DECLINIT_H__
 
+namespace xfe {
+
 //Infer type to tree nodes.
 INT processDeclInit();
 
+} //namespace xfe
 #endif

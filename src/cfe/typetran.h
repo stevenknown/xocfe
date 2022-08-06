@@ -28,6 +28,8 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef __TYPETRAN_H__
 #define __TYPETRAN_H__
 
+namespace xfe {
+
 bool isConsistentWithPointer(Tree * t);
 void initTypeTran();
 INT process_init_by_extra_val(Decl * decl, Tree ** init);
@@ -38,4 +40,5 @@ INT TypeTranList(Tree * t, TYCtx * cont);
 INT TypeTran(Tree * t, TYCtx * cont);
 INT TypeTransform();
 
+} //namespace xfe
 #endif

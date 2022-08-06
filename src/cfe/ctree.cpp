@@ -27,6 +27,8 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 @*/
 #include "cfeinc.h"
 
+namespace xfe {
+
 UINT g_tree_count = TREE_ID_UNDEF + 1;
 
 static void * xmalloc(size_t size)
@@ -793,3 +795,5 @@ void Tree::setParentForKid()
         }
     }
 }
+
+} //namespace xfe

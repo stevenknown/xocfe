@@ -28,6 +28,8 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "cfeinc.h"
 #include "cfecommacro.h"
 
+namespace xfe {
+
 SMemPool * g_pool_general_used = nullptr;
 SMemPool * g_pool_st_used = nullptr;
 SMemPool * g_pool_tree_used = nullptr;
@@ -292,3 +294,5 @@ Tree * copyTree(Tree const* t)
     }
     return newt;
 }
+
+} //namespace xfe

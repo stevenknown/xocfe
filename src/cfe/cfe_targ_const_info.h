@@ -28,6 +28,11 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef __CFE_TARG_CONST_INFO_H__
 #define __CFE_TARG_CONST_INFO_H__
 
+///////////////////////////////////////////////////////////////////////////
+//NOTE THE FILE DEFINES DEFAULT TARGET DEPENDENT MACROS THAT USED BY CFE.//
+//THUS USER SHOULD PLACE THEIR OWN MACROS DEFINITION BEFORE THE FILE.    //
+///////////////////////////////////////////////////////////////////////////
+
 //Represent target machine word with host type.
 #ifndef TMWORD
 #define TMWORD UINT
@@ -79,14 +84,37 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #endif
 
 //Define signed and unsigned integer type on host machine.
+#ifndef CHAR
 #define INT8 CHAR
+#endif
+
+#ifndef UCHAR
 #define UINT8 UCHAR
+#endif
+
+#ifndef SHORT
 #define INT16 SHORT
+#endif
+
+#ifndef USHORT
 #define UINT16 USHORT
+#endif
+
+#ifndef INT
 #define INT32 INT
+#endif
+
+#ifndef UINT
 #define UINT32 UINT
+#endif
+
+#ifndef LONGLONG
 #define INT64 LONGLONG
+#endif
+
+#ifndef ULONGLONG
 #define UINT64 ULONGLONG
+#endif
 
 //Host integer and float point type.
 //e.g: Build XOCC on x8664, HOST_INT should be 64bit.

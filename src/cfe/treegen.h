@@ -28,6 +28,8 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #ifndef __TREE_GEN_H__
 #define __TREE_GEN_H__
 
+namespace xfe {
+
 #define NEWTN(tok)  allocTreeNode((tok), g_real_line_num)
 
 //Exported Variables
@@ -67,4 +69,5 @@ Tree * buildTypeName(Decl * decl);
 Tree * copyTree(Tree const* t);
 Tree * copyTreeList(Tree const* t);
 
+} //namespace xfe
 #endif
