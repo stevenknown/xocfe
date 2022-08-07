@@ -140,6 +140,7 @@ static bool checkCall(Tree * t, TYCtx * cont)
         return false;
     }
     Decl * fun_decl = TREE_fun_exp(t)->getResultType();
+    ASSERTN(fun_decl, ("return type of call is not inferred out"));
 
     //Return type is the call type.
     //And here constructing return value type.
@@ -471,7 +472,6 @@ INT TypeCheck()
 {
     Scope * s = get_global_scope();
     if (s == nullptr) { return ST_SUCC; }
-
     for (Decl * dcl = s->getDeclList(); dcl != nullptr; dcl = DECL_next(dcl)) {
         ASSERT0(dcl->getDeclScope() == s);
         checkDeclaration(dcl);

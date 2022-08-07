@@ -2614,7 +2614,10 @@ void CParser::finiSrcFile()
 //Start to parse a file.
 STATUS CParser::perform()
 {
-    ASSERTN(g_hsrc && g_fe_sym_tab, ("must initialize them"));
+    if (g_hsrc == nullptr || g_fe_sym_tab == nullptr) {
+        err(0, "source file and frontend symbol table are not initialized");
+        return ST_ERR;
+    }
     //base_type_spec:   one of
     //    type-name void char short int long float double signed
     //    unsigned struct union auto register extern static typedef const
