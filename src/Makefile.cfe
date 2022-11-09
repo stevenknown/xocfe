@@ -13,6 +13,7 @@ cfe/declinit.o \
 cfe/typeck.o \
 cfe/cfeutil.o \
 cfe/cell.o\
+cfe/treecanon.o\
 cfe/parse.o 
 
 COM_OBJS +=\

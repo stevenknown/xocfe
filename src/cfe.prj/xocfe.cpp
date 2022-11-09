@@ -114,7 +114,7 @@ bool processCmdLine(INT argc, CHAR * argv[])
 
 
 //cmdline usage: xocfe example.c -dump a.tmp
-#define DEBUG
+//#define DEBUG
 #ifdef DEBUG
 INT main(INT argcc, CHAR * argvc[])
 {
