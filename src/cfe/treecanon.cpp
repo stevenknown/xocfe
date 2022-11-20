@@ -83,8 +83,7 @@ Tree * TreeCanon::handleString(Tree * t, TreeCanonCtx * ctx)
 Tree * TreeCanon::handleId(Tree * t, TreeCanonCtx * ctx)
 {
     ASSERT0(t->getCode() == TR_ID);
-    Decl const* decl = TREE_id_decl(t);
-    ASSERT0(decl);
+    ASSERT0(TREE_id_decl(t));
     if (t->parent() != nullptr && //Enum ID does not have parent.
         t->parent()->getCode() == TR_ARRAY) {
         if (t == TREE_array_base(t->parent()) &&
@@ -467,7 +466,7 @@ Tree * TreeCanon::handleTreeList(Tree * tl, TreeCanonCtx * ctx)
             xcom::replace(&tl, t, newt);
         }
         if (g_err_msg_list.has_msg()) {
-            return false;
+            return nullptr;
         }
         ctx->unionInfoBottomUp(lctx);
     }
