@@ -3721,7 +3721,7 @@ void Decl::convertToPointerType()
     bool isdo = true;
     INT count = 0;
 
-   //is_append: transform to pointer type by inserting a DCL_POINTER.
+    //is_append: transform to pointer type by inserting a DCL_POINTER.
     //  In order to achieve inserting DCL_POINTER type before
     //  the first array type.
     //  e.g: ID->ARRAY->ARRAY => ID->POINTER->ARRAY->ARRAY
@@ -3745,7 +3745,7 @@ void Decl::convertToPointerType()
                 isdo = false;
             }
 
-            ASSERT0(!isdo);
+            ASSERT0_DUMMYUSE(!isdo);
             Decl * p = dupDecl(trait);
             DECL_is_paren(p) = 1;
             xcom::add_next(&new_trait, p);

@@ -69,7 +69,7 @@ UINT FrontEnd(xoc::LogMgr * lm, CParser & parser)
 static bool is_c_source_file(CHAR * fn)
 {
     CHAR * buf = (CHAR*)ALLOCA(strlen(fn) + 1);
-    upper(getfilesuffix(fn, buf, strlen(fn) + 1));
+    xcom::upper(xcom::getFileSuffix(fn, buf, strlen(fn) + 1));
     if (strcmp(buf, "C") == 0 ||
         strcmp(buf, "I") == 0) {
         return true;

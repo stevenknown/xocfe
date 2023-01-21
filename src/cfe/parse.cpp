@@ -598,9 +598,8 @@ STATUS CParser::match(TOKEN tok)
 
 
 //Pry next 'num' token info.
-//
-//'n': represent the next N token to current token.
-//     If n is 0, it will return current token.
+//n: represent the next N token to current token.
+//   If n is 0, it will return current token.
 static TOKEN look_next_token(INT n,
                              OUT CHAR ** tok_string,
                              OUT UINT * tok_line_num)

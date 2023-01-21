@@ -85,9 +85,13 @@ author: Su Zhenyu
 //all local optimizations are disabled.
 #define MAX_OR_BB_OPT_BB_LEN 1000
 
-//Define target machine word length.
+//Define target machine data or register word length.
 //Note TMWORD must be unsigned.
 #define TMWORD UINT32
+
+//Define target machine instruction word length.
+//Note TMIWORD must be unsigned.
+#define TMIWORD UINT32
 
 //Define target machine memory and stack alignment.
 //The alignment is power of 2 on ARM.
