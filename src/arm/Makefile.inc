@@ -18,4 +18,5 @@ arm_scalar_opt.o\
 arm_refine.o\
 arm_sr.o\
 arm_var.o\
-arm_ddg.o
+arm_ddg.o\
+elf_targinfo_arm.o

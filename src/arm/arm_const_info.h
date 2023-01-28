@@ -277,9 +277,18 @@ typedef enum _REGFILE {
 #define REG_R1 2
 #define REG_R2 3
 #define REG_R3 4
+#define REG_R4 5
+#define REG_R11 12
+#define REG_R15 16
 #define REG_FP 8 //R7
-#define REG_R12 13 //Scratch Register, the synonym is IP register.
+#define REG_TMP 13 //R12, Scratch Register, the synonym is IP register.
 #define REG_SP 14
+#define REG_D0 17
+#define REG_D31 48
+#define REG_Q0 49
+#define REG_Q15 64
+#define REG_S0 65
+#define REG_S31 96
 #define REG_RFLAG_REGISTER 97
 #define REG_EQ_PRED 98
 #define REG_NE_PRED 99
@@ -297,10 +306,40 @@ typedef enum _REGFILE {
 #define REG_LT_PRED 111
 #define REG_GT_PRED 112
 #define REG_LE_PRED 113
-#define REG_RETURN_ADDRESS_REGISTER 15
 #define REG_TRUE_PRED 114
+#define REG_RETURN_ADDRESS_REGISTER 15
 #define REG_LAST 114 //The last physical register
 #define REG_NUM (REG_LAST+1) //The number of physical register
+
+//Define mnemonic for register set for each regfile.
+#define RF_R_REG_START REG_R0
+#define RF_R_REG_END REG_R15
+#define RF_D_REG_START REG_D0
+#define RF_D_REG_END REG_D31
+#define RF_Q_REG_START REG_Q0
+#define RF_Q_REG_END REG_Q15
+#define RF_S_REG_START REG_S0
+#define RF_S_REG_END REG_S31
+
+//Define reigsters to pass argument.
+#define ARG_REG_START REG_R0
+#define ARG_REG_END REG_R3
+
+//Define reigsters to pass return value.
+#define RETVAL_REG_START REG_R0
+#define RETVAL_REG_END REG_R3
+
+//Define callee saved reigsters.
+#define CALLEE_SAVED_REG_START REG_R4
+#define CALLEE_SAVED_REG_END REG_R11
+
+//Define caller saved reigsters.
+#define CALLER_SAVED_REG_START REG_R0
+#define CALLER_SAVED_REG_END REG_R3
+
+//Define allocable registers.
+#define ALLOCABLE_REG_START REG_R4
+#define ALLOCABLE_REG_END REG_R11
 
 typedef enum _BUILTIN_TYPE {
     BUILTIN_UNDEF = 0,
