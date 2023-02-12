@@ -26,32 +26,14 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 @*/
-#ifndef _STORAGE_SPACE_H_
-#define _STORAGE_SPACE_H_
+#ifndef _TARG_UTILS_EXT_H_
+#define _TARG_UTILS_EXT_H_
 
-namespace xoc {
+#if defined(FOR_JS)
+#include "../js/js_utils_ext.h"
 
-//The storage space represents property for memory operations.
-typedef enum tagStorageSpace {
-    SS_UNDEF = 0,
-    SS_GLOBAL,
-    SS_REG,
-    SS_SPM,
-    SS_PARAM,
-    SS_SHARED,
-    SS_STACK,
-    SS_READONLY,
-} StorageSpace;
-
-class StorageSpaceDesc {
-public:
-    StorageSpace ss;
-    CHAR const* name;
-public:
-    //Get flag's name.
-    static CHAR const* getName(StorageSpace ss);
-};
-
-} //namespace xoc
+#else
+//No target ir utils.
+#endif
 
 #endif

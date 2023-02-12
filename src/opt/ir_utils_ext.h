@@ -26,31 +26,39 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 @*/
-#ifndef _STORAGE_SPACE_H_
-#define _STORAGE_SPACE_H_
+#ifndef __IR_UTILS_EXT_H__
+#define __IR_UTILS_EXT_H__
+
+//The file defined a list of utilities to better manipulate IR.
 
 namespace xoc {
 
-//The storage space represents property for memory operations.
-typedef enum tagStorageSpace {
-    SS_UNDEF = 0,
-    SS_GLOBAL,
-    SS_REG,
-    SS_SPM,
-    SS_PARAM,
-    SS_SHARED,
-    SS_STACK,
-    SS_READONLY,
-} StorageSpace;
+//Defined the entry for extened expression ir code.
+#define SWITCH_CASE_EXT_EXP \
+    case IR_BROADCAST
 
-class StorageSpaceDesc {
-public:
-    StorageSpace ss;
-    CHAR const* name;
-public:
-    //Get flag's name.
-    static CHAR const* getName(StorageSpace ss);
-};
+//Defined the entry for extened virtual stmt ir code.
+#define SWITCH_CASE_EXT_VSTMT \
+    SWITCH_CASE_EXT_WRITE_PR: \
+    SWITCH_CASE_EXT_DIRECT_MEM_VSTMT: \
+    SWITCH_CASE_EXT_INDIRECT_MEM_VSTMT
+
+//Defined the entry for extened stmt ir code.
+#define SWITCH_CASE_EXT_STMT \
+    SWITCH_CASE_EXT_VSTMT
+
+//Defined the entry for extened ir code.
+#define SWITCH_CASE_EXT \
+    SWITCH_CASE_EXT_STMT: \
+    SWITCH_CASE_EXT_EXP
+
+#define SWITCH_CASE_EXT_WRITE_PR \
+    case IR_VSTPR
+
+#define SWITCH_CASE_EXT_DIRECT_MEM_VSTMT \
+    case IR_VST
+
+#include "targ_utils_ext.h"
 
 } //namespace xoc
 

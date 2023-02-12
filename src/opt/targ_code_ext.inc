@@ -26,16 +26,9 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 @*/
-//Represents a virtual sttore to PR.
-IR_VSTPR = IR_LAST_UNDERLYING_CODE + 1,
+#if defined(FOR_JS)
+#include "../js/js_code_ext.inc"
 
-//Represents a virtual store to Var.
-IR_VST,
-
-//Represents a virtual indirect store.
-IR_VIST,
-
-//Represent broadcast operation.
-IR_BROADCAST,
-
-#include "targ_code_ext.inc"
+#else
+//No target extented code
+#endif
