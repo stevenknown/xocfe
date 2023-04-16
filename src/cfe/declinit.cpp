@@ -355,7 +355,7 @@ static INT processScalarInit(Decl const* dcl, OUT Tree ** stmts)
 
 static INT processDeclList(Decl * decl, OUT Tree ** stmts)
 {
-    for (Decl * dcl = decl; dcl != nullptr; dcl = DECL_next(dcl)) {        
+    for (Decl * dcl = decl; dcl != nullptr; dcl = DECL_next(dcl)) {
         if (dcl->is_fun_def()) {
             if (ST_SUCC != processFuncDef(dcl) ||
                 g_err_msg_list.has_msg()) {

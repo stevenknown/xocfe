@@ -288,6 +288,7 @@ void TypeAttr::dump() const
     if (g_logmgr == nullptr) { return; }
     StrBuf buf(128);
     format_attr(buf, this, false);
+    if (buf.is_equal("")) { return; }
     note(g_logmgr, "\n%s\n", buf.buf);
 }
 
@@ -963,7 +964,7 @@ Decl * Decl::get_array_elem_decl() const
 //     the function construct and return decl: 'int'.
 Decl * Decl::get_array_base_decl() const
 {
-    ASSERT0(is_array());    
+    ASSERT0(is_array());
     Decl * newdecl = dupDeclFully(this);
     ASSERT0(DECL_trait(newdecl));
 
@@ -1782,7 +1783,7 @@ static Decl * buildAnonyDeclarator()
     DECL_qua(dcl) = nullptr;
 
     DECL_child(anony_declarator) = dcl;
-    return anony_declarator; 
+    return anony_declarator;
 }
 
 
@@ -1820,7 +1821,7 @@ static Decl * aggr_declaration()
         //If aggreate's declarator is NULL, it means the aggregate is
         //anonymous, and create an anonymous declaration to facilitate
         //following accessing to anonymous fields.
-        dcl_list = buildAnonyDeclarator(); 
+        dcl_list = buildAnonyDeclarator();
         is_anony_aggr = true;
     }
 
@@ -1921,7 +1922,7 @@ static TypeAttr * type_spec_struct(TypeAttr * ty)
         if (s->is_complete()) {
             //Report error if there exist a previous declaration.
             ASSERT0(AGGR_tag(s));
-            err(g_real_line_num, "struct '%s' redefined", 
+            err(g_real_line_num, "struct '%s' redefined",
                 AGGR_tag(s)->getStr());
             return ty;
         }
@@ -2152,7 +2153,7 @@ static EnumValueList * enumrator(Enum * en)
     }
 
     xcom::add_next(&ENUM_vallist(en), evl);
- 
+
     CParser::match(T_ID);
     if (g_real_token != T_ASSIGN) {
         inferAndSetEValue(en->getValList());
@@ -2552,7 +2553,7 @@ static bool isLegalTypeAttr(TypeAttr const* ty)
             return false;
         }
         break;
-    case T_RESTRICT:        
+    case T_RESTRICT:
         break;
     case T_ID:
         if (HAVE_FLAG(ty->getDes(), scalar_ds) ||
@@ -3153,7 +3154,7 @@ static Decl * init_declarator(TypeAttr const* ts, TypeAttr * qua)
 
 
 static bool process_initializer(Decl * declaration, TypeAttr * qua)
-{ 
+{
     if (g_real_token != T_ASSIGN) { return true; }
 
     ASSERT0(declaration);
@@ -3222,7 +3223,7 @@ static bool assembleDeclaration(TypeAttr * attr, Decl * declarator,
 
     if (attr->is_user_type_ref()) {
         //Current declaration reference user-defined-type.
-        //Expand user type recursively with the first-class type of C.        
+        //Expand user type recursively with the first-class type of C.
         *declaration = makeupAndExpandUserType(*declaration);
         DECL_placeholder(*declaration) = t;
         DECL_align(*declaration) = g_alignment;
@@ -3243,7 +3244,7 @@ static bool process_declaration(OUT Decl * declaration)
                 return false;
             }
         } else if (isFollowSetOfDeclaration(g_real_token)) {
-            //End of Function Declaration.            
+            //End of Function Declaration.
             DECL_is_fun_def(declaration) = false;
 
             //Current declaration is variable/function declaration.
@@ -3416,7 +3417,7 @@ static Decl * direct_declarator(TypeAttr const* ts, TypeAttr * qua)
         break;
     case T_ID: { //identifier
         if (!ts->isValidSpecifier()) {
-            err(g_real_line_num, 
+            err(g_real_line_num,
                 "meet '%s', illegal qualifier of declaration",
                 g_real_token_string);
         }
@@ -3624,9 +3625,9 @@ static Tree * refineArrayParam(Tree * t, Tree * base, Decl * base_decl)
     if (base_of_pt != nullptr && base_of_pt->is_dt_array()) {
         //The basetype of pointer is an array.
         //e.g:Given a[] to (*a)[], the decl-list is:
-        //    ID(a)->ARR 
+        //    ID(a)->ARR
         //Convert to (*a)[], the decl-list is:
-        //    ID(a)->PTR->ARR         
+        //    ID(a)->PTR->ARR
         Tree * deref = buildDeref(base);
         TREE_array_base(t) = deref;
         Tree::setParent(t, deref);
@@ -3738,7 +3739,7 @@ void Decl::convertToPointerType()
             xcom::add_next(&new_trait, dupDecl(trait));
             break;
         }
-        case DCL_ARRAY: { //ARRAY declarator        
+        case DCL_ARRAY: { //ARRAY declarator
             if (is_append) {
                 is_append = false;
                 xcom::add_next(&new_trait, newDecl(DCL_POINTER));
@@ -3750,7 +3751,7 @@ void Decl::convertToPointerType()
             DECL_is_paren(p) = 1;
             xcom::add_next(&new_trait, p);
             break;
-        }        
+        }
         default: ASSERTN(0, ("unexpected Decl type"));
         }
         trait = DECL_next(trait);
@@ -3935,7 +3936,7 @@ static bool isEnumTagExist(EnumTab const* entab, CHAR const* id_name,
     if (entab == nullptr || id_name == nullptr) { return false; }
     EnumTabIter it;
     for (Enum * en = entab->get_first(it);
-         en != nullptr; en = entab->get_next(it)) {  
+         en != nullptr; en = entab->get_next(it)) {
         if (en->getName() == nullptr) {
             continue;
         }
@@ -4228,7 +4229,7 @@ UINT TypeAttr::computeStructTypeSize(Aggr const* s)
             newofst += 4;
         }
         ofst = newofst;
-        max_field_sz = MAX(max_field_sz, elem_bytesize);        
+        max_field_sz = MAX(max_field_sz, elem_bytesize);
         dcl = DECL_next(dcl);
     }
 
@@ -4503,7 +4504,7 @@ INT format_attr(StrBuf & buf, TypeAttr const* ty, bool is_complete)
     if (is_ut) {
         return format_user_type(buf, ty);
     }
-    return ST_ERR;
+    return ST_SUCC;
 }
 
 
@@ -5042,7 +5043,7 @@ bool get_aggr_field(TypeAttr const* ty, CHAR const* name, Decl ** fld_decl,
             }
             if (fld_ofst != nullptr) {
                 *fld_ofst = ofst;
-            }            
+            }
             return true;
         }
         if (dcl->is_anony_aggr()) {
@@ -5053,17 +5054,16 @@ bool get_aggr_field(TypeAttr const* ty, CHAR const* name, Decl ** fld_decl,
                     *fld_ofst = ofst + inner_ofst;
                 }
                 return true;
-            }            
+            }
         }
         if (is_union) {
             //Each field in UNION is offset from 0.
             continue;
         }
-
         UINT elem_bytesize = 0;
         ofst = compute_field_ofst(s, ofst, dcl, AGGR_field_align(s),
                                   &elem_bytesize);
-    }    
+    }
     return false;
 }
 
@@ -5107,20 +5107,18 @@ static void remove_redundant_para(Decl * declaration)
             declaration->is_dt_typename());
     Decl * dclor;
     Decl * para_list = get_parameter_list(declaration, &dclor);
-    if (para_list != nullptr) {
-        TypeAttr * spec = para_list->getTypeAttr();
-        ASSERT0(spec != nullptr);
-        if (spec->is_void()) {
-            if (isAbsDeclaraotr(para_list) && !para_list->is_pointer()) {
-                //e.g int foo(void), there is no any parameter.
-                DECL_fun_para_list(dclor) = nullptr;
-                return;
-            }
-            if (!isAbsDeclaraotr(para_list) && !para_list->is_pointer()) {
-                err(g_real_line_num, "the first parameter has incomplete type");
-                return;
-            }
-        }
+    if (para_list == nullptr) { return; }
+    TypeAttr * spec = para_list->getTypeAttr();
+    ASSERT0(spec != nullptr);
+    if (!spec->is_void()) { return; }
+    if (isAbsDeclaraotr(para_list) && !para_list->is_pointer()) {
+        //e.g int foo(void), there is no any parameter.
+        DECL_fun_para_list(dclor) = nullptr;
+        return;
+    }
+    if (!isAbsDeclaraotr(para_list) && !para_list->is_pointer()) {
+        err(g_real_line_num, "the first parameter has incomplete type");
+        return;
     }
 }
 
@@ -5433,7 +5431,7 @@ Tree * declaration()
             CParser::match(T_SEMI);
         }
     }
-    
+
     return dcl_tree_list;
 }
 

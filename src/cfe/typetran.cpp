@@ -741,7 +741,7 @@ static Decl * refineFuncPtr(Decl * dcl_list)
         //Change traits of result-type of 't' to be function pointer.
         tmp = DECL_prev(tmp);
         DECL_prev(tmp) = nullptr;
-    } 
+    }
     return tmp != nullptr ? tmp : dcl_list;
 }
 

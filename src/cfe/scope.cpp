@@ -77,7 +77,7 @@ void Scope::destroy()
 Enum * Scope::addEnum(Enum * e)
 {
     ASSERT0(e);
-    return getEnumTab()->append_and_retrieve(e); 
+    return getEnumTab()->append_and_retrieve(e);
 }
 
 

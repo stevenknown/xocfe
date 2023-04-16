@@ -50,7 +50,6 @@ public:
     xoc::Sym const* str;
     EnumValueList * next;
     EnumValueList * prev;
-
 public:
     INT getVal() const { return EVAL_val(this); }
     bool is_evaluated() const { return EVAL_is_evaluated(this); }
@@ -73,7 +72,6 @@ public:
     BYTE m_is_complete:1;
     xoc::Sym const* m_name;
     EnumValueList * m_vallist;
-
 public:
     void copy(Enum const& src)
     {
@@ -139,13 +137,13 @@ public:
     UINT m_id:31;
     UINT m_is_aggr_complete:1;
     UINT m_align; //alignment that whole structure have to align.
-    UINT m_field_align; //alignment that each fields in structure have to align.
-                      //0 indicates there is requirement to field align.
+    //Alignment that each fields in structure have to align.
+    //0 indicates there is requirement to field align.
+    UINT m_field_align;
     UINT m_pack_align; //User declared field alignment.
     Decl * m_decl_list;
     xoc::Sym const* m_tag;
     Scope * m_scope;
-
 public:
     //Compute new alignment size according to given 'size' and 'max_field_size'.
     UINT computeAlignedSize(UINT size, UINT max_field_size) const;
@@ -210,7 +208,7 @@ public:
 #define TYPE_parent(t) ((t)->m_sub_field[0])
 #define TYPE_next(t) ((t)->m_sub_field[1])
 #define TYPE_prev(t) ((t)->m_sub_field[2])
-#define TYPE_user_type(t) ((t)->u1.m_user_type) //reord user type
+#define TYPE_user_type(t) ((t)->m_user_type) //reord user type
 #define TYPE_enum_type(t) ((t)->u1.m_enum_type) //record enum type
 #define TYPE_aggr_type(t) ((t)->u1.m_aggr_type) //record aggregate type
 
@@ -225,9 +223,9 @@ typedef ULONG DesSet;
 class TypeAttr {
 public:
     DesSet m_descriptor; //records the attributes.
+    Decl * m_user_type; //record user defined type.
     union {
         void * anony; //records an anonymous pointer that is used internally.
-        Decl * m_user_type; //record user defined type.
         Enum * m_enum_type; //record the enumerator that consist of list
                             //enum-iterm.
         Aggr * m_aggr_type; //record the aggregation.
@@ -307,7 +305,7 @@ public:
 
     //Return true if the specifier represents a variable or type-name via
     //user type.
-    bool is_user_type_ref() const 
+    bool is_user_type_ref() const
     { return HAVE_FLAG(TYPE_des(this), T_SPEC_USER_TYPE); }
 
     //Return true if the declaration defined a user type via 'typedef' operator.
@@ -541,7 +539,7 @@ public:
 //The placeholder is used to mark the lexicographical order of declarataion.
 //The order is often used to determine where should to
 //insert initialization code.
-#define  DECL_placeholder(d) ((d)->placeholder)
+#define DECL_placeholder(d) ((d)->placeholder)
 
 //'d' must be DECLARATION or TYPE-NAME, get pure declarator list
 //The macro without validation check, plz call
@@ -799,7 +797,7 @@ public:
     {
         ASSERT0(is_struct());
         return (Struct*)getTypeAttr()->getAggrType();
-    
+
     }
     Union * get_union_spec() const
     {
@@ -904,7 +902,7 @@ public:
         TypeAttr * ty = getTypeAttr();
         return is_scalar() && (ty->is_integer() || ty->is_fp());
     }
-    bool is_any() const 
+    bool is_any() const
     {
         ASSERTN(DECL_dt(this) == DCL_TYPE_NAME ||
                 DECL_dt(this) == DCL_DECLARATION,
@@ -953,8 +951,8 @@ public:
                 ("expect type-name or dcrlaration"));
         return is_scalar() && getTypeAttr()->is_double();
     }
-    
-    
+
+
     //Is integer type.
     bool is_integer() const
     {
@@ -975,7 +973,7 @@ public:
     bool is_fun_def() const { return DECL_is_fun_def(this); }
     bool is_fun_decl() const;
     bool is_fun_return_void() const;
-    bool is_fun_return_pointer() const;    
+    bool is_fun_return_pointer() const;
     bool is_fun_pointer() const;
     bool is_local_variable() const;
     bool is_global_variable() const;

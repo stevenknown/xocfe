@@ -47,7 +47,7 @@ public:
     //Unify informations which propagated bottom up
     //during processing tree.
     void unionInfoBottomUp(TreeCanonCtx const& src)
-    { TCC_change(this) |= TCC_change(&src); }    
+    { TCC_change(this) |= TCC_change(&src); }
 };
 
 

@@ -23,7 +23,8 @@ com/strbuf.o \
 com/bs.o \
 com/diagnostic.o \
 com/byteop.o \
-com/ltype.o
+com/ltype.o\
+com/fileobj.o
 
 OPT_OBJS +=\
 opt/symtab.o \

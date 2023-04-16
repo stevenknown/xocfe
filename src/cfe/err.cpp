@@ -47,7 +47,7 @@ void show_err()
     fprintf(stdout, "\n");
     for (ErrMsg * e = g_err_msg_list.get_head();
          e != nullptr; e = g_err_msg_list.get_next()) {
-        fprintf(stdout, "\nerror(%d):%s", ERR_MSG_lineno(e), ERR_MSG_msg(e));        
+        fprintf(stdout, "\nerror(%d):%s", ERR_MSG_lineno(e), ERR_MSG_msg(e));
     }
     fprintf(stdout, "\n");
 }

@@ -44,7 +44,7 @@ static Tree * exp_list();
 static bool look_forward_token(INT num, ...);
 static INT suck_tok();
 static void suck_tok_to(INT placeholder, ...);
- 
+
 //Remove a token from head of list
 static size_t remove_head_tok()
 {
@@ -2608,7 +2608,7 @@ void CParser::finiSrcFile()
         g_hsrc = nullptr;
     }
 }
- 
+
 
 //Start to parse a file.
 STATUS CParser::perform()

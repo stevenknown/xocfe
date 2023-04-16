@@ -286,7 +286,7 @@ Tree * TreeCanon::handleAggrAccess(Tree * t, TreeCanonCtx * ctx)
 
         Tree::setParent(tparent, newt);
         TCC_change(ctx) = true;
-        return newt; 
+        return newt;
     }
 
     TREE_field(t) = handleTreeList(TREE_field(t), ctx);
@@ -443,7 +443,7 @@ Tree * TreeCanon::handleTree(Tree * t, TreeCanonCtx * ctx)
         return handleArray(t, ctx);
     case TR_DMEM: // a.b
     case TR_INDMEM: // a->b
-        return handleAggrAccess(t, ctx);    
+        return handleAggrAccess(t, ctx);
     case TR_PRAGMA:
     case TR_PREP:
     case TR_DECL:
@@ -487,8 +487,8 @@ INT TreeCanonicalize()
         ASSERT0(dcl->getDeclScope() == s);
         if (!dcl->is_fun_def()) { continue; }
 
-        TreeCanon tc; 
-        TreeCanonCtx ctx; 
+        TreeCanon tc;
+        TreeCanonCtx ctx;
         SCOPE_stmt_list(DECL_fun_body(dcl)) = tc.handleTreeList(
             dcl->getFunBody()->getStmtList(), &ctx);
         if (g_err_msg_list.has_msg()) {
@@ -496,7 +496,7 @@ INT TreeCanonicalize()
         }
     }
 
-    TreeCanon tc; 
+    TreeCanon tc;
     TreeCanonCtx ctx;
     SCOPE_stmt_list(s) = tc.handleTreeList(s->getStmtList(), &ctx);
     if (g_err_msg_list.has_msg()) {
