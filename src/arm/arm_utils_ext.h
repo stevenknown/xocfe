@@ -25,48 +25,10 @@ LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
 ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+author: Su Zhenyu
 @*/
-#ifndef __IR_UTILS_EXT_H__
-#define __IR_UTILS_EXT_H__
-
-//The file defined a list of utilities to better manipulate IR.
-
-namespace xoc {
-
-//Defined the entry for extened expression ir code.
-#define SWITCH_CASE_EXT_EXP \
-    case IR_BROADCAST
-
-//Defined the entry for extened virtual stmt ir code.
-#define SWITCH_CASE_EXT_VSTMT \
-    SWITCH_CASE_EXT_WRITE_PR: \
-    SWITCH_CASE_EXT_DIRECT_MEM_VSTMT: \
-    SWITCH_CASE_EXT_INDIRECT_MEM_VSTMT
-
-//Defined the entry for extened stmt ir code.
-#define SWITCH_CASE_EXT_STMT \
-    SWITCH_CASE_EXT_VSTMT
-
 //Defined the entry for extened ir code.
-#define SWITCH_CASE_EXT \
-    SWITCH_CASE_EXT_STMT: \
-    SWITCH_CASE_EXT_EXP
-
-#define SWITCH_CASE_EXT_WRITE_PR \
-    case IR_VSTPR
-
-#define SWITCH_CASE_EXT_DIRECT_MEM_VSTMT \
-    case IR_VST
-
-//No extended UNA for now.
-#define SWITCH_CASE_EXT_UNA
-#define SWITCH_CASE_EXT_BIN
-
 //In order to conform the compatibility of origin IR code, user can undef
 //original SWITCH_CASE_<NAME>, then redefine the same MACRO with new IR code
 //and followed by origin IR code.
-#include "targ_utils_ext.h"
-
-} //namespace xoc
-
-#endif

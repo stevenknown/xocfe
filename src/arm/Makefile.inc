@@ -15,7 +15,9 @@ arm_ramgr.o\
 arm_region.o\
 arm_region_mgr.o\
 arm_scalar_opt.o\
+arm_simp.o\
 arm_refine.o\
 arm_sr.o\
 arm_var.o\
-arm_ddg.o
+arm_ddg.o\
+arm_elf_mgr.o

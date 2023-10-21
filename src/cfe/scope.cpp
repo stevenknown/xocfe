@@ -41,7 +41,7 @@ static void * xmalloc(size_t size)
 {
     void * p = smpoolMalloc(size, g_pool_general_used);
     ASSERT0(p);
-    ::memset(p, 0, size);
+    ::memset((void*)p, 0, size);
     return p;
 }
 

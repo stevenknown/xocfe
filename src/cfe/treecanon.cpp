@@ -178,7 +178,7 @@ Tree * TreeCanon::handleCall(Tree * t, TreeCanonCtx * ctx)
     //Return type is the call type.
     //And here constructing return value type.
     //TypeAttr * ty = DECL_spec(fun_decl);
-    Decl * pure_decl = DECL_trait(fun_decl);
+    Decl const* pure_decl = fun_decl->getTraitList();
     if (DECL_dt(pure_decl) == DCL_FUN) {
         pure_decl = DECL_next(pure_decl);
     }

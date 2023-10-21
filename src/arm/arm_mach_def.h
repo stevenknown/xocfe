@@ -25,9 +25,32 @@ LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
 ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+author: Su Zhenyu
 @*/
-bool is_vst() const { return getCode() == IR_VST; }
-bool is_vstpr() const { return getCode() == IR_VSTPR; }
-bool is_vist() const { return getCode() == IR_VIST; }
-bool is_broadcast() const { return getCode() == IR_BROADCAST; }
-bool isVirtualOp() const { return is_vst() || is_vstpr() || is_vist(); }
+//Defines the maximum allowed field type.
+#define MAX_FT_NUM 256
+
+typedef enum {
+    FT_UNDEF = 0,
+    FT_OPC,
+    FT_RA,
+    FT_RB,
+    FT_RC,
+    FT_FUNC,
+    FT_DISP16,
+    FT_RESERVED,
+    FT_NUM,
+} FIELD_TYPE;
+
+typedef enum {
+    MI_UNDEF = 0,
+    MI_label,
+
+    //Align load/store.
+    MI_ldm, //load multiple words.
+    MI_stm, //store multiple words.
+    MI_ldr, //load 4 byte
+    MI_str, //store 4 byte
+    MI_NUM,
+} MI_CODE;

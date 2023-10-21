@@ -705,7 +705,7 @@ static void reduceDimForArrayOrPointer(Decl * decl)
 {
     ASSERT0(decl);
     ASSERT0(decl->is_dt_declaration() || decl->is_dt_typename());
-    Decl * dcl = DECL_trait(decl);
+    Decl * dcl = DECL_trait(decl); //dcl will changed.
     if (dcl->is_dt_id()) {
         dcl = DECL_next(dcl);
     }
@@ -852,7 +852,7 @@ static INT TypeTranDeref(Tree * t, TYCtx * cont)
     }
 
     Decl * td = dupTypeName(ld);
-    ld = DECL_trait(td);
+    ld = DECL_trait(td); //ld may changed.
     ASSERTN(ld, ("left child must be pointer type"));
     if (ld->is_dt_pointer() || ld->is_dt_array()) {
         //In C, base of array only needs address, so the DEREF
@@ -1151,7 +1151,7 @@ static INT TypeTranArray(Tree * t, TYCtx * cont)
     //Return sub-dimension type if 'basetype' is
     //multi-dimensional array or multi-level pointer.
     Decl * resty = dupTypeName(basetype);
-    if (DECL_trait(resty) == nullptr) {
+    if (resty->getTraitList() == nullptr) {
         err(t->getLineno(),
             "The referrence of array is not match with its declaration.");
     } else {
@@ -1182,7 +1182,7 @@ static INT TypeTranCall(Tree * t, TYCtx * cont)
     //Return value type is the CALL node type.
     //So constructing return value type.
     TypeAttr * ty = ld->getTypeAttr();
-    Decl * pure = DECL_trait(ld);
+    Decl * pure = DECL_trait(ld); //pure may changed.
     if (pure->is_dt_fun()) {
         pure = DECL_next(pure);
     } else if (pure->is_dt_pointer() &&

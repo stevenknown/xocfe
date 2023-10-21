@@ -36,7 +36,7 @@ static void * xmalloc(size_t size)
     ASSERT0(g_pool_general_used != nullptr);
     void * p = smpoolMalloc(size, g_pool_general_used);
     if (p == nullptr) return nullptr;
-    ::memset(p, 0, size);
+    ::memset((void*)p, 0, size);
     return p;
 }
 
@@ -60,7 +60,7 @@ Cell * get_free_cell()
 {
     Cell * c = g_cell_free_list.remove_tail();
     if (c) {
-        ::memset(c, 0 , sizeof(Cell));
+        ::memset((void*)c, 0 , sizeof(Cell));
         return c;
     }
     return nullptr;

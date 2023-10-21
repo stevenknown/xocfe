@@ -76,7 +76,7 @@ static void * xmalloc(unsigned long size)
 {
     void * p = smpoolMalloc(size, g_pool_tree_used);
     ASSERT0(p != nullptr);
-    ::memset(p, 0, size);
+    ::memset((void*)p, 0, size);
     return p;
 }
 
@@ -3518,7 +3518,8 @@ static Decl * pointer(TypeAttr ** qua)
         }
         xcom::add_next(&ndcl, dcl);
     }
-    qualifier(new_qua); //CParser::match qualifiers for what are following identifier.
+    //CParser::match qualifiers for what are following identifier.
+    qualifier(new_qua);
     *qua = new_qua;
     return ndcl;
 }

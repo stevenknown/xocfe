@@ -266,11 +266,11 @@ static INT getLine()
     if (g_ofst_tab == nullptr) {
         g_ofst_tab_byte_size = LEX_MAX_OFST_BUF_LEN * sizeof(LONG);
         g_ofst_tab = (LONG*)::malloc(g_ofst_tab_byte_size);
-        ::memset(g_ofst_tab, 0, g_ofst_tab_byte_size);
+        ::memset((void*)g_ofst_tab, 0, g_ofst_tab_byte_size);
     } else if (OFST_TAB_LINE_SIZE < (g_src_line_num + 10)) {
         g_ofst_tab = (LONG*)::realloc(g_ofst_tab, g_ofst_tab_byte_size +
                                       LEX_MAX_OFST_BUF_LEN * sizeof(LONG));
-        ::memset(((BYTE*)g_ofst_tab) + g_ofst_tab_byte_size,
+        ::memset((void*)(((BYTE*)g_ofst_tab) + g_ofst_tab_byte_size),
                  0, LEX_MAX_OFST_BUF_LEN * sizeof(LONG));
         g_ofst_tab_byte_size += LEX_MAX_OFST_BUF_LEN * sizeof(LONG);
     }
@@ -318,7 +318,8 @@ static INT getLine()
         bool is_0xd_recog = false;
         while (g_file_buf_pos < g_last_read_num) {
             if (g_file_buf[g_file_buf_pos] == 0xd &&
-                g_file_buf[g_file_buf_pos + 1] == 0xa) { //DOS line end characters.
+                //DOS line end characters.
+                g_file_buf[g_file_buf_pos + 1] == 0xa) {
                 g_is_dos = true;
                 if (g_use_newline_char) {
                     g_cur_line[pos] = g_file_buf[g_file_buf_pos];
@@ -409,7 +410,8 @@ FEOF:
 
 class String2Token : public HMap<CHAR const*, TOKEN, HashFuncString2> {
 public:
-    String2Token(UINT bsize) : HMap<CHAR const*, TOKEN, HashFuncString2>(bsize) {}
+    String2Token(UINT bsize) : HMap<CHAR const*, TOKEN, HashFuncString2>(bsize)
+    {}
     virtual ~String2Token() {}
 };
 
@@ -689,7 +691,8 @@ static TOKEN t_string()
                     c = getNextChar();
                 }
                 if (n > 2 && only_allow_two_hex) {
-                    err(g_real_line_num, "constant too big, only permit two hex digits");
+                    err(g_real_line_num,
+                        "constant too big, only permit two hex digits");
                 }
             } else {
                 g_cur_token_string[g_cur_token_string_pos++] = '\\';
@@ -780,7 +783,8 @@ static TOKEN t_char_list()
                     c = getNextChar();
                 }
                 if (n > 2 && only_allow_two_hex) {
-                    err(g_real_line_num, "constant too big, only permit two hex digits");
+                    err(g_real_line_num,
+                        "constant too big, only permit two hex digits");
                 }
             } else {
                 g_cur_token_string[g_cur_token_string_pos++] = '\\';

@@ -107,7 +107,7 @@ static void * xmalloc(size_t size)
 {
     void * p = smpoolMalloc(size, g_pool_tree_used);
     ASSERT0(p);
-    ::memset(p, 0, size);
+    ::memset((void*)p, 0, size);
     return p;
 }
 
@@ -522,7 +522,7 @@ static inline INT is_assign_op(TOKEN tok)
 }
 
 
-//Draw token until meeting any TOKEN list in '...'
+//Draw token until meet any TOKEN list in '...'
 static void suck_tok_to(INT placeholder, ...)
 {
     va_list arg;
@@ -2216,7 +2216,6 @@ static bool statement_list(Scope * cur_scope)
         if (is_compound_terminal()) {
             break;
         }
-
         Tree * t = statement();
         ASSERT0(verify(t));
         if (last == nullptr) {

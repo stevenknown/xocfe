@@ -35,7 +35,7 @@ static void * xmalloc(size_t size)
 {
     void * p = smpoolMalloc(size, g_pool_tree_used);
     if (p == nullptr) { return 0; }
-    ::memset(p,0,size);
+    ::memset((void*)p,0,size);
     return p;
 }
 
@@ -128,8 +128,8 @@ void Tree::dump() const
             } else {
                 Scope * s = DECL_decl_scope(TREE_id_decl(t));
                 format_declaration(sbuf, get_decl_in_scope(name, s), true);
-                note(g_logmgr, "\nID(id:%u):'%s' Scope:%d Decl:%s",
-                     t->id(), name, SCOPE_level(s), sbuf.buf);
+                xoc::note(g_logmgr, "\nID(id:%u):'%s' Scope:%d Decl:%s",
+                          t->id(), name, SCOPE_level(s), sbuf.buf);
             }
         } else {
             note(g_logmgr, "\nreferred ID(id:%d):'%s'",

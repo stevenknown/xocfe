@@ -36,7 +36,7 @@ static void * xmalloc(size_t size)
 {
     BYTE * p = (BYTE*)smpoolMalloc(size, g_pool_general_used);
     if (p == nullptr) { return nullptr; }
-    ::memset(p, 0, size);
+    ::memset((void*)p, 0, size);
     return (void*)p;
 }
 
