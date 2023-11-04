@@ -746,8 +746,8 @@ static Tree * param_list()
 
 
 //Process the first part of postfix expression:
-//e.g:  a[10].u1.s++,  where a[10] is the first part,
-//    .u1.s++ is the second part.
+//e.g: a[10].u1.s++, where a[10] is the first part,
+//     .u1.s++ is the second part.
 static Tree * primary_exp(MOD UINT * st)
 {
     Tree * t = nullptr;
@@ -2244,7 +2244,7 @@ Scope * CParser::compound_stmt(Decl * para_list)
     //Enter a new sub-scope region.
     Scope * cur_scope = push_scope(false);
     Scope * s = nullptr;
-    Tree * t;
+    Tree * t = nullptr;
     if (!append_parameters(cur_scope, para_list)) {
         goto FAILED;
     }
@@ -2422,6 +2422,11 @@ static Tree * statement()
         return nullptr;
     case T_SHARP: {
         Tree * t = sharp_start_stmt();
+        if (t == nullptr) {
+            ASSERT0(g_err_msg_list.has_msg());
+            //Error occurred.
+            return nullptr;
+        }
         if (t->getCode() == TR_PRAGMA) {
             process_pragma(t);
         } else if (t->getCode() == TR_PREP) {

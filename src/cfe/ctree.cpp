@@ -553,7 +553,7 @@ void Tree::dump() const
         break;
     case TR_INITVAL_SCOPE:
         g_logmgr->incIndent(dn);
-        note(g_logmgr, "\n{");
+        note(g_logmgr, "\n{ (id:%u)", t->id());
         g_logmgr->incIndent(dn);
         dump_trees(TREE_initval_scope(t));
         g_logmgr->decIndent(dn);

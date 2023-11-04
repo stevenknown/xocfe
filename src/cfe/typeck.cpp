@@ -140,7 +140,7 @@ static bool checkCall(Tree * t, TYCtx * cont)
         return false;
     }
     Decl * fun_decl = TREE_fun_exp(t)->getResultType();
-    ASSERTN(fun_decl, ("return type of call is not inferred out"));
+    ASSERTN(fun_decl, ("can not infer out return-type of call"));
 
     //Return type is the call type.
     //And here constructing return value type.
@@ -364,6 +364,7 @@ bool checkTreeList(Tree * t, TYCtx * cont)
         case TR_FPLD: // long double
         case TR_ENUM_CONST:
         case TR_STRING:
+            break;
         case TR_LOGIC_OR: // logical or ||
         case TR_LOGIC_AND: // logical and &&
         case TR_INCLUSIVE_OR: // inclusive or |

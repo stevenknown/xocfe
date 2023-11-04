@@ -31,6 +31,15 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 namespace xfe {
 
 class TYCtx {
+protected:
+    void copyTopDown(TYCtx const& src)
+    {
+        is_lvalue = src.is_lvalue;
+        is_field = src.is_field;
+        base_tree_node = src.base_tree_node;
+        current_func_declaration = src.current_func_declaration;
+        current_initialized_declaration = src.current_initialized_declaration;
+    }
 public:
     //The property propagated top down.
     //When it comes to lvalue expression of assignment,
@@ -50,14 +59,13 @@ public:
     //The property propagated top down.
     //Record the current function declaration.
     Decl * current_func_declaration;
+
+    //The property propagated top down.
+    //Record declaration when type-transfering meeting initial-value scope.
+    Decl * current_initialized_declaration;
 public:
-    TYCtx()
-    {
-        is_lvalue = false;
-        is_field = false;
-        base_tree_node = nullptr;
-        current_func_declaration = nullptr;
-    }
+    TYCtx() { ::memset((void*)this, 0, sizeof(TYCtx)); }
+    TYCtx(TYCtx const& src) { copyTopDown(src); }
 };
 
 bool isConsistentWithPointer(Tree * t);

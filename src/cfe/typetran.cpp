@@ -30,6 +30,8 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 namespace xfe {
 
+static INT TypeTranInitValScope(Tree * t, TYCtx * cont);
+
 #define BUILD_TYNAME(T)  buildTypeName(buildBaseTypeSpec(T))
 
 static TypeAttr * g_schar_type;
@@ -1303,15 +1305,44 @@ static INT TypeTranAdditive(Tree * t, TYCtx * cont)
 }
 
 
-static INT TypeTranDeclInit(Decl const* decl, TYCtx * cont)
+static INT TypeTranDeclInit(Decl * decl, TYCtx * cont)
+{
+    ASSERT0(decl->is_initialized());
+    Tree * inittree = decl->get_decl_init_tree();
+    ASSERT0(inittree);
+    if (inittree->getCode() == TR_INITVAL_SCOPE) {
+        ASSERT0(cont);
+        TYCtx tc(*cont);
+        tc.current_initialized_declaration = decl;
+        return TypeTranInitValScope(inittree, &tc);
+    }
+    return TypeTranList(inittree, cont);
+}
+
+
+static INT TypeTranDeclInitList(Decl const* decl, TYCtx * cont)
 {
     for (Decl const* dcl = decl; dcl != nullptr; dcl = DECL_next(dcl)) {
+        ASSERT0(dcl->is_dt_declaration());
         if (!dcl->is_initialized()) { continue; }
         Tree * inittree = dcl->get_decl_init_tree();
         ASSERT0(inittree);
-        if (ST_SUCC != TypeTranList(inittree, cont)) {
+        if (ST_SUCC != TypeTranDeclInit(const_cast<Decl*>(dcl), cont)) {
             return ST_ERR;
         }
+    }
+    return ST_SUCC;
+}
+
+
+static INT TypeTranScope(Scope * sc, TYCtx * cont)
+{
+    ASSERT0(sc);
+    if (ST_SUCC != TypeTranDeclInitList(sc->getDeclList(), cont)) {
+        return ST_ERR;
+    }
+    if (ST_SUCC != TypeTranList(sc->getStmtList(), cont)) {
+        return ST_ERR;
     }
     return ST_SUCC;
 }
@@ -1402,15 +1433,37 @@ static INT TypeTranBinaryRelation(Tree * t, TYCtx * cont)
 }
 
 
+static bool hasScopeInitVal(Decl const* decl)
+{
+    return decl->is_array() || decl->is_struct() || decl->is_union();
+}
+
+
 static INT TypeTranInitValScope(Tree * t, TYCtx * cont)
 {
     ASSERT0(t);
-    ASSERT0(t->parent()->getCode() == TR_ASSIGN);
-    ASSERT0(TREE_lchild(t->parent())->getCode() == TR_ID);
-    Decl * decl = TREE_id_decl(TREE_lchild(t->parent()));
-    ASSERT0(decl);
-    ASSERT0(decl->is_array() || decl->is_struct() || decl->is_union());
-    TypeTranList(TREE_initval_scope(t), nullptr);
+    Decl * decl = nullptr;
+    if (t->parent() != nullptr) {
+        //Current type-tran is processing assignment.
+        //e.g: char a[]={'x'};
+        ASSERT0(t->parent()->getCode() == TR_ASSIGN);
+        ASSERT0(TREE_lchild(t->parent())->getCode() == TR_ID);
+        decl = TREE_id_decl(TREE_lchild(t->parent()));
+    } else {
+        //Current type-tran is processing declaration init-value trees.
+        //These init-value trees are not recorded in the rchild of assignment.
+        ASSERT0(cont);
+        decl = cont->current_initialized_declaration;
+    }
+    ASSERTN(decl, ("none of senarios provides enough info"));
+    if (!hasScopeInitVal(decl)) {
+        StrBuf buf(64);
+        format_declaration(buf, decl, false);
+        err(t->getLineno(),
+            "'%s' can not be initialized via scoped initial value", buf.buf);
+        return ST_ERR;
+    }
+    TypeTranList(TREE_initval_scope(t), cont);
     TREE_result_type(t) = decl;
     return ST_SUCC;
 }
@@ -1436,7 +1489,6 @@ INT TypeTran(Tree * t, TYCtx * cont)
     if (cont == nullptr) {
         cont = &ct;
     }
-
     g_src_line_num = t->getLineno();
     switch (t->getCode()) {
     case TR_ASSIGN:
@@ -1512,16 +1564,11 @@ INT TypeTran(Tree * t, TYCtx * cont)
     case TR_INITVAL_SCOPE:
         if (ST_SUCC != TypeTranInitValScope(t, cont)) { goto FAILED; }
         break;
-    case TR_SCOPE: {
-        Scope * sc = TREE_scope(t);
-        if (ST_SUCC != TypeTranDeclInit(sc->getDeclList(), nullptr)) {
-            goto FAILED;
-        }
-        if (ST_SUCC != TypeTranList(sc->getStmtList(), nullptr)) {
+    case TR_SCOPE:
+        if (ST_SUCC != TypeTranScope(TREE_scope(t), nullptr)) {
             goto FAILED;
         }
         break;
-    }
     case TR_IF:
         if (ST_SUCC != TypeTranList(TREE_if_det(t), cont)) { goto FAILED; }
         if (ST_SUCC != TypeTranList(TREE_if_true_stmt(t), cont)) {
@@ -1549,7 +1596,7 @@ INT TypeTran(Tree * t, TYCtx * cont)
         break;
     case TR_FOR:
         if (TREE_for_scope(t) != nullptr &&
-            ST_SUCC != TypeTranDeclInit(
+            ST_SUCC != TypeTranDeclInitList(
                 TREE_for_scope(t)->getDeclList(), nullptr)) {
             goto FAILED;
         }
@@ -1719,23 +1766,27 @@ INT TypeTransform()
     initTypeTran();
     Scope * s = get_global_scope();
     if (s == nullptr) { return ST_SUCC; }
-
     for (Decl * dcl = s->getDeclList(); dcl != nullptr; dcl = DECL_next(dcl)) {
         ASSERT0(dcl->getDeclScope() == s);
+        TYCtx cont;
         if (dcl->is_fun_def()) {
-            if (ST_SUCC != TypeTranList(dcl->getFunBody()->getStmtList(),
-                                        nullptr) ||
+            if (ST_SUCC != TypeTranScope(dcl->getFunBody(), &cont) ||
+                g_err_msg_list.has_msg()) {
+                return ST_ERR;
+            }
+        }
+        if (dcl->is_initialized()) {
+            if (ST_SUCC != TypeTranDeclInit(dcl, &cont) ||
                 g_err_msg_list.has_msg()) {
                 return ST_ERR;
             }
         }
     }
-
-    if (ST_SUCC != TypeTranList(s->getStmtList(), nullptr) ||
+    TYCtx cont;
+    if (ST_SUCC != TypeTranList(s->getStmtList(), &cont) ||
         g_err_msg_list.has_msg()) {
         return ST_ERR;
     }
-
     return ST_SUCC;
 }
 

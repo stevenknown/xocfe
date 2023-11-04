@@ -539,18 +539,15 @@ bool Decl::is_global_variable() const
 //Return true if dcl has initial value.
 bool Decl::is_initialized() const
 {
-    ASSERTN(is_dt_declaration() || is_dt_declarator(),
-            ("requires declaration"));
+    ASSERTN(is_dt_declaration() || is_dt_declarator(), ("need declaration"));
     Decl const* dcl = this;
     if (dcl->is_dt_declaration()) {
-        dcl = DECL_decl_list(dcl); //get DCRLARATOR
-        ASSERTN(DECL_dt(dcl) == DCL_DECLARATOR ||
-                dcl->is_dt_abs_declarator(), ("requires declaration"));
+        //Initial value flag is attached on declarator.
+        dcl = dcl->getDeclarator();
     }
-    if (DECL_is_init(dcl)) {
-        return true;
-    }
-    return false;
+    ASSERTN(dcl->is_dt_declarator() ||
+            dcl->is_dt_abs_declarator(), ("requires declarator"));
+    return DECL_is_init(dcl);
 }
 
 
@@ -2958,12 +2955,14 @@ static Tree * initializer_list(TypeAttr * qua)
 //    { initializer_list , }
 static Tree * initializer(TypeAttr * qua)
 {
-    Tree * t = nullptr, * es = nullptr;
     switch (g_real_token) {
     case T_LLPAREN: {
         UINT lineno = g_real_line_num;
         CParser::match(T_LLPAREN);
-        t = initializer_list(qua);
+        Tree * es = allocTreeNode(TR_INITVAL_SCOPE, lineno);
+        TREE_token(es) = T_LLPAREN;
+        Tree * t = initializer_list(qua);
+        TREE_initval_scope(es) = t;
         if (g_real_token == T_COMMA) {
             CParser::match(T_COMMA);
             if (CParser::match(T_RLPAREN) != ST_SUCC) {
@@ -2974,10 +2973,7 @@ static Tree * initializer(TypeAttr * qua)
             err(g_real_line_num, "syntax error : '%s'", g_real_token_string);
             return t;
         }
-        es = allocTreeNode(TR_INITVAL_SCOPE, lineno);
-        TREE_initval_scope(es) = t;
-        t = es;
-        return t;
+        return es;
     }
     default:
         if (CParser::inFirstSetOfExp(g_real_token)) {
@@ -2990,8 +2986,10 @@ static Tree * initializer(TypeAttr * qua)
         err(g_real_line_num,
             "syntax error : initializing cannot used '%s'",
             g_real_token_string);
+        return nullptr;
     }
-    return t;
+    UNREACHABLE();
+    return nullptr;
 }
 
 
