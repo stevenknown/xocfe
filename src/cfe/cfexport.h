@@ -36,7 +36,6 @@ class Decl;
 class Tree;
 
 //Exported Variable.
-extern bool g_prt_asm_horizontal;
 extern bool g_enable_c99_declaration;
 
 } //namespace xfe

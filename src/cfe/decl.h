@@ -63,7 +63,8 @@ public:
 #define ENUM_vallist(e) ((e)->m_vallist)
 #define ENUM_is_complete(e) ((e)->m_is_complete)
 class Enum {
-    //Retrieve constant value of Enum Iterm and Index in Enum List by given name.
+    //Retrieve constant value of Enum Iterm and Index in Enum List by
+    //given name.
     //idx: index in enum 'e' constant list, start at 0.
     bool isEnumValExistAndEvalValue(EnumValueList const* evl,
                                     CHAR const* vname,
@@ -100,12 +101,11 @@ class CompareEnumTab {
 public:
     CompareEnumTab() {}
 
-    bool is_less(Enum const* t1, Enum const* t2) const;
-    bool is_equ(Enum const* t1, Enum const* t2) const;
-
     //Note the function createKey() will modify parameter's contents, thus the
     //'const' qualifier is unusable.
     Enum * createKey(Enum * t);
+    bool is_less(Enum const* t1, Enum const* t2) const;
+    bool is_equ(Enum const* t1, Enum const* t2) const;
 };
 
 class EnumTab : public TTab<Enum*, CompareEnumTab> {};
@@ -516,7 +516,8 @@ public:
 //NOTE: During the Decl generation processing, DECL_array_dim_exp() is avaiable,
 //it records the expressions of dimension,
 //and the actually dimension value will be calculated after parsing array type
-//finished, and compute_array_dim() will be invoked to compute the integer value.
+//finished, and compute_array_dim() will be invoked to compute the integer
+//value.
 //Meanwile, DECL_array_dim() is avaiable.
 #define DECL_array_dim(d) ((d)->u1.u12.u121.dimval)
 #define DECL_array_dim_exp(d) ((d)->u1.u12.u121.dimexp)
@@ -720,7 +721,8 @@ public:
 
     //Return the *first* Decl structure which indicate an array
     //in pure-list of declaration.
-    //e.g: int p[10][20]; the declarator is: DCL_ID(p)->DCL_ARRAY(20)->DCL_ARRAY(10).
+    //e.g:int p[10][20]; the declarator is:
+    //    DCL_ID(p)->DCL_ARRAY(20)->DCL_ARRAY(10).
     //return DCL_ARRAY(20).
     Decl * get_first_array_decl() const;
 
