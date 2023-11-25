@@ -1094,6 +1094,7 @@ bool isAggrTypeExist(List<Aggr*> const* aggrs, CHAR const* tag,
                      bool is_complete, OUT Aggr ** s);
 bool inFirstSetOfDeclaration();
 
+//fun_dclor: record the declarator that indicates a parameter list.
 Decl * get_parameter_list(Decl * dcl, OUT Decl ** fun_dclor = nullptr);
 Decl * get_decl_in_scope(CHAR const* name, Scope const* scope);
 INT get_enum_const_val(Enum const* e, INT idx);

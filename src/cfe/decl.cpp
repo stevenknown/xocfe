@@ -659,11 +659,10 @@ bool Decl::is_declaration() const
 
 
 //Pick out the pure declarator specification list
-//e.g:int * a [10];
-//    the pure declarator list is :  a->[10]->*
-//
-//    int (*) [10];
-//    the pure declarator list is :  *->[10]
+//e.g1:int * a [10];
+//     the pure declarator list is :  a->[10]->*
+//e.g2:int (*) [10];
+//     the pure declarator list is :  *->[10]
 Decl const* Decl::getTraitList() const
 {
     Decl const* decl = this;
@@ -694,8 +693,9 @@ Decl const* Decl::getTraitList() const
         if (decl == nullptr) {
             return nullptr;
         }
-        ASSERT0(DECL_dt(decl) == DCL_DECLARATOR ||
-                decl->is_dt_abs_declarator());
+        ASSERTN(DECL_dt(decl) == DCL_DECLARATOR ||
+                decl->is_dt_abs_declarator(),
+                ("must be DCL_DECLARATOR"));
         decl = DECL_child(decl);
         break;
     default: ASSERTN(0, ("unknown Decl"));
@@ -1241,17 +1241,18 @@ bool Decl::is_fun_pointer() const
     while (dcl != nullptr) {
         switch (DECL_dt(dcl)) {
         case DCL_FUN:
-            //  e.g: void f();
-            //  Trait is: ID->FUN is func-declaration.
+            //e.g1: void f();
+            //Trait is: ID->FUN, which means func-declaration.
             //
-            //  e.g: void ( * f() ) [];
-            //  Trait is: ID->FUN->*->[]
-            //  ID->FUN->... is func-declaration, where '...' is the
-            //  return-value-type of function.
+            //e.g2: void ( * f() ) [];
+            //Trait is: ID->FUN->*->[]
+            //ID->FUN->... is func-declaration, where '...' is the
+            //return-value-type of function.
             //
-            //  e.g: void (* (* f)() ) [];
-            //  Trait is: ID->*->FUN->*->[]
-            //  ID->*->FUN->... is func-pointer.
+            //e.g3: void (* (* f)() ) [];
+            //Trait is: ID->*->FUN->*->[]
+            //ID->*->FUN->... is func-declaration, where '...' is the
+            //return-value-type of function.
             if (DECL_prev(dcl) != nullptr &&
                 DECL_dt(DECL_prev(dcl)) == DCL_POINTER) {
                 return true;
@@ -1259,6 +1260,9 @@ bool Decl::is_fun_pointer() const
             return false;
         case DCL_ID:
         case DCL_VARIADIC:
+        case DCL_POINTER:
+            //e.g: given abs-function-pointer is void (*)();
+            //Trait is POINTER->FUN->...
             break;
         default:
             ASSERTN(!dcl->is_dt_declaration() &&
@@ -2633,18 +2637,21 @@ END:
 }
 
 
-//'fun_dclor': parameter list.
+//fun_dclor: record the declarator that indicates a parameter list.
 Decl * get_parameter_list(Decl * dcl, OUT Decl ** fun_dclor)
 {
+    ASSERT0(dcl->is_dt_declaration() || dcl->is_dt_typename());
     dcl = const_cast<Decl*>(dcl->getTraitList());
     while (dcl != nullptr && DECL_dt(dcl) != DCL_FUN) {
         dcl = DECL_next(dcl);
     }
-
     if (fun_dclor != nullptr) {
         *fun_dclor = dcl;
     }
-
+    if (dcl == nullptr) {
+        //Trait list may be NULL, or 'dcl' is not a function type. 
+        return nullptr;
+    }
     return DECL_fun_para_list(dcl);
 }
 

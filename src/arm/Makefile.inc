@@ -20,6 +20,7 @@ arm_refine.o\
 arm_sr.o\
 arm_var.o\
 arm_ddg.o\
+arm_targinfo.o\
 arm_elf_mgr.o
 
 ifneq ($(findstring $(REF_TARGMACH_INFO), true),)

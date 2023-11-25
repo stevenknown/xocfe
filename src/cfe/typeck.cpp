@@ -139,14 +139,33 @@ static bool checkCall(Tree * t, TYCtx * cont)
     if (!checkTreeList(TREE_fun_exp(t), cont)) {
         return false;
     }
-    Decl * fun_decl = TREE_fun_exp(t)->getResultType();
+    Tree * callee = TREE_fun_exp(t);
+    Decl * fun_decl = callee->getResultType();
     ASSERTN(fun_decl, ("can not infer out return-type of call"));
+    if (callee->getCode() == TR_ID) {
+        //t is direct function call with symbol function name.
+        if (!fun_decl->is_fun_decl() && !fun_decl->is_fun_def() &&
+            !fun_decl->is_fun_pointer()) {
+            err(callee->getLineno(), "'%s' is not a function",
+                TREE_id_name(callee)->getStr());
+            return false;
+        }
+    } else {
+        //t is indirect function call through computable expression.
+        if (!fun_decl->is_fun_pointer()) {
+            xcom::StrBuf buf(64);
+            format_declaration(buf, fun_decl, true);
+            err(callee->getLineno(), "callee '%s' is not a function pointer",
+                TOKEN_INFO_name(get_token_info(TREE_token(callee))));
+            return false;
+        }
+    }
 
     //Return type is the call type.
     //And here constructing return value type.
     //TypeAttr * ty = DECL_spec(fun_decl);
     Decl const* pure_decl = fun_decl->getTraitList();
-    if (DECL_dt(pure_decl) == DCL_FUN) {
+    if (pure_decl != nullptr && pure_decl->is_dt_fun()) {
         pure_decl = DECL_next(pure_decl);
     }
 
@@ -201,6 +220,15 @@ static void checkAssignLHS(Tree * t)
     ASSERT0(t);
     switch (TREE_lchild(t)->getCode()) {
     case TR_ID:
+        ASSERT0(t->getResultType());
+        if (t->getResultType()->is_fun_decl() ||
+            t->getResultType()->is_fun_def()) {
+            ASSERT0(TREE_id_name(TREE_lchild(t)));
+            err(t->getLineno(),
+                "function '%s': can not be left-value",
+                TREE_id_name(TREE_lchild(t))->getStr());
+        }
+        break;
     case TR_DEREF:
     case TR_DMEM:
     case TR_INDMEM:
@@ -229,7 +257,7 @@ static bool checkAssign(Tree * t, TYCtx * cont)
         warn(t->getLineno(),
              "should not assign '%s' to '%s'", bufr.buf, bufl.buf);
     }
-    //Check lhs of assignment.
+    //Check LHS of assignment.
     checkAssignLHS(t);
     return true;
 }
@@ -347,7 +375,6 @@ bool checkTreeList(Tree * t, TYCtx * cont)
     if (cont == nullptr) {
         cont = &ct;
     }
-
     for (; t != nullptr; t = TREE_nsib(t)) {
         g_src_line_num = t->getLineno();
         switch (t->getCode()) {

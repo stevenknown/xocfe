@@ -172,19 +172,18 @@ Tree * TreeCanon::handleCall(Tree * t, TreeCanonCtx * ctx)
     TREE_para_list(t) = handleTreeList(TREE_para_list(t), ctx);
     TREE_fun_exp(t) = handleTreeList(TREE_fun_exp(t), ctx);
     t->setParentForKid();
-
     Decl * fun_decl = TREE_fun_exp(t)->getResultType();
 
     //Return type is the call type.
     //And here constructing return value type.
     //TypeAttr * ty = DECL_spec(fun_decl);
     Decl const* pure_decl = fun_decl->getTraitList();
-    if (DECL_dt(pure_decl) == DCL_FUN) {
+    if (pure_decl != nullptr && pure_decl->is_dt_fun()) {
         pure_decl = DECL_next(pure_decl);
     }
 
     //Do legality handleing first for the return value type.
-    if (pure_decl) {
+    if (pure_decl != nullptr) {
         if (pure_decl->is_array()) {
             err(t->getLineno(), "function cannot returns array");
         }
@@ -219,7 +218,6 @@ Tree * TreeCanon::handleCall(Tree * t, TreeCanonCtx * ctx)
             }
         }
     }
-
     if (formal_param_decl != nullptr || real_param != nullptr) {
         CHAR * name = nullptr;
         if (TREE_fun_exp(t)->getCode() == TR_ID) {

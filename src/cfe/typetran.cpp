@@ -577,12 +577,10 @@ static void insertCvtForParams(Tree * t)
 {
     ASSERT0(t && t->getCode() == TR_CALL);
     Decl * funcdecl = TREE_result_type(TREE_fun_exp(t));
-
-    ASSERTN(funcdecl->is_dt_typename(), ("expect TypeAttr-NAME"));
+    ASSERTN(funcdecl->is_dt_typename(), ("expect Type-NAME"));
     ASSERT0(DECL_decl_list(funcdecl));
     ASSERTN(DECL_decl_list(funcdecl)->is_dt_abs_declarator(),
             ("expect abs-declarator"));
-
     Decl const* formalp_decl = get_parameter_list(funcdecl);
     Tree * newparamlist = nullptr;
     Tree * last = nullptr;
@@ -1181,19 +1179,23 @@ static INT TypeTranCall(Tree * t, TYCtx * cont)
     ASSERTN(DECL_decl_list(ld)->is_dt_abs_declarator(),
             ("expect abs-declarator"));
 
-    //Return value type is the CALL node type.
+    //Return value type is the CALL's result-type.
     //So constructing return value type.
     TypeAttr * ty = ld->getTypeAttr();
     Decl * pure = DECL_trait(ld); //pure may changed.
-    if (pure->is_dt_fun()) {
-        pure = DECL_next(pure);
-    } else if (pure->is_dt_pointer() &&
-               DECL_next(pure) != nullptr &&
-               DECL_next(pure)->is_dt_fun()) {
-        //FUN_POINTER
-        pure = DECL_next(DECL_next(pure));
+    if (pure != nullptr) {
+        if (pure != nullptr && pure->is_dt_fun()) {
+            //The next DCL of DCL_FUN is the return-value type if exist.
+            pure = DECL_next(pure);
+        } else if (pure->is_dt_pointer() &&
+                   DECL_next(pure) != nullptr &&
+                   DECL_next(pure)->is_dt_fun()) {
+            //'t' is FUN_POINTER
+            //The next of next of DCL of DCL_FUN is the return-value type
+            // if exist.
+            pure = DECL_next(DECL_next(pure));
+        }
     }
-
     ASSERTN(pure == nullptr || !pure->is_dt_fun(), ("Illegal dcl list"));
     TREE_result_type(t) = buildTypeName(ty);
     DECL_trait(TREE_result_type(t)) = pure;
