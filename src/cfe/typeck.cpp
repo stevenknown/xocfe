@@ -152,7 +152,8 @@ static bool checkCall(Tree * t, TYCtx * cont)
         }
     } else {
         //t is indirect function call through computable expression.
-        if (!fun_decl->is_fun_pointer()) {
+        if (!fun_decl->is_fun_pointer() && !fun_decl->is_fun_decl() &&
+            !fun_decl->is_fun_def()) {
             xcom::StrBuf buf(64);
             format_declaration(buf, fun_decl, true);
             err(callee->getLineno(), "callee '%s' is not a function pointer",
