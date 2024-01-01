@@ -5098,7 +5098,6 @@ bool get_aggr_field(TypeAttr const* ty, INT idx, Decl ** fld_decl,
             //Each field in UNION is offset from 0.
             continue;
         }
-
         UINT elem_bytesize = 0;
         ofst = compute_field_ofst(s, ofst, dcl, AGGR_field_align(s),
                                   &elem_bytesize);

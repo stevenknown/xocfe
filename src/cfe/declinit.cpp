@@ -34,6 +34,9 @@ static void replaceBaseWith(Tree const* newbase, Tree * stmts);
 static INT processAggrInit(Decl const* dcl, Tree * initval, OUT Tree ** stmts);
 static INT processScope(Scope * scope, bool is_collect_stmt);
 static INT processFuncDef(Decl * dcl);
+static INT processAggrInitRecur(
+    Decl const* dcl, Decl * flddecl, Tree ** initval, UINT curdim,
+    xcom::Vector<UINT> & fldvec, OUT Tree ** stmts);
 
 static INT processArrayInitRecur(Decl const* dcl, Tree * initval, UINT curdim,
                                  xcom::Vector<UINT> & dimvec,
@@ -209,50 +212,119 @@ static void replaceBaseWith(Tree const* newbase, Tree * stmts)
 }
 
 
-//dcl: it may be modifed
-static INT processAggrInitRecur(Decl const* dcl, Decl * flddecl,
-                                Tree * initval, UINT curdim,
-                                xcom::Vector<UINT> & fldvec,
-                                OUT Tree ** stmts)
+static INT processAggrInitRecurByIterFieldDecl(
+    Decl const* dcl, Decl * flddecl,
+    Tree ** initval, UINT curdim, xcom::Vector<UINT> & fldvec,
+    OUT Tree ** stmts)
 {
-    if (initval->getCode() == TR_INITVAL_SCOPE) {
-        if (flddecl->is_aggr()) {
-            curdim++;
-            UINT pos_in_curdim = 0;
-            for (Tree * t = TREE_initval_scope(initval);
-                 t != nullptr; t = TREE_nsib(t), pos_in_curdim++) {
-                Decl * flddecl_of_fld = nullptr;
-                get_aggr_field(flddecl->getTypeAttr(), (INT)pos_in_curdim,
-                               &flddecl_of_fld, nullptr);
-                ASSERT0(flddecl_of_fld);
-                fldvec.set(curdim, pos_in_curdim);
-                processAggrInitRecur(dcl, flddecl_of_fld, t,
-                                     curdim, fldvec, stmts);
-            }
-            return ST_SUCC;
-        }
+    ASSERT0(initval && flddecl);
+    ASSERT0((*initval)->getCode() != TR_INITVAL_SCOPE && flddecl->is_aggr());
+    curdim++;
 
-        if (flddecl->is_array()) {
-            Tree * inittree = nullptr;
-            if (ST_SUCC != processArrayInit(flddecl, initval, &inittree)) {
-                return ST_ERR;
-            }
-            Tree * aggr_ref = buildAggrFieldRef(dcl, fldvec);
-            TREE_lineno(aggr_ref) = initval->getLineno();
-            ASSERT0(aggr_ref->is_aggr_field_access());
-            replaceBaseWith(aggr_ref, inittree);
-            xcom::add_next(stmts, inittree);
-            return ST_SUCC;
+    //Because programmer may not enclose initval in angle brackets '{ }', we
+    //have to iterate the Aggrate field-declaration-list to match the initval.
+    //e.g:
+    //  struct M {
+    //    int a;
+    //    struct N { int b,c; }
+    //  };
+    //  struct M m = {1,2,3};
+    //  The more regular syntax is:
+    //  struct M m = {1,{2,3}};
+    Aggr const* fldaggr = flddecl->get_aggr_spec();
+    ASSERT0(fldaggr);
+    UINT pos_in_curdim = 0;
+    for (Decl * flddecl_of_fld = fldaggr->getDeclList();
+         flddecl_of_fld != nullptr && (*initval) != nullptr;
+         flddecl_of_fld = DECL_next(flddecl_of_fld),
+         *initval = TREE_nsib(*initval),
+         pos_in_curdim++) {
+        fldvec.set(curdim, pos_in_curdim);
+        INT st = processAggrInitRecur(
+            dcl, flddecl_of_fld, initval, curdim, fldvec, stmts);
+        if (st != ST_SUCC) {
+            return st;
         }
-
-        UNREACHABLE();
-        return ST_ERR;
+        if ((*initval) == nullptr) {
+            //The remain elements in initval list has been processed.
+            break;
+        }
+        if (dcl->is_union()) {
+            //The initial behaviour of UNION only stores the first initval to
+            //the first field element in dcl's UNION declaration.
+            break;
+        }
     }
+    return ST_SUCC;
+}
 
+
+//dcl: it may be modifed
+static INT processAggrInitRecurByIterValue(
+    Decl const* dcl, Decl * flddecl,
+    Tree * initval, UINT curdim, xcom::Vector<UINT> & fldvec,
+    OUT Tree ** stmts)
+{
+    ASSERT0(initval->getCode() == TR_INITVAL_SCOPE);
+    if (flddecl->is_aggr()) {
+        curdim++;
+        UINT pos_in_curdim = 0;
+        for (Tree * t = TREE_initval_scope(initval);
+             t != nullptr; t = TREE_nsib(t), pos_in_curdim++) {
+            Decl * flddecl_of_fld = nullptr;
+            get_aggr_field(flddecl->getTypeAttr(), (INT)pos_in_curdim,
+                           &flddecl_of_fld, nullptr);
+            ASSERT0(flddecl_of_fld);
+            fldvec.set(curdim, pos_in_curdim);
+            processAggrInitRecur(
+                dcl, flddecl_of_fld, &t, curdim, fldvec, stmts);
+            if (t == nullptr) {
+                //The remain elements in initval list has been processed.
+                break;
+            }
+            if (dcl->is_union()) {
+                //The initial behaviour of UNION only stores the first
+                //initval to the first field element in dcl's UNION
+                //declaration.
+                break;
+            }
+        }
+        return ST_SUCC;
+    }
+    if (flddecl->is_array()) {
+        Tree * inittree = nullptr;
+        if (ST_SUCC != processArrayInit(flddecl, initval, &inittree)) {
+            return ST_ERR;
+        }
+        Tree * aggr_ref = buildAggrFieldRef(dcl, fldvec);
+        TREE_lineno(aggr_ref) = initval->getLineno();
+        ASSERT0(aggr_ref->is_aggr_field_access());
+        replaceBaseWith(aggr_ref, inittree);
+        xcom::add_next(stmts, inittree);
+        return ST_SUCC;
+    }
+    UNREACHABLE();
+    return ST_ERR;
+}
+
+
+//dcl: it may be modifed
+static INT processAggrInitRecur(
+    Decl const* dcl, Decl * flddecl, Tree ** initval, UINT curdim,
+    xcom::Vector<UINT> & fldvec, OUT Tree ** stmts)
+{
+    if ((*initval)->getCode() == TR_INITVAL_SCOPE) {
+        return processAggrInitRecurByIterValue(
+            dcl, flddecl, *initval, curdim, fldvec, stmts);
+    }
+    if (flddecl->is_aggr()) {
+        return processAggrInitRecurByIterFieldDecl(
+            dcl, flddecl, initval, curdim, fldvec, stmts);
+    }
     Tree * lhs = buildAggrFieldRef(dcl, fldvec);
-    TREE_lineno(lhs) = initval->getLineno();
-    Tree * assign = buildAssign(lhs, copyTree(initval));
-    TREE_lineno(assign) = initval->getLineno();
+    TREE_lineno(lhs) = (*initval)->getLineno();
+    Tree * assign = buildAssign(lhs, copyTree(*initval));
+    TREE_lineno(assign) = (*initval)->getLineno();
     xcom::add_next(stmts, assign);
     return ST_SUCC;
 }
@@ -296,10 +368,10 @@ static INT processAggrInit(Decl const* dcl, Tree * initval,
     //e.g: given array[I][J][K], curdim begins at the left-first dimension I,
     //the position in dimension I begins at 0.
     xcom::Vector<UINT> fieldvec;
-
     UINT pos_in_curdim = 0;
     UINT curdim = 0;
     Tree * stmtlst = nullptr;
+    ASSERT0(dcl->is_aggr());
     for (Tree * t = TREE_initval_scope(initval);
          t != nullptr; t = TREE_nsib(t), pos_in_curdim++) {
         Decl * flddecl = nullptr;
@@ -308,12 +380,20 @@ static INT processAggrInit(Decl const* dcl, Tree * initval,
         fieldvec.clean();
         fieldvec.set(curdim, pos_in_curdim);
         if (stmts != nullptr) {
-            processAggrInitRecur(dcl, flddecl, t, curdim, fieldvec, stmts);
+            processAggrInitRecur(dcl, flddecl, &t, curdim, fieldvec, stmts);
         } else {
-            processAggrInitRecur(dcl, flddecl, t, curdim, fieldvec, &stmtlst);
+            processAggrInitRecur(dcl, flddecl, &t, curdim, fieldvec, &stmtlst);
+        }
+        if (t == nullptr) {
+            //The remain elements in initval list has been processed.
+            break;
+        }
+        if (dcl->is_union()) {
+            //The initial behaviour of UNION only stores the first initval to
+            //the first field element in dcl's UNION declaration.
+            break;
         }
     }
-
     if (stmtlst != nullptr) {
         ASSERT0(DECL_placeholder(dcl));
         //Because placeholder will never be header of list, the insertion will

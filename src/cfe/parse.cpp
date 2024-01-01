@@ -383,25 +383,27 @@ bool CParser::inFirstSetOfExp(TOKEN tok)
             return true;
         }
         break;
-    case T_IMM:       // 0~9
-    case T_IMML:      // 0~9L
-    case T_IMMU:      // Unsigned
-    case T_IMMUL:     // Unsigned Long
-    case T_FP:        // double decimal e.g 3.14
-    case T_FPF:       // float decimal e.g 3.14
-    case T_FPLD:      // long double decimal e.g 3.14
-    case T_STRING:    // "abcd"
-    case T_CHAR_LIST: // 'abcd'
-    case T_LPAREN:    // (
-    case T_ADD:       // +
-    case T_SUB:       // -
-    case T_ASTERISK:  // *
-    case T_BITAND:    // &
-    case T_NOT:       // !
-    case T_REV:       // ~ (reverse  a = ~a)
-    case T_ADDADD:    // ++
-    case T_SUBSUB:    // --
-    case T_SIZEOF:    // sizeof
+    case T_IMM:
+    case T_IMML:
+    case T_IMMLL:
+    case T_IMMU:
+    case T_IMMUL:
+    case T_IMMULL:
+    case T_FP:
+    case T_FPF:
+    case T_FPLD:
+    case T_STRING:
+    case T_CHAR_LIST:
+    case T_LPAREN:
+    case T_ADD:
+    case T_SUB:
+    case T_ASTERISK:
+    case T_BITAND:
+    case T_NOT:
+    case T_REV:
+    case T_ADDADD:
+    case T_SUBSUB:
+    case T_SIZEOF:
         return true;
     default:;
     }
@@ -477,11 +479,13 @@ static bool isFirstSetOfUnaryExp(TOKEN tok)
     case T_ID:
     case T_IMM:
     case T_IMML:
+    case T_IMMLL:
     case T_IMMU:
     case T_IMMUL:
+    case T_IMMULL:
     case T_FP:
-    case T_FPF:       //float decimal e.g 3.14
-    case T_FPLD:      //long double decimal e.g 3.14
+    case T_FPF:
+    case T_FPLD:
     case T_STRING:
     case T_CHAR_LIST:
     case T_AND:
@@ -784,12 +788,13 @@ static Tree * primary_exp(MOD UINT * st)
         CParser::match(T_IMM);
         return t;
     case T_IMML:
+    case T_IMMLL:
         t = NEWTN(TR_IMML);
         //If the target integer hold in 'g_real_token_string' is longer than
         //host size_t type, it will be truncated now.
         TREE_token(t) = g_real_token;
         TREE_imm_val(t) = (HOST_INT)xcom::xatoll(g_real_token_string, false);
-        CParser::match(T_IMML);
+        CParser::match(g_real_token);
         return t;
     case T_IMMU:
         t = NEWTN(TR_IMMU);
@@ -798,12 +803,13 @@ static Tree * primary_exp(MOD UINT * st)
         CParser::match(T_IMMU);
         return t;
     case T_IMMUL:
+    case T_IMMULL:
         t = NEWTN(TR_IMMUL);
         TREE_token(t) = g_real_token;
         TREE_imm_val(t) = (HOST_UINT)xcom::xatoll(g_real_token_string, false);
-        CParser::match(T_IMMUL);
+        CParser::match(g_real_token);
         return t;
-    case T_FP:         // decimal e.g 3.14
+    case T_FP: // decimal e.g 3.14
         t = NEWTN(TR_FP);
         TREE_token(t) = g_real_token;
         TREE_fp_str_val(t) = g_fe_sym_tab->add(g_real_token_string);
@@ -1126,11 +1132,13 @@ static Tree * unary_exp()
     switch (g_real_token) {
     case T_IMM:
     case T_IMML:
+    case T_IMMLL:
     case T_IMMU:
     case T_IMMUL:
-    case T_FP: //decimal e.g 3.14
-    case T_FPF: //decimal e.g 3.14
-    case T_FPLD: //decimal e.g 3.14
+    case T_IMMULL:
+    case T_FP:
+    case T_FPF:
+    case T_FPLD:
     case T_STRING: //"abcd"
     case T_CHAR_LIST: //'abcd'
     case T_LPAREN: //(exp)
@@ -1750,8 +1758,10 @@ static TokenList * matchTokenTillNewLine()
         switch (g_real_token) {
         case T_IMM:
         case T_IMML:
+        case T_IMMLL:
         case T_IMMU:
         case T_IMMUL:
+        case T_IMMULL:
             TL_imm(tl) = (UINT)xcom::xatoll(g_real_token_string, false);
             break;
         case T_ID:
@@ -2304,8 +2314,10 @@ static bool process_pragma_imm(TokenList const* tl, UINT * imm)
     switch (TL_tok(tl)) {
     case T_IMM:
     case T_IMML:
+    case T_IMMLL:
     case T_IMMU:
     case T_IMMUL:
+    case T_IMMULL:
         *imm = (UINT)TL_imm(tl);
         return true;
     default:
@@ -2514,11 +2526,13 @@ static Tree * dispatch()
         break;
     case T_IMM:
     case T_IMML:
+    case T_IMMLL:
     case T_IMMU:
     case T_IMMUL:
-    case T_FP:         // decimal e.g 3.14
-    case T_FPF:        // decimal e.g 3.14
-    case T_FPLD:       // decimal e.g 3.14
+    case T_IMMULL:
+    case T_FP:  
+    case T_FPF: 
+    case T_FPLD:
     case T_STRING:     // "abcd"
     case T_CHAR_LIST:  // 'abcd'
     case T_LPAREN:     // (

@@ -215,19 +215,18 @@ static INT process_union_init(TypeAttr * ty, Tree ** init)
             s->getTag()->getStr());
         return ST_ERR;
     }
-
     if (*init == nullptr) {
         //There is no initial value, nothing to check.
         return ST_SUCC;
     }
-
-    if ((*init)->getCode() != TR_INITVAL_SCOPE) {
-        err(g_real_line_num, "unmatch initial value type to union %s",
-            s->getTag()->getStr());
+    Tree * fldval = nullptr;
+    if ((*init)->getCode() == TR_INITVAL_SCOPE) {
+        //Strip off the initval-scope.
+        fldval = TREE_initval_scope(*init);
+    } else {
+        //*init is already initial-value which has stripped SCOPE token.
+        fldval = *init;
     }
-
-    //Strip off the initval-scope.
-    Tree * fldval = TREE_initval_scope(*init);
     for (Decl * flddcl = s->getDeclList();
          flddcl != nullptr && fldval != nullptr; flddcl = DECL_next(flddcl)) {
         INT st = ST_SUCC;
@@ -235,7 +234,10 @@ static INT process_union_init(TypeAttr * ty, Tree ** init)
             return st;
         }
     }
-    *init = TREE_nsib(*init);
+    if ((*init)->getCode() == TR_INITVAL_SCOPE) {
+        //Update *init pointer to subsequent token that may be value or scope.
+        *init = TREE_nsib(*init);
+    }
     return ST_SUCC;
 }
 
@@ -280,7 +282,6 @@ INT process_init_of_declaration(Decl * decl)
         err(g_real_line_num, "initializing expression is illegal");
         return ST_ERR;
     }
-
     INT st = ST_SUCC;
     if (dcl->is_pointer()) {
         //First, determine whether 'dcl' is aggregate or array type.

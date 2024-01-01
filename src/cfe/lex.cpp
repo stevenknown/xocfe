@@ -72,12 +72,14 @@ UINT g_disgarded_line_num = 0;
 //with declarations order in lex.h.
 static TokenInfo g_token_info[] =
 {
-    { T_UNDEF,        "" },
+    { T_UNDEF,      "" },
     { T_ID,         "id" },
-    { T_IMM,        "imme" },
-    { T_IMML,       "long imme" },
-    { T_IMMU,       "unsigned imme" },
-    { T_IMMUL,      "unsigned long imme" },
+    { T_IMM,        "int" },
+    { T_IMML,       "long int" },
+    { T_IMMLL,      "long long int" },
+    { T_IMMU,       "unsigned int" },
+    { T_IMMUL,      "unsigned long int" },
+    { T_IMMULL,     "unsigned long long int" },
     { T_FP,         "decimal" },
     { T_FPF,        "float decimal" },
     { T_FPLD,       "long double decimal" },
@@ -130,16 +132,16 @@ static TokenInfo g_token_info[] =
     { T_UNDERLINE,  "_" },
     { T_LANDSCAPE,  "-" },
     { T_REV,        "~" },
-    { T_DOT,        "." },//.
+    { T_DOT,        "." },
     { T_QUES_MARK,  "?" },
     { T_ARROW,      "->" },
     { T_ADDADD,     "++" },
     { T_SUBSUB,     "--" },
 
-    //The following token is C specail.
-    { T_DOTDOTDOT,  "..." },//...
+    //The following token is C specification.
+    { T_DOTDOTDOT,  "..." },
 
-    //scalar-type-spec
+    //Scalar-type-specification
     { T_VOID,       "void" },
     { T_CHAR,       "char" },
     { T_SHORT,      "short" },
@@ -198,7 +200,7 @@ static TokenInfo g_token_info[] =
 
 //Define Keywords which distinguish Identifiers.
 static KeywordInfo g_keyword_info[] = {
-    //scalar-type-spec
+    //Scalar-type-specification
     { T_VOID,       "void" },
     { T_CHAR,       "char" },
     { T_SHORT,      "short" },
@@ -258,11 +260,11 @@ static KeywordInfo g_keyword_info[] = {
 static UINT g_keyword_num = sizeof(g_keyword_info)/sizeof(g_keyword_info[0]);
 
 
-//This function read a line from source code buffer.
-//Return status, which could be ST_SUCC or ST_ERR.
+//The function read one line (end by '\n') from source code buffer.
+//Return status which will be ST_SUCC or ST_ERR.
 static INT getLine()
 {
-    //Initializing or realloc offset table.
+    //Initialize or realloc offset table.
     if (g_ofst_tab == nullptr) {
         g_ofst_tab_byte_size = LEX_MAX_OFST_BUF_LEN * sizeof(LONG);
         g_ofst_tab = (LONG*)::malloc(g_ofst_tab_byte_size);
@@ -274,9 +276,8 @@ static INT getLine()
                  0, LEX_MAX_OFST_BUF_LEN * sizeof(LONG));
         g_ofst_tab_byte_size += LEX_MAX_OFST_BUF_LEN * sizeof(LONG);
     }
-
     UINT pos = 0;
-    bool is_some_chars_in_cur_line = false;
+    bool has_some_chars_in_cur_line = false;
     for (;;) {
         if (g_cur_line == nullptr) {
             g_cur_line_len = LEX_MAX_BUF_LINE;
@@ -286,39 +287,37 @@ static INT getLine()
             }
         }
 
-        //Read LEX_MAX_BUF_LINE characters from src file.
+        //Read the most LEX_MAX_BUF_LINE characters from source file.
         if (g_file_buf_pos >= g_last_read_num) {
-            ASSERT0(g_hsrc != nullptr);
+            ASSERT0(g_hsrc);
             INT dw = (INT)::fread(g_file_buf, 1, LEX_MAX_BUF_LINE, g_hsrc);
             if (dw == 0) {
-                if (!is_some_chars_in_cur_line) {
+                if (!has_some_chars_in_cur_line) {
                     //Some characters had been put into 'g_cur_line', but the
-                    //last character of 'g_file_buf' is not '0xD,0xA', so we
-                    //should to get there. But there is nothing more can
-                    //be read from file, so 'dw' is zero.
-                    //This situation may take place at that we meet the
-                    //file that terminate without a '0xD,0xA'.
-                    //TODO:Considering this specified case, we can not return
-                    //'FEOF' directly , and we should process the last
+                    //last character of 'g_file_buf' is not '0xD,0xA'. Thus we
+                    //should keep reading characters till the last character in
+                    //'g_file_buf. But there is nothing more can be
+                    //read from source file until the last file read, so 'dw'
+                    //is zero.
+                    //This situation may take place when we are meeting the
+                    //file that is terminated without a '0xD,0xA'.
+                    //TODO:Considering the case, we should not return
+                    //'FEOF' directly , instead we should process the last
                     //characters in 'g_cur_line' correctly.
-
                     goto FEOF;
-                } else {
-                    goto FIN;
                 }
-            } else {
-                g_last_read_num = dw;
+                goto FIN;
             }
+            g_last_read_num = dw;
             g_last_read_num = MIN(g_last_read_num, LEX_MAX_BUF_LINE);
             g_file_buf_pos = 0;
         }
-
-        //Get one line characters from buffer which end up
-        //with '0xd,0xa' in DOS or '0xa' in Linux.
+        //Get one line characters from buffer which end up with '0xD,0xA'
+        //under DOS or '0xA' under Linux.
         bool is_0xd_recog = false;
         while (g_file_buf_pos < g_last_read_num) {
             if (g_file_buf[g_file_buf_pos] == 0xd &&
-                //DOS line end characters.
+                //DOS line-end characters.
                 g_file_buf[g_file_buf_pos + 1] == 0xa) {
                 g_is_dos = true;
                 if (g_use_newline_char) {
@@ -334,9 +333,10 @@ static INT getLine()
                 g_cur_src_ofst += 2;
                 g_src_line_num++;
                 goto FIN;
-            } else if (g_file_buf[g_file_buf_pos] == 0xa) { //unix text format
+            }
+            if (g_file_buf[g_file_buf_pos] == 0xa) { //unix text format
                 if (is_0xd_recog) {
-                    //We have met '0xd', the '0xa' is one of
+                    //We have met '0xD', the '0xA' is one of
                     //the terminate string '0xD,0xA' under DOS text format.
                     if (g_use_newline_char) {
                         g_cur_line[pos] = g_file_buf[g_file_buf_pos];
@@ -359,35 +359,35 @@ static INT getLine()
                 g_cur_src_ofst++;
                 g_src_line_num++;
                 goto FIN;
-            } else if(g_file_buf[g_file_buf_pos] == 0xd && g_is_dos) {
-                //0xd is the last charactor in 'g_file_buf',so 0xa is
-                //should be recognized in getNextToken() in order to the
-                //lex parsing correctly.
-                is_0xd_recog = 1;
+            }
+            if (g_file_buf[g_file_buf_pos] == 0xd && g_is_dos) {
+                //0xD is the last charactor in 'g_file_buf', thus 0xA
+                //should be recognized in getNextToken() in order to guarrantee
+                //the lex token parsing correctly, or else some exceptions
+                //occurred in text file.
+                is_0xd_recog = true;
                 if (g_use_newline_char) {
-                      g_cur_line[pos] = g_file_buf[g_file_buf_pos];
+                    g_cur_line[pos] = g_file_buf[g_file_buf_pos];
                     pos++;
                     g_file_buf_pos++;
-                }else{
+                } else {
                     g_file_buf_pos++;
                 }
                 g_cur_src_ofst++;
                 goto FIN;
             }
-
             if (pos >= g_cur_line_len) {
-                //Escalate line buffer.
+                //Escalate the line buffer.
                 g_cur_line_len += LEX_MAX_BUF_LINE;
                 g_cur_line = (CHAR*)::realloc(g_cur_line, g_cur_line_len);
             }
             g_cur_line[pos] = g_file_buf[g_file_buf_pos];
             pos++;
             g_file_buf_pos++;
-            is_some_chars_in_cur_line = true;
+            has_some_chars_in_cur_line = true;
             g_cur_src_ofst++;
         }
     }
-
 FIN:
     ASSERT0((g_src_line_num + 1) < OFST_TAB_LINE_SIZE);
     g_ofst_tab[g_src_line_num + 1] = g_cur_src_ofst;
@@ -395,10 +395,8 @@ FIN:
     g_cur_line_num = (INT)strlen(g_cur_line);
     g_cur_line_pos = 0;
     return ST_SUCC;
-
 FAILED:
     return ST_ERR;
-
 FEOF:
     g_src_line_num++;
     g_cur_line[pos] = 0;
@@ -513,12 +511,92 @@ static CHAR getNextChar()
 }
 
 
-///////////////////////////////////////////////////////////////////////
-//You should construct the following function accroding to your lexical
-//token word.
-//
-//START HERE.
-///////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+//YOU SHOULD CONSTRUCT THE FOLLOWING FUNCTION ACCRODING TO YOUR LEXICAL       //
+//TOKEN WORD.                                                                 //
+//BEGIN FROM NOW.                                                             //
+////////////////////////////////////////////////////////////////////////////////
+
+//The function is always used as post-process when parsing a token.
+//If given token is an immediate, the function will parse and check whether
+//the suffix if exist is legal.
+//e.g:0x7fffull, 1.1f, etc.
+//t: the latest token that has been parsed by previous functions.
+static TOKEN parse_suffix(TOKEN t)
+{
+    ASSERT0(t != T_UNDEF);
+    if (xcom::upper(g_cur_char) == 'L') {
+        //e.g: 1000L
+        //t is long integer.
+        if (t == T_IMM) {
+            t = T_IMML;
+            g_cur_char = getNextChar();
+            if (xcom::upper(g_cur_char) == 'L') {
+                //e.g: 1000LL
+                t = T_IMMLL;
+                g_cur_char = getNextChar();
+                if (xcom::upper(g_cur_char) == 'U') {
+                    //e.g: 1000LLU <=> 1000ULL
+                    t = T_IMMULL;
+                    g_cur_char = getNextChar();
+                }
+                return t;
+            }
+            if (xcom::upper(g_cur_char) == 'U') {
+                //e.g: 1000LU <=> 1000UL
+                g_cur_char = getNextChar();
+                return T_IMMUL;
+            }
+            return t;
+        }
+        if (t == T_FP) {
+            //e.g: 1.11L
+            //If suffixed by the letter L, imm has type with long double.
+            g_cur_char = getNextChar();
+            return T_FPLD;
+        }
+        return t;
+    }
+    if (xcom::upper(g_cur_char) == 'U') {
+        if (t == T_IMM) {
+            //e.g: 1000U
+            //t is unsigned integer.
+            t = T_IMMU;
+            g_cur_char = getNextChar();
+            if (xcom::upper(g_cur_char) == 'L') {
+                //e.g: 1000UL
+                t = T_IMMUL;
+                g_cur_char = getNextChar();
+                if (xcom::upper(g_cur_char) == 'L') {
+                    //e.g: 1000ULL
+                    t = T_IMMULL;
+                    g_cur_char = getNextChar();
+                }
+                return t;
+            }
+            return t;
+        }
+        ASSERT0(t == T_FP);
+        err(g_real_line_num, "invalid suffix \"%c\" on float constant",
+            g_cur_char);
+        g_cur_char = getNextChar();
+        return t;
+    }
+    if (xcom::upper(g_cur_char) == 'F') {
+        //e.g:1.0F, emphasize that immeidate is float rather than double.
+        if (t == T_IMM) {
+            err(g_real_line_num, "invalid suffix \"%c\" on integer constant",
+                g_cur_char);
+            return t;
+        }
+        ASSERT0(t == T_FP);
+        g_cur_char = getNextChar();
+        t = T_FPF;
+        return t;
+    }
+    return t;
+}
+
 
 //'g_cur_char' hold the current charactor right now.
 //You should assign 'g_cur_char' the next valid charactor before
@@ -528,7 +606,7 @@ static TOKEN t_num()
     CHAR c = getNextChar();
     CHAR b_is_fp = 0;
     TOKEN t = T_UNDEF;
-    if (g_cur_char == '0' && (c == 'x' || c == 'X')) {
+    if (g_cur_char == '0' && (xcom::upper(c) == 'X')) {
         //hex
         g_cur_token_string[g_cur_token_string_pos++] = c;
         while (xisdigithex(c = getNextChar())) {
@@ -537,7 +615,7 @@ static TOKEN t_num()
         g_cur_token_string[g_cur_token_string_pos] = 0;
         g_cur_char = c;
         t = T_IMM;
-        goto FIN;
+        goto SUFFIX;
     }
 
     if (xisdigit(c) || c == '.') {
@@ -571,46 +649,8 @@ static TOKEN t_num()
         g_cur_char = c;
         t = T_IMM; //t is '0','1','2','3','4','5','6','7','8','9'
     }
-FIN:
-    if (g_cur_char == 'L' || g_cur_char == 'l') {
-        //e.g: 1000L
-        //t is long integer.
-        if (t == T_IMM) {
-            t = T_IMML;
-            g_cur_char = getNextChar();
-            if (g_cur_char == 'L' || g_cur_char == 'l') {
-                //e.g: 1000LL
-                g_cur_char = getNextChar();
-                if (g_cur_char == 'U' || g_cur_char == 'u') {
-                    //e.g: 1000LLU
-                    g_cur_char = getNextChar();
-                }
-            } else if (g_cur_char == 'U' || g_cur_char == 'u') {
-                //e.g: 1000LU
-                g_cur_char = getNextChar();
-                t = T_IMMUL;
-            }
-        } else if (t == T_FP) {
-            //If suffixed by the letter l or L, it has type long double.
-            g_cur_char = getNextChar();
-            t = T_FPLD;
-        }
-    } else if (g_cur_char == 'U' || g_cur_char == 'u') {
-        //imm is unsigned.
-        g_cur_char = getNextChar();
-        t = T_IMMU;
-    } else if (g_cur_char == 'F' || g_cur_char == 'f') {
-        //e.g: 1.0F, float
-        if (t == T_IMM) {
-            err(g_real_line_num, "invalid suffix \"%c\" on integer constant",
-                g_cur_char);
-        } else {
-            ASSERT0(t == T_FP);
-            g_cur_char = getNextChar();
-            t = T_FPF;
-        }
-    }
-    return t;
+SUFFIX:
+    return parse_suffix(t);
 }
 
 
@@ -628,35 +668,51 @@ static TOKEN t_string()
                 //newline, 0xa
                 g_cur_token_string[g_cur_token_string_pos++] = '\n';
                 c = getNextChar();
-            } else if (c == 't') {
+                continue;
+            }
+            if (c == 't') {
                 //horizontal tab
                 g_cur_token_string[g_cur_token_string_pos++] = '\t';
                 c = getNextChar();
-            } else if (c == 'b') {
+                continue;
+            }
+            if (c == 'b') {
                 //backspace
                 g_cur_token_string[g_cur_token_string_pos++] = '\b';
                 c = getNextChar();
-            } else if (c == 'r') {
+                continue;
+            }
+            if (c == 'r') {
                 //carriage return, 0xd
                 g_cur_token_string[g_cur_token_string_pos++] = '\r';
                 c = getNextChar();
-            } else if (c == 'f') {
+                continue;
+            }
+            if (c == 'f') {
                 //form feed
                 g_cur_token_string[g_cur_token_string_pos++] = '\f';
                 c = getNextChar();
-            } else if (c == '\\') {
+                continue;
+            }
+            if (c == '\\') {
                 //backslash
                 g_cur_token_string[g_cur_token_string_pos++] = '\\';
                 c = getNextChar();
-            } else if (c == '\'') {
+                continue;
+            }
+            if (c == '\'') {
                 //single quote
                 g_cur_token_string[g_cur_token_string_pos++] = '\'';
                 c = getNextChar();
-            } else if (c == '"') {
+                continue;
+            }
+            if (c == '"') {
                 //double quote
                 g_cur_token_string[g_cur_token_string_pos++] = '"';
                 c = getNextChar();
-            } else if (c >= '0' && c <= '9') {
+                continue;
+            }
+            if (xcom::xisdigit(c)) {
                 //Finally, the escape \ddd consists of the backslash followed
                 //by
                 // 1. not more than 3 octal digits or
@@ -676,11 +732,14 @@ static TOKEN t_string()
                 CHAR o = (CHAR)xatoll(&g_cur_token_string[
                     g_cur_token_string_pos], true);
                 g_cur_token_string[g_cur_token_string_pos++] = o;
-            } else if (c == 'x' || c == 'X' || (c >= 'a' && c <= 'f') ||
-                       (c >= 'A' && c <= 'Z')) {
-                //'\xdd' or '\aabb'
+                continue;
+            }
+            if (xcom::upper(c) == 'X' || (c >= 'a' && c <= 'f') ||
+                (c >= 'A' && c <= 'Z')) {
+                ///e.g:'\x','\X', '\a-\f', '\A-\Z'.
+                //     '\xdd' or '\aabb'
                 bool only_allow_two_hex = false;
-                if (c == 'x' || c == 'X') {
+                if (xcom::upper(c) == 'X') {
                     only_allow_two_hex = true;
                     c = getNextChar();
                 }
@@ -694,15 +753,14 @@ static TOKEN t_string()
                     err(g_real_line_num,
                         "constant too big, only permit two hex digits");
                 }
-            } else {
-                g_cur_token_string[g_cur_token_string_pos++] = '\\';
-                g_cur_token_string[g_cur_token_string_pos++] = c;
-                c = getNextChar();
+                continue;
             }
-        } else {
+            g_cur_token_string[g_cur_token_string_pos++] = '\\';
             g_cur_token_string[g_cur_token_string_pos++] = c;
             c = getNextChar();
         }
+        g_cur_token_string[g_cur_token_string_pos++] = c;
+        c = getNextChar();
     }
     g_cur_char = getNextChar();
     g_cur_token_string[g_cur_token_string_pos] = 0;
@@ -724,31 +782,45 @@ static TOKEN t_char_list()
                 //newline, 0xa
                 g_cur_token_string[g_cur_token_string_pos++] = '\n';
                 c = getNextChar();
-            } else if (c == 't') {
+                continue;
+            }
+            if (c == 't') {
                 //horizontal tab
                 g_cur_token_string[g_cur_token_string_pos++] = '\t';
                 c = getNextChar();
-            } else if (c == 'b') {
+                continue;
+            }
+            if (c == 'b') {
                 //backspace
                 g_cur_token_string[g_cur_token_string_pos++] = '\b';
                 c = getNextChar();
-            } else if (c == 'r') {
+                continue;
+            }
+            if (c == 'r') {
                 //carriage return, 0xd
                 g_cur_token_string[g_cur_token_string_pos++] = '\r';
                 c = getNextChar();
-            } else if (c == 'f') {
+                continue;
+            }
+            if (c == 'f') {
                 //form feed
                 g_cur_token_string[g_cur_token_string_pos++] = '\f';
                 c = getNextChar();
-            } else if (c == '\\') {
+                continue;
+            }
+            if (c == '\\') {
                 //backslash
                 g_cur_token_string[g_cur_token_string_pos++] = '\\';
                 c = getNextChar();
-            } else if (c == '\'') {
+                continue;
+            }
+            if (c == '\'') {
                 //single quote
                 g_cur_token_string[g_cur_token_string_pos++] = '\'';
                 c = getNextChar();
-            } else if (c >= '0' && c <= '9') {
+                continue;
+            }
+            if (c >= '0' && c <= '9') {
                 //Finally, the escape \ddd consists of the backslash followed
                 //by
                 // 1. not more than 3 octal digits or
@@ -768,11 +840,14 @@ static TOKEN t_char_list()
                 CHAR o = (CHAR)xatoll(&g_cur_token_string[
                     g_cur_token_string_pos], true);
                 g_cur_token_string[g_cur_token_string_pos++] = o;
-            } else if (c == 'x' || c == 'X' || (c >= 'a' && c <= 'f') ||
-                       (c >= 'A' && c <= 'Z')) {
-                //'\xdd' or '\aabb'
+                continue;
+            }
+            if (xcom::upper(c) == 'X' || (c >= 'a' && c <= 'f') ||
+                (c >= 'A' && c <= 'Z')) {
+                ///e.g:'\x','\X', '\a-\f', '\A-\Z'.
+                //     '\xdd' or '\aabb'
                 bool only_allow_two_hex = false;
-                if (c == 'x' || c == 'X') {
+                if (xcom::upper(c) == 'X') {
                     only_allow_two_hex = true;
                     c = getNextChar();
                 }
@@ -786,15 +861,15 @@ static TOKEN t_char_list()
                     err(g_real_line_num,
                         "constant too big, only permit two hex digits");
                 }
-            } else {
-                g_cur_token_string[g_cur_token_string_pos++] = '\\';
-                g_cur_token_string[g_cur_token_string_pos++] = c;
-                c = getNextChar();
+                continue;
             }
-        } else {
+            g_cur_token_string[g_cur_token_string_pos++] = '\\';
             g_cur_token_string[g_cur_token_string_pos++] = c;
             c = getNextChar();
+            continue;
         }
+        g_cur_token_string[g_cur_token_string_pos++] = c;
+        c = getNextChar();
     }
     g_cur_char = getNextChar();
     g_cur_token_string[g_cur_token_string_pos] = 0;

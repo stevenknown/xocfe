@@ -36,8 +36,10 @@ typedef enum _TOKEN {
     T_ID,           // ID = (A-Z|a-z)( A-Z|a-z|0-9 )*
     T_IMM,          // 0~9
     T_IMML,         // 0~9L
+    T_IMMLL,        // 0~9LL
     T_IMMU,         // Unsigned
     T_IMMUL,        // Unsigned Long
+    T_IMMULL,       // Unsigned Long Long
     T_FP,           //double decimal e.g 3.14
     T_FPF,          //float decimal e.g 3.14
     T_FPLD,         //long double decimal e.g 3.14L
