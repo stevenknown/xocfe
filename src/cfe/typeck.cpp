@@ -355,7 +355,7 @@ static void checkDeclInit(Decl const* decl, TYCtx * cont)
 {
     for (Decl const* dcl = decl; dcl != nullptr; dcl = DECL_next(dcl)) {
         if (!dcl->is_initialized()) { continue; }
-        Tree * inittree = dcl->get_decl_init_tree();
+        Tree * inittree = dcl->getDeclInitTree();
         ASSERT0(inittree);
         checkTreeList(inittree, cont);
     }

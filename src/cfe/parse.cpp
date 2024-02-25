@@ -2201,7 +2201,7 @@ static bool append_parameters(Scope * cur_scope, Decl const* para_list)
         lastdcl = declaration;
 
         //Append parameter list to symbol list of function body scope.
-        Sym const* sym = declaration->get_decl_sym();
+        Sym const* sym = declaration->getDeclSym();
         if (g_cur_scope->addToSymList(sym) != nullptr) {
             err(g_real_line_num, "'%s' already defined",
                 g_real_token_string);

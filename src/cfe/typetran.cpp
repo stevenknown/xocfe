@@ -277,7 +277,7 @@ INT process_init_of_declaration(Decl * decl)
     ASSERT0(DECL_is_init(dcl));
     ASSERT0(DECL_init_tree(dcl));
 
-    Tree * initval = decl->get_decl_init_tree();
+    Tree * initval = decl->getDeclInitTree();
     if (initval == nullptr) {
         err(g_real_line_num, "initializing expression is illegal");
         return ST_ERR;
@@ -299,10 +299,10 @@ INT process_init_of_declaration(Decl * decl)
     }
 
     if (initval != nullptr) {
-        ASSERT0(decl->get_decl_sym());
+        ASSERT0(decl->getDeclSym());
         err(g_real_line_num,
             "there are too many initializers than var '%s' declared",
-            decl->get_decl_sym()->getStr());
+            decl->getDeclSym()->getStr());
         st = ST_ERR;
     }
     return st;
@@ -574,6 +574,50 @@ static bool checkAssign(Tree const* t, Decl * ld, Decl *)
 
 
 //Check parameters type and insert CVT if necessary.
+//arg: real arguments of function call.
+//param_decl: the declaration of formal parameter of function call.
+static Tree * insertCvtForParam(Tree * arg, Decl const* param_decl)
+{
+    Decl * arg_decl = TREE_result_type(arg);
+    ASSERTN(arg_decl, ("miss result-type"));
+    if (arg_decl->is_double() && param_decl->is_float()) {
+        //Insert convertion operation: truncate double to float.
+        arg = buildCvt(param_decl, arg);
+        TypeTranList(arg, nullptr);
+        return arg;
+    }
+    if (arg_decl->is_integer() && param_decl->is_integer()) {
+        if (arg_decl->getDeclByteSize() == param_decl->getDeclByteSize()) {
+            //The arguments will be expended safely to the size of parameter.
+            return arg;
+        }
+        //Insert convertion operation: truncate bigger simple type to
+        //smaller one.
+        //e.g:The function declaration is: void foo(unsigned int p);
+        //  The call-site is:
+        //    unsigned long long lx;
+        //    foo(lx);
+        //  after insertion:
+        //    unsigned long long lx;
+        //    foo((unsigned int)lx);
+        //e.g2:The function declaration is:
+        //   void foo(unsigned long long p, unsigned long long q);
+        //  The call-site is:
+        //    unsigned int x,y;
+        //    foo(x, y);
+        //  after insertion:
+        //    unsigned int x,y;
+        //    foo((unsigned long long)x, (unsigned long long)y);
+        arg = buildCvt(param_decl, arg);
+        TypeTranList(arg, nullptr);
+        return arg;
+    }
+    //Should be verified during type-checking.
+    return arg;
+}
+
+
+//Check parameters type and insert CVT if necessary.
 static void insertCvtForParams(Tree * t)
 {
     ASSERT0(t && t->getCode() == TR_CALL);
@@ -592,14 +636,7 @@ static void insertCvtForParams(Tree * t)
             xcom::add_next(&newparamlist, &last, realp);
             continue;
         }
-
-        Decl * realp_decl = TREE_result_type(realp);
-        ASSERT0(realp_decl);
-        if (realp_decl->is_double() && formalp_decl->is_float()) {
-            //Insert convertion operation: truncate double to float.
-            realp = buildCvt(formalp_decl, realp);
-            TypeTranList(realp, nullptr);
-        }
+        realp = insertCvtForParam(realp, formalp_decl);
         xcom::add_next(&newparamlist, &last, realp);
         formalp_decl = DECL_next(formalp_decl);
     }
@@ -643,7 +680,7 @@ static bool findAndRefillAggrField(Decl const* base, Sym const* field_name,
     }
 
     while (field_list != nullptr) {
-        Sym const* sym = field_list->get_decl_sym();
+        Sym const* sym = field_list->getDeclSym();
         if (sym == field_name) {
             *field_decl = field_list;
             break;
@@ -773,7 +810,7 @@ static INT TypeTranID(Tree * t, TYCtx * cont)
     //be used to infer decl-type of tree node.
     Decl * res_ty = buildTypeName(id_decl->getTypeAttr());
     TREE_result_type(t) = res_ty;
-    Decl * declarator = id_decl->getDeclarator();
+    Decl * declarator = id_decl->getPureDeclaratorList();
     if (DECL_is_bit_field(declarator)) {
         //Set bit info if idenifier is bitfield.
         //Bitfield info is stored at declarator list.
@@ -806,7 +843,7 @@ static INT TypeTranID(Tree * t, TYCtx * cont)
         }
 
         //Check bitfield's base type is big enough to hold it.
-        UINT size = id_decl->get_decl_size() * BIT_PER_BYTE;
+        UINT size = id_decl->getDeclByteSize() * BIT_PER_BYTE;
         if (size < (UINT)DECL_bit_len(declarator)) {
             StrBuf buf(64);
             format_declaration(buf, id_decl, true);
@@ -1039,13 +1076,13 @@ static INT TypeTranSizeof(Tree * t, TYCtx * cont)
     UINT size;
     if (exp->getCode() == TR_TYPE_NAME) {
         ASSERT0(TREE_type_name(exp));
-        size = TREE_type_name(exp)->get_decl_size();
+        size = TREE_type_name(exp)->getDeclByteSize();
     } else {
         if (ST_SUCC != TypeTranList(exp, cont)) {
             return ST_ERR;
         }
         ASSERT0(TREE_result_type(exp));
-        size = TREE_result_type(exp)->get_decl_size();
+        size = TREE_result_type(exp)->getDeclByteSize();
     }
     ASSERT0(size != 0);
     TREE_code(t) = TR_IMMU;
@@ -1079,7 +1116,7 @@ static INT TypeTranInDMem(Tree * t, TYCtx * cont)
     cont->is_field = false;
 
     if (!ld->is_pointer()) {
-        xoc::Sym const* sym = TREE_id_decl(TREE_field(t))->get_decl_sym();
+        xoc::Sym const* sym = TREE_id_decl(TREE_field(t))->getDeclSym();
         err(t->getLineno(),
             "'->%s' : left operand has 'struct' type, should use '.'",
             sym->getStr());
@@ -1118,7 +1155,7 @@ static INT TypeTranDMem(Tree * t, TYCtx * cont)
     cont->is_field = false;
 
     if (ld->is_pointer()) {
-        Sym const* sym = TREE_id_decl(TREE_field(t))->get_decl_sym();
+        Sym const* sym = TREE_id_decl(TREE_field(t))->getDeclSym();
         err(t->getLineno(),
             "'.%s' : left operand points to 'struct' type, should use '->'",
             sym->getStr());
@@ -1311,7 +1348,7 @@ static INT TypeTranAdditive(Tree * t, TYCtx * cont)
 static INT TypeTranDeclInit(Decl * decl, TYCtx * cont)
 {
     ASSERT0(decl->is_initialized());
-    Tree * inittree = decl->get_decl_init_tree();
+    Tree * inittree = decl->getDeclInitTree();
     ASSERT0(inittree);
     if (inittree->getCode() == TR_INITVAL_SCOPE) {
         ASSERT0(cont);
@@ -1328,7 +1365,7 @@ static INT TypeTranDeclInitList(Decl const* decl, TYCtx * cont)
     for (Decl const* dcl = decl; dcl != nullptr; dcl = DECL_next(dcl)) {
         ASSERT0(dcl->is_dt_declaration());
         if (!dcl->is_initialized()) { continue; }
-        Tree * inittree = dcl->get_decl_init_tree();
+        Tree * inittree = dcl->getDeclInitTree();
         ASSERT0(inittree);
         if (ST_SUCC != TypeTranDeclInit(const_cast<Decl*>(dcl), cont)) {
             return ST_ERR;

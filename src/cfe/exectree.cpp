@@ -90,7 +90,7 @@ static bool compute_sizeof(Tree * t)
             TREE_type_name(p) = dcl;
         }
 
-        ULONG sz = dcl->get_decl_size();
+        ULONG sz = dcl->getDeclByteSize();
         //if (is_complex_type(abs_decl) || dcl->is_user_type_ref()) {
         //    sz = getComplexTypeSize(dcl);
         //} else {
@@ -303,7 +303,7 @@ static bool compute_conditional_exp(IN Tree * t)
             return false;
 
             //TODO: infer the constant value of ID.
-            //pushv(get_decl_size(dcl));
+            //pushv(getDeclByteSize(dcl));
         break;
     }
     case TR_COND: {

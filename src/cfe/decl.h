@@ -662,13 +662,13 @@ public:
     void dump() const;
     void dump(StrBuf & buf) const;
 
-    DCL get_decl_type() const { return DECL_dt(this); }
-    Sym const* get_decl_sym() const;
-    CHAR const* get_decl_name() const;
-    Tree * get_decl_init_tree() const;
-    Decl * getDeclarator() const { return DECL_decl_list(this); }
-    Decl const* get_return_type() const;
-    Decl const* get_decl_id_tree() const;
+    DCL getDeclType() const { return DECL_dt(this); }
+    Sym const* getDeclSym() const;
+    CHAR const* getDeclName() const;
+    Tree * getDeclInitTree() const;
+    Decl * getPureDeclaratorList() const { return DECL_decl_list(this); }
+    Decl const* getReturnType() const;
+    Decl const* getDeclIdTree() const;
 
     //Pick out the trait declarator specification list
     //    e.g:
@@ -685,13 +685,13 @@ public:
     //     int a [];
     ULONG getComplexTypeSize() const;
 
-    //Compute the byte size of declaration.
-    //This function will compute array size.
-    UINT get_decl_size() const;
+    //Compute the byte size of current declaration.
+    //The function will compute whole array byte size.
+    UINT getDeclByteSize() const;
 
     //Compute byte size of pointer base declarator.
     //e.g: Given 'int *(*p)[3]', the pointer-base is 'int * [3]'.
-    UINT get_pointer_base_size() const;
+    UINT getPointerBaseSize() const;
 
     //The function get the POINTER decl-type in decl-list.
     //   declaration----
@@ -704,27 +704,27 @@ public:
     //    must be DCL_POINTER, the first is DCL_ID 'a'.
     //    And simplar for abs-decl, as an example 'int *', the first decltor
     //    in the type-chain must be DCL_POINTER.
-    Decl const* get_pointer_declarator() const;
+    Decl const* getPointerDeclarator() const;
 
     //Return the *first* Decl structure which indicate a pointer
     //in pure-list of declaration.
     //e.g: int * p; the declarator is: DCL_ID(p)->DCL_POINTER(*).
     //return DCL_POINTER.
-    Decl const* get_pointer_decl() const;
+    Decl const* getPointerDecl() const;
 
     //Return the Decl structure of return-value of function declaration of
     //function pointer type if exist.
     //e.g:int bar(); the returned Decl is NULL.
     //    int * zoo(); the returned Decl is DCL_POINTER.
     //Note the TypeAttr of return-value is 'int'.
-    Decl const* get_return_value_decl() const;
+    Decl const* getReturnValueDecl() const;
 
     //Return the *first* Decl structure which indicate an array
     //in pure-list of declaration.
     //e.g:int p[10][20]; the declarator is:
     //    DCL_ID(p)->DCL_ARRAY(20)->DCL_ARRAY(10).
     //return DCL_ARRAY(20).
-    Decl * get_first_array_decl() const;
+    Decl * getFirstArrayDecl() const;
 
     //The function get the base decloarator of ARRAY in decl-list.
     //e.g: the function will return 'pointer' decl-type.
@@ -743,7 +743,7 @@ public:
     //e.g: given int arr[10][20];
     //  the declarator is: ID(arr)->ARRAY(10)->ARRAY(20).
     //  the function construct and return decl: 'int'.
-    Decl * get_array_base_decl() const;
+    Decl * getArrayBaseDecl() const;
 
     //Get and generate array element declaration.
     //Note if array is multiple-dimension, the funtion only construct and
@@ -751,7 +751,7 @@ public:
     //e.g: given int arr[10][20];
     //  the declarator is: ID(arr)->ARRAY(10)->ARRAY(20).
     //  The function constructs and returns an array decl: 'int [20]';
-    Decl * get_array_elem_decl() const;
+    Decl * getArrayElemDecl() const;
 
     //Get the number of element to given dimension.
     //Note the field DECL_array_dim of array is only
@@ -770,7 +770,7 @@ public:
     ULONG getArrayElemnumToDim(UINT dim) const;
 
     //Get the number of elements in entire array.
-    ULONG get_array_elemnum() const
+    ULONG getArrayElemNum() const
     {
         UINT dn = getArrayDim();
         UINT en = 1;
@@ -781,7 +781,7 @@ public:
     }
 
     //Get the bytesize of array element.
-    ULONG get_array_elem_bytesize() const
+    ULONG getArrayElemByteSize() const
     {
         ASSERT0(is_array());
         ASSERT0(getTypeAttr());
@@ -793,20 +793,20 @@ public:
     UINT getArrayDim() const;
 
     //Get base type of POINTER.
-    Decl * get_pointer_base_decl(TypeAttr ** ty) const;
+    Decl * getPointerBaseDecl(TypeAttr ** ty) const;
 
-    Struct * get_struct_spec() const
+    Struct * getStructSpec() const
     {
         ASSERT0(is_struct());
         return (Struct*)getTypeAttr()->getAggrType();
 
     }
-    Union * get_union_spec() const
+    Union * getUnionSpec() const
     {
         ASSERT0(is_union());
         return (Union*)getTypeAttr()->getAggrType();
     }
-    Aggr * get_aggr_spec() const
+    Aggr * getAggrSpec() const
     {
         ASSERT0(is_aggr());
         return getTypeAttr()->getAggrType();
@@ -819,7 +819,7 @@ public:
     //      declaration
     //          |->declarator
     //                 |->a->[10]->*
-    Decl const* get_declarator() const;
+    Decl const* getDeclarator() const;
 
     //Get the function body scope.
     Scope * getFunBody() const { return DECL_fun_body(this); }
@@ -829,17 +829,17 @@ public:
     UINT getLineno() const { return DECL_lineno(this); }
 
     UINT id() const { return DECL_id(this); }
-    bool is_dt_array() const { return get_decl_type() == DCL_ARRAY; }
-    bool is_dt_pointer() const { return get_decl_type() == DCL_POINTER; }
-    bool is_dt_fun() const { return get_decl_type() == DCL_FUN; }
-    bool is_dt_id() const { return get_decl_type() == DCL_ID; }
-    bool is_dt_var() const { return get_decl_type() == DCL_VARIADIC; }
-    bool is_dt_typename() const { return get_decl_type() == DCL_TYPE_NAME; }
-    bool is_dt_declarator() const { return get_decl_type() == DCL_DECLARATOR; }
+    bool is_dt_array() const { return getDeclType() == DCL_ARRAY; }
+    bool is_dt_pointer() const { return getDeclType() == DCL_POINTER; }
+    bool is_dt_fun() const { return getDeclType() == DCL_FUN; }
+    bool is_dt_id() const { return getDeclType() == DCL_ID; }
+    bool is_dt_var() const { return getDeclType() == DCL_VARIADIC; }
+    bool is_dt_typename() const { return getDeclType() == DCL_TYPE_NAME; }
+    bool is_dt_declarator() const { return getDeclType() == DCL_DECLARATOR; }
     bool is_dt_declaration() const
-    { return get_decl_type() == DCL_DECLARATION; }
+    { return getDeclType() == DCL_DECLARATION; }
     bool is_dt_abs_declarator() const
-    { return get_decl_type() == DCL_ABS_DECLARATOR; }
+    { return getDeclType() == DCL_ABS_DECLARATOR; }
     bool is_equal(Decl const& src) const;
     bool is_extern() const { return getTypeAttr()->is_extern(); }
 
@@ -980,6 +980,7 @@ public:
     bool is_local_variable() const;
     bool is_global_variable() const;
     bool is_anony_aggr() const { return DECL_is_anony_aggr(this); }
+
     //Return true if current declaration/type-name indicates a reference of
     //function type, except function definition.
     bool isFunTypeRef() const
@@ -997,7 +998,7 @@ public:
     //base-pointee-type.
     bool regardAsPointer() const { return isPointer() || isFunTypeRef(); }
 
-    void set_decl_init_tree(Tree * initval);
+    void setDeclInitTree(Tree * initval);
 };
 
 //The function generate type-name, and convert it to pointer type.
@@ -1064,34 +1065,38 @@ bool findEnumVal(CHAR const* name, OUT Enum ** e, OUT INT * idx);
 bool isDeclExistInOuterScope(CHAR const* name, OUT Decl ** dcl);
 bool isAbsDeclaraotr(Decl const* declarator);
 bool isUniqueDecl(Decl const* decl_list, Decl const* decl);
-bool isUnionExistInOuterScope(Scope * scope, CHAR const* tag,
-                              bool is_complete, OUT Union ** s);
+bool isUnionExistInOuterScope(
+    Scope * scope, CHAR const* tag, bool is_complete, OUT Union ** s);
+
 //Return true if the union typed declaration have already existed in both
 //current and all of outer scopes.
-bool isUnionExistInOuterScope(Scope * scope, Sym const* tag,
-                              bool is_complete, OUT Union ** s);
-bool isStructTypeExistInCurScope(CHAR const* tag, bool is_complete,
-                                 OUT Struct ** s);
+bool isUnionExistInOuterScope(
+    Scope * scope, Sym const* tag, bool is_complete, OUT Union ** s);
+bool isStructTypeExistInCurScope(
+    CHAR const* tag, bool is_complete, OUT Struct ** s);
+
 //Return true if the struct typed declaration have already existed in both
 //current and all of outer scopes.
-bool isAggrExistInOuterScope(Scope * scope, Sym const* tag, bool is_complete,
-                             TypeAttr const* spec, OUT Aggr ** s);
-bool isAggrExistInOuterScope(Scope * scope, CHAR const* tag, bool is_complete,
-                             TypeAttr const* spec, OUT Aggr ** s);
-bool isStructExistInOuterScope(Scope * scope, Sym const* tag, bool is_complete,
-                               OUT Struct ** s);
-bool isStructExistInOuterScope(Scope * scope, CHAR const* tag, bool is_complete,
-                               OUT Struct ** s);
+bool isAggrExistInOuterScope(
+    Scope * scope, Sym const* tag, bool is_complete, TypeAttr const* spec,
+    OUT Aggr ** s);
+bool isAggrExistInOuterScope(
+    Scope * scope, CHAR const* tag, bool is_complete, TypeAttr const* spec,
+    OUT Aggr ** s);
+bool isStructExistInOuterScope(
+    Scope * scope, Sym const* tag, bool is_complete, OUT Struct ** s);
+bool isStructExistInOuterScope(
+    Scope * scope, CHAR const* tag, bool is_complete, OUT Struct ** s);
 bool isEnumTagExistInOuterScope(CHAR const* cl, OUT Enum ** e);
-
 bool isUserTypeExistInOuterScope(CHAR const* cl, OUT Decl ** ut);
+
 //Return true if enum-value existed in current scope.
-bool isUserTypeExist(UserTypeList const* ut_list, CHAR const* ut_name,
-                     Decl ** ut);
-bool isAggrTypeExist(List<Aggr*> const* aggrs, Sym const* tag,
-                     bool is_complete, OUT Aggr ** s);
-bool isAggrTypeExist(List<Aggr*> const* aggrs, CHAR const* tag,
-                     bool is_complete, OUT Aggr ** s);
+bool isUserTypeExist(
+    UserTypeList const* ut_list, CHAR const* ut_name, Decl ** ut);
+bool isAggrTypeExist(
+    List<Aggr*> const* aggrs, Sym const* tag, bool is_complete, OUT Aggr ** s);
+bool isAggrTypeExist(
+    List<Aggr*> const* aggrs, CHAR const* tag, bool is_complete, OUT Aggr ** s);
 bool inFirstSetOfDeclaration();
 
 //fun_dclor: record the declarator that indicates a parameter list.
@@ -1099,10 +1104,10 @@ Decl * get_parameter_list(Decl * dcl, OUT Decl ** fun_dclor = nullptr);
 Decl * get_decl_in_scope(CHAR const* name, Scope const* scope);
 INT get_enum_const_val(Enum const* e, INT idx);
 CHAR const* get_enum_const_name(Enum const* e, INT idx);
-bool get_aggr_field(TypeAttr const* ty, CHAR const* name, Decl ** fld_decl,
-                    UINT * fld_ofst);
-bool get_aggr_field(TypeAttr const* ty, INT idx, Decl ** fld_decl,
-                    UINT * fld_ofst);
+bool get_aggr_field(
+    TypeAttr const* ty, CHAR const* name, Decl ** fld_decl, UINT * fld_ofst);
+bool get_aggr_field(
+    TypeAttr const* ty, INT idx, Decl ** fld_decl, UINT * fld_ofst);
 
 //The function make up TYPE_NAME according to given DECLARATION.
 //The function just do copy if 'src' is TYPE_NAME, otherwise generate
@@ -1110,8 +1115,8 @@ bool get_aggr_field(TypeAttr const* ty, INT idx, Decl ** fld_decl,
 Decl * genTypeName(Decl const* src);
 Decl const* genTypeName(TypeAttr * ty);
 
-Decl * newDeclaration(TypeAttr * spec, Decl * declor, Scope * sc,
-                      Tree * inittree);
+Decl * newDeclaration(
+    TypeAttr * spec, Decl * declor, Scope * sc, Tree * inittree);
 Decl * newDecl(DCL dcl_type);
 Decl * newVarDecl(IN Scope * scope, CHAR const* name);
 TypeAttr * newTypeAttr();
@@ -1126,6 +1131,7 @@ Decl * type_name();
 extern INT g_alignment;
 extern UINT g_decl_count;
 extern UINT g_aggr_count;
+
 //The counter for anonymous name of aggregate.
 extern UINT g_aggr_anony_name_count;
 extern CHAR const* g_dcl_name[];

@@ -121,7 +121,7 @@ Tree * buildId(Decl const* decl)
     Tree * t = NEWTN(TR_ID);
     TREE_lineno(t) = decl->getLineno();
     TREE_token(t) = T_ID;
-    Sym const* sym = decl->get_decl_sym();
+    Sym const* sym = decl->getDeclSym();
     ASSERT0(sym);
     TREE_id_name(t) = sym;
     TREE_id_decl(t) = const_cast<Decl*>(decl);

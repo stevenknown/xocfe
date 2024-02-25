@@ -175,15 +175,24 @@ Decl * genTypeName(Decl const* src)
     //Generate type_name.
     Decl * type_name = newDecl(DCL_TYPE_NAME);
     DECL_spec(type_name) = dupSpec(DECL_spec(src));
-
-    Decl * decl_list_child = DECL_trait(src);
-    ASSERT0(decl_list_child && decl_list_child->is_dt_id());
-
-    Decl * decl_list = newDecl(DCL_ABS_DECLARATOR);
-    DECL_child(decl_list) = dupDeclBeginAt(DECL_next(decl_list_child));
-
-    DECL_decl_list(type_name) = decl_list;
-
+    Decl const* trait = src->getTraitList();
+    Decl * declor = newDecl(DCL_ABS_DECLARATOR);
+    if (trait != nullptr) {
+        ASSERTN(trait->is_dt_id(), ("leading DCL must be ID"));
+        DECL_child(declor) = dupDeclBeginAt(DECL_next(trait));
+    } else {
+        //Some declaration-type does not have any traits.
+        //e.g:void foo(unsigned int);
+        //  The parameter's type is:
+        //  DECLARATION(id:3) LOC:0
+        //    SPECIFIER: unsigned int
+        //    DECLARATOR(uid:4) //declarator's trait is NULL.
+        //e.g2:
+        //  TYPE_NAME(id:44) LOC:0
+        //    SPECIFIER: unsigned long long
+        //    ABS_DECLARATOR(uid : 45) //declarator's trait is NULL.
+    }
+    DECL_decl_list(type_name) = declor;
     return type_name;
 }
 
@@ -475,7 +484,7 @@ bool Decl::is_restrict() const
 {
     ASSERTN(is_dt_declaration(), ("needs declaration"));
     if (is_pointer()) {
-        Decl const* x = get_pointer_decl();
+        Decl const* x = getPointerDecl();
         ASSERT0(x);
         TypeAttr const* ty = DECL_qua(x);
         if (ty != nullptr && ty->is_restrict()) {
@@ -489,23 +498,23 @@ bool Decl::is_restrict() const
 //Pointer, array, struct, union are not scalar type.
 bool Decl::is_scalar() const
 {
-    ASSERTN(get_decl_type() == DCL_DECLARATION ||
-            get_decl_type() == DCL_TYPE_NAME, ("needs declaration"));
+    ASSERTN(getDeclType() == DCL_DECLARATION ||
+            getDeclType() == DCL_TYPE_NAME, ("needs declaration"));
     TypeAttr const* attr = getTypeAttr();
     if (!attr->isSimpleType()) { return false; }
 
     Decl const* dcl = getTraitList();
     if (dcl == nullptr) { return true; }
 
-    if (dcl->get_decl_type() == DCL_ID) {
+    if (dcl->getDeclType() == DCL_ID) {
         dcl = DECL_next(dcl);
     }
 
     if (dcl == nullptr) { return true; }
 
-    ASSERT0(dcl->get_decl_type() == DCL_POINTER ||
-            dcl->get_decl_type() == DCL_ARRAY ||
-            dcl->get_decl_type() == DCL_FUN);
+    ASSERT0(dcl->getDeclType() == DCL_POINTER ||
+            dcl->getDeclType() == DCL_ARRAY ||
+            dcl->getDeclType() == DCL_FUN);
     return false;
 }
 
@@ -551,7 +560,7 @@ bool Decl::is_initialized() const
 }
 
 
-Decl const* Decl::get_decl_id_tree() const
+Decl const* Decl::getDeclIdTree() const
 {
     Decl const* pdcl = getTraitList();
     while (pdcl != nullptr) {
@@ -564,7 +573,7 @@ Decl const* Decl::get_decl_id_tree() const
 }
 
 
-Decl const* Decl::get_return_type() const
+Decl const* Decl::getReturnType() const
 {
     ASSERT0(is_dt_declaration());
     Decl const* retty = genTypeName(getTypeAttr());
@@ -584,17 +593,17 @@ Decl const* Decl::get_return_type() const
 }
 
 
-CHAR const* Decl::get_decl_name() const
+CHAR const* Decl::getDeclName() const
 {
-    Sym const* sym = get_decl_sym();
+    Sym const* sym = getDeclSym();
     if (sym == nullptr) { return nullptr; }
     return sym->getStr();
 }
 
 
-Sym const* Decl::get_decl_sym() const
+Sym const* Decl::getDeclSym() const
 {
-    Decl const* dcl = get_decl_id_tree();
+    Decl const* dcl = getDeclIdTree();
     if (dcl != nullptr) {
         return TREE_id_name(DECL_id_tree(dcl));
     }
@@ -602,7 +611,7 @@ Sym const* Decl::get_decl_sym() const
 }
 
 
-void Decl::set_decl_init_tree(Tree * initval)
+void Decl::setDeclInitTree(Tree * initval)
 {
     ASSERT0(is_dt_declaration());
     Decl * dclor = DECL_decl_list(this); //get DCRLARATOR
@@ -617,7 +626,7 @@ void Decl::set_decl_init_tree(Tree * initval)
 }
 
 
-Tree * Decl::get_decl_init_tree() const
+Tree * Decl::getDeclInitTree() const
 {
     ASSERT0(is_initialized());
     Decl const* dcl = this;
@@ -639,7 +648,7 @@ bool Decl::is_decl_equal(Decl const* d1, Decl const* d2)
     Scope const* s1 = DECL_decl_scope(d1);
     Scope const* s2 = DECL_decl_scope(d2);
     if (s1 == s2) {
-        if (d1->get_decl_sym() == d2->get_decl_sym()) {
+        if (d1->getDeclSym() == d2->getDeclSym()) {
             return true;
         }
     }
@@ -743,7 +752,7 @@ UINT Decl::getArrayDim() const
 //     dim 0 indicates ARRAY[8], the highest dimension of 'arr'.
 ULONG Decl::getArrayElemnumToDim(UINT dim) const
 {
-    Decl const* dcl = const_cast<Decl*>(this)->get_first_array_decl();
+    Decl const* dcl = const_cast<Decl*>(this)->getFirstArrayDecl();
     ASSERT0(dcl);
     UINT i = 0;
     while (i < dim && dcl != nullptr) {
@@ -753,7 +762,6 @@ ULONG Decl::getArrayElemnumToDim(UINT dim) const
         dcl = DECL_next(dcl);
         i++;
     }
-
     if (dcl == nullptr || DECL_dt(dcl) != DCL_ARRAY) {
         return 0;
     }
@@ -790,7 +798,7 @@ bool Decl::is_bitfield() const
 {
     ASSERTN(is_dt_typename() || is_dt_declaration(),
             ("need TypeAttr-NAME or DCRLARATION"));
-    Decl const* dcl = get_declarator();
+    Decl const* dcl = getDeclarator();
     return dcl != nullptr && DECL_is_bit_field(dcl);
 }
 
@@ -846,7 +854,7 @@ bool Decl::is_array() const
 //    must be DCL_POINTER, the first is DCL_ID 'a'.
 //    And simplar for abs-decl, as an example 'int *', the first decltor
 //    in the type-chain must be DCL_POINTER.
-Decl const* Decl::get_pointer_declarator() const
+Decl const* Decl::getPointerDeclarator() const
 {
     Decl const* dcl = getTraitList();
     while (dcl != nullptr) {
@@ -915,7 +923,7 @@ ULONG Decl::getComplexTypeSize() const
 
 //Compute the byte size of declaration.
 //This function will compute array size.
-UINT Decl::get_decl_size() const
+UINT Decl::getDeclByteSize() const
 {
     TypeAttr const* spec = getTypeAttr();
     if (is_dt_declaration() || is_dt_typename()) {
@@ -932,7 +940,7 @@ UINT Decl::get_decl_size() const
 }
 
 
-Decl * Decl::get_array_elem_decl() const
+Decl * Decl::getArrayElemDecl() const
 {
     ASSERT0(is_array());
     //Return sub-dimension of base if 'decl' is
@@ -959,7 +967,7 @@ Decl * Decl::get_array_elem_decl() const
 //the funtion constructs return the base type by striping all dimensions.
 //e.g: given int arr[10][20];
 //     the function construct and return decl: 'int'.
-Decl * Decl::get_array_base_decl() const
+Decl * Decl::getArrayBaseDecl() const
 {
     ASSERT0(is_array());
     Decl * newdecl = dupDeclFully(this);
@@ -970,7 +978,7 @@ Decl * Decl::get_array_base_decl() const
     //e.g: If trait list is: ID->ARRAY0->ARRAY1->POINTER->ARRAY2->ARRAY3.
     //  We elide ARRAY0->ARRAY1, the returned declator will be:
     //  ID->POINTER->ARRAY2->ARRAY3.
-    Decl * dclor = newdecl->get_first_array_decl();
+    Decl * dclor = newdecl->getFirstArrayDecl();
     Decl * next = nullptr;
     while (dclor != nullptr && dclor->is_dt_array()) {
         next = DECL_next(dclor);
@@ -982,7 +990,7 @@ Decl * Decl::get_array_base_decl() const
 }
 
 
-Decl * Decl::get_first_array_decl() const
+Decl * Decl::getFirstArrayDecl() const
 {
     ASSERTN(is_dt_typename() || is_dt_declaration(),
             ("expect DCRLARATION"));
@@ -1012,7 +1020,7 @@ Decl * Decl::get_first_array_decl() const
 }
 
 
-Decl const* Decl::get_return_value_decl() const
+Decl const* Decl::getReturnValueDecl() const
 {
     ASSERTN(is_dt_typename() || is_dt_declaration(),
             ("expect DCRLARATION"));
@@ -1041,7 +1049,7 @@ Decl const* Decl::get_return_value_decl() const
 }
 
 
-Decl const* Decl::get_pointer_decl() const
+Decl const* Decl::getPointerDecl() const
 {
     ASSERTN(is_dt_typename() || is_dt_declaration(),
             ("expect DCRLARATION"));
@@ -1079,7 +1087,7 @@ Decl const* Decl::get_pointer_decl() const
 
 
 //Get base type of POINTER.
-Decl * Decl::get_pointer_base_decl(TypeAttr ** ty) const
+Decl * Decl::getPointerBaseDecl(TypeAttr ** ty) const
 {
     ASSERTN(is_dt_typename() || is_dt_declaration(),
             ("expect DCRLARATION"));
@@ -1106,15 +1114,15 @@ Decl * Decl::get_pointer_base_decl(TypeAttr ** ty) const
     }
 
     ASSERT0(is_fun_return_pointer());
-    Decl const* d = get_return_value_decl();
-    ASSERT0(d->get_decl_type() == DCL_POINTER);
+    Decl const* d = getReturnValueDecl();
+    ASSERT0(d->getDeclType() == DCL_POINTER);
     return DECL_next(d); //get Decl that is the heel of '*'
 }
 
 
 //Compute byte size of pointer base declarator.
 //e.g: Given 'int *(*p)[3]', the pointer-base is 'int * [3]'.
-UINT Decl::get_pointer_base_size() const
+UINT Decl::getPointerBaseSize() const
 {
     ASSERT0(is_dt_declaration() || is_dt_typename());
     if (isFunTypeRef()) {
@@ -1123,7 +1131,7 @@ UINT Decl::get_pointer_base_size() const
     }
 
     TypeAttr * ty = nullptr;
-    Decl * d = get_pointer_base_decl(&ty);
+    Decl * d = getPointerBaseDecl(&ty);
     if (d == nullptr) {
         if (ty == nullptr) { return 0; }
 
@@ -1176,7 +1184,7 @@ bool Decl::is_fun_return_void() const
 {
     if (!is_fun_decl() && !is_fun_pointer()) { return false; }
     if (getTypeAttr()->is_void() &&
-        get_return_value_decl() == nullptr) {
+        getReturnValueDecl() == nullptr) {
         return true;
     }
     return false;
@@ -1187,8 +1195,8 @@ bool Decl::is_fun_return_void() const
 bool Decl::is_fun_return_pointer() const
 {
     if (!is_fun_decl() && !is_fun_pointer()) { return false; }
-    Decl const* d = get_return_value_decl();
-    if (d != nullptr && d->get_decl_type() == DCL_POINTER) {
+    Decl const* d = getReturnValueDecl();
+    if (d != nullptr && d->getDeclType() == DCL_POINTER) {
         return true;
     }
     return false;
@@ -1281,7 +1289,7 @@ bool Decl::is_fun_pointer() const
 bool Decl::isPointerPointToArray() const
 {
     if (!is_pointer()) { return false; }
-    Decl const* base_decl = get_pointer_base_decl(nullptr);
+    Decl const* base_decl = getPointerBaseDecl(nullptr);
     return base_decl != nullptr && base_decl->is_array();
 }
 
@@ -1358,7 +1366,7 @@ Decl const* Decl::getArrayBaseDeclarator() const
 //      declaration
 //          |->declarator
 //                 |->a->[10]->*
-Decl const* Decl::get_declarator() const
+Decl const* Decl::getDeclarator() const
 {
     Decl const* decl = this;
     switch (DECL_dt(decl)) {
@@ -1509,7 +1517,7 @@ bool isAbsDeclaraotr(Decl const* declarator)
     declarator = declarator->getTraitList();
     if (declarator == nullptr) { return true; }
 
-    Sym const* id = declarator->get_decl_sym();
+    Sym const* id = declarator->getDeclSym();
     if (id == nullptr) { return true; }
 
     return false;
@@ -1577,7 +1585,7 @@ bool isDeclExistInOuterScope(CHAR const* name, OUT Decl ** dcl)
              dcl_list != nullptr;) {//declaration list
             Decl * dr = dcl_list;
             dcl_list = DECL_next(dcl_list);
-            Sym const* sym = dr->get_decl_sym();
+            Sym const* sym = dr->getDeclSym();
             if (sym == nullptr) {
                 continue;
             }
@@ -1613,7 +1621,7 @@ Decl * get_decl_in_scope(CHAR const* name, Scope const* scope)
     while (dcl_list != nullptr) { //declaration list
         Decl * dr = dcl_list;
         dcl_list = DECL_next(dcl_list);
-        Sym const* sym = dr->get_decl_sym();
+        Sym const* sym = dr->getDeclSym();
         if (sym == nullptr) { continue; }
         if (::strcmp(sym->getStr(), name) == 0) {
             return dr;
@@ -3024,7 +3032,7 @@ static Decl * aggr_declarator(TypeAttr const* ts, TypeAttr * qua)
         //Prase bit field in aggregate.
         Tree * t = nullptr;
         if (is_indirection(dclr)) {
-            Sym const* s = dclr->get_decl_sym();
+            Sym const* s = dclr->getDeclSym();
             ASSERTN(s != nullptr, ("member name cannot be nullptr"));
             err(g_real_line_num,
                 "'%s' : pointer type cannot assign bit length", s->getStr());
@@ -3163,7 +3171,7 @@ static bool process_initializer(Decl * declaration, TypeAttr * qua)
     if (g_real_token != T_ASSIGN) { return true; }
 
     ASSERT0(declaration);
-    Decl * declarator = declaration->getDeclarator();
+    Decl * declarator = declaration->getPureDeclaratorList();
 
     CParser::match(T_ASSIGN);
     DECL_init_tree(declarator) = initializer(qua);
@@ -3266,7 +3274,7 @@ static bool process_declaration(OUT Decl * declaration)
         //Variable definition/declaration.
         if (!isUniqueDecl(g_cur_scope->getDeclList(), declaration)) {
             err(g_real_line_num, "'%s' already defined",
-                declaration->get_decl_sym()->getStr());
+                declaration->getDeclSym()->getStr());
             return false;
         }
 
@@ -3328,7 +3336,7 @@ static bool post_process_of_initializer(TypeAttr * attr,
             fixExternArraySize(declaration);
 
             //This function also do check in addition to compute array size.
-            declaration->get_decl_size();
+            declaration->getDeclByteSize();
         }
     }
 
@@ -3371,7 +3379,7 @@ static bool init_declarator_list(TypeAttr * ts, TypeAttr * qua,
         ASSERT0(declaration);
         process_initializer(declaration, qua);
 
-        Decl * dclor = declaration->getDeclarator();
+        Decl * dclor = declaration->getPureDeclaratorList();
         ASSERTN(dclor, ("declaration misses declarator"));
         if (dclor->getTraitList() == nullptr) {
             err(g_real_line_num, "declaration expected identifier");
@@ -3587,7 +3595,7 @@ static void fixParamArrayIndex(Decl * decl)
     ASSERT0(decl->is_formal_param());
     ASSERT0(decl->is_pointer());
     TypeAttr * ty = nullptr;
-    Decl * d = decl->get_pointer_base_decl(&ty);
+    Decl * d = decl->getPointerBaseDecl(&ty);
     if (d == nullptr || d->is_dt_pointer()) { return; }
 
     if (d->is_dt_array() && DECL_array_dim(d) == 0) {
@@ -3963,7 +3971,7 @@ bool isUserTypeExist(UserTypeList const* ut_list, CHAR const* ut_name,
     for (UserTypeList const* utl = ut_list; utl != nullptr;
          utl = USER_TYPE_LIST_next(utl)) {
         Decl * dcl = USER_TYPE_LIST_utype(utl);
-        if (::strcmp(dcl->get_decl_sym()->getStr(), ut_name) == 0) {
+        if (::strcmp(dcl->getDeclSym()->getStr(), ut_name) == 0) {
             *decl = dcl;
             return true;
         }
@@ -4140,7 +4148,7 @@ static UINT computeBitFieldByteSize(Decl const** dcl)
         TypeAttr * ty2 = DECL_spec(*dcl);
         ASSERT0(ty2);
 
-        Decl const* declarator = (*dcl)->get_declarator();
+        Decl const* declarator = (*dcl)->getDeclarator();
         ASSERT0(declarator);
 
         if (!DECL_is_bit_field(declarator)) {
@@ -4186,27 +4194,25 @@ UINT Aggr::computeAlignedSize(UINT size, UINT max_field_size) const
 }
 
 
-static UINT compute_field_ofst(Aggr const* s, UINT ofst,
-                               Decl const* dcl, UINT field_align,
-                               UINT * elem_bytesize)
+static UINT compute_field_ofst(
+    Aggr const* s, UINT ofst, Decl const* dcl, UINT field_align,
+    UINT * elem_bytesize)
 {
     if (dcl->is_array()) {
-        Decl const* elem_dcl = dcl->get_array_base_decl();
-        *elem_bytesize = elem_dcl->get_decl_size();
-        UINT elem_num = dcl->get_array_elemnum();
+        Decl const* elem_dcl = dcl->getArrayBaseDecl();
+        *elem_bytesize = elem_dcl->getDeclByteSize();
+        UINT elem_num = dcl->getArrayElemNum();
         if (elem_num != 0) {
             //C-language allows the highest dimension of array to be zero.
             //e.g:struct { int a; char cc[]; };
-            ofst = compute_field_ofst_consider_pad(s, ofst, *elem_bytesize,
-                                                   elem_num,
-                                                   AGGR_field_align(s));
+            ofst = compute_field_ofst_consider_pad(
+                s, ofst, *elem_bytesize, elem_num, AGGR_field_align(s));
         }
         return ofst;
     }
-
-    *elem_bytesize = dcl->get_decl_size();
-    ofst = compute_field_ofst_consider_pad(s, ofst, *elem_bytesize,
-                                           1, AGGR_field_align(s));
+    *elem_bytesize = dcl->getDeclByteSize();
+    ofst = compute_field_ofst_consider_pad(
+        s, ofst, *elem_bytesize, 1, AGGR_field_align(s));
     return ofst;
 }
 
@@ -4249,7 +4255,7 @@ UINT TypeAttr::computeUnionTypeSize(Aggr const* s)
     UINT size = 0;
     for (Decl const* dcl = s->getDeclList();
          dcl != nullptr; dcl = DECL_next(dcl)) {
-        size = MAX(size, dcl->get_decl_size());
+        size = MAX(size, dcl->getDeclByteSize());
     }
     return s->computeAlignedSize(size, size);
 }
@@ -4996,7 +5002,7 @@ Decl * convertToPointerTypeName(Decl const* decl)
 {
     ASSERT0(decl);
     Decl * tn = dupTypeName(decl);
-    Decl * declor = tn->getDeclarator();
+    Decl * declor = tn->getPureDeclaratorList();
     if (declor->is_dt_abs_declarator()) {
         ASSERTN(tn->getTraitList() == nullptr ||
                 !tn->getTraitList()->is_dt_id(), ("invalid abs-declarator"));
@@ -5042,7 +5048,7 @@ bool get_aggr_field(TypeAttr const* ty, CHAR const* name, Decl ** fld_decl,
     UINT ofst = 0;
     for (Decl * dcl = s->getDeclList(); dcl != nullptr;
          dcl = DECL_next(dcl)) {
-        Sym const* sym = dcl->get_decl_sym();
+        Sym const* sym = dcl->getDeclSym();
         if (::strcmp(name, sym->getStr()) == 0) {
             if (fld_decl != nullptr) {
                 *fld_decl = dcl;
@@ -5156,7 +5162,7 @@ static bool checkAggrComplete(Decl * decl)
 
     //Error occurred.
     StrBuf buf(64);
-    Sym const* sym = decl->get_decl_sym();
+    Sym const* sym = decl->getDeclSym();
     if (sym != nullptr) {
         format_aggr_complete(buf, attr->getPureTypeAttr());
         err(g_real_line_num, "'%s' uses incomplete defined %s : %s",
@@ -5195,7 +5201,7 @@ static bool parse_function_definition(Decl * declaration)
         if (Decl::is_decl_equal(dcl, declaration) && declaration != dcl
             && DECL_is_fun_def(dcl)) {
             err(g_real_line_num, "function '%s' already defined",
-                dcl->get_decl_sym()->getStr());
+                dcl->getDeclSym()->getStr());
             return false;
         }
         dcl = DECL_next(dcl);
@@ -5315,7 +5321,7 @@ Decl * makeupAndExpandUserType(Decl const* ut)
 
     Tree * inittree = nullptr;
     if (ut->is_dt_declaration() && ut->is_initialized()) {
-        inittree = ut->get_decl_init_tree();
+        inittree = ut->getDeclInitTree();
     }
     Decl * cur_declor = const_cast<Decl*>(ut->getTraitList());
     if (cur_declor == nullptr) {

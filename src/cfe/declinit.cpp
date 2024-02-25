@@ -43,7 +43,7 @@ static INT processArrayInitRecur(Decl const* dcl, Tree * initval, UINT curdim,
                                  OUT Tree ** stmts)
 {
     if (initval->getCode() == TR_INITVAL_SCOPE) {
-        Decl const* dummy_elemdcl = dcl->get_array_elem_decl();
+        Decl const* dummy_elemdcl = dcl->getArrayElemDecl();
         if (dummy_elemdcl->is_aggr()) {
             Tree * inittree = nullptr;
             //If element of array is Aggregate type.
@@ -158,10 +158,10 @@ static Tree * canonArrayInitVal(Decl const* dcl, Tree * initval)
 static INT processArrayInit(Decl * dcl, OUT Tree ** stmts)
 {
     ASSERT0(dcl->is_array());
-    Tree * initval = dcl->get_decl_init_tree();
+    Tree * initval = dcl->getDeclInitTree();
     Tree * new_initval = canonArrayInitVal(dcl, initval);
     if (new_initval != initval) {
-        dcl->set_decl_init_tree(new_initval);
+        dcl->setDeclInitTree(new_initval);
     }
     return processArrayInit(dcl, new_initval, stmts);
 }
@@ -231,7 +231,7 @@ static INT processAggrInitRecurByIterFieldDecl(
     //  struct M m = {1,2,3};
     //  The more regular syntax is:
     //  struct M m = {1,{2,3}};
-    Aggr const* fldaggr = flddecl->get_aggr_spec();
+    Aggr const* fldaggr = flddecl->getAggrSpec();
     ASSERT0(fldaggr);
     UINT pos_in_curdim = 0;
     for (Decl * flddecl_of_fld = fldaggr->getDeclList();
@@ -408,7 +408,7 @@ static INT processAggrInit(Decl const* dcl, Tree * initval,
 static INT processAggrInit(Decl const* dcl, OUT Tree ** stmts)
 {
     ASSERT0(dcl->is_aggr());
-    Tree * initval = dcl->get_decl_init_tree();
+    Tree * initval = dcl->getDeclInitTree();
     return processAggrInit(dcl, initval, stmts);
 }
 
@@ -417,7 +417,7 @@ static INT processAggrInit(Decl const* dcl, OUT Tree ** stmts)
 //genereted stmt after placeholder.
 static INT processScalarInit(Decl const* dcl, OUT Tree ** stmts)
 {
-    Tree * initval = dcl->get_decl_init_tree();
+    Tree * initval = dcl->getDeclInitTree();
     Tree * assign = buildAssign(dcl, initval);
     TREE_lineno(assign) = initval->getLineno();
     if (stmts != nullptr) {
