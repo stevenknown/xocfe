@@ -970,13 +970,23 @@ static INT TypeTranCond(Tree * t, TYCtx * cont)
     if (ST_SUCC != TypeTranList(TREE_det(t), cont)) { return ST_ERR; }
     if (ST_SUCC != TypeTranList(TREE_true_part(t), cont)) { return ST_ERR; }
     if (ST_SUCC != TypeTranList(TREE_false_part(t), cont)) { return ST_ERR; }
-
     Decl * td = xcom::get_last(TREE_true_part(t))->getResultType();
     Decl * fd = xcom::get_last(TREE_false_part(t))->getResultType();
     ASSERT0(td && fd);
+    Tree const* truepart = TREE_true_part(t);
+    Tree const* falsepart = TREE_false_part(t);
     if (td->is_pointer() && !fd->is_pointer()) {
-        if (!TREE_false_part(t)->is_imm_int() ||
-            TREE_imm_val(TREE_false_part(t)) != 0) {
+        if (falsepart->is_imm_int() && TREE_imm_val(falsepart) == 0) {
+            //This is valid case:0 can be treated as NULL pointer.
+            //CASE: compare a pointer to 0.
+            ;
+        } else if (fd->isCharArray()) {
+            //This is valid case:char array can be treated as a pointer that
+            //point to a string.
+            //CASE: compare a pointer to a char-array, and leave the type
+            //checking to type-check pass.
+            ;
+        } else {
             err(t->getLineno(),
                 "no conversion from pointer to non-pointer");
             return ST_ERR;

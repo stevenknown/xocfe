@@ -1617,13 +1617,13 @@ Tree * CParser::conditional_exp()
         Tree::setParent(p,t);
         t = p;
 
-        TREE_true_part(t) = exp_list();
+        TREE_true_part(t) = exp();
         Tree::setParent(t,TREE_true_part(t));
         if (CParser::match(T_COLON) != ST_SUCC) {
             err(g_real_line_num, "condition expression is incomplete");
             goto FAILED;
         }
-        TREE_false_part(t) = exp_list();
+        TREE_false_part(t) = exp();
         Tree::setParent(t,TREE_false_part(t));
     }
     return t;

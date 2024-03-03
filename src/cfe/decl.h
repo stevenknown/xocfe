@@ -916,7 +916,14 @@ public:
         ASSERTN(DECL_dt(this) == DCL_TYPE_NAME ||
                 DECL_dt(this) == DCL_DECLARATION,
                ("expect type-name or dcrlaration"));
-        return getTypeAttr()->is_bool();
+        return is_scalar() && getTypeAttr()->is_bool();
+    }
+    bool is_char() const
+    {
+        ASSERTN(DECL_dt(this) == DCL_TYPE_NAME ||
+                DECL_dt(this) == DCL_DECLARATION,
+               ("expect type-name or dcrlaration"));
+        return is_scalar() && getTypeAttr()->is_char();
     }
 
     //Return true if current decl declared with 'restrict'.
@@ -963,6 +970,12 @@ public:
                ("expect type-name or dcrlaration"));
         return is_scalar() && getTypeAttr()->is_integer();
     }
+
+    //Return true if declaration|typename is a char-array.
+    //e.g: char x[10]; x is a char-array.
+    //     'abcd' is a char-array.
+    bool isCharArray() const
+    { return is_array() && getTypeAttr()->is_char(); }
 
     //What is 'complex type'? Non-pointer and non-array type.
     //e.g: int * a;

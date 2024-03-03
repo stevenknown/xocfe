@@ -28,7 +28,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 author: Su Zhenyu
 @*/
-//Defined the entry for extened ir code.
+//Defined the entry for extended ir code.
 //In order to conform the compatibility of origin IR code, user can undef
 //original SWITCH_CASE_<NAME>, then redefine the same MACRO with new IR code
 //and followed by origin IR code.

@@ -49,33 +49,34 @@ Tree * TreeCanon::handleAssign(Tree * t, TreeCanonCtx * ctx)
 Tree * TreeCanon::handleString(Tree * t, TreeCanonCtx * ctx)
 {
     ASSERT0(t->getCode() == TR_STRING);
-    if (t->parent()->getCode() == TR_ARRAY) {
-        //e.g: ... = "abcd"[3];
-        Decl * ty = t->getResultType();
-        ASSERT0(ty);
-        if (t == TREE_array_base(t->parent()) && ty->is_array()) {
-            //In C language, string can be accessed via array operator.
-            //The reference of the string should be represented as LDA.
-            //e.g: ... = "abcd"[3];
-            //     ... = ARRAY(STR(abcd)) will be transfomed to :
-            //     ... = ARRAY(LDA(STR(abcd)))
-            Tree * tparent = t->parent();
-            Tree * newt = buildLda(t);
-
-            //Do NOT call TypeTran() to compute the result-type of newt, because
-            //TreeCanon will insert LDA prior to original tree node, which will
-            //confuse the TypeTran() and generate the wrong result-type.
-            TREE_result_type(newt) = convertToPointerTypeName(
-                t->getResultType());
-
-            Tree::setParent(tparent, newt);
-            TCC_change(ctx) = true;
-            return newt;
-        }
-
-        //t may be array subscript exp.
+    if (t->parent() == nullptr || t->parent()->getCode() != TR_ARRAY) {
         return t;
     }
+
+    //e.g: ... = "abcd"[3];
+    Decl * ty = t->getResultType();
+    ASSERT0(ty);
+    if (t == TREE_array_base(t->parent()) && ty->is_array()) {
+        //In C language, string can be accessed via array operator.
+        //The reference of the string should be represented as LDA.
+        //e.g: ... = "abcd"[3];
+        //     ... = ARRAY(STR(abcd)) will be transfomed to :
+        //     ... = ARRAY(LDA(STR(abcd)))
+        Tree * tparent = t->parent();
+        Tree * newt = buildLda(t);
+
+        //Do NOT call TypeTran() to compute the result-type of newt, because
+        //TreeCanon will insert LDA prior to original tree node, which will
+        //confuse the TypeTran() and generate the wrong result-type.
+        TREE_result_type(newt) = convertToPointerTypeName(
+            t->getResultType());
+
+        Tree::setParent(tparent, newt);
+        TCC_change(ctx) = true;
+        return newt;
+    }
+
+    //t may be array subscript exp.
     return t;
 }
 
