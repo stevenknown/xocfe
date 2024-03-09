@@ -324,12 +324,7 @@ public:
 
     //Return true if 'qua' is suffice for constrains of language.
     bool isValidSpecifier() const
-    {
-        if (!isSimpleType() && !is_aggr() && !is_user_type_ref()) {
-            return false;
-        }
-        return true;
-    }
+    { return isSimpleType() || is_aggr() || is_user_type_ref(); }
 
     //Return true if aggregation definition is complete.
     bool isAggrComplete() const;
@@ -952,7 +947,7 @@ public:
         return is_scalar() && getTypeAttr()->is_float();
     }
 
-    //Is double decision float-point.
+    //Return true if it is double decision float-point.
     bool is_double() const
     {
         ASSERTN(DECL_dt(this) == DCL_TYPE_NAME ||
@@ -961,8 +956,7 @@ public:
         return is_scalar() && getTypeAttr()->is_double();
     }
 
-
-    //Is integer type.
+    //Return true if it is scalar integer type.
     bool is_integer() const
     {
         ASSERTN(DECL_dt(this) == DCL_TYPE_NAME ||
@@ -970,6 +964,15 @@ public:
                ("expect type-name or dcrlaration"));
         return is_scalar() && getTypeAttr()->is_integer();
     }
+
+    //Return if current declaration is aggregate and is complete defined.
+    bool isAggrComplete() const
+    { return is_aggr() && getTypeAttr()->isAggrComplete(); }
+
+    //Return if current declaration is aggregate but is NOT complete defined.
+    //The incomplete aggregate type is usually used in forward-declaration.
+    bool isAggrInComplete() const
+    { return is_aggr() && !getTypeAttr()->isAggrComplete(); }
 
     //Return true if declaration|typename is a char-array.
     //e.g: char x[10]; x is a char-array.

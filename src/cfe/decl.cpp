@@ -1602,15 +1602,45 @@ bool isDeclExistInOuterScope(CHAR const* name, OUT Decl ** dcl)
 //Return true if 'decl' is unique at a list of Decl.
 bool isUniqueDecl(Decl const* decl_list, Decl const* decl)
 {
-    Decl const* dcl = decl_list;
-    while (dcl != nullptr) {
-        if (Decl::is_decl_equal(dcl, decl) && dcl != decl) {
-            return false;
+    for (Decl const* dcl = decl_list; dcl != nullptr; dcl = DECL_next(dcl)) {
+        if (dcl == decl) { continue; }
+        if (!Decl::is_decl_equal(dcl, decl)) { continue; }
+        if (dcl->isAggrInComplete()) {
+            //Forward Declaration should be skipped at the comparison.
+            //e.g:typedef struct _A A; #S1
+            //    typedef struct _A A; #S2
+            //The A in #S1 is not conflict/redefine to the A in #S2.
+            //Because the struct _A is incomplete.
+            continue;
         }
-        dcl = DECL_next(dcl);
+        if (dcl->is_extern()) {
+            //Declaration with 'extern' is used to tell compiler that the
+            //symbol is declared at other files, and this declaration is
+            //not the real definition of variable.
+            continue;
+        }
     }
     return true;
 }
+
+
+
+////Return true if 'decl' is unique at a list of Decl.
+//bool isUniqueDecl(Decl const* decl_list, Decl const* decl)
+//{
+//    Decl const* dcl = decl_list;
+//    while (dcl != nullptr) {
+//        if (!dcl->is_extern() && Decl::is_decl_equal(dcl, decl) &&
+//            dcl != decl) {
+//            //Declaration with 'extern' is used to tell compiler that the
+//            //symbol is declared at other files, and this declaration is
+//            //not the real definition of variable.
+//            return false;
+//        }
+//        dcl = DECL_next(dcl);
+//    }
+//    return true;
+//}
 
 
 Decl * get_decl_in_scope(CHAR const* name, Scope const* scope)
@@ -1816,7 +1846,9 @@ static Decl * aggr_declaration()
     TypeAttr * attr = specifier_qualifier_list();
     if (attr == nullptr) {
         err(g_real_line_num,
-            "miss qualifier, illegal member declaration of aggregation");
+            "'%s' is not valid qualifier, "
+            "illegal member declaration of aggregation",
+            g_real_token_string);
         consume_tok_to_semi();
         return nullptr;
     }
@@ -1849,8 +1881,8 @@ static Decl * aggr_declaration()
 
         if (declaration->is_user_type_decl()) {
             err(g_real_line_num,
-                "illegal storage class, should not use typedef in "
-                "struct/union declaration.");
+                "'%s' is illegal storage class, should not use typedef in "
+                "struct/union declaration.", g_real_token_string);
             continue;
         }
 
@@ -2448,7 +2480,7 @@ static TypeAttr * parseAggrType(TypeAttr * ty, bool * parse_finish,
 
 //parse_finish: record the result of the parsing. Set to true if the parsing
 //              of type-specifier should finish when the function return.
-static TypeAttr * parseSpecifierOrId(TypeAttr * ty, bool * parse_finish)
+static TypeAttr * parseUserDefinedSpecifier(TypeAttr * ty, bool * parse_finish)
 {
     Decl * ut = nullptr;
     if (isUserTypeExistInOuterScope(g_real_token_string, &ut)) {
@@ -2632,8 +2664,21 @@ static TypeAttr * declaration_spec()
             ty = qualifier(ty);
             break;
         case T_ID: {
+            if (ty != nullptr && ty->isValidSpecifier()) {
+                //Current token is ID, that means, it might be user defined
+                //type. However, if ty is already a valid Specifier. There
+                //is no need to parse and check whether ID is specifier.
+                //Treat current token as an ID.
+                //e.g:struct stat {}; #S1
+                //    int stat(const char * path); #S2
+                //  #S1 stat has been defined as a struct.
+                //  In #S2, 'stat' appeared in type-specifier, and current
+                //  type-specifier is 'int', thus we do not treat 'stat' as
+                //  part of specifier.
+                return ty;
+            }
             bool parse_finish = false;
-            ty = parseSpecifierOrId(ty, &parse_finish);
+            ty = parseUserDefinedSpecifier(ty, &parse_finish);
             if (parse_finish) { return ty; }
             break;
         }

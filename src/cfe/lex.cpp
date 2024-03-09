@@ -617,6 +617,17 @@ static TOKEN t_num()
         t = T_IMM;
         goto SUFFIX;
     }
+    if (g_cur_char == '0' && (xcom::upper(c) == 'B')) {
+        //binary
+        g_cur_token_string[g_cur_token_string_pos++] = c;
+        while (xisdigitbin(c = getNextChar())) {
+            g_cur_token_string[g_cur_token_string_pos++] = c;
+        }
+        g_cur_token_string[g_cur_token_string_pos] = 0;
+        g_cur_char = c;
+        t = T_IMM;
+        goto SUFFIX;
+    }
 
     if (xisdigit(c) || c == '.') {
         //'c' is decimal.

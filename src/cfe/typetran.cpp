@@ -1614,11 +1614,13 @@ INT TypeTran(Tree * t, TYCtx * cont)
     case TR_INITVAL_SCOPE:
         if (ST_SUCC != TypeTranInitValScope(t, cont)) { goto FAILED; }
         break;
-    case TR_SCOPE:
-        if (ST_SUCC != TypeTranScope(TREE_scope(t), nullptr)) {
+    case TR_SCOPE: {
+        TYCtx tc;
+        if (ST_SUCC != TypeTranScope(TREE_scope(t), &tc)) {
             goto FAILED;
         }
         break;
+    }
     case TR_IF:
         if (ST_SUCC != TypeTranList(TREE_if_det(t), cont)) { goto FAILED; }
         if (ST_SUCC != TypeTranList(TREE_if_true_stmt(t), cont)) {
