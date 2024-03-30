@@ -790,6 +790,15 @@ public:
     //Get base type of POINTER.
     Decl * getPointerBaseDecl(TypeAttr ** ty) const;
 
+    //Record qualification of DCL.
+    //If current 'decl' is DCL_POINTER or DCL_ID, the
+    //followed member record its quanlifier specicfier.
+    //qualifier include const, volatile, restrict.
+    TypeAttr * getQua() const
+    {
+        ASSERT0(is_dt_pointer() || is_dt_id());
+        return DECL_qua(this);
+    }
     Struct * getStructSpec() const
     {
         ASSERT0(is_struct());
@@ -806,7 +815,11 @@ public:
         ASSERT0(is_aggr());
         return getTypeAttr()->getAggrType();
     }
-    TypeAttr * getTypeAttr() const { return DECL_spec(this); }
+    TypeAttr * getTypeAttr() const
+    {
+        ASSERT0(is_dt_declaration() || is_dt_typename());
+        return DECL_spec(this);
+    }
 
     //Pick out the declarator.
     //e.g:int * a [10];
@@ -867,20 +880,10 @@ public:
     }
 
     //Return true if current decl declared with 'const'.
-    bool is_constant() const
-    {
-        ASSERTN(DECL_dt(this) == DCL_DECLARATION, ("requires declaration"));
-        ASSERT0(getTypeAttr());
-        return getTypeAttr()->is_const();
-    }
+    bool is_constant() const;
 
-    //Return true if current decl declared with 'volatile'.
-    bool is_volatile() const
-    {
-        ASSERTN(DECL_dt(this) == DCL_DECLARATION, ("requires declaration"));
-        ASSERT0(getTypeAttr());
-        return getTypeAttr()->is_volatile();
-    }
+    //Return true if current declaration declared with 'volatile'.
+    bool is_volatile() const;
 
     //Return true if dcl declared with 'inline'.
     bool is_inline() const
@@ -1127,7 +1130,7 @@ bool get_aggr_field(
 
 //The function make up TYPE_NAME according to given DECLARATION.
 //The function just do copy if 'src' is TYPE_NAME, otherwise generate
-//TYPE_NAME accroding 'src' information.
+//TYPE_NAME according 'src' information.
 Decl * genTypeName(Decl const* src);
 Decl const* genTypeName(TypeAttr * ty);
 

@@ -276,6 +276,7 @@ static bool checkLda(Tree * t, TYCtx * cont)
     case TR_STRING:
     case TR_INC:
     case TR_DEC:
+    case TR_ASSIGN: //CASE:x=&(p=q)
         return true;
     default:
         err(t->getLineno(), "'&' needs l-value");
@@ -292,7 +293,7 @@ static bool checkReturn(Tree * t, TYCtx * cont)
     ASSERT0(funcdecl);
     if (funcdecl->is_fun_return_void() && TREE_ret_exp(t) != nullptr) {
         //The current function does not have a return
-        //value accroding to its declaration. But in C language, this is
+        //value according to its declaration. But in C language, this is
         //NOT an error, just a warning. Thus we still give a return result.
         //e.g: void get_bar(void) { return 10; }
         warn(t->getLineno(),

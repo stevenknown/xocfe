@@ -39,8 +39,8 @@ static Decl * abstract_declarator(TypeAttr * qua);
 static Decl * pointer(TypeAttr ** qua);
 static INT compute_array_dim(Decl * dclr, bool allow_dim0_is_empty);
 static Tree * refine_tree_list(Tree * t);
-static bool isEnumTagExist(EnumTab const* entab, CHAR const* id_name,
-                           OUT Enum ** e);
+static bool isEnumTagExist(
+    EnumTab const* entab, CHAR const* id_name, OUT Enum ** e);
 static INT format_base_spec(StrBuf & buf, TypeAttr const* ty);
 static INT format_aggr(StrBuf & buf, TypeAttr const* ty);
 static INT format_aggr(StrBuf & buf, Aggr const* s);
@@ -134,9 +134,8 @@ static UINT pad_align(UINT size, UINT align)
 //The function computes the byte offset after appending a field that size is
 //'field_size'.
 //field_align: 0 indicates there is NO requirement to field align.
-static UINT compute_field_ofst_consider_pad(Aggr const* st, UINT ofst,
-                                            UINT field_size, UINT elemnum,
-                                            UINT field_align)
+static UINT compute_field_ofst_consider_pad(
+    Aggr const* st, UINT ofst, UINT field_size, UINT elemnum, UINT field_align)
 {
     //return ofst + (UINT)xcom::ceil_align(field_size, st->getAlign());
     if (field_align != 0) {
@@ -165,7 +164,7 @@ static UINT getDeclaratorSize(TypeAttr const* spec, Decl const* d)
 
 //The function constructs TYPE_NAME according to given DECLARATION.
 //The function just do copy if 'src' is TYPE_NAME, otherwise generate
-//TYPE_NAME accroding to 'src' information.
+//TYPE_NAME according to 'src' information.
 Decl * genTypeName(Decl const* src)
 {
     if (src->is_dt_typename()) {
@@ -457,7 +456,6 @@ bool Decl::is_equal(Decl const& src) const
         break;
     default: UNREACHABLE();
     }
-
     TypeAttr const* thista = getTypeAttr();
     TypeAttr const* srcta = DECL_spec(&src);
     if ((thista != nullptr) ^ (srcta != nullptr)) {
@@ -466,7 +464,6 @@ bool Decl::is_equal(Decl const& src) const
     if (thista != nullptr && !thista->is_equal(*srcta)) {
         return false;
     }
-
     Decl const* thisf = getTraitList();
     Decl const* srcf = src.getTraitList();
     for (; thisf != nullptr && srcf != nullptr;
@@ -502,16 +499,12 @@ bool Decl::is_scalar() const
             getDeclType() == DCL_TYPE_NAME, ("needs declaration"));
     TypeAttr const* attr = getTypeAttr();
     if (!attr->isSimpleType()) { return false; }
-
     Decl const* dcl = getTraitList();
     if (dcl == nullptr) { return true; }
-
     if (dcl->getDeclType() == DCL_ID) {
         dcl = DECL_next(dcl);
     }
-
     if (dcl == nullptr) { return true; }
-
     ASSERT0(dcl->getDeclType() == DCL_POINTER ||
             dcl->getDeclType() == DCL_ARRAY ||
             dcl->getDeclType() == DCL_FUN);
@@ -794,6 +787,32 @@ bool Decl::is_complex_type() const
 }
 
 
+bool Decl::is_constant() const
+{
+    ASSERT0(is_dt_declaration() || is_dt_typename());
+    ASSERT0(getTypeAttr());
+    if (getTypeAttr()->is_const()) { return true; }
+    Decl const* dcl = getTraitList();
+    if (dcl == nullptr || !dcl->is_dt_id()) { return false; }
+    TypeAttr const* qua = dcl->getQua();
+    if (qua == nullptr) { return false; }
+    return qua->is_const();
+}
+
+
+bool Decl::is_volatile() const
+{
+    ASSERT0(is_dt_declaration() || is_dt_typename());
+    ASSERT0(getTypeAttr());
+    if (getTypeAttr()->is_const()) { return true; }
+    Decl const* dcl = getTraitList();
+    if (dcl == nullptr || !dcl->is_dt_id()) { return false; }
+    TypeAttr const* qua = dcl->getQua();
+    if (qua == nullptr) { return false; }
+    return qua->is_volatile();
+}
+
+
 bool Decl::is_bitfield() const
 {
     ASSERTN(is_dt_typename() || is_dt_declaration(),
@@ -985,7 +1004,6 @@ Decl * Decl::getArrayBaseDecl() const
         xcom::remove(&DECL_trait(newdecl), dclor);
         dclor = next;
     }
-
     return newdecl;
 }
 
@@ -1008,10 +1026,10 @@ Decl * Decl::getFirstArrayDecl() const
             break;
         default:
             ASSERTN(!x->is_dt_declaration() &&
-                   !x->is_dt_declarator() &&
-                   !x->is_dt_abs_declarator() &&
-                   !x->is_dt_typename(),
-                   ("\nunsuitable Decl type locate here in is_pointer()\n"));
+                    !x->is_dt_declarator() &&
+                    !x->is_dt_abs_declarator() &&
+                    !x->is_dt_typename(),
+                    ("\nunsuitable Decl type locate here in is_pointer()\n"));
             return nullptr;
         }
         x = DECL_next(x);
@@ -1092,11 +1110,9 @@ Decl * Decl::getPointerBaseDecl(TypeAttr ** ty) const
     ASSERTN(is_dt_typename() || is_dt_declaration(),
             ("expect DCRLARATION"));
     ASSERTN(is_pointer() || is_fun_return_pointer(), ("expect pointer type"));
-
     if (ty != nullptr) {
         *ty = getTypeAttr();
     }
-
     if (is_pointer()) {
         Decl * d = const_cast<Decl*>(getTraitList());
         if (d->is_dt_id()) {
@@ -1108,11 +1124,9 @@ Decl * Decl::getPointerBaseDecl(TypeAttr ** ty) const
         else if (d->is_dt_pointer() || d->is_dt_fun()) {
             return DECL_next(d); //get Decl that is the heel of '*'
         }
-
         ASSERTN(0, ("it is not a pointer type"));
         return nullptr;
     }
-
     ASSERT0(is_fun_return_pointer());
     Decl const* d = getReturnValueDecl();
     ASSERT0(d->getDeclType() == DCL_POINTER);
@@ -1129,7 +1143,6 @@ UINT Decl::getPointerBaseSize() const
         //Base size of function-pointer is the size of pointer.
         return BYTE_PER_POINTER;
     }
-
     TypeAttr * ty = nullptr;
     Decl * d = getPointerBaseDecl(&ty);
     if (d == nullptr) {
@@ -1156,7 +1169,6 @@ UINT Decl::getPointerBaseSize() const
         ASSERTN(s != 0, ("base-type size should not be zero"));
         return s;
     }
-
     UINT s = 1;
     UINT e = getDeclaratorSize(getTypeAttr(), d);
     if (!d->is_pointer()) {
@@ -1381,8 +1393,7 @@ Decl const* Decl::getDeclarator() const
         return decl;
     case DCL_DECLARATION:
         decl = DECL_decl_list(decl);
-        ASSERT0(decl == nullptr ||
-                DECL_dt(decl) == DCL_DECLARATOR ||
+        ASSERT0(decl == nullptr || DECL_dt(decl) == DCL_DECLARATOR ||
                 decl->is_dt_abs_declarator());
         return decl;
     default: ASSERTN(0, ("Not a declarator"));
@@ -1391,7 +1402,6 @@ Decl const* Decl::getDeclarator() const
     return nullptr;
 }
 //END Decl
-
 
 
 //
@@ -1624,25 +1634,6 @@ bool isUniqueDecl(Decl const* decl_list, Decl const* decl)
 }
 
 
-
-////Return true if 'decl' is unique at a list of Decl.
-//bool isUniqueDecl(Decl const* decl_list, Decl const* decl)
-//{
-//    Decl const* dcl = decl_list;
-//    while (dcl != nullptr) {
-//        if (!dcl->is_extern() && Decl::is_decl_equal(dcl, decl) &&
-//            dcl != decl) {
-//            //Declaration with 'extern' is used to tell compiler that the
-//            //symbol is declared at other files, and this declaration is
-//            //not the real definition of variable.
-//            return false;
-//        }
-//        dcl = DECL_next(dcl);
-//    }
-//    return true;
-//}
-
-
 Decl * get_decl_in_scope(CHAR const* name, Scope const* scope)
 {
     if (scope == nullptr) { return nullptr; }
@@ -1736,7 +1727,6 @@ static INT ck_type_spec_legally(TypeAttr * ty)
     if (ONLY_HAVE_FLAG(des, T_SPEC_UNSIGNED|T_SPEC_LONG|T_SPEC_INT)) {
         return ST_SUCC;
     }
-
     if (c1 == 1 && c2 == 1) {
         err(g_real_line_num,
             "struct or union cannot compatilable with enum-type");
@@ -1870,7 +1860,6 @@ static Decl * aggr_declaration()
         Decl * dcl = dcl_list;
         dcl_list = DECL_next(dcl_list);
         DECL_next(dcl) = DECL_prev(dcl) = nullptr;
-
         Decl * declaration = newDecl(DCL_DECLARATION);
         DECL_spec(declaration) = attr;
         DECL_decl_list(declaration) = dcl;
@@ -1878,24 +1867,20 @@ static Decl * aggr_declaration()
         DECL_decl_scope(declaration) = g_cur_scope;
         DECL_lineno(declaration) = g_real_line_num;
         DECL_is_anony_aggr(declaration) = is_anony_aggr;
-
         if (declaration->is_user_type_decl()) {
             err(g_real_line_num,
                 "'%s' is illegal storage class, should not use typedef in "
                 "struct/union declaration.", g_real_token_string);
             continue;
         }
-
         if (attr->is_user_type_ref()) {
             declaration = makeupAndExpandUserType(declaration);
             DECL_align(declaration) = g_alignment;
             DECL_decl_scope(declaration) = g_cur_scope;
             DECL_lineno(declaration) = g_real_line_num;
         }
-
         g_cur_scope->addDecl(declaration);
     }
-
     if (g_real_token != T_SEMI) {
         err(g_real_line_num,
             "meet illegal '%s', expected ';' after struct field declaration",
@@ -2437,8 +2422,8 @@ static TypeAttr * parseUserType(TypeAttr * ty, bool * parse_finish)
 
 
 //Parse user defined aggragate.
-static TypeAttr * parseAggrType(TypeAttr * ty, bool * parse_finish,
-                                Aggr * s, bool is_struct)
+static TypeAttr * parseAggrType(
+    TypeAttr * ty, bool * parse_finish, Aggr * s, bool is_struct)
 {
     if (ty != nullptr) {
         if (ty->is_user_type_ref()) {
@@ -2446,7 +2431,6 @@ static TypeAttr * parseAggrType(TypeAttr * ty, bool * parse_finish,
             *parse_finish = true;
             return ty;
         }
-
         if (ty->is_aggr()) {
             if (ty->is_typedef()) {
                 if (!TYPE_aggr_type(ty)->is_equal(*s)) {
@@ -2466,7 +2450,6 @@ static TypeAttr * parseAggrType(TypeAttr * ty, bool * parse_finish,
             }
         }
     }
-
     ASSERT0(s);
     if (ty == nullptr) {
         ty = newTypeAttr();
@@ -2486,13 +2469,11 @@ static TypeAttr * parseUserDefinedSpecifier(TypeAttr * ty, bool * parse_finish)
     if (isUserTypeExistInOuterScope(g_real_token_string, &ut)) {
         return parseUserType(ty, parse_finish);
     }
-
     Struct * s = nullptr;
     if (isStructExistInOuterScope(g_cur_scope, g_real_token_string,
                                   false, &s)) {
         return parseAggrType(ty, parse_finish, s, true);
     }
-
     Union * u = nullptr;
     if (isUnionExistInOuterScope(g_cur_scope, g_real_token_string,
                                  false, &u)) {
@@ -2502,7 +2483,6 @@ static TypeAttr * parseUserDefinedSpecifier(TypeAttr * ty, bool * parse_finish)
     //g_real_token is not a specifier, may be error occurred, the
     //current parsing have to finish.
     *parse_finish = true;
-
     return ty;
 }
 
@@ -2521,7 +2501,6 @@ static bool isLegalTypeAttr(TypeAttr const* ty)
     DesSet aggr_ds = T_SPEC_STRUCT|T_SPEC_UNION;
     DesSet stor_ds = T_STOR_AUTO|T_STOR_REG|T_STOR_STATIC|
                      T_STOR_EXTERN|T_STOR_INLINE|T_STOR_TYPEDEF;
-
     switch (g_real_token) {
     case T_AUTO:
     case T_REGISTER:
@@ -2629,7 +2608,6 @@ static TypeAttr * declaration_spec()
             return ty;
         }
         if (ty != nullptr && !isLegalTypeAttr(ty)) { return ty; }
-
         switch (g_real_token) {
         case T_AUTO:
         case T_REGISTER:
@@ -2702,7 +2680,7 @@ Decl * get_parameter_list(Decl * dcl, OUT Decl ** fun_dclor)
         *fun_dclor = dcl;
     }
     if (dcl == nullptr) {
-        //Trait list may be NULL, or 'dcl' is not a function type. 
+        //Trait list may be NULL, or 'dcl' is not a function type.
         return nullptr;
     }
     return DECL_fun_para_list(dcl);
@@ -2720,7 +2698,6 @@ static Decl * parameter_declaration()
     if (attr == nullptr) {
         return nullptr;
     }
-
     TypeAttr * qualifier = newTypeAttr();
 
     //Extract qualifier, and regarded it as the qualifier
@@ -2732,14 +2709,12 @@ static Decl * parameter_declaration()
     Decl * dcl_list = reverse_list(abstract_declarator(qualifier));
 
     DECL_spec(declaration) = attr;
-
     if (dcl_list == nullptr ||
         (dcl_list != nullptr && dcl_list->is_dt_id())) {
         DECL_decl_list(declaration) = newDecl(DCL_DECLARATOR);
     } else {
         DECL_decl_list(declaration) = newDecl(DCL_ABS_DECLARATOR);
     }
-
     DECL_trait(declaration) = dcl_list;
 
     //array parameter has at least one elem.
@@ -2752,7 +2727,6 @@ static Decl * parameter_declaration()
         DECL_decl_scope(declaration) = g_cur_scope;
         DECL_lineno(declaration) = g_real_line_num;
     }
-
     return declaration;
 }
 
@@ -3246,7 +3220,6 @@ static bool process_initializer(Decl * declaration, TypeAttr * qua)
         //goes on.
         TREE_initval_scope(DECL_init_tree(declarator)) = buildInt(0);
     }
-
     DECL_is_init(declarator) = true;
     return true;
 }
@@ -3272,9 +3245,9 @@ static bool isFollowSetOfDeclaration(TOKEN tok)
 }
 
 
-static bool assembleDeclaration(TypeAttr * attr, Decl * declarator,
-                                UINT lineno, Decl ** declaration,
-                                Tree ** dcl_tree_list)
+static bool assembleDeclaration(
+    TypeAttr * attr, Decl * declarator, UINT lineno, Decl ** declaration,
+    Tree ** dcl_tree_list)
 {
     *declaration = buildDeclaration(attr, declarator, lineno);
     Tree * t = appendInitPlaceholder(*declaration, dcl_tree_list);
@@ -3326,7 +3299,6 @@ static bool process_declaration(OUT Decl * declaration)
         //Current declaration is variable/function declaration.
         g_cur_scope->addDecl(declaration);
     }
-
     if (declaration->is_user_type_decl()) {
         //Current declaration is user typedef declaration.
         //As the preivous parsing in 'declarator()' has recoginzed that
@@ -3384,7 +3356,6 @@ static bool post_process_of_initializer(TypeAttr * attr,
             declaration->getDeclByteSize();
         }
     }
-
     *is_last_decl = DECL_is_fun_def(declaration);
     return true;
 }
@@ -3393,9 +3364,9 @@ static bool post_process_of_initializer(TypeAttr * attr,
 //init_declarator_list:
 //    init_declarator
 //    init_declarator_list, init_declarator
-static bool init_declarator_list(TypeAttr * ts, TypeAttr * qua,
-                                 UINT lineno, bool * is_last_decl,
-                                 Tree ** dcl_tree_list)
+static bool init_declarator_list(
+    TypeAttr * ts, TypeAttr * qua, UINT lineno, bool * is_last_decl,
+    Tree ** dcl_tree_list)
 {
     do {
         Decl * declarator = init_declarator(ts, qua);
@@ -3414,28 +3385,23 @@ static bool init_declarator_list(TypeAttr * ts, TypeAttr * qua,
                 break;
             }
         }
-
         Decl * declaration = nullptr;
         if (!post_process_of_declarator(ts, declarator, lineno,
                                         &declaration, dcl_tree_list)) {
             return false;
         }
-
         ASSERT0(declaration);
         process_initializer(declaration, qua);
-
         Decl * dclor = declaration->getPureDeclaratorList();
         ASSERTN(dclor, ("declaration misses declarator"));
         if (dclor->getTraitList() == nullptr) {
             err(g_real_line_num, "declaration expected identifier");
             return false;
         }
-
         if (!post_process_of_initializer(ts, declaration, lineno, is_last_decl,
                                          dcl_tree_list)) {
             return false;
         }
-
         if (g_real_token == T_COMMA) { CParser::match(T_COMMA); }
         else { break; }
     } while (!CParser::isTerminateToken());

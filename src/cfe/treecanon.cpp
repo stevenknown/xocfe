@@ -148,6 +148,7 @@ Tree * TreeCanon::handleLda(Tree * t, TreeCanonCtx * ctx)
     case TR_STRING:
     case TR_INC:
     case TR_DEC:
+    case TR_ASSIGN: //CASE:x=&(p=q)
         return t;
     case TR_LDA:
         //LDA has been generated when handling 'lchild'. Thus elide current LDA.

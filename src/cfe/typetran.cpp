@@ -973,7 +973,6 @@ static INT TypeTranCond(Tree * t, TYCtx * cont)
     Decl * td = xcom::get_last(TREE_true_part(t))->getResultType();
     Decl * fd = xcom::get_last(TREE_false_part(t))->getResultType();
     ASSERT0(td && fd);
-    Tree const* truepart = TREE_true_part(t);
     Tree const* falsepart = TREE_false_part(t);
     if (td->is_pointer() && !fd->is_pointer()) {
         if (falsepart->is_imm_int() && TREE_imm_val(falsepart) == 0) {

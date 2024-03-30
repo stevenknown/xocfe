@@ -609,7 +609,7 @@ static TOKEN t_num()
     if (g_cur_char == '0' && (xcom::upper(c) == 'X')) {
         //hex
         g_cur_token_string[g_cur_token_string_pos++] = c;
-        while (xisdigithex(c = getNextChar())) {
+        while (xcom::xisdigithex(c = getNextChar())) {
             g_cur_token_string[g_cur_token_string_pos++] = c;
         }
         g_cur_token_string[g_cur_token_string_pos] = 0;
@@ -620,7 +620,7 @@ static TOKEN t_num()
     if (g_cur_char == '0' && (xcom::upper(c) == 'B')) {
         //binary
         g_cur_token_string[g_cur_token_string_pos++] = c;
-        while (xisdigitbin(c = getNextChar())) {
+        while (xcom::xisdigitbin(c = getNextChar())) {
             g_cur_token_string[g_cur_token_string_pos++] = c;
         }
         g_cur_token_string[g_cur_token_string_pos] = 0;
@@ -629,18 +629,18 @@ static TOKEN t_num()
         goto SUFFIX;
     }
 
-    if (xisdigit(c) || c == '.') {
+    if (xcom::xisdigit(c) || c == '.') {
         //'c' is decimal.
         if (c == '.') {
             b_is_fp = 1;
         }
         g_cur_token_string[g_cur_token_string_pos++] = c;
         if (b_is_fp) { //there is already present '.'
-           while (xisdigit(c = getNextChar())) {
+           while (xcom::xisdigit(c = getNextChar())) {
                g_cur_token_string[g_cur_token_string_pos++] = c;
            }
         } else {
-            while (xisdigit(c = getNextChar()) || c == '.') {
+            while (xcom::xisdigit(c = getNextChar()) || c == '.') {
                if (c == '.') {
                    if (!b_is_fp){
                        b_is_fp=1;
@@ -755,7 +755,7 @@ static TOKEN t_string()
                     c = getNextChar();
                 }
                 UINT n = 0;
-                while (xisdigithex(c)) {
+                while (xcom::xisdigithex(c)) {
                     g_cur_token_string[g_cur_token_string_pos++] = c;
                     n++;
                     c = getNextChar();
@@ -863,7 +863,7 @@ static TOKEN t_char_list()
                     c = getNextChar();
                 }
                 UINT n = 0;
-                while (xisdigithex(c)) {
+                while (xcom::xisdigithex(c)) {
                     g_cur_token_string[g_cur_token_string_pos++] = c;
                     n++;
                     c = getNextChar();
@@ -894,7 +894,7 @@ static TOKEN t_char_list()
 static TOKEN t_id()
 {
     CHAR c = getNextChar();
-    while (xisalpha(c) || c == '_' || xisdigit(c)) {
+    while (xcom::xisalpha(c) || c == '_' || xcom::xisdigit(c)) {
         g_cur_token_string[g_cur_token_string_pos++] = c;
         c = getNextChar();
     }
@@ -1398,7 +1398,8 @@ START:
             token = t_string();
         } else if (g_cur_char == '\'') { //char list
             token = t_char_list();
-        } else if (xisalpha(g_cur_char) || g_cur_char == '_') { //identifier
+        } else if (xcom::xisalpha(g_cur_char) ||
+                   g_cur_char == '_') { //identifier
             g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
             token = t_id();
             if (g_enable_true_false_token &&
@@ -1413,7 +1414,7 @@ START:
                 token = T_IMM;
                 g_cur_token_string_pos = 1;
             }
-        } else if (xisdigit(g_cur_char) != 0) { //imm
+        } else if (xcom::xisdigit(g_cur_char) != 0) { //imm
             g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
             token = t_num();
         } else {
