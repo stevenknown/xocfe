@@ -2530,8 +2530,8 @@ static Tree * dispatch()
     case T_IMMU:
     case T_IMMUL:
     case T_IMMULL:
-    case T_FP:  
-    case T_FPF: 
+    case T_FP:
+    case T_FPF:
     case T_FPLD:
     case T_STRING:     // "abcd"
     case T_CHAR_LIST:  // 'abcd'

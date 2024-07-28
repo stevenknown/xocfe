@@ -25,16 +25,14 @@ LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
 ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+author: Su Zhenyu
 @*/
-#if defined(FOR_JS)
-#include "../js/js_code_ext.inc"
-
-#elif defined(FOR_TECO)
-#include "../teco/teco_code_ext.inc"
-
-#elif defined(FOR_ARM)
-#include "../arm/arm_code_ext.inc"
-
-#else
-//No target extented code
-#endif
+//EXT CODE START
+IR_RELU, //f(x)=max(0,x)
+IR_SOFTMAX, //f(x)=exp(x)/sigma(exp(x_i))
+IR_SIGMOID, //f(x)=1/(1+exp(-x))
+IR_CONV, //f(x)=conv(x,w)
+IR_CONV_OPND_GRAD, //x' = f(conv',x,w), w' = g(conv',x,w)
+IR_TANH, //f(x)=(e^x - e^(-x)) / (e^x + e^(-x))
+//EXT CODE END

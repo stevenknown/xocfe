@@ -52,5 +52,12 @@ typedef enum {
     MI_stm, //store multiple words.
     MI_ldr, //load 4 byte
     MI_str, //store 4 byte
+
+    //dwarf
+    MI_cfi_def_cfa,         //cfi_def_cfa Ra Rb
+    MI_cfi_same_value,      //cfi_same_value Ra
+    MI_cfi_offset,          //cfi_offset Ra Rb
+    MI_cfi_restore,         //restore Ra
+    MI_cfi_def_cfa_offset,  //cfi_def_cfa Ra
     MI_NUM,
 } MI_CODE;

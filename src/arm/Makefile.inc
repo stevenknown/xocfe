@@ -23,7 +23,16 @@ arm_ddg.o\
 arm_targinfo.o\
 arm_elf_mgr.o
 
-ifneq ($(findstring $(REF_TARGMACH_INFO), true),)
+ifeq ($(FOR_IP), true)
+  $(info "CONDBR:arm/Makefile.inc:FOR_IP=$(FOR_IP)")
+  ARM_OBJS+=\
+  arm_derivative.o\
+  arm_decl_ext.o\
+  arm_ir_dump.o\
+  arm_irmgr.o\
+  arm_elf_targinfo.o\
+  arm_linear_scan.o
+else ifneq ($(findstring $(REF_TARGMACH_INFO), true),)
   $(info "CONDBR:arm/Makefile.inc:REF_TARGMACH_INFO=$(REF_TARGMACH_INFO)")
   ARM_OBJS+=\
   arm_linear_scan.o

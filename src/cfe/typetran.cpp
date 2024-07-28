@@ -1547,14 +1547,14 @@ INT TypeTran(Tree * t, TYCtx * cont)
         if (ST_SUCC != TypeTranID(t, cont)) { goto FAILED; }
         break;
     case TR_IMM:
-        if (GET_HIGH_32BIT(TREE_imm_val(t)) != 0) {
+        if (xcom::get64BitValueHighNBit((UINT64)TREE_imm_val(t), 32) != 0) {
             TREE_result_type(t) = BUILD_TYNAME(T_SPEC_LONGLONG|T_QUA_CONST);
         } else {
             TREE_result_type(t) = BUILD_TYNAME(T_SPEC_INT|T_QUA_CONST);
         }
         break;
     case TR_IMMU:
-        if (GET_HIGH_32BIT(TREE_imm_val(t)) != 0) {
+        if (xcom::get64BitValueHighNBit((UINT64)TREE_imm_val(t), 32) != 0) {
             TREE_result_type(t) = BUILD_TYNAME(
                 T_SPEC_UNSIGNED|T_SPEC_LONGLONG|T_QUA_CONST);
         } else {
