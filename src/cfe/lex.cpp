@@ -362,7 +362,7 @@ static INT getLine()
             }
             if (g_file_buf[g_file_buf_pos] == 0xd && g_is_dos) {
                 //0xD is the last charactor in 'g_file_buf', thus 0xA
-                //should be recognized in getNextToken() in order to guarrantee
+                //should be recognized in getNextToken() in order to guarantee
                 //the lex token parsing correctly, or else some exceptions
                 //occurred in text file.
                 is_0xd_recog = true;
@@ -908,81 +908,83 @@ static TOKEN t_id()
 }
 
 
+static TOKEN t_solidus_solidus(bool * is_restart)
+{
+    TOKEN t = T_UNDEF;
+    INT st = getLine();
+    if (st == ST_SUCC) {
+        g_cur_char = getNextChar();
+        ASSERT0(is_restart);
+        *is_restart = true;
+        return T_UNDEF;
+    }
+    if (st == ST_EOF) {
+        return T_END;
+    }
+    return t;
+}
+
+
+static TOKEN t_solidus_asterisk(bool * is_restart)
+{
+    TOKEN t = T_UNDEF;
+    UINT cur_line_num = g_src_line_num;
+    CHAR c = getNextChar();
+    CHAR c1 = 0;
+    for (;;) {
+        cur_line_num = g_src_line_num;
+        c1 = getNextChar();
+        if (c == '*' && c1 == '/') {
+            if (g_src_line_num == cur_line_num) {
+                //We meet the multipul-comment terminated token '*/',
+                //so change the parsing state to normal.
+                g_cur_char = getNextChar();
+
+                //CASE: recur_lex.c, Do NOT recursive call into
+                //getNextToken() if meeting end of comments.
+                //Avoid stack overflow.
+                //t = getNextToken();
+                ASSERT0(is_restart);
+                *is_restart = true;
+                return T_UNDEF;
+            }
+            c = c1;
+            continue;
+        }
+        if (c == ST_EOF || c1 == ST_EOF) {
+            return T_END;
+        }
+        c = c1;
+    }
+    return t;
+}
+
+
 //'g_cur_char' hold the current charactor right now.
 //You should assign 'g_cur_char' the next valid charactor before
 //the function return.
 //is_restart: record the result if lexer need to restart getNextToken().
 static TOKEN t_solidus(bool * is_restart)
 {
-    TOKEN t = T_UNDEF;
-    INT st = 0;
     CHAR c = getNextChar();
     switch (c) {
     case '=': // /=
-        t = T_DIVEQU;
         g_cur_token_string[g_cur_token_string_pos++] = '/';
         g_cur_token_string[g_cur_token_string_pos++] = c;
         g_cur_token_string[g_cur_token_string_pos] = 0;
         g_cur_char = getNextChar();
-        break;
+        return T_DIVEQU;
     case '/': //single comment line
-        if ((st = getLine()) == ST_SUCC) {
-            g_cur_char = g_cur_line[g_cur_line_pos];
-            g_cur_line_pos++;
-            if (g_cur_char == '/'){ // another single comment line
-                t = t_solidus(is_restart);
-                goto FIN;
-            } else {
-                t = getNextToken();
-                goto FIN;
-             }
-        } else if (st == ST_EOF) {
-            t = T_END;
-            goto FIN;
-        }
-        break;
-    case '*': { // multi comment line
-        UINT cur_line_num = g_src_line_num;
-        c = getNextChar();
-        CHAR c1 = 0;
-        for (;;) {
-            cur_line_num = g_src_line_num;
-            c1 = getNextChar();
-            if (c == '*' && c1 == '/') {
-                if (g_src_line_num == cur_line_num) {
-                    //We meet the multipul comment terminated token '*/',
-                    //so change the parsing state to normal.
-                    g_cur_char = getNextChar();
-
-                    //CASE: recur_lex.c, Do NOT recursive call into
-                    //getNextToken() if meeting end of comments.
-                    //Avoid stack overflow.
-                    //t = getNextToken();
-                    t = T_UNDEF;
-                    ASSERT0(is_restart);
-                    *is_restart = true;
-                    goto FIN;
-                } else {
-                    c = c1;
-                    continue;
-                }
-            } else if (c == ST_EOF || c1 == ST_EOF) {
-                  t = T_END;
-                goto FIN;
-            } else {
-                  c = c1;
-            }
-        }
-        break;
-    }
+        return t_solidus_solidus(is_restart);
+    case '*': // multi comment line
+        return t_solidus_asterisk(is_restart);
     default:
-        t = T_DIV;
         g_cur_token_string[g_cur_token_string_pos++] = g_cur_char;
         g_cur_token_string[g_cur_token_string_pos] = 0;
         g_cur_char = c;
+        return T_DIV;
     }
-FIN:
-    return t;
+    return T_UNDEF;
 }
 
 
