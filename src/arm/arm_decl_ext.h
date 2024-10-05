@@ -79,7 +79,7 @@ public:
     static inline IR *& accKid(IR * ir, UINT idx) { return CONV_kid(ir, idx); }
 
     //Dump function.
-    static void accDump(IR const* ir, Region const* rg, IRDumpCtx & ctx);
+    static void accDump(IR const* ir, Region const* rg, IRDumpCtx<> & ctx);
 
     //Access storage space.
     static inline StorageSpace & accSS(IR * ir)
@@ -148,7 +148,7 @@ public:
     { return CONVOPNDGRAD_kid(ir, idx); }
 
     //Dump function.
-    static void accDump(IR const* ir, Region const* rg, IRDumpCtx & ctx);
+    static void accDump(IR const* ir, Region const* rg, IRDumpCtx<> & ctx);
 
     IR * getKid(UINT idx) const { return CONVOPNDGRAD_kid(this, idx); }
 };
