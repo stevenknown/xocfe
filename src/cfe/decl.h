@@ -655,7 +655,7 @@ public:
     void convertToPointerType();
 
     void dump() const;
-    void dump(StrBuf & buf) const;
+    void dump(xcom::DefFixedStrBuf & buf) const;
 
     DCL getDeclType() const { return DECL_dt(this); }
     Sym const* getDeclSym() const;
@@ -977,7 +977,7 @@ public:
     bool isAggrInComplete() const
     { return is_aggr() && !getTypeAttr()->isAggrComplete(); }
 
-    //Return true if declaration|typename is a char-array.
+    //Return true if declaration|type_name is a char-array.
     //e.g: char x[10]; x is a char-array.
     //     'abcd' is a char-array.
     bool isCharArray() const
@@ -1047,14 +1047,15 @@ Tree * declaration_list();
 Decl * expandUserType(Decl * ut);
 
 //Dump C style type-info
-INT format_enum_complete(StrBuf & buf, Enum const* e);
-INT format_aggr_complete(StrBuf & buf, TypeAttr const* ty);
-INT format_struct_complete(StrBuf & buf, Struct const* s);
-INT format_union_complete(StrBuf & buf, Union const* u);
-INT format_parameter_list(StrBuf & buf, Decl const* decl);
-INT format_user_type(StrBuf & buf, TypeAttr const* ty);
-INT format_user_type(StrBuf & buf, Decl const* ut);
-INT format_declarator(StrBuf & buf, TypeAttr const* ty, Decl const* decl);
+INT format_enum_complete(xcom::DefFixedStrBuf & buf, Enum const* e);
+INT format_aggr_complete(xcom::DefFixedStrBuf & buf, TypeAttr const* ty);
+INT format_struct_complete(xcom::DefFixedStrBuf & buf, Struct const* s);
+INT format_union_complete(xcom::DefFixedStrBuf & buf, Union const* u);
+INT format_parameter_list(xcom::DefFixedStrBuf & buf, Decl const* decl);
+INT format_user_type(xcom::DefFixedStrBuf & buf, TypeAttr const* ty);
+INT format_user_type(xcom::DefFixedStrBuf & buf, Decl const* ut);
+INT format_declarator(xcom::DefFixedStrBuf & buf, TypeAttr const* ty,
+                      Decl const* decl);
 
 //To avoid recursive aggregate type, format field
 //only with incomplete aggregate type.
@@ -1069,8 +1070,10 @@ INT format_declarator(StrBuf & buf, TypeAttr const* ty, Decl const* decl);
 //is_complete: true to dump aggregate's declarations list recursively.
 //             Note this might leading to infinite invocation of current
 //             function if meeting recursive struct.
-INT format_attr(StrBuf & buf, TypeAttr const* ty, bool is_complete);
-INT format_declaration(StrBuf & buf, Decl const* decl, bool is_complete);
+INT format_attr(xcom::DefFixedStrBuf & buf, TypeAttr const* ty,
+                bool is_complete);
+INT format_declaration(xcom::DefFixedStrBuf & buf, Decl const* decl,
+                       bool is_complete);
 
 //Dump Decl-Tree style type-info
 INT format_dcrl(Decl const* decl, INT indent);

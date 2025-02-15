@@ -31,8 +31,8 @@ author: Su Zhenyu
 //EXT CODE START
 IR_RELU, //f(x)=max(0,x)
 IR_SOFTMAX, //f(x)=exp(x)/sigma(exp(x_i))
-IR_SIGMOID, //f(x)=1/(1+exp(-x))
 IR_CONV, //f(x)=conv(x,w)
 IR_CONV_OPND_GRAD, //x' = f(conv',x,w), w' = g(conv',x,w)
-IR_TANH, //f(x)=(e^x - e^(-x)) / (e^x + e^(-x))
+IR_SIGMOID,
+IR_TANH,
 //EXT CODE END

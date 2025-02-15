@@ -1,6 +1,6 @@
 #DO NOT ADD VAR BEFORE FILES
 
-ARM_OBJS+=\
+TARG_OBJS+=\
 armasmprinter.o\
 arm_cg.o\
 arm_sim.o\
@@ -23,11 +23,13 @@ arm_ddg.o\
 arm_targinfo.o\
 arm_decl_ext.o\
 arm_ir_dump.o\
-arm_elf_mgr.o
+arm_elf_targinfo.o\
+arm_elf_mgr.o\
+arm_irmgr.o
 
 ifeq ($(FOR_IP), true)
   $(info "CONDBR:arm/Makefile.inc:FOR_IP=$(FOR_IP)")
-  ARM_OBJS+=\
+  TARG_OBJS+=\
   arm_derivative.o\
   arm_irmgr.o\
   arm_elf_targinfo.o
@@ -35,7 +37,11 @@ endif
 
 ifneq ($(findstring $(REF_TARGMACH_INFO), true),)
   $(info "CONDBR:arm/Makefile.inc:REF_TARGMACH_INFO=$(REF_TARGMACH_INFO)")
-  ARM_OBJS+=\
+  TARG_OBJS+=\
   arm_targinfo_mgr.o\
   arm_linear_scan.o
+endif
+
+ifeq ($(ROOT_DIR),)
+  $(error "NEED ROOT_DIR:e.g:make ROOT_DIR=~/xoc")
 endif

@@ -219,5 +219,9 @@ CHAR const* getTokenName(TOKEN tok);
 
 TokenInfo const* get_token_info(TOKEN tok);
 
+//Get the current token string length. 
+//e.g:current token string is "ab\0c", the function return 4.
+UINT getCurTokenStringLen();
+
 } //namespace xfe
 #endif

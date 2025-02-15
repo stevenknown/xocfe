@@ -33,8 +33,9 @@ namespace xfe {
 SMemPool * g_pool_general_used = nullptr;
 SMemPool * g_pool_st_used = nullptr;
 SMemPool * g_pool_tree_used = nullptr;
-SymTab * g_fe_sym_tab = nullptr;
+CLSymTab * g_fe_sym_tab = nullptr;
 CHAR * g_real_token_string = nullptr;
+UINT g_real_token_string_len = 0;
 TOKEN g_real_token = T_UNDEF;
 
 Tree * buildDeref(Tree * base)
@@ -169,7 +170,7 @@ Tree * buildInt(HOST_INT val)
 }
 
 
-Tree * buildString(Sym const* str)
+Tree * buildString(ESym const* str)
 {
     Tree * t = NEWTN(TR_STRING);
     TREE_token(t) = T_STRING;
@@ -285,7 +286,6 @@ Tree * copyTree(Tree const* t)
     for (UINT i = 0; i < MAX_TREE_FLDS; i++) {
         Tree * kid = TREE_fld(t, i);
         if (kid == nullptr) { continue; }
-
         Tree * newkid_list = copyTreeList(kid);
         TREE_fld(newt, i) = newkid_list;
         for (Tree * xt = newkid_list; xt != nullptr; xt = TREE_nsib(xt)) {

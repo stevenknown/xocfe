@@ -31,6 +31,9 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include "cfecommacro.h"
 #include "lex.h"
 
+#define OCTAL_LITERAL_LEN_IN_STRING 3
+#define HEX_LITERAL_LEN_IN_STRING 2
+
 namespace xfe {
 
 static INT g_cur_token_string_pos = 0;
@@ -476,6 +479,13 @@ static TOKEN getKeyWord(CHAR const* s)
 }
 
 
+UINT getCurTokenStringLen()
+{
+    //e.g:current token string is "ab\0c", the function return 4.
+    return g_cur_token_string_pos;
+}
+
+
 //Get a charactor from g_cur_line.
 //If it meets the EOF, the return value will be -1.
 static CHAR getNextChar()
@@ -665,110 +675,138 @@ SUFFIX:
 }
 
 
+//User input is: \X...
+//e.g:'\X','\A-\F','\xdd','\aabb'
+static bool try_handle_escape_hex_digit(MOD CHAR & c)
+{
+    ASSERT0(xcom::upper(c) == 'X' || xcom::xisdigithex_alpha(c));
+    //Finally, the escape \ddd consists of the backslash followed
+    //by
+    // 1. not more than 3 octal digits (e.g:\765) or
+    // 2. not more than 2 hex digits start with 'x' (e.g:\xAB) or
+    // 3. any length of hex digits (e.g:\123456789ABCDEF)
+    //which are taken to specify the desired character.
+    bool only_allow_two_hex = false;
+    if (xcom::upper(c) == 'X') {
+        only_allow_two_hex = true;
+        c = getNextChar();
+    }
+    UINT n = 0;
+    while (xcom::xisdigithex(c)) {
+        g_cur_token_string[g_cur_token_string_pos] = c;
+        g_cur_token_string_pos++;
+        n++;
+        c = getNextChar();
+    }
+    if (n > HEX_LITERAL_LEN_IN_STRING && only_allow_two_hex) {
+        err(g_real_line_num,
+            "constant literal is too large, only permit two hex digits");
+    }
+    return true;
+}
+
+
+//User input is: \[0-9]...
+//c: a character which belongs to the range of [0-9].
+static bool try_handle_escape_digit(MOD CHAR & c)
+{
+    ASSERT0(xcom::xisdigit(c));
+    //Finally, the escape \ddd consists of the backslash followed
+    //by
+    // 1. not more than 3 octal digits (e.g:\765) or
+    // 2. not more than 2 hex digits start with 'x' (e.g:\xAB) or
+    // 3. any length of hex digits (e.g:\123456789ABCDEF)
+    //which are taken to specify the desired character.
+    UINT n = 0;
+    while (xcom::xisdigithex_octal(c) && n < OCTAL_LITERAL_LEN_IN_STRING) {
+        g_cur_token_string[g_cur_token_string_pos] = c;
+        g_cur_token_string_pos++;
+        c = getNextChar();
+        n++;
+    }
+    g_cur_token_string[g_cur_token_string_pos] = 0;
+    g_cur_token_string_pos -= n;
+
+    //longlong type truncated to char type. e.g:0x1f5 trunated to 0xf5.
+    CHAR o = (CHAR)xcom::xatoll(
+        &g_cur_token_string[g_cur_token_string_pos], true);
+    g_cur_token_string[g_cur_token_string_pos] = o;
+    g_cur_token_string_pos++;
+    return true;
+}
+
+
+//c is escape char.
+static bool try_handle_escape_char(MOD CHAR & c)
+{
+    ASSERT0(c == '\\');
+    c = getNextChar();
+    switch (c) {
+    case 'n':
+        //newline, 0xa
+        g_cur_token_string[g_cur_token_string_pos++] = '\n';
+        c = getNextChar();
+        return true;
+    case 't':
+        //horizontal tab
+        g_cur_token_string[g_cur_token_string_pos++] = '\t';
+        c = getNextChar();
+        return true;
+    case 'b':
+        //backspace
+        g_cur_token_string[g_cur_token_string_pos++] = '\b';
+        c = getNextChar();
+        return true;
+    case 'r':
+        //carriage return, 0xd
+        g_cur_token_string[g_cur_token_string_pos++] = '\r';
+        c = getNextChar();
+        return true;
+    case 'f':
+        //form feed
+        g_cur_token_string[g_cur_token_string_pos++] = '\f';
+        c = getNextChar();
+        return true;
+    case '\\':
+        //backslash
+        g_cur_token_string[g_cur_token_string_pos++] = '\\';
+        c = getNextChar();
+        return true;
+    case '\'':
+        //single quote
+        g_cur_token_string[g_cur_token_string_pos++] = '\'';
+        c = getNextChar();
+        return true;
+    case '"':
+        //double quote
+        g_cur_token_string[g_cur_token_string_pos++] = '"';
+        c = getNextChar();
+        return true;
+    default:
+        if (xcom::xisdigit(c)) {
+            return try_handle_escape_digit(c);
+        }
+        if (xcom::upper(c) == 'X' || xcom::xisdigithex_alpha(c)) {
+            return try_handle_escape_hex_digit(c);
+        }
+    }
+    g_cur_token_string[g_cur_token_string_pos++] = '\\';
+    g_cur_token_string[g_cur_token_string_pos++] = c;
+    c = getNextChar();
+    return false; //The parameter is not an escape char.
+}
+
+
 //'g_cur_char' hold the current charactor right now.
 //You should assign 'g_cur_char' the next valid charactor before
 //the function return.
 static TOKEN t_string()
 {
+    ASSERT0(g_cur_char == '"');
     CHAR c = getNextChar();
     while (c != '"') {
-        if (c == '\\') {
-            //c is escape char.
-            c = getNextChar();
-            if (c == 'n' ) {
-                //newline, 0xa
-                g_cur_token_string[g_cur_token_string_pos++] = '\n';
-                c = getNextChar();
-                continue;
-            }
-            if (c == 't') {
-                //horizontal tab
-                g_cur_token_string[g_cur_token_string_pos++] = '\t';
-                c = getNextChar();
-                continue;
-            }
-            if (c == 'b') {
-                //backspace
-                g_cur_token_string[g_cur_token_string_pos++] = '\b';
-                c = getNextChar();
-                continue;
-            }
-            if (c == 'r') {
-                //carriage return, 0xd
-                g_cur_token_string[g_cur_token_string_pos++] = '\r';
-                c = getNextChar();
-                continue;
-            }
-            if (c == 'f') {
-                //form feed
-                g_cur_token_string[g_cur_token_string_pos++] = '\f';
-                c = getNextChar();
-                continue;
-            }
-            if (c == '\\') {
-                //backslash
-                g_cur_token_string[g_cur_token_string_pos++] = '\\';
-                c = getNextChar();
-                continue;
-            }
-            if (c == '\'') {
-                //single quote
-                g_cur_token_string[g_cur_token_string_pos++] = '\'';
-                c = getNextChar();
-                continue;
-            }
-            if (c == '"') {
-                //double quote
-                g_cur_token_string[g_cur_token_string_pos++] = '"';
-                c = getNextChar();
-                continue;
-            }
-            if (xcom::xisdigit(c)) {
-                //Finally, the escape \ddd consists of the backslash followed
-                //by
-                // 1. not more than 3 octal digits or
-                // 2. not more than 2 hex digits start with 'x' or
-                // 3. any length of hex digits
-                //which are taken to specify the desired character.
-                UINT n = 0;
-                while ((c >= '0' && c <= '7') && n < 3) {
-                    g_cur_token_string[g_cur_token_string_pos++] = c;
-                    n++;
-                    c = getNextChar();
-                }
-                g_cur_token_string[g_cur_token_string_pos] = 0;
-                g_cur_token_string_pos -= n;
-
-                //longlong type truncated to char type.
-                CHAR o = (CHAR)xatoll(&g_cur_token_string[
-                    g_cur_token_string_pos], true);
-                g_cur_token_string[g_cur_token_string_pos++] = o;
-                continue;
-            }
-            if (xcom::upper(c) == 'X' || (c >= 'a' && c <= 'f') ||
-                (c >= 'A' && c <= 'Z')) {
-                ///e.g:'\x','\X', '\a-\f', '\A-\Z'.
-                //     '\xdd' or '\aabb'
-                bool only_allow_two_hex = false;
-                if (xcom::upper(c) == 'X') {
-                    only_allow_two_hex = true;
-                    c = getNextChar();
-                }
-                UINT n = 0;
-                while (xcom::xisdigithex(c)) {
-                    g_cur_token_string[g_cur_token_string_pos++] = c;
-                    n++;
-                    c = getNextChar();
-                }
-                if (n > 2 && only_allow_two_hex) {
-                    err(g_real_line_num,
-                        "constant too big, only permit two hex digits");
-                }
-                continue;
-            }
-            g_cur_token_string[g_cur_token_string_pos++] = '\\';
-            g_cur_token_string[g_cur_token_string_pos++] = c;
-            c = getNextChar();
+        if (c == '\\' && try_handle_escape_char(c)) {
+            continue;
         }
         g_cur_token_string[g_cur_token_string_pos++] = c;
         c = getNextChar();
@@ -1286,9 +1324,7 @@ static TOKEN t_rest(bool * is_restart)
 //Get current token.
 TOKEN getNextToken()
 {
-    if (g_cur_token == T_END) {
-        return g_cur_token;
-    }
+    if (g_cur_token == T_END) { return g_cur_token; }
     TOKEN token = T_UNDEF;
     g_cur_token_string_pos = 0;
     g_cur_token_string[0] = 0;
@@ -1427,7 +1463,7 @@ START:
                 goto START;
             }
         }
-    } //end switch
+    }
     g_cur_token = token;
     return token;
 }

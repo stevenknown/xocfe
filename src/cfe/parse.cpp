@@ -70,6 +70,7 @@ static TOKEN gettok()
     ASSERT0(tok == g_cur_token);
     g_real_token = tok;
     g_real_token_string = g_cur_token_string;
+    g_real_token_string_len = getCurTokenStringLen();
     ASSERT0(g_src_line_num >= g_disgarded_line_num);
     g_real_line_num = g_src_line_num - g_disgarded_line_num;
     if (g_disgarded_line_num != 0) {
@@ -322,7 +323,7 @@ static void append_c_head(size_t v)
 }
 
 
-//Append current token info descripte by 'g_cur_token','g_cur_token_string'
+//Append current token info described by 'g_cur_token','g_cur_token_string'
 //and 'g_src_line_num'
 static void append_tok_tail(TOKEN tok, CHAR * tokname, INT lineno)
 {
@@ -675,7 +676,6 @@ static bool look_forward_token(INT num, ...)
     if (num <= 0) {
         return 0;
     }
-
     va_list arg;
     va_start(arg, num);
     TOKEN v = (TOKEN)va_arg(arg, INT);
@@ -745,6 +745,55 @@ static Tree * param_list()
         }
         xcom::add_next(&t, &last, nt);
     }
+    return t;
+}
+
+
+//The function concates the adjacent string to one single string.
+//Return the single string.
+//e.g: given two string "ab\0c" "de\0f" to "ab\0cde\0f".
+static CLSym const* concate_string(CLSym const* sym)
+{
+    CHAR * tbuf = nullptr;
+    UINT tbuflen = 0;
+    UINT slen = 0;
+    for (; g_real_token == T_STRING; CParser::match(T_STRING)) {
+        if (tbuf == nullptr) {
+            slen = sym->getLen() + g_real_token_string_len;
+            tbuflen = slen + 1;
+            tbuf = (CHAR*)::malloc(tbuflen);
+            ::memcpy(tbuf, sym->getStr(), sym->getLen());
+            ::memcpy(tbuf + sym->getLen(), g_real_token_string,
+                     g_real_token_string_len);
+            tbuf[slen] = 0;
+            continue;
+        }
+        tbuflen += g_real_token_string_len;
+        CHAR * tbuf2 = (CHAR*)::malloc(tbuflen);
+        ::memcpy(tbuf2, tbuf, slen);
+        ::memcpy(tbuf2 + slen, g_real_token_string, g_real_token_string_len);
+        slen = tbuflen - 1;
+        tbuf2[slen] = 0;
+        ::free(tbuf);
+        tbuf = tbuf2;
+    }
+    if (tbuf != nullptr) {
+        sym = g_fe_sym_tab->add(tbuf, slen);
+        ::free(tbuf);
+    }
+    return sym;
+}
+
+
+static Tree * primary_exp_string(MOD UINT * st)
+{
+    Tree * t = NEWTN(TR_STRING);
+    TREE_token(t) = g_real_token;
+    CLSym const* sym = g_fe_sym_tab->add(
+        g_real_token_string, g_real_token_string_len);
+    CParser::match(T_STRING);
+    CLSym const* newsym = concate_string(sym);
+    TREE_string_val(t) = newsym;
     return t;
 }
 
@@ -827,37 +876,8 @@ static Tree * primary_exp(MOD UINT * st)
         TREE_fp_str_val(t) = g_fe_sym_tab->add(g_real_token_string);
         CParser::match(T_FPLD);
         break;
-    case T_STRING: { // "abcd"
-        t = NEWTN(TR_STRING);
-        TREE_token(t) = g_real_token;
-        CHAR * tbuf = nullptr;
-        UINT tbuflen = 0;
-        Sym const* sym = g_fe_sym_tab->add(g_real_token_string);
-        CParser::match(T_STRING);
-
-        //Concatenate string.
-        for (; g_real_token == T_STRING; CParser::match(T_STRING)) {
-            if (tbuf == nullptr) {
-                tbuflen = (UINT)strlen(SYM_name(sym)) +
-                          (UINT)strlen(g_real_token_string) + 1;
-                tbuf = (CHAR*)malloc(tbuflen);
-                sprintf(tbuf, "%s%s", SYM_name(sym), g_real_token_string);
-            } else {
-                tbuflen += (UINT)strlen(g_real_token_string);
-                CHAR * ttbuf = (CHAR*)malloc(tbuflen);
-                sprintf(ttbuf, "%s%s", tbuf, g_real_token_string);
-                free(tbuf);
-                tbuf = ttbuf;
-            }
-        }
-
-        if (tbuf != nullptr) {
-            sym = g_fe_sym_tab->add(tbuf);
-            free(tbuf);
-        }
-        TREE_string_val(t) = sym;
-        return t;
-    }
+    case T_STRING: // "abcd"
+        return primary_exp_string(st);
     case T_CHAR_LIST:  // 'abcd'
         t = NEWTN(TR_IMM);
         TREE_token(t) = g_real_token;

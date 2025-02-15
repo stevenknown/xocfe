@@ -552,18 +552,18 @@ static Decl * buildPointerType(TypeAttr * ty)
 static bool checkAssign(Tree const* t, Decl * ld, Decl *)
 {
     ASSERT0(t && ld);
-    StrBuf buf(64);
+    xcom::DefFixedStrBuf buf;
     if (ld->is_array()) {
         format_declaration(buf, ld, true);
         err(t->getLineno(), "illegal '%s', left operand must be l-value",
-            buf.buf);
+            buf.getBuf());
         return false;
     }
 
     if (ld->getTypeAttr()->is_const()) {
         format_declaration(buf, ld, true);
         err(t->getLineno(),
-            "illegal '%s', l-value specifies const object", buf.buf);
+            "illegal '%s', l-value specifies const object", buf.getBuf());
         return false;
     }
 
@@ -669,11 +669,11 @@ static bool findAndRefillAggrField(Decl const* base, Sym const* field_name,
 
         if (field_list == nullptr) {
             //Not find field.
-            StrBuf buf(64);
+            xcom::DefFixedStrBuf buf;
             format_aggr_complete(buf, base_spec);
             err(lineno,
                 " '%s' is an empty %s, '%s' is not its field",
-                buf.buf, base_spec->getAggrTypeName(),
+                buf.getBuf(), base_spec->getAggrTypeName(),
                 SYM_name(field_name));
             return false;
         }
@@ -718,16 +718,15 @@ static INT TypeTranIDField(Tree * t, Decl ** field_decl, TYCtx * cont)
     ASSERT0(t && t->getCode() == TR_ID);
     //At present, the ID may be a field of struct/union,
     //and you need to check out if it is the correct field.
-
     //Get the aggregate type base.
     Decl * base = TREE_result_type(cont->base_tree_node);
     ASSERTN(base, ("miss base tree node of aggregate"));
     if (!findAndRefillAggrField(base, TREE_id_name(t), field_decl,
                                 t->getLineno())) {
-        StrBuf buf(64);
+        xcom::DefFixedStrBuf buf;
         format_aggr_complete(buf, base->getTypeAttr());
         err(t->getLineno(), " '%s' : is not a member of type '%s'",
-            TREE_id_name(t)->getStr(), buf.buf);
+            TREE_id_name(t)->getStr(), buf.getBuf());
         return ST_ERR;
     }
     ASSERT0(*field_decl);
@@ -819,37 +818,37 @@ static INT TypeTranID(Tree * t, TYCtx * cont)
 
         //Check bitfield properties.
         if (id_decl->is_pointer()) {
-            StrBuf buf(64);
+            xcom::DefFixedStrBuf buf;
             format_declaration(buf, id_decl, true);
             err(t->getLineno(),
-                "'%s' : pointer cannot assign bit length", buf.buf);
+                "'%s' : pointer cannot assign bit length", buf.getBuf());
             return ST_ERR;
         }
 
         if (id_decl->is_array()) {
-            StrBuf buf(64);
+            xcom::DefFixedStrBuf buf;
             format_declaration(buf, id_decl, true);
             err(t->getLineno(),
-                "'%s' : array type cannot assign bit length", buf.buf);
+                "'%s' : array type cannot assign bit length", buf.getBuf());
             return ST_ERR;
         }
 
         if (!id_decl->is_integer()) {
-            StrBuf buf(64);
+            xcom::DefFixedStrBuf buf;
             format_declaration(buf, id_decl, true);
             err(t->getLineno(), "'%s' : bit field must have integer type",
-                buf.buf);
+                buf.getBuf());
             return ST_ERR;
         }
 
         //Check bitfield's base type is big enough to hold it.
         UINT size = id_decl->getDeclByteSize() * BIT_PER_BYTE;
         if (size < (UINT)DECL_bit_len(declarator)) {
-            StrBuf buf(64);
+            xcom::DefFixedStrBuf buf;
             format_declaration(buf, id_decl, true);
             err(t->getLineno(),
                 "'%s' : type of bit field too small for number of bits",
-                buf.buf);
+                buf.getBuf());
             return ST_ERR;
         }
     }
@@ -1025,14 +1024,14 @@ static INT TypeTranPreAndPostInc(Tree * t, TYCtx * cont)
 
     Decl * d = TREE_result_type(TREE_inc_exp(t));
     if (!d->is_arith() && !d->is_pointer()) {
-        StrBuf buf(64);
+        xcom::DefFixedStrBuf buf;
         format_declaration(buf, d, true);
         if (t->getCode() == TR_INC) {
             err(t->getLineno(),
-                "illegal prefixed '++', for type '%s'", buf.buf);
+                "illegal prefixed '++', for type '%s'", buf.getBuf());
         } else {
             err(t->getLineno(),
-                "illegal postfix '++', for type '%s'", buf.buf);
+                "illegal postfix '++', for type '%s'", buf.getBuf());
         }
     }
     TREE_result_type(t) = d;
@@ -1047,14 +1046,14 @@ static INT TypeTranPreAndPostDec(Tree * t, TYCtx * cont)
 
     Decl * d = TREE_result_type(TREE_dec_exp(t));
     if (!d->is_arith() && !d->is_pointer()) {
-        StrBuf buf(64);
+        xcom::DefFixedStrBuf buf;
         format_declaration(buf, d, true);
         if (t->getCode() == TR_DEC) {
             err(t->getLineno(),
-                "illegal prefixed '--' for type '%s'", buf.buf);
+                "illegal prefixed '--' for type '%s'", buf.getBuf());
         } else {
             err(t->getLineno(),
-                "illegal postfix '--' for type '%s'", buf.buf);
+                "illegal postfix '--' for type '%s'", buf.getBuf());
         }
     }
     TREE_result_type(t) = d;
@@ -1426,18 +1425,18 @@ static INT TypeTranBinaryLogical(Tree * t, TYCtx * cont)
     Decl * ld = TREE_result_type(t->lchild());
     Decl * rd = TREE_result_type(t->rchild());
     if (ld->is_pointer() || ld->is_array()) {
-        StrBuf buf(64);
+        xcom::DefFixedStrBuf buf;
         format_declaration(buf, ld, true);
         err(t->getLineno(), "illegal '%s', left operand has type '%s'",
-            getTokenName(TREE_token(t->lchild())), buf.buf);
+            getTokenName(TREE_token(t->lchild())), buf.getBuf());
         return ST_ERR;
     }
 
     if (rd->is_pointer() || rd->is_array()) {
-        StrBuf buf(64);
+        xcom::DefFixedStrBuf buf;
         format_declaration(buf, rd, true);
         err(t->getLineno(), "illegal '%s', right operand has type '%s'",
-            getTokenName(TREE_token(t->rchild())), buf.buf);
+            getTokenName(TREE_token(t->rchild())), buf.getBuf());
         return ST_ERR;
     }
 
@@ -1506,10 +1505,11 @@ static INT TypeTranInitValScope(Tree * t, TYCtx * cont)
     }
     ASSERTN(decl, ("none of senarios provides enough info"));
     if (!hasScopeInitVal(decl)) {
-        StrBuf buf(64);
+        xcom::DefFixedStrBuf buf;
         format_declaration(buf, decl, false);
         err(t->getLineno(),
-            "'%s' can not be initialized via scoped initial value", buf.buf);
+            "'%s' can not be initialized via scoped initial value",
+            buf.getBuf());
         return ST_ERR;
     }
     TypeTranList(TREE_initval_scope(t), cont);
@@ -1583,7 +1583,7 @@ INT TypeTran(Tree * t, TYCtx * cont)
         Decl * tn = BUILD_TYNAME(T_SPEC_CHAR|T_QUA_CONST);
         Decl * d = newDecl(DCL_ARRAY);
         ASSERT0(TREE_string_val(t));
-        DECL_array_dim(d) = strlen(SYM_name(TREE_string_val(t))) + 1;
+        DECL_array_dim(d) = TREE_string_val(t)->getLen() + 1;
         xcom::add_next(&DECL_trait(tn), d);
         TREE_result_type(t) = tn;
         break;
@@ -1716,14 +1716,14 @@ INT TypeTran(Tree * t, TYCtx * cont)
         if (ST_SUCC != TypeTranList(t->lchild(), cont)) { goto FAILED; }
         Decl * ld = t->lchild()->getResultType();
         if (!ld->is_arith() || ld->is_array() || ld->is_pointer()) {
-            StrBuf buf(64);
+            xcom::DefFixedStrBuf buf;
             format_declaration(buf, ld, true);
             if (t->getCode() == TR_PLUS) {
                 err(t->getLineno(),
-                    "illegal positive '+' for type '%s'", buf.buf);
+                    "illegal positive '+' for type '%s'", buf.getBuf());
             } else {
                 err(t->getLineno(),
-                    "illegal minus '-' for type '%s'", buf.buf);
+                    "illegal minus '-' for type '%s'", buf.getBuf());
             }
         }
         TREE_result_type(t) = ld;
@@ -1734,10 +1734,10 @@ INT TypeTran(Tree * t, TYCtx * cont)
 
         Decl * ld = t->lchild()->getResultType();
         if (!ld->is_integer() || ld->is_array() || ld->is_pointer()) {
-            StrBuf buf(64);
+            xcom::DefFixedStrBuf buf;
             format_declaration(buf, ld, true);
             err(t->getLineno(),
-                "illegal bit reverse operation for type '%s'", buf.buf);
+                "illegal bit reverse operation for type '%s'", buf.getBuf());
         }
         TREE_result_type(t) = ld;
         break;
@@ -1747,10 +1747,10 @@ INT TypeTran(Tree * t, TYCtx * cont)
 
         Decl * ld = t->lchild()->getResultType();
         if (!ld->is_arith() && !ld->is_pointer() && !ld->is_bool()) {
-            StrBuf buf(64);
+            xcom::DefFixedStrBuf buf;
             format_declaration(buf, ld, true);
             err(t->getLineno(),
-                "illegal logical not operation for type '%s'", buf.buf);
+                "illegal logical not operation for type '%s'", buf.getBuf());
         }
         TREE_result_type(t) = ld;
         break;

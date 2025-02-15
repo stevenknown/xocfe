@@ -289,7 +289,7 @@ static bool compute_conditional_exp(IN Tree * t)
             err(t->getLineno(),"constant expression is not integral");
             return false;
         }
-        pushv((LONGLONG)atof(SYM_name(TREE_fp_str_val(t))));
+        pushv((LONGLONG)::atof(TREE_fp_str_val(t)->getStr()));
         break;
     case TR_SIZEOF:
         return compute_sizeof(t);

@@ -53,7 +53,7 @@ protected:
 
     //Record all allocated pass.
     //When PassMgr destructed, the table guarantees objects that allocated
-    //by the mananger are destroied at all.
+    //by the mananger are destroyed at all.
     xcom::TTab<Pass*> m_allocated_pass;
     PassTab m_registered_pass;
 protected:
@@ -79,6 +79,7 @@ protected:
     virtual Pass * allocInferType();
     virtual Pass * allocInliner();
     virtual Pass * allocInsertCvt();
+    virtual Pass * allocInsertVecSet();
     virtual Pass * allocInvertBrTgt();
     virtual Pass * allocIPA();
     virtual Pass * allocIRMgr();
@@ -107,7 +108,9 @@ protected:
     virtual Pass * allocScalarOpt();
     virtual Pass * allocVectorization();
     virtual Pass * allocMultiResConvert();
+    virtual Pass * allocAlgeReasscociate();
     virtual Pass * allocVRP();
+    virtual Pass * allocTargInfoHandler();
     virtual Pass * allocExtPass(PASS_TYPE passty)
     {
         ASSERTN(0, ("Target Dependent Code."));
@@ -116,6 +119,8 @@ protected:
 protected:
     void checkAndRecomputeDUChain(
         OptCtx * oc, DUMgr * dumgr, BitSet const& opts);
+    void checkAndRecomputeAA(
+        OptCtx * oc, IRCFG * cfg, AliasAnalysis *& aa, BitSet const& opts);
     void checkAndRecomputeAAandDU(
         OptCtx * oc, IRCFG * cfg, AliasAnalysis *& aa, DUMgr *& dumgr,
         BitSet const& opts);

@@ -103,9 +103,9 @@ static bool checkCallParamList(Tree * t, TYCtx * cont)
     }
 
     if (formal_param_decl != nullptr || real_param != nullptr) {
-        CHAR * name = nullptr;
+        CHAR const* name = nullptr;
         if (TREE_fun_exp(t)->getCode() == TR_ID) {
-            name = SYM_name(TREE_id_name(TREE_fun_exp(t)));
+            name = TREE_id_name(TREE_fun_exp(t))->getStr();
         }
 
         Decl * p = get_parameter_list(TREE_fun_exp(t)->getResultType());
@@ -154,7 +154,7 @@ static bool checkCall(Tree * t, TYCtx * cont)
         //t is indirect function call through computable expression.
         if (!fun_decl->is_fun_pointer() && !fun_decl->is_fun_decl() &&
             !fun_decl->is_fun_def()) {
-            xcom::StrBuf buf(64);
+            xcom::DefFixedStrBuf buf;
             format_declaration(buf, fun_decl, true);
             err(callee->getLineno(), "callee '%s' is not a function pointer",
                 TOKEN_INFO_name(get_token_info(TREE_token(callee))));
@@ -251,12 +251,12 @@ static bool checkAssign(Tree * t, TYCtx * cont)
          !isConsistentWithPointer(TREE_rchild(t))) ||
         (TREE_rchild(t)->getResultType()->is_pointer() &&
          !isConsistentWithPointer(TREE_lchild(t)))) {
-        xcom::StrBuf bufl(64);
-        xcom::StrBuf bufr(64);
+        xcom::DefFixedStrBuf bufl;
+        xcom::DefFixedStrBuf bufr;
         format_declaration(bufl, TREE_lchild(t)->getResultType(), true);
         format_declaration(bufr, TREE_rchild(t)->getResultType(), true);
         warn(t->getLineno(),
-             "should not assign '%s' to '%s'", bufr.buf, bufl.buf);
+             "should not assign '%s' to '%s'", bufr.getBuf(), bufl.getBuf());
     }
     //Check LHS of assignment.
     checkAssignLHS(t);
@@ -319,8 +319,8 @@ static bool checkCvt(Tree * t, TYCtx * cont)
     bool tgt_is_pt = tgtty->isPointer();
     bool src_is_fp = srcty->is_fp();
     bool tgt_is_fp = tgtty->is_fp();
-    xcom::StrBuf bufsrc(64);
-    xcom::StrBuf buftgt(64);
+    xcom::DefFixedStrBuf bufsrc;
+    xcom::DefFixedStrBuf buftgt;
 
     if ((src_is_arr && tgt_is_aggr) ||
         (src_is_aggr && tgt_is_arr) ||
@@ -328,7 +328,7 @@ static bool checkCvt(Tree * t, TYCtx * cont)
         format_declaration(bufsrc, srcty, true);
         format_declaration(buftgt, tgtty, true);
         err(t->getLineno(),
-            "can not convert '%s' to '%s'", bufsrc.buf, buftgt.buf);
+            "can not convert '%s' to '%s'", bufsrc.getBuf(), buftgt.getBuf());
         return false;
     }
 
@@ -337,7 +337,7 @@ static bool checkCvt(Tree * t, TYCtx * cont)
         format_declaration(bufsrc, srcty, true);
         format_declaration(buftgt, tgtty, true);
         err(t->getLineno(),
-            "can not convert '%s' to '%s'", bufsrc.buf, buftgt.buf);
+            "can not convert '%s' to '%s'", bufsrc.getBuf(), buftgt.getBuf());
         return false;
     }
 
@@ -345,7 +345,7 @@ static bool checkCvt(Tree * t, TYCtx * cont)
         format_declaration(bufsrc, srcty, true);
         format_declaration(buftgt, tgtty, true);
         err(t->getLineno(),
-            "can not convert '%s' to '%s'", bufsrc.buf, buftgt.buf);
+            "can not convert '%s' to '%s'", bufsrc.getBuf(), buftgt.getBuf());
         return false;
     }
     return res;

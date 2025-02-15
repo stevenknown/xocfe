@@ -221,9 +221,9 @@ Tree * TreeCanon::handleCall(Tree * t, TreeCanonCtx * ctx)
         }
     }
     if (formal_param_decl != nullptr || real_param != nullptr) {
-        CHAR * name = nullptr;
+        CHAR const* name = nullptr;
         if (TREE_fun_exp(t)->getCode() == TR_ID) {
-            name = SYM_name(TREE_id_name(TREE_fun_exp(t)));
+            name = TREE_id_name(TREE_fun_exp(t))->getStr();
         }
 
         Decl * p = get_parameter_list(TREE_fun_exp(t)->getResultType());

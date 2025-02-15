@@ -82,9 +82,9 @@ static void dump_line(Tree const* t)
 
 static void dump_ty(Decl const* ty)
 {
-    StrBuf sbuf(64);
+    xcom::DefFixedStrBuf sbuf;
     format_declaration(sbuf, ty, true);
-    xoc::prt(g_logmgr, " TY<%s>", sbuf.buf);
+    xoc::prt(g_logmgr, " TY<%s>", sbuf.getBuf());
 }
 
 
@@ -115,21 +115,22 @@ void Tree::dump() const
         g_logmgr->decIndent(dn);
         break;
     case TR_ID: {
-        CHAR * name = SYM_name(TREE_id_name(t));
-        if (TREE_id_decl(t) != nullptr) {
-            StrBuf sbuf(64);
+        CHAR const* name = TREE_id_name(t)->getStr();
+        Decl const* id_decl = TREE_id_decl(t);
+        if (id_decl != nullptr) {
+            xcom::DefFixedStrBuf sbuf;
             format_declaration(sbuf, t->getResultType(), true);
             sbuf.strcat(" -- ");
-            if (DECL_is_sub_field(TREE_id_decl(t))) {
-                TypeAttr * ty = DECL_base_type_spec(TREE_id_decl(t));
-                format_attr(sbuf, ty, TREE_id_decl(t)->is_pointer());
+            if (DECL_is_sub_field(id_decl)) {
+                TypeAttr * ty = DECL_base_type_spec(id_decl);
+                format_attr(sbuf, ty, id_decl->is_pointer());
                 note(g_logmgr, "\n%s(id:%u) base-type:%s",
-                     name, t->id(), sbuf.buf);
+                     name, t->id(), sbuf.getBuf());
             } else {
-                Scope * s = DECL_decl_scope(TREE_id_decl(t));
+                Scope * s = DECL_decl_scope(id_decl);
                 format_declaration(sbuf, get_decl_in_scope(name, s), true);
                 xoc::note(g_logmgr, "\nID(id:%u):'%s' Scope:%d Decl:%s",
-                          t->id(), name, SCOPE_level(s), sbuf.buf);
+                          t->id(), name, SCOPE_level(s), sbuf.getBuf());
             }
         } else {
             note(g_logmgr, "\nreferred ID(id:%d):'%s'",
@@ -374,9 +375,9 @@ void Tree::dump() const
         g_logmgr->decIndent(dn);
         break;
     case TR_TYPE_NAME: { //user defined type ord C standard type
-        StrBuf sbuf(32);
+        xcom::DefFixedStrBuf sbuf;
         format_declaration(sbuf, t->getTypeName(), true);
-        note(g_logmgr, "\nTYPE_NAME(id:%u):%s", t->id(), sbuf.buf);
+        note(g_logmgr, "\nTYPE_NAME(id:%u):%s", t->id(), sbuf.getBuf());
         dump_line(t);
         break;
     }
@@ -519,9 +520,9 @@ void Tree::dump() const
         g_logmgr->decIndent(dn);
         break;
     case TR_CALL: {
-        StrBuf sbuf(32);
+        xcom::DefFixedStrBuf sbuf;
         format_declaration(sbuf, t->getResultType(), true);
-        note(g_logmgr, "\nCALL(id:%u) RETV_TY<%s>", t->id(), sbuf.buf);
+        note(g_logmgr, "\nCALL(id:%u) RETV_TY<%s>", t->id(), sbuf.getBuf());
         dump_line(t);
 
         g_logmgr->incIndent(dn);

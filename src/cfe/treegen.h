@@ -34,16 +34,17 @@ namespace xfe {
 
 //Exported Variables
 extern CHAR * g_real_token_string;
+extern UINT g_real_token_string_len;
 extern TOKEN g_real_token;
 extern SMemPool * g_pool_general_used;
 extern SMemPool * g_pool_tree_used; //front end
 extern SMemPool * g_pool_st_used;
-extern SymTab * g_fe_sym_tab;
+extern CLSymTab * g_fe_sym_tab;
 extern LogMgr * g_logmgr; //the file handler of log file.
 
 Tree * buildDeref(Tree * base);
 Tree * buildInitvalScope(Tree * exp_list);
-Tree * buildString(Sym const* str);
+Tree * buildString(ESym const* str);
 Tree * buildInt(HOST_INT val);
 Tree * buildUInt(HOST_UINT val);
 Tree * buildId(Decl const* decl);

@@ -245,6 +245,12 @@ Scope * pop_scope()
 }
 
 
+void clean_global_scope()
+{
+    g_cur_scope = nullptr;
+}
+
+
 // Get GLOBAL_SCOPE level scope
 Scope * get_global_scope()
 {
@@ -339,18 +345,16 @@ static void dump_enums(Scope const* s)
 {
     EnumTab * el = s->getEnumTab();
     if (el == nullptr) { return; }
-
-    StrBuf buf(64);
+    xcom::DefFixedStrBuf buf;
     note(g_logmgr, "\nENUM Tab:");
     g_logmgr->incIndent(2);
     note(g_logmgr, "\n");
-
     EnumTabIter it;
     for (Enum * e = el->get_first(it);
          e != nullptr; e = el->get_next(it)) {
         buf.clean();
         format_enum_complete(buf, e);
-        note(g_logmgr, "%s\n", buf.buf);
+        note(g_logmgr, "%s\n", buf.getBuf());
     }
     g_logmgr->decIndent(2);
 }
@@ -365,11 +369,11 @@ static void dump_user_defined_type(Scope const* s)
     note(g_logmgr, "\nUSER Type:");
     g_logmgr->incIndent(2);
 
-    StrBuf buf(64);
+    xcom::DefFixedStrBuf buf;
     while (utl != nullptr) {
         buf.clean();
         format_user_type(buf, USER_TYPE_LIST_utype(utl));
-        note(g_logmgr, "\n%s", buf.buf);
+        note(g_logmgr, "\n%s", buf.getBuf());
         utl = USER_TYPE_LIST_next(utl);
     }
     g_logmgr->decIndent(2);
@@ -385,13 +389,13 @@ static void dump_structs(Scope const* s)
     note(g_logmgr, "\nSTRUCT:");
     g_logmgr->incIndent(2);
 
-    StrBuf buf(64);
+    xcom::DefFixedStrBuf buf;
     xcom::C<Struct*> * ct;
     for (Struct * st = SCOPE_struct_list(s).get_head(&ct);
          st != nullptr; st = SCOPE_struct_list(s).get_next(&ct)) {
         buf.clean();
         format_struct_complete(buf, st);
-        note(g_logmgr, "\n%s", buf.buf);
+        note(g_logmgr, "\n%s", buf.getBuf());
     }
 
     g_logmgr->decIndent(2);
@@ -408,13 +412,13 @@ static void dump_unions(Scope const* s)
     g_logmgr->incIndent(2);
     note(g_logmgr, "\n");
 
-    StrBuf buf(64);
+    xcom::DefFixedStrBuf buf;
     xcom::C<Union*> * ct;
     for (Union * st = SCOPE_union_list(s).get_head(&ct);
          st != nullptr; st = SCOPE_union_list(s).get_next(&ct)) {
         buf.clean();
         format_union_complete(buf, st);
-        note(g_logmgr, "\n%s", buf.buf);
+        note(g_logmgr, "\n%s", buf.getBuf());
     }
 
     g_logmgr->decIndent(2);
@@ -428,13 +432,13 @@ static void dump_declarations(Scope const* s, UINT flag)
     Decl * dcl = s->getDeclList();
     if (dcl == nullptr) { return; }
 
-    StrBuf buf(64);
+    xcom::DefFixedStrBuf buf;
     note(g_logmgr, "\nDECLARATIONS:");
     g_logmgr->incIndent(2);
     while (dcl != nullptr) {
         buf.clean();
         format_declaration(buf, dcl, true);
-        note(g_logmgr, "\n%s", buf.buf);
+        note(g_logmgr, "\n%s", buf.getBuf());
 
         g_logmgr->incIndent(2);
         dcl->dump();
@@ -491,7 +495,7 @@ void Scope::dump(UINT flag) const
     if (g_logmgr == nullptr) { return; }
 
     Scope const* s = this;
-    StrBuf buf(64);
+    xcom::DefFixedStrBuf buf;
     note(g_logmgr, "\nSCOPE(id:%d, level:%d)", SCOPE_id(s), SCOPE_level(s));
     g_logmgr->incIndent(2);
     dump_symbols(s);

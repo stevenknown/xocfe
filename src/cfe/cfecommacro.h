@@ -28,3 +28,19 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #define ST_ERR 1 //Status if error occur.
 #define ST_SUCC 0 //Status if successful.
 #define ST_EOF 2 //Status meet End-Of-File.
+
+#define ENABLE_ESYMTAB
+
+#ifdef ENABLE_ESYMTAB
+//Define SymTab type of C-Language frontend.
+typedef xoc::ESymTab CLSymTab;
+
+//Define Sym type of C-Language frontend.
+typedef xoc::ESym CLSym;
+#else
+//Define SymTab type of C-Language frontend.
+typedef xoc::SymTab CLSymTab;
+
+//Define Sym type of C-Language frontend.
+typedef xoc::Sym CLSym;
+#endif

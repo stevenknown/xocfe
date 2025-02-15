@@ -40,6 +40,7 @@ author: Su Zhenyu
 //Defined the entry for extended expression ir code.
 #undef SWITCH_CASE_EXT_EXP
 #define SWITCH_CASE_EXT_EXP \
+    SWITCH_CASE_EXT_ATOM: \
     case IR_BROADCAST: \
     SWITCH_CASE_ML_CODE
 

@@ -274,7 +274,7 @@ public:
             Sym const* id_name; //record symbol of TR_ID in SymTab
             Decl * id_decl; //record legal declaration
         } u12;
-        Sym const* sval; //record a string in SymTab
+        CLSym const* sval; //record a string in C-language SymTab
         Sym const* lab_name; //record a label name in SymTab
         HOST_INT ival; //record an integer value
         LabelInfo const* lab_info; //record a label info defined

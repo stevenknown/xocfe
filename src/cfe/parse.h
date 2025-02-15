@@ -70,7 +70,7 @@ extern TOKEN g_real_token;
 extern SMemPool * g_pool_general_used;
 extern SMemPool * g_pool_tree_used; //front end
 extern SMemPool * g_pool_st_used;
-extern SymTab * g_fe_sym_tab;
+extern CLSymTab * g_fe_sym_tab;
 extern LogMgr * g_logmgr; //the file handler of log file.
 
 } //namespace xfe

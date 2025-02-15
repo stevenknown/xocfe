@@ -41,10 +41,10 @@ static INT compute_array_dim(Decl * dclr, bool allow_dim0_is_empty);
 static Tree * refine_tree_list(Tree * t);
 static bool isEnumTagExist(
     EnumTab const* entab, CHAR const* id_name, OUT Enum ** e);
-static INT format_base_spec(StrBuf & buf, TypeAttr const* ty);
-static INT format_aggr(StrBuf & buf, TypeAttr const* ty);
-static INT format_aggr(StrBuf & buf, Aggr const* s);
-static INT format_aggr_complete(StrBuf & buf, Aggr const* s);
+static INT format_base_spec(xcom::DefFixedStrBuf & buf, TypeAttr const* ty);
+static INT format_aggr(xcom::DefFixedStrBuf & buf, TypeAttr const* ty);
+static INT format_aggr(xcom::DefFixedStrBuf & buf, Aggr const* s);
+static INT format_aggr_complete(xcom::DefFixedStrBuf & buf, Aggr const* s);
 static UINT computeArrayByteSize(TypeAttr const* spec, Decl const* decl);
 static void type_spec_aggr_field(Aggr * aggr, TypeAttr * ty);
 static bool parse_function_definition(Decl * declaration);
@@ -294,10 +294,10 @@ bool TypeAttr::is_equal(TypeAttr const& ty) const
 void TypeAttr::dump() const
 {
     if (g_logmgr == nullptr) { return; }
-    StrBuf buf(128);
+    xcom::DefFixedStrBuf buf;
     format_attr(buf, this, false);
     if (buf.is_equal("")) { return; }
-    note(g_logmgr, "\n%s\n", buf.buf);
+    note(g_logmgr, "\n%s\n", buf.getBuf());
 }
 
 
@@ -762,11 +762,11 @@ ULONG Decl::getArrayElemnumToDim(UINT dim) const
 }
 
 
-void Decl::dump(StrBuf & buf) const
+void Decl::dump(xcom::DefFixedStrBuf & buf) const
 {
     if (g_logmgr == nullptr) { return; }
     format_declaration(buf, this, true);
-    note(g_logmgr, "\n%s\n", buf.buf);
+    note(g_logmgr, "\n%s\n", buf.getBuf());
 }
 
 
@@ -1673,8 +1673,8 @@ static TypeAttr * typedef_name(TypeAttr * ty)
 static INT ck_type_spec_legally(TypeAttr * ty)
 {
     INT des = TYPE_des(ty);
-    StrBuf buf1(64);
-    StrBuf buf2(64);
+    xcom::DefFixedStrBuf buf1;
+    xcom::DefFixedStrBuf buf2;
     //struct or union
     BYTE c1 = (HAVE_FLAG(des, T_SPEC_STRUCT) ||
                HAVE_FLAG(des, T_SPEC_UNION)) != 0,
@@ -1735,32 +1735,33 @@ static INT ck_type_spec_legally(TypeAttr * ty)
     if (c1 == 1 && c3 == 1) {
         format_base_spec(buf1, ty);
         err(g_real_line_num,
-            "struct or union cannot compatilable with '%s'", buf1.buf);
+            "struct or union cannot compatilable with '%s'", buf1.getBuf());
         return ST_ERR;
     }
     if (c1 == 1 && c4 == 1) {
         format_user_type(buf1, ty);
         err(g_real_line_num,
-            "struct or union cannot compatilable with '%s'", buf1.buf);
+            "struct or union cannot compatilable with '%s'", buf1.getBuf());
         return ST_ERR;
     }
     if (c2 == 1 && c3 == 1) {
         format_base_spec(buf1, ty);
         err(g_real_line_num, "enum-type cannot compatilable with '%s'",
-            buf1.buf);
+            buf1.getBuf());
         return ST_ERR;
     }
     if (c2 == 1 && c4 == 1) {
         format_user_type(buf1, ty);
         err(g_real_line_num, "enum-type cannot compatilable with '%s'",
-            buf1.buf);
+            buf1.getBuf());
         return ST_ERR;
     }
     if (c3 == 1 && c4 == 1) {
         format_user_type(buf1, ty);
         format_base_spec(buf2, ty);
         err(g_real_line_num,
-            "'%s' type cannot compatilable with '%s'", buf1.buf, buf2.buf);
+            "'%s' type cannot compatilable with '%s'",
+            buf1.getBuf(), buf2.getBuf());
         return ST_ERR;
     }
     return ST_SUCC;
@@ -2527,20 +2528,20 @@ static bool isLegalTypeAttr(TypeAttr const* ty)
         if (HAVE_FLAG(ty->getDes(), aggr_ds) ||
             HAVE_FLAG(ty->getDes(), T_SPEC_ENUM) ||
             ty->is_user_type_ref()) {
-            StrBuf buf(16);
+            xcom::DefFixedStrBuf buf;
             format_attr(buf, ty, true);
             err(g_real_line_num, "'%s' is conflict with '%s'",
-                g_real_token_string, buf.buf);
+                g_real_token_string, buf.getBuf());
             return false;
         }
         break;
     case T_STRUCT:
     case T_UNION:
         if (HAVE_FLAG(ty->getDes(), scalar_ds) || ty->is_user_type_ref()) {
-            StrBuf buf(16);
+            xcom::DefFixedStrBuf buf;
             format_attr(buf, ty, true);
             err(g_real_line_num, "'%s' is conflict with '%s'",
-                g_real_token_string, buf.buf);
+                g_real_token_string, buf.getBuf());
             return false;
         }
         break;
@@ -2548,28 +2549,28 @@ static bool isLegalTypeAttr(TypeAttr const* ty)
         if (HAVE_FLAG(ty->getDes(), basic_scalar_ds) ||
             HAVE_FLAG(ty->getDes(), aggr_ds) ||
             ty->is_user_type_ref()) {
-            StrBuf buf(16);
+            xcom::DefFixedStrBuf buf;
             format_attr(buf, ty, true);
             err(g_real_line_num, "'%s' is conflict with '%s'",
-                g_real_token_string, buf.buf);
+                g_real_token_string, buf.getBuf());
             return false;
         }
         break;
     case T_CONST:
         if (HAVE_FLAG(ty->getDes(), T_QUA_VOLATILE)) {
-            StrBuf buf(16);
+            xcom::DefFixedStrBuf buf;
             format_attr(buf, ty, true);
             err(g_real_line_num, "'%s' is conflict with '%s'",
-                g_real_token_string, buf.buf);
+                g_real_token_string, buf.getBuf());
             return false;
         }
         break;
     case T_VOLATILE:
         if (HAVE_FLAG(ty->getDes(), T_QUA_CONST)) {
-            StrBuf buf(16);
+            xcom::DefFixedStrBuf buf;
             format_attr(buf, ty, true);
             err(g_real_line_num, "'%s' is conflict with '%s'",
-                g_real_token_string, buf.buf);
+                g_real_token_string, buf.getBuf());
             return false;
         }
         break;
@@ -2579,10 +2580,10 @@ static bool isLegalTypeAttr(TypeAttr const* ty)
         if (HAVE_FLAG(ty->getDes(), scalar_ds) ||
             HAVE_FLAG(ty->getDes(), aggr_ds) ||
             ty->is_user_type_ref()) {
-            StrBuf buf(16);
+            xcom::DefFixedStrBuf buf;
             format_attr(buf, ty, true);
             err(g_real_line_num, "'%s' is conflict with '%s'",
-                g_real_token_string, buf.buf);
+                g_real_token_string, buf.getBuf());
             return false;
         }
         break;
@@ -4161,22 +4162,17 @@ static UINT computeBitFieldByteSize(Decl const** dcl)
 
         Decl const* declarator = (*dcl)->getDeclarator();
         ASSERT0(declarator);
-
         if (!DECL_is_bit_field(declarator)) {
             break;
         }
-
         ASSERT0(DECL_bit_len(declarator) > 0);
-
         if (TYPE_des(ty2) != int_ty) { break; }
 
         if (bitsize + DECL_bit_len(declarator) > int_bitsize) {
             total_bitsize += int_bitsize;
             bitsize = 0;
         }
-
         bitsize += DECL_bit_len(declarator);
-
         *dcl = DECL_next(*dcl);
     }
 
@@ -4272,7 +4268,7 @@ UINT TypeAttr::computeUnionTypeSize(Aggr const* s)
 }
 
 
-static INT format_base_spec(StrBuf & buf, TypeAttr const* ty)
+static INT format_base_spec(xcom::DefFixedStrBuf & buf, TypeAttr const* ty)
 {
     if (ty == nullptr) { return ST_SUCC; }
     if (!ty->isSimpleType()) { return ST_ERR; }
@@ -4290,7 +4286,7 @@ static INT format_base_spec(StrBuf & buf, TypeAttr const* ty)
 }
 
 
-INT format_enum_complete(StrBuf & buf, Enum const* e)
+INT format_enum_complete(xcom::DefFixedStrBuf & buf, Enum const* e)
 {
     if (e == nullptr) { return ST_SUCC; }
     if (e->getName() != nullptr) {
@@ -4310,7 +4306,7 @@ INT format_enum_complete(StrBuf & buf, Enum const* e)
 }
 
 
-static INT format_enum_complete(StrBuf & buf, TypeAttr const* ty)
+static INT format_enum_complete(xcom::DefFixedStrBuf & buf, TypeAttr const* ty)
 {
     if (ty == nullptr) { return ST_SUCC; }
     buf.strcat("enum ");
@@ -4320,7 +4316,7 @@ static INT format_enum_complete(StrBuf & buf, TypeAttr const* ty)
 
 
 //Format union's name and members.
-INT format_union_complete(StrBuf & buf, Union const* u)
+INT format_union_complete(xcom::DefFixedStrBuf & buf, Union const* u)
 {
     if (u == nullptr) { return ST_SUCC; }
     buf.strcat("union ");
@@ -4344,7 +4340,7 @@ INT format_union_complete(StrBuf & buf, Union const* u)
 
 
 //Format struct's name and members.
-INT format_struct_complete(StrBuf & buf, Struct const* s)
+INT format_struct_complete(xcom::DefFixedStrBuf & buf, Struct const* s)
 {
     if (s == nullptr) { return ST_SUCC; }
     buf.strcat("struct ");
@@ -4379,7 +4375,7 @@ INT format_struct_complete(StrBuf & buf, Struct const* s)
 
 
 //Format struct/union's name and members.
-static INT format_aggr_complete(StrBuf & buf, Aggr const* s)
+static INT format_aggr_complete(xcom::DefFixedStrBuf & buf, Aggr const* s)
 {
     if (s == nullptr) { return ST_SUCC; }
     format_aggr(buf, s);
@@ -4422,7 +4418,7 @@ static INT format_aggr_complete(StrBuf & buf, Aggr const* s)
 
 
 //Format struct/union's name and members.
-INT format_aggr_complete(StrBuf & buf, TypeAttr const* ty)
+INT format_aggr_complete(xcom::DefFixedStrBuf & buf, TypeAttr const* ty)
 {
     if (ty == nullptr) { return ST_SUCC; }
     return format_aggr_complete(buf, ty->getAggrType());
@@ -4430,7 +4426,7 @@ INT format_aggr_complete(StrBuf & buf, TypeAttr const* ty)
 
 
 //Format aggregation type's name, the formation does not include field-members.
-static INT format_aggr(StrBuf & buf, Aggr const* s)
+static INT format_aggr(xcom::DefFixedStrBuf & buf, Aggr const* s)
 {
     //Illegal type, TYPE_aggr_type can not be nullptr,
     //one should filter this case before invoke format_aggr();
@@ -4452,7 +4448,7 @@ static INT format_aggr(StrBuf & buf, Aggr const* s)
 
 
 //Format aggregation type's name, the formation does not include field-members.
-static INT format_aggr(StrBuf & buf, TypeAttr const* ty)
+static INT format_aggr(xcom::DefFixedStrBuf & buf, TypeAttr const* ty)
 {
     if (ty == nullptr) { return ST_SUCC; }
     if (ty->is_aggr()) {
@@ -4465,7 +4461,7 @@ static INT format_aggr(StrBuf & buf, TypeAttr const* ty)
 }
 
 
-static INT format_storage(StrBuf & buf, TypeAttr const* ty)
+static INT format_storage(xcom::DefFixedStrBuf & buf, TypeAttr const* ty)
 {
     if (ty == nullptr) { return ST_SUCC; }
     if (ty->is_reg()) { buf.strcat("register "); }
@@ -4476,7 +4472,7 @@ static INT format_storage(StrBuf & buf, TypeAttr const* ty)
 }
 
 
-INT format_qualifier(StrBuf & buf, TypeAttr const* ty)
+INT format_qualifier(xcom::DefFixedStrBuf & buf, TypeAttr const* ty)
 {
     if (ty == nullptr) { return ST_SUCC; }
     if (ty->is_const()) { buf.strcat("const "); }
@@ -4498,7 +4494,8 @@ INT format_qualifier(StrBuf & buf, TypeAttr const* ty)
 //is_complete: true to dump aggregate's declarations list recursively.
 //             Note this might leading to infinite invocation of current
 //             function if meeting recursive struct.
-INT format_attr(StrBuf & buf, TypeAttr const* ty, bool is_complete)
+INT format_attr(xcom::DefFixedStrBuf & buf, TypeAttr const* ty,
+                bool is_complete)
 {
     if (ty == nullptr) { return ST_SUCC; }
     bool is_aggr = (BYTE)(ty->is_struct() || ty->is_union());
@@ -4531,7 +4528,7 @@ INT format_attr(StrBuf & buf, TypeAttr const* ty, bool is_complete)
 }
 
 
-INT format_parameter_list(StrBuf & buf, Decl const* decl)
+INT format_parameter_list(xcom::DefFixedStrBuf & buf, Decl const* decl)
 {
     if (decl == nullptr) { return ST_SUCC; }
     while (decl != nullptr) {
@@ -4543,7 +4540,7 @@ INT format_parameter_list(StrBuf & buf, Decl const* decl)
 }
 
 
-static INT format_dcrl_reverse(StrBuf & buf, TypeAttr const* ty,
+static INT format_dcrl_reverse(xcom::DefFixedStrBuf & buf, TypeAttr const* ty,
                                Decl const* decl)
 {
     if (decl == nullptr) { return ST_SUCC; }
@@ -4620,10 +4617,10 @@ static INT format_dcrl_reverse(StrBuf & buf, TypeAttr const* ty,
         break;
     case DCL_ARRAY: {
         if (DECL_is_paren(decl)) {
-            StrBuf tmpbuf(8);
+            xcom::DefFixedStrBuf tmpbuf;
             format_dcrl_reverse(tmpbuf, ty, DECL_prev(decl));
             if (!tmpbuf.is_empty()) {
-                buf.strcat("(%s)", tmpbuf.buf);
+                buf.strcat("(%s)", tmpbuf.getBuf());
             }
         } else {
             format_dcrl_reverse(buf, ty, DECL_prev(decl));
@@ -4645,15 +4642,18 @@ static INT format_dcrl_reverse(StrBuf & buf, TypeAttr const* ty,
 }
 
 
-INT format_declarator(StrBuf & buf, TypeAttr const* ty, Decl const* decl)
+INT format_declarator(xcom::DefFixedStrBuf & buf, TypeAttr const* ty,
+                      Decl const* decl)
 {
     CHAR b[128];
     b[0] = 0;
+    bool decl_is_bitfield = false;
     if (decl == nullptr) { return ST_SUCC; }
-    if (decl->is_dt_abs_declarator()||
-        DECL_dt(decl) == DCL_DECLARATOR) {
-        if (DECL_bit_len(decl)) {
+    if (decl->is_dt_abs_declarator()|| decl->is_dt_declarator()) {
+        if (DECL_is_bit_field(decl)) {
+            ASSERT0(DECL_bit_len(decl) > 0);
             SNPRINTF(b, 128, ":%d", DECL_bit_len(decl));
+            decl_is_bitfield = true;
         }
         decl = DECL_child(decl);
     }
@@ -4664,16 +4664,18 @@ INT format_declarator(StrBuf & buf, TypeAttr const* ty, Decl const* decl)
                  decl->is_dt_id() ||
                  decl->is_dt_var()),
                 ("unknown declarator"));
-
         while (DECL_next(decl) != nullptr) { decl = DECL_next(decl); }
         format_dcrl_reverse(buf, ty, decl);
+    }
+    if (decl_is_bitfield) {
+        ASSERT0(b[0] != 0);
         buf.strcat(b);
     }
     return ST_SUCC;
 }
 
 
-INT format_user_type(StrBuf & buf, TypeAttr const* ty)
+INT format_user_type(xcom::DefFixedStrBuf & buf, TypeAttr const* ty)
 {
     if (ty == nullptr) { return ST_SUCC; }
     ASSERT0(HAVE_FLAG(TYPE_des(ty), T_SPEC_USER_TYPE));
@@ -4683,7 +4685,7 @@ INT format_user_type(StrBuf & buf, TypeAttr const* ty)
 }
 
 
-INT format_user_type(StrBuf & buf, Decl const* ut)
+INT format_user_type(xcom::DefFixedStrBuf & buf, Decl const* ut)
 {
     if (ut == nullptr) { return ST_SUCC; }
     return format_declaration(buf, ut, true);
@@ -4703,7 +4705,8 @@ INT format_user_type(StrBuf & buf, Decl const* ut)
 //is_complete: true to dump aggregate's declarations list recursively.
 //             Note this might leading to infinite invocation of current
 //             function if meeting recursive struct.
-INT format_declaration(StrBuf & buf, Decl const* decl, bool is_complete)
+INT format_declaration(xcom::DefFixedStrBuf & buf, Decl const* decl,
+                       bool is_complete)
 {
     if (decl == nullptr) { return ST_SUCC; }
     if (decl->is_dt_declaration() || decl->is_dt_typename()) {
@@ -4829,12 +4832,12 @@ INT format_declarator(Decl const* decl, TypeAttr const* ty, INT indent)
 {
     DUMMYUSE(ty);
     if (decl == nullptr) { return ST_SUCC; }
-
     if (decl->is_dt_abs_declarator()||
         DECL_dt(decl) == DCL_DECLARATOR) {
         prt(g_logmgr, "%s", g_dcl_name[DECL_dt(decl)]);
         prt(g_logmgr, "(uid:%d)", DECL_id(decl));
-        if (DECL_bit_len(decl)) {
+        if (DECL_is_bit_field(decl)) {
+            ASSERT0(DECL_bit_len(decl) > 0);
             prt(g_logmgr, ",bitfield:%d", DECL_bit_len(decl));
         }
         note(g_logmgr, "\n");
@@ -4883,7 +4886,7 @@ INT format_declaration(Decl const* decl, INT indent, bool is_complete)
     if (decl == nullptr || g_logmgr == nullptr) { return ST_SUCC; }
     note(g_logmgr, "\n");
 
-    StrBuf sbuf(128);
+    xcom::DefFixedStrBuf sbuf;
     if (decl->is_dt_declaration() || decl->is_dt_typename()) {
         TypeAttr * ty = decl->getTypeAttr();
         Decl * dcl = DECL_decl_list(decl);
@@ -4896,7 +4899,7 @@ INT format_declaration(Decl const* decl, INT indent, bool is_complete)
 
         g_logmgr->incIndent(DECL_FMT_INDENT_INTERVAL);
 
-        prt(g_logmgr, "SPECIFIER:%s", sbuf.buf);
+        prt(g_logmgr, "SPECIFIER:%s", sbuf.getBuf());
 
         note(g_logmgr, "\n");
         format_declarator(dcl, decl->getTypeAttr(),
@@ -5172,12 +5175,12 @@ static bool checkAggrComplete(Decl * decl)
     if (!errs) { return true; }
 
     //Error occurred.
-    StrBuf buf(64);
+    xcom::DefFixedStrBuf buf;
     Sym const* sym = decl->getDeclSym();
     if (sym != nullptr) {
         format_aggr_complete(buf, attr->getPureTypeAttr());
         err(g_real_line_num, "'%s' uses incomplete defined %s : %s",
-            sym->getStr(), attr->getAggrTypeName(), buf.buf);
+            sym->getStr(), attr->getAggrTypeName(), buf.getBuf());
         return false;
     }
 

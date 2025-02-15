@@ -164,6 +164,8 @@ typedef TTab<xoc::LabelInfo*, CompareLab> LabelTab;
 #define DUMP_SCOPE_STMT_TREE 0x2
 #define DUMP_SCOPE_RECUR 0x4
 
+void clean_global_scope();
+
 void destroy_scope_list();
 
 Scope * get_global_scope();

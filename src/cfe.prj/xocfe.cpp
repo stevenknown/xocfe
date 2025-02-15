@@ -129,7 +129,7 @@ INT main(INT argc, CHAR * argv[])
 {
 #endif
     if (!processCmdLine(argc, argv)) { return 1; }
-    g_fe_sym_tab = new SymTab();
+    g_fe_sym_tab = new CLSymTab();
     LogMgr * lm = new LogMgr();
     if (g_dump_file_name != nullptr) {
         lm->init(g_dump_file_name, true);
