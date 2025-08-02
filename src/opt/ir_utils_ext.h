@@ -43,6 +43,7 @@ namespace xoc {
     SWITCH_CASE_EXT_BIN: \
     SWITCH_CASE_EXT_ATOM: \
     case IR_BROADCAST: \
+    case IR_PHYREG
 
 //Defined the entry for extended virtual stmt ir code.
 #define SWITCH_CASE_EXT_VSTMT \

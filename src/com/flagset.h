@@ -37,6 +37,7 @@ typedef BSIdx FlagSetIdx;
 //
 template <class FlagDescSeg, UINT FlagDescNum>
 class FlagSet : public FixedSizeBitSet {
+    //THE CLASS ALLOWS COPY-CONSTRUCTOR.
 protected:
     static UINT const g_flagset_byte_size = sizeof(FlagDescSeg) * FlagDescNum;
     BYTE m_flagbuf[g_flagset_byte_size];
@@ -48,8 +49,14 @@ public:
     }
     FlagSet(FlagDescSeg v) : FixedSizeBitSet(m_flagbuf, g_flagset_byte_size)
     {
-        ASSERT0(g_flagset_byte_size >= sizeof(v));
+        ASSERT0(sizeof(v) <= g_flagset_byte_size);
         ::memcpy(m_flagbuf, &v, sizeof(v));
+    }
+    FlagSet(BYTE const* vbuf, UINT vbuflen)
+        : FixedSizeBitSet(m_flagbuf, g_flagset_byte_size)
+    {
+        ASSERT0(vbuflen <= g_flagset_byte_size);
+        ::memcpy(m_flagbuf, vbuf, vbuflen);
     }
 
     //The function unifies all flags in 'st' into current flags buffer.

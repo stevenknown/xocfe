@@ -270,7 +270,7 @@ static LabelInfo * add_label(CHAR * name, INT lineno)
     }
 
     //Allocate different LabelInfo for different lines.
-    li = allocCustomerLabel(g_fe_sym_tab->add(name), g_pool_general_used);
+    li = xoc::allocCustomerLabel(g_fe_sym_tab->add(name), g_pool_general_used);
     set_map_lab2lineno(li, lineno);
     SCOPE_label_list(sc).append_tail(li);
     return li;
@@ -292,7 +292,7 @@ static LabelInfo * add_ref_label(CHAR * name, INT lineno)
     }
 
     //Allocate different LabelInfo for different lines.
-    li = allocCustomerLabel(g_fe_sym_tab->add(name), g_pool_general_used);
+    li = xoc::allocCustomerLabel(g_fe_sym_tab->add(name), g_pool_general_used);
     set_lab_used(li);
     set_map_lab2lineno(li, lineno); //ONLY for debug-info or dumping
     SCOPE_ref_label_list(sc).append_tail(li);
@@ -673,9 +673,7 @@ static TOKEN look_next_token(INT n,
 //'...': represent a token list which will to match.
 static bool look_forward_token(INT num, ...)
 {
-    if (num <= 0) {
-        return 0;
-    }
+    if (num <= 0) { return 0; }
     va_list arg;
     va_start(arg, num);
     TOKEN v = (TOKEN)va_arg(arg, INT);
@@ -683,7 +681,6 @@ static bool look_forward_token(INT num, ...)
         va_end(arg);
         return g_real_token == v;
     }
-
     Cell * c = g_cell_list.get_head();
     if (c != nullptr) {
         //append current real token to 'token-list'
@@ -709,7 +706,6 @@ static bool look_forward_token(INT num, ...)
             v = (TOKEN)va_arg(arg, INT);
             num--;
         }
-
     } else {
         //token_list is empty. So fetch new token to match.
         while (num > 0) {

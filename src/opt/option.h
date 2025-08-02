@@ -90,6 +90,10 @@ public:
     //Note is_dump_all and is_dump_nothing can not all be true.
     bool is_dump_all;
 
+    //Dump the properly information to support the extraction and comparasion
+    //to the dump files in the test environment that built by user.
+    bool is_dump_for_test;
+
     //Dump after pass.
     bool is_dump_after_pass;
 
@@ -112,6 +116,7 @@ public:
     bool is_dump_rp; //Dump Register Promotion.
     bool is_dump_rce; //Dump light weight Redundant Code Elimination.
     bool is_dump_dce; //Dump Dead Code Elimination.
+    bool is_dump_bcp; //Dump Branch Condition Propagation.
     bool is_dump_vrp; //Dump Value Range Propagation.
     bool is_dump_infertype; //Dump Infer Type.
     bool is_dump_invert_brtgt; //Dump Invert Branch Target.
@@ -130,6 +135,7 @@ public:
     bool is_dump_simplification; //Dump IR simplification.
     bool is_dump_prssamgr; //Dump PRSSAMgr.
     bool is_dump_mdssamgr; //Dump MDSSAMgr.
+    bool is_dump_regssamgr; //Dump RegSSAMgr.
     bool is_dump_memusage; //Dump memory usage.
     bool is_dump_livenessmgr; //Dump LivenessMgr.
     bool is_dump_irparser; //Dump IRParser.
@@ -142,6 +148,7 @@ public:
     bool is_dump_lsra; //Dump LinearScanRA
     bool is_dump_to_buffer; //Dump info to buffer
     bool is_dump_pelog; //Dump PrologueEpilogue
+    bool is_dump_irfusion; //Dump IRFusion.
 
     //The option determines whether IR dumper dumps the IR's id when dumpIR()
     //invoked. It should be set to false when the dump information is used in
@@ -159,6 +166,14 @@ public:
     bool is_dump_irreloc; //Dump IRReloc.
 
     bool is_dump_kernel_adjustment; //Dump ir after KernelAdjustment.
+    bool is_dump_last_simp; //Dump ir after last simplification.
+    bool is_dump_insert_vecset; //Dump vset information after InsertVecSet.
+    bool is_dump_inst_sched; //Dump inst sched information after InstSched.
+    bool is_dump_linker; //Dump linker info.
+    bool is_dump_stack_coloring; //Dump some informations after stack coloring.
+
+     //Dump some informations After pattern matching and replacement.
+    bool is_dump_match_and_replace;
 public:
     DumpOption();
     DumpOption const& operator = (DumpOption const&); //Disable operator =.
@@ -166,6 +181,7 @@ public:
     bool isDumpAA() const;
     bool isDumpAfterPass() const;
     bool isDumpAll() const;
+    bool isDumpForTest() const;
     bool isDumpArgPasser() const;
     bool isDumpBeforePass() const;
     bool isDumpBROpt() const;
@@ -174,18 +190,23 @@ public:
     bool isDumpCFG() const;
     bool isDumpCFGOpt() const;
     bool isDumpCG() const;
+    bool isDumpMatchAndReplace() const;
     bool isDumpCP() const;
+    bool isDumpBCP() const;
     bool isDumpDCE() const;
     bool isDumpDOM() const;
     bool isDumpDUMgr() const;
     bool isDumpExprTab() const;
     bool isDumpGCSE() const;
+    bool isDumpMDRef() const;
     bool isDumpGPAdjustment() const;
     bool isDumpGSCC() const;
     bool isDumpGVN() const;
     bool isDumpInferType() const;
     bool isDumpInsertCvt() const;
+    bool isDumpInstSched() const;
     bool isDumpInvertBrTgt() const;
+    bool isDumpIRFusion() const;
     bool isDumpIRID() const;
     bool isDumpIRParser() const;
     bool isDumpIRReloc() const;
@@ -201,6 +222,7 @@ public:
     bool isDumpLSRAReorderMovInLatchBB() const;
     bool isDumpMDSetHash() const;
     bool isDumpMDSSAMgr() const;
+    bool isDumpRegSSAMgr() const;
     bool isDumpMemUsage() const;
     bool isDumpMultiResConvert() const;
     bool isDumpTargInfoHandler() const;
@@ -215,9 +237,13 @@ public:
     bool isDumpRP() const;
     bool isDumpRPO() const;
     bool isDumpSimp() const;
+    bool isDumpStackColoring() const;
     bool isDumpToBuffer() const;
     bool isDumpVectorization() const;
     bool isDumpVRP() const;
+    bool isDumpLastSimp() const;
+    bool isDumpInsertVecSet() const;
+    bool isDumpLinker() const;
 
     void setDumpNothing();
     void setDumpAll();
@@ -253,26 +279,6 @@ public:
 };
 
 
-class ArchOption {
-public:
-    //Architecture T1.
-    bool is_arch_t1;
-
-    //Architecture T2.
-    bool is_arch_t2;
-
-public:
-    ArchOption();
-    ArchOption const& operator = (ArchOption const&); //Disable operator =.
-
-    bool isArchSpecified() const { return is_arch_t1 || is_arch_t2; }
-
-    bool isArchT1() const { return is_arch_t1; }
-
-    bool isArchT2() const { return is_arch_t2; }
-};
-
-
 class Option {
 public:
     Option() {}
@@ -295,6 +301,7 @@ typedef enum _PASS_TYPE {
     PASS_AA,
     PASS_DU_MGR,
     PASS_CP,
+    PASS_BCP,
     PASS_CCP,
     PASS_GCSE,
     PASS_LCSE,
@@ -327,6 +334,7 @@ typedef enum _PASS_TYPE {
     PASS_VRP,
     PASS_PRSSA_MGR,
     PASS_MDSSA_MGR,
+    PASS_REGSSA_MGR,
     PASS_CFS_MGR,
     PASS_POLY_TRAN,
     PASS_MD_BUGPATTERN_MGR,
@@ -334,6 +342,7 @@ typedef enum _PASS_TYPE {
     PASS_INLINER,
     PASS_REFINE_DUCHAIN,
     PASS_SCALAR_OPT,
+    PASS_PRLIVENESS_MGR,
     PASS_MDLIVENESS_MGR,
     PASS_MDSSALIVE_MGR,
     PASS_REFINE,
@@ -358,6 +367,12 @@ typedef enum _PASS_TYPE {
     PASS_IGOTO_OPT,
     PASS_MEMCHECK,
     PASS_KERNEL_ADJUSTMENT,
+    PASS_INSERT_VECSET,
+    PASS_IRFUSION,
+    PASS_INST_SCHED,
+    PASS_STACK_COLORING,
+    PASS_MATCH_AND_REPLACE,
+    PASS_TYPE_REVISER,
     #include "pass_type_ext.inc"
     PASS_NUM,
 } PASS_TYPE;
@@ -438,6 +453,9 @@ extern bool g_do_rpo;
 
 //Perform loop analysis.
 extern bool g_do_loop_ana;
+
+//Perform cfg optimizations.
+extern bool g_do_cfg_opt;
 
 //Perform cfg optimization: remove labels that no one referenced.
 extern bool g_do_cfg_remove_redundant_label;
@@ -556,6 +574,9 @@ extern bool g_do_cp_aggressive;
 //Perform copy propagation.
 extern bool g_do_cp;
 
+//Perform branch condition propagation.
+extern bool g_do_bcp;
+
 //Perform register promotion.
 extern bool g_do_rp;
 
@@ -615,6 +636,15 @@ extern bool g_cst_bb_list;
 //that built by DUMgr or SSAMgr will be conservative.
 extern bool g_enable_local_var_delegate;
 
+//If the flag is true, MDMgr will try to generate and assign MD according to
+//the OFFSET of the Partial PR operations.
+//NOTE: Since the generated MD considers the OFFSET, it will confuse the
+//classic DU chain because there will be different MDs for the same PRNO.
+//e.g: setelem $x:u32 id:19 = ld b, 20, 2;
+//     ...        = $x:u32 id:20;
+//  where 'setelem id:19' will not be the DEF of '$x id:20'.
+extern bool g_assign_mdref_with_the_offset_for_prop;
+
 //Record the maximum limit of the number of IR to perform optimizations.
 //This is the threshold to do optimization.
 extern UINT g_thres_opt_ir_num;
@@ -664,8 +694,29 @@ extern bool g_do_memcheck;
 //Perform static memory check.
 extern bool g_do_memcheck_static;
 
+//Perform memory check of out-of-bound.
+extern bool g_do_memcheck_oob;
+
+//Perform static memory check of out-of-bound.
+extern bool g_do_memcheck_static_oob;
+
+//Perform memory check of stack overflow.
+extern bool g_do_memcheck_stackoverflow;
+
+//Perform reply word dependency analysis and revise.
+extern bool g_do_memcheck_reply_dependency;
+
+//Perform reply word dependency analysis only.
+extern bool g_do_memcheck_static_reply_dependency;
+
 //Adjust kernel.
 extern bool g_adjust_kernel;
+
+//Perform last simplification.
+extern bool g_do_last_simp;
+
+//Perform IR fusion.
+extern bool g_do_ir_fusion;
 
 //Set to true to retain the PassMgr even if Region processing finished.
 extern bool g_retain_pass_mgr_for_region;
@@ -703,14 +754,15 @@ extern bool g_is_search_and_copy_dbx;
 //If user only consider PRNO in pass, Var and MD is dispensable.
 extern bool g_generate_var_for_pr;
 
+//Set true to strictly ensure the related PR and Var are pointer type.
+//e.g: $x = 10; ...=ild &x, where $x should be pointer type.
+extern bool g_strictly_ensure_the_use_of_pointer;
+
 //Record dump options for each Pass.
 extern DumpOption g_dump_opt;
 
 //Record options for each Pass.
 extern PassOption g_pass_opt;
-
-//Record architecture.
-extern ArchOption g_arch;
 
 //Redirect output information to stdout to dump file if exist.
 extern bool g_redirect_stdout_to_dump_file;
@@ -732,12 +784,22 @@ extern StrTabOption g_exclude_region;
 //If it is located in HBM, it is set to true.
 extern bool g_stack_on_global;
 
+#ifdef FOR_TECO_IP
+//Forced relaxation of cond-br to uncond-br.
+extern bool g_do_relaxation2uncondbr;
+
+//Forced relaxation of cond-br or uncond-br to jmp.
+extern bool g_do_relaxation2jmp;
+
+#endif
 //Used to enable the debug mode for LSRA, and the g_debug_reg_num can be use
 //to control the number of physical register under debug mode.
 extern bool g_do_lsra_debug;
 extern UINT g_debug_reg_num;
-//Support alloca.
-extern bool g_support_alloca;
+
+//Support vector setting.
+extern bool g_do_insert_vecset;
+
 //Enable fp as stack pointer.
 extern bool g_force_use_fp_as_sp;
 
@@ -756,12 +818,43 @@ extern bool g_debug;
 //The front end is in debug_cpp mode.
 extern bool g_debug_cpp;
 
-//The front end is in debug_python mode.
-extern bool g_debug_pyhton;
+//The front end is in debug_pcx mode.
+extern bool g_debug_pcx;
 
-//Use the interference graph algorithm to clor the stack slot generated in LSRA,
-//which can reduce the final stack space.
-extern bool g_interference_graph_stack_slot_color;
+//The front end is in debug_python mode.
+extern bool g_debug_python;
+
+//The front end is in debug_gr mode.
+extern bool g_debug_gr;
+
+//Only reuse the spill variables.
+extern bool g_do_spill_var_stack_coloring;
+
+//Only reuse the stack variables.
+extern bool g_do_stack_var_stack_coloring;
+
+//Reuse all local variables.
+extern bool g_do_local_var_stack_coloring;
+
+//Enable instruction scheduling
+extern bool g_do_inst_sched;
+
+//stack coloring.
+extern bool g_do_stack_coloring;
+
+//Consider setting separate vta and vma values for
+//the first vector instruction in the basic block.
+extern bool g_vset_insert_consider_first_vir;
+
+//Support match and replace optimization.
+extern bool g_do_match_and_replace;
+
+//Enable preprocessing optimization (replace places
+//where 0 is used with the zero register).
+extern bool g_do_match_and_replace_preprocess;
+
+//Make the mov and stretch modes effective.
+extern bool g_do_match_and_replace_mov_stretch;
 
 } //namespace xoc
 

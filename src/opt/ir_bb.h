@@ -216,6 +216,7 @@ public:
 
 typedef xcom::TTab<IRBB*> BBTab;
 typedef xcom::TTabIter<IRBB*> BBTabIter;
+typedef xcom::TTab<IRBB const*> ConstBBTab;
 typedef xcom::Vector<IRBB*> BBVec;
 
 //
@@ -242,8 +243,47 @@ public:
     //next: next BB.
     bool isPrevBB(IRBB const* prev, IRBB const* next) const;
     bool isPrevBB(IRBB const* prev, BBListIter nextit) const;
+    bool is_empty() const { return get_elem_count() == 0; }
 };
 //END BBList
+
+//The class represents the context information during BB dump.
+template <class DumpTypeName = void>
+class BBDumpCtx {
+public:
+    BBDumpCtx() {}
+
+    //Dump prolog information before dumping BBIR list.
+    virtual void dumpProlog(Region const*, IRBB const*) const
+    {
+        //Target Dependent Code.
+        ASSERT0(0);
+    }
+
+    //Dump epilog information after dumping BBIR list.
+    virtual void dumpEpilog(Region const*, IRBB const*) const
+    {
+        //Target Dependent Code.
+        ASSERT0(0);
+    }
+};
+
+
+//The class represents the context information during IR or BB dump.
+//Note there is a forward declaration of IRDumpCtx placed in ir_desc.h.
+//Change the number of template-parameters should both modify the forward
+//decalaration and the class definition.
+template <class IRDumpCtxTypeName = IRDumpCtx<>,
+          class BBDumpCtxTypeName = BBDumpCtx<> >
+class BBDumpCtxMgr {
+public:
+    IRDumpCtxTypeName * ir_dump_ctx; //context's content may be modified
+    BBDumpCtxTypeName * bb_dump_ctx; //context's content may be modified
+public:
+    //idc: the dump context should contain IR dumping behavior at least.
+    BBDumpCtxMgr(IRDumpCtxTypeName * idc, BBDumpCtxTypeName * bdc = nullptr)
+        : ir_dump_ctx(idc), bb_dump_ctx(bdc) {}
+};
 
 
 //
@@ -307,7 +347,7 @@ public:
     }
     ~IRBB() {}
 
-    inline void addLabel(LabelInfo const* li, bool at_head = false)
+    void addLabel(LabelInfo const* li, bool at_head = false)
     {
         ASSERT0(li);
         ASSERTN(!getLabelList().find(li),
@@ -351,13 +391,15 @@ public:
         BB_is_terminate(this) |= LABELINFO_is_terminate(li);
     }
 
+    void dumpEpilog(Region const* rg, BBDumpCtx<> const* ctx) const;
+    void dumpProlog(Region const* rg, BBDumpCtx<> const* ctx) const;
     void dumpDigest(Region const* rg) const;
     void dumpLabelList(Region const* rg) const;
     void dumpAttr(Region const* rg) const;
     void dumpIRList(Region const* rg, bool dump_inner_region,
-                    MOD IRDumpCtx<> * ctx) const;
+                    MOD BBDumpCtxMgr<> * ctx) const;
     void dump(Region const* rg, bool dump_inner_region = false,
-              MOD IRDumpCtx<> * ctx = nullptr) const;
+              MOD BBDumpCtxMgr<> * ctx = nullptr) const;
     void dupSuccessorPhiOpnd(CFG<IRBB, IR> * cfg, Region * rg, UINT opnd_pos);
 
     //The function frees all IR in IRList back into IRMgr.
@@ -392,6 +434,18 @@ public:
         return const_cast<IRBB*>(this)->getIRList().getPrevIR(ir, irit);
     }
 
+    IR * getBranchOp() const
+    {
+        IR * lb = getLowerBoundary();
+        return (lb != nullptr && lb->isBranch()) ? lb : nullptr;
+    }
+
+    IR * getLowerBoundary() const
+    {
+        IR * ir = const_cast<BBIRList*>(&BB_irlist(this))->get_tail();
+        return (ir != nullptr && isLowerBoundary(ir)) ? ir : nullptr;
+    }
+
     bool hasMDPhi(CFG<IRBB, IR> const* cfg) const;
     bool hasPRPhi() const;
     bool hasPhi(CFG<IRBB, IR> const* cfg) const
@@ -407,7 +461,7 @@ public:
     { return const_cast<IRBB*>(this)->getLabelList().get_elem_count() != 0; }
 
     //Is bb containing given label.
-    inline bool hasLabel(LabelInfo const* lab) const
+    bool hasLabel(LabelInfo const* lab) const
     {
         LabelInfoListIter it;
         IRBB * pthis = const_cast<IRBB*>(this);
@@ -420,30 +474,25 @@ public:
         return false;
     }
 
+    bool hasLowerBoundary() const { return getLowerBoundary() != nullptr; }
+
     //For some aggressive optimized purposes, call node is not looked as
     //boundary of basic block.
     //So we must bottom-up go through whole bb to find call.
-    inline bool hasCall() const
+    bool hasBranchOp() const
     {
-        BBIRList * irlst = const_cast<BBIRList*>(&BB_irlist(this));
-        for (IR * ir = irlst->get_tail();
-             ir != nullptr; ir = irlst->get_prev()) {
-            if (ir->isCallStmt()) {
-                return true;
-            }
-        }
-        return false;
+        IR const* lb;
+        return (lb = getLowerBoundary()) != nullptr ? lb->isBranch() : false;
+    }
+    bool hasCall() const
+    {
+        IR const* lb;
+        return (lb = getLowerBoundary()) != nullptr ? lb->isCallStmt() : false;
     }
     bool hasReturn() const
     {
-        BBIRList * irlst = const_cast<BBIRList*>(&BB_irlist(this));
-        for (IR * ir = irlst->get_tail();
-             ir != nullptr; ir = irlst->get_prev()) {
-            if (ir->is_return()) {
-                return true;
-            }
-        }
-        return false;
+        IR const* lb;
+        return (lb = getLowerBoundary()) != nullptr ? lb->is_return() : false;
     }
     //Return true if one of current bb's successors has a phi.
     bool hasPhiInSuccBB(CFG<IRBB, IR> const* cfg) const;
@@ -515,12 +564,21 @@ public:
         return false;
     }
 
+    inline bool isAttachIRRefedLabel()
+    {
+        for (LabelInfo const* li = getLabelList().get_head();
+             li != nullptr; li = getLabelList().get_next()) {
+            if (li->is_refed_by_ir()) { return true; }
+        }
+        return false;
+    }
+
     //Return true if current BB is the target of 'ir'.
     bool isTarget(IR const* ir) const
     { ASSERT0(ir->getLabel()); return hasLabel(ir->getLabel()); }
 
-    inline bool is_dom(IR const* ir1, IR const* ir2, IROrder const& order,
-                       bool is_strict) const
+    bool is_dom(IR const* ir1, IR const* ir2, IROrder const& order,
+                bool is_strict) const
     {
         ASSERT0(ir1 && ir2 && ir1->is_stmt() && ir2->is_stmt() &&
                 ir1->getBB() == this && ir2->getBB() == this);
@@ -540,7 +598,7 @@ public:
     //Return true if ir1 dominates ir2 in current bb.
     //Function will modify the IR container of bb.
     //is_strict: true if ir1 should not equal to ir2.
-    inline bool is_dom(IR const* ir1, IR const* ir2, bool is_strict) const
+    bool is_dom(IR const* ir1, IR const* ir2, bool is_strict) const
     {
         ASSERT0(ir1 && ir2 && ir1->is_stmt() && ir2->is_stmt() &&
                 ir1->getBB() == this && ir2->getBB() == this);
@@ -639,14 +697,14 @@ public:
 //Exported Functions
 void dumpBBLabel(LabelInfoList & lablist, Region const* rg);
 void dumpBBList(BBList const* bbl, Region const* rg,
-                bool dump_inner_region = true, IRDumpCtx<> * ctx = nullptr);
+                bool dump_inner_region = true, BBDumpCtxMgr<> * ctx = nullptr);
 
 //filename: dump BB list into given filename.
 void dumpBBList(CHAR const* filename, BBList const* bbl, Region const* rg,
-                bool dump_inner_region = true, IRDumpCtx<> * ctx = nullptr);
+                bool dump_inner_region = true, BBDumpCtxMgr<> * ctx = nullptr);
 
 void dumpBBSet(BBSet const& bbs, Region const* rg,
-               bool dump_inner_region = true, IRDumpCtx<> * ctx = nullptr);
+               bool dump_inner_region = true, BBDumpCtxMgr<> * ctx = nullptr);
 
 bool verifyIRandBB(BBList * bbl, Region const* rg);
 

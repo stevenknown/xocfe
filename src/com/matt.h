@@ -192,7 +192,7 @@ protected:
     //The function is used to compute the sqrt for given element.
     //Here only apply an instantiate that simpliest call C/C++ library.
     //If it is inappropriate, overloading it as your need.
-    virtual T sqrtElem(T t)
+    virtual T sqrtElem(T)
     { ASSERTN(0, ("Target Dependent Code")); return T(0); }
 public:
     bool m_is_init;
@@ -376,12 +376,12 @@ public:
 
     //Print matrix element on screen.
     virtual void dumps() const;
-    virtual void dumpT2S(T const& t) const
+    virtual void dumpT2S(T const&) const
     { ASSERTN(0, ("Target Dependent Code")); }
 
     //The function is used to dump 't' into 'buf'.
     //Note 'buf' can be cleaned entirely.
-    virtual void dumpT2Buf(T const& t, OUT StrBuf & buf) const
+    virtual void dumpT2Buf(T const&, OUT StrBuf &) const
     { ASSERTN(0, ("Target Dependent Code")); }
 
     //Computation of eigenvalues.
@@ -2310,7 +2310,6 @@ bool Matrix<T>::rinv(OUT Matrix<T> & x, MatMgr<T> & mgr)
     MatWrap<T> t2(mgr); Matrix<T> & prod = t2.m();
     transm.trans();
     mul(*this, transm, prod);
-    bool res = false;
     if (!prod.inv(prod, mgr)) {
         return false;
     }
@@ -3465,8 +3464,6 @@ T Matrix<T>::dot(Matrix<T> const& v) const
     if (m_row_size == 1 && v.m_row_size == 1) {
         //'this' is row vector, 'v' is row vector
         for (UINT i = 0; i < m_col_size; i++) {
-            T v1 = get(0, i);
-            T v2 = v.get(0, i);
             dotv = dotv + (get(0, i) * v.get(0,i));
         }
         return dotv;
@@ -3953,8 +3950,10 @@ void Matrix<T>::setPartialElem(UINT num, ...)
     UINT row = 0, col = 0;
     va_list ptr;
     va_start(ptr, num);
+    using CvtedPODType = typename TryCvtIfTypeIsNotPOD<
+        IsTrivialType<T>::is_trivial, T>::type;
     for (UINT i = 0; i < num; i++) {
-        set(row, col++, T(va_arg(ptr, T)));
+        set(row, col++, CvtedPODType(va_arg(ptr, CvtedPODType)));
         if (col >= m_col_size) {
             row++;
             col = 0;

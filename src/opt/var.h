@@ -724,6 +724,7 @@ public:
     //Note there may be multiple variable with same name, this function return
     //the first one.
     Var * findVarByName(Sym const* name);
+    Var * findVarByName(CHAR const* name);
 
     //Return true if the 'name' is the name of recorded unique
     //dedicated string variable.
@@ -740,7 +741,7 @@ public:
     //related to properties.
     //var_name: name of the variable, it is optional.
     Var * registerVar(CHAR const* varname, Type const* type, UINT align,
-                      VarFlag const& flag);
+                      VarFlag const& flag, StorageSpace ss);
 
     //Create variable by symbol name.
     //Add Var into VarTab.
@@ -749,7 +750,7 @@ public:
     //related to properties.
     //var_name: name of the variable, it is optional.
     Var * registerVar(Sym const* var_name, Type const* type, UINT align,
-                      VarFlag const& flag);
+                      VarFlag const& flag, StorageSpace ss);
 
     //Create string variable by name and string-content.
     //Register Var for const string.
@@ -757,7 +758,8 @@ public:
     //otherwise create a new Var.
     //var_name: name of the variable, it is optional.
     //s: string's content.
-    Var * registerStringVar(CHAR const* var_name, Sym const* s, UINT align);
+    Var * registerStringVar(CHAR const* var_name, Sym const* s, UINT align,
+                            StorageSpace ss);
 
     //The function verify that the given variable information is sane.
     bool verifyVar(Var const* v) const;

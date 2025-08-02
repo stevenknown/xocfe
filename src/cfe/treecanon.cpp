@@ -463,7 +463,7 @@ Tree * TreeCanon::handleTreeList(Tree * tl, TreeCanonCtx * ctx)
         TreeCanonCtx lctx;
         Tree * newt = handleTree(t, &lctx);
         if (newt != t) {
-            xcom::replace(&tl, t, newt);
+            xcom::replace_one(&tl, t, newt);
         }
         if (g_err_msg_list.has_msg()) {
             return nullptr;

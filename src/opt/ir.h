@@ -49,10 +49,6 @@ class MDPhi;
 class IRCFG;
 class IRMgr;
 
-#include "ir_code.h"
-#include "ir_desc.h"
-#include "ir_debug_check.h"
-
 //Define the condition of isomophic checking.
 typedef enum tagISOMO_COND {
     ISOMO_UNDEF = 0,
@@ -93,7 +89,11 @@ public:
     //replacer in 'newir'.
     //newir: return as a result that recorded the anticipated IR to replace.
     virtual bool is_replace(IR const* oldir, OUT IR ** newir) const
-    { ASSERTN(0, ("Target Dependent Code")); return false; }
+    {
+        DUMMYUSE(newir && oldir);
+        ASSERTN(0, ("Target Dependent Code"));
+        return false;
+    }
 
     //Return true if the replacement will scan whole IR tree, otherwise the
     //scanning will stopped right after the first replacing happened.
@@ -202,8 +202,9 @@ public:
 //simplification of IR is called to translate IR from the current level to
 //the next lower level.
 //
-//High level IR preserves the high level control flow constructs, such as
-//DO_LOOP, DO_WHILE, WHILE_DO, SWITCH, IF, BREAK and CONTINUE.
+//High level IR preserves the high level Control-Flow-Structure, such as
+//DO_LOOP, DO_WHILE, WHILE_DO, SWITCH, IF, and Scope-Control-Operation,
+//such as BREAK and CONTINUE.
 //Operations can be divided into two categories: statements, and expressions.
 //Statement implies which variable is defined, or control flow transfering.
 //Expression implies which variable is used, or operation without sideeffect,
@@ -353,7 +354,12 @@ public:
     //The function collects the LabelInfo for each branch-target.
     void collectLabel(OUT List<LabelInfo const*> & lst) const;
 
-    void dumpRef(Region * rg, UINT indent);
+    //Return true if 'ty' can be the data type of Const-Op.
+    static bool canBeTypeOfConstOp(Type const* ty);
+
+    //Dump MD reference.
+    void dumpRefOnly(Region const* rg) const;
+    void dumpRef(Region const* rg, UINT indent) const;
 
     //Clean all DU-Chain and Defined/Used-MD reference info.
     void freeDUset(DUMgr * dumgr);
@@ -363,6 +369,7 @@ public:
     IR * get_prev() const { return IR_prev(this); }
     IR * getBase() const; //Get base expression if exist.
     TMWORD getOffset() const; //Get byte offset if any.
+    IR * getOffsetOfPartialPROp() const; //Get byte offset if any.
     Var * getIdinfo() const; //Get idinfo if any.
     IR * getParent() const { return IR_parent(this); }
     IR * getKid(UINT idx) const;
@@ -648,6 +655,12 @@ public:
     //may be integer, string, vector.
     bool is_unsigned() const { return IR_dt(this)->is_unsigned(); }
 
+    //Return true if the type can be regarded as signed.
+    bool isSigned() const { return IR_dt(this)->isSigned(); }
+
+    //Return true if the type can be regarded as unsigned.
+    bool isUnsigned() const { return IR_dt(this)->isUnsigned(); }
+
     //Return true if ir data type is signed integer.
     bool is_sint() const { return IR_dt(this)->is_sint(); }
 
@@ -665,6 +678,9 @@ public:
 
     //Return true if ir data type is tensor.
     bool is_tensor() const { return IR_dt(this)->is_tensor(); }
+
+    //Return true if ir data type is scalar type.
+    bool is_scalar() const { return IR_dt(this)->is_scalar(); }
 
     //Return true if ir is label.
     bool is_lab() const { return getCode() == IR_LABEL; }
@@ -698,7 +714,22 @@ public:
 
     //Return true if IR tree is exactly congruent, or
     //they are parity memory reference.
+    //NOTE: the function performs the comparison from the perspective of IR
+    //tree.
     bool isMemRefEqual(IR const* src, IRMgr const* mgr) const;
+
+    //Return true if IR tree is exactly congruent, or
+    //they are parity memory reference.
+    //NOTE: the function performs the comparison from the perspective of
+    //MustRef and MayRef.
+    bool isMDRefEqual(IR const* src) const;
+
+    //Return true if the expression or stmt references given 'mdid'.
+    //The function checks both MustRef and MayRef.
+    //NOTE: the function only checks the overlaping effect or delegation effect.
+    //e.g: given mdid is MD_GLOBAL, if current ir's MayRef is {MD16}
+    //even if MD16 is global MD, the function also return false.
+    bool isRefMD(MDIdx mdid) const;
 
     //Return true if ir does not have any sibling.
     bool is_single() const
@@ -768,6 +799,9 @@ public:
 
     //Return true if ir is string.
     bool isConstStr() const { return is_const() && is_str(); }
+
+    //Return true if ir is immutable expression, includes immediate, lda.
+    bool isImmutExp() const;
 
     //Return true if ir is readonly expression or readonly call stmt.
     //If ir is expression, this function indicates that the expression does
@@ -870,6 +904,10 @@ public:
     //Return true if ir indicate conditional branch to a label.
     bool isConditionalBr() const { return IRDES_is_conditional_br(getCode()); }
 
+    //Return true if current IR is a constant zero.
+    //Note that the constant zero may be integer or positive float.
+    bool isConstZero() const;
+
     //Return true if ir is operation that read or write to an array element.
     bool isArrayOp() const { return IRDES_is_array_op(getCode()); }
 
@@ -923,8 +961,13 @@ public:
 
     //Return true if current stmt exactly modifies a PR.
     //CALL/ICALL may modify PR if it has a return value.
-    //IR_SETELEM and IR_GETELEM may modify part of PR rather than whole IR.
+    //IR_SETELEM may modify part of PR rather than whole IR.
+    //IR_GETELEM may get part of PR rather than whole IR.
     bool isWriteWholePR() const { return IRDES_is_write_whole_pr(getCode()); }
+
+    //Return true if current stmt partailly modifies the value of PR.
+    //e.g:IR_SETELEM may modify part of PR rather than whole IR.
+    bool isWritePartialPR() const { return !isWriteWholePR(); }
 
     //Return true if current stmt may modifies a PR.
     //Note CALL/ICALL may modify PR if it has a return value.
@@ -934,14 +977,36 @@ public:
     //Return true if current expression read value from PR.
     bool isReadPR() const { return is_pr(); }
 
+    //Return true if current expression read value from part of PR.
+    bool isReadPartialPR() const { return is_getelem(); }
+
     //Return true if current stmt/expression operates PR.
     bool isPROp() const
     { return isReadPR() || isWritePR() || isCallHasRetVal(); }
 
+    //Return true if current stmt/expression operates part of PR.
+    bool isPartialPROp() const
+    { return isWritePartialPR() || isReadPartialPR(); }
+
     //Return true if ir might be control-flow-structure.
     bool isCFS() const
-    { return is_switch() || is_if() || is_dowhile() || is_whiledo() ||
-             is_doloop(); }
+    {
+        return is_switch() || is_if() || is_dowhile() || is_whiledo() ||
+               is_doloop();
+    }
+
+    //Return true if ir might be control-flow-loop-structure.
+    bool isCFSLoop() const
+    { return is_dowhile() || is_whiledo() || is_doloop(); }
+
+    //Return true if ir is scope-control-operation that is used to operate on
+    //control-flow-structure.
+    bool isScopeControlOp() const { return is_continue() || is_break(); }
+
+    //Return true if ir is control-flow-structure and can be controlled by
+    //scope-control-operation.
+    bool isCFSThatControlledBySCO() const
+    { return is_switch() || is_dowhile() || is_whiledo() || is_doloop(); }
 
     //Return true if current operation references memory.
     //These kinds of operation always define or use MD, thus include both PR
@@ -1053,6 +1118,9 @@ public:
     //Return true if ir's data type must be bool.
     bool mustBeBoolType() const { return is_judge(); }
 
+    //Return true if ir's data type must be used to represent constant.
+    bool mustBeConstDataType() const;
+
     //Return true if ir code's data type must be bool.
     static bool mustBeBoolType(IR_CODE c) { return is_judge(c); }
 
@@ -1144,6 +1212,13 @@ public:
     //replacement for 'oldk'.
     bool replaceKid(IR * oldk, IR * newk, bool recur);
 
+    //Find and substitute 'newk_list' for 'oldk'.
+    //Return true if replaced the 'oldk'.
+    //recur: set to true if function recusively perform
+    //replacement for 'oldk'.
+    //NOTE:the function will replace 'oldk' with a list of IR.
+    bool replaceKidWithIRList(IR * oldk, IR * newk_list, bool recur);
+
     //Find and substitute 'newk' by the strategy that defined in compare
     //function 'cmp'.
     //Return true if substitution happened.
@@ -1152,8 +1227,9 @@ public:
     //recur: set to true if function recusively perform the replacement for
     //cmp: a strategy comparison function that determined which IR should be
     //     replaced by 'newk'.
-    bool replaceKid(IR const* newk, bool recur,
-                    ReplaceKidCompareFunc const& cmp, MOD Region * rg);
+    bool replaceKid(
+        IR const* newk, bool recur, ReplaceKidCompareFunc const& cmp,
+        MOD Region * rg);
 
     //Find and substitute the related IR by the strategy that defined in compare
     //function 'cmp'.
@@ -1161,8 +1237,8 @@ public:
     //recur: set to true if function recusively perform the replacement for
     //cmp: a strategy comparison function that determined which IR should be
     //     replaced by new IR. Note the new IR is also given by 'cmp' function.
-    bool replaceKid(bool recur, ReplaceKidCompareFunc const& cmp,
-                    MOD Region * rg);
+    bool replaceKid(
+        bool recur, ReplaceKidCompareFunc const& cmp, MOD Region * rg);
 
     //Get the MD DefUse Set. This function is readonly.
     DUSet const* readDUSet() const { return getDUSet(); }
@@ -1196,4 +1272,5 @@ public:
 };
 
 } //namespace xoc
+
 #endif

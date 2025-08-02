@@ -65,7 +65,6 @@ public:
 protected:
     virtual void allocTargInfo() override;
 
-    //Allocate TECOSectionInfoMgr object.
     virtual SectionInfoMgr * allocSectionInfoMgr() override
     { return new ARMSectionInfoMgr(); }
 
