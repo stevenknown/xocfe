@@ -55,6 +55,17 @@ public:
 
     IR * buildBroadCast(IR * src, IR * res_list, Type const* ty);
 
+    //Build mask operation.
+    //op: normal full-size operation.
+    //mask: the mask operand.
+    //ty: the result data type of the mask operation.
+    IR * buildMaskOp(IR * op, IR * mask, Type const* ty);
+
+    //Build mask select-operation.
+    //op: normal full-size operation.
+    //mask: the mask operand.
+    IR * buildMaskSelect(IR * op, IR * mask, Type const* ty);
+
     IR * buildVIStore(IR * base, TMWORD ofst, IR * rhs, IR * dummyuse,
                       Type const* ty);
     IR * buildVStore(Var * lhs, TMWORD ofst, IR * rhs, IR * dummyuse,

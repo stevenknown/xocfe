@@ -162,16 +162,6 @@ author: Su Zhenyu
 //This is an expirical value.
 #define THRESHOLD_HIGH_DOMINATOR_FRONTIER_DENSITY 70000
 
-//HACK CODE TO BE REMOVED
-//Element number of vector type.
-//For type intv16, uintv16, floatv16, float16v16.
-//Also used for type vec<bool*16> in IR.
-#define ELEM_NUM_OF_16_ELEM_VECTOR_TYPE 16
-
-//HACK CODE TO BE REMOVED
-//For type shortv32, ushortv32.
-//Also used for type vec<bool*32> in IR.
-#define ELEM_NUM_OF_32_ELEM_VECTOR_TYPE 32
 
 //Defined macros to skip some special argument registers when passing
 //arguments.
@@ -465,72 +455,6 @@ typedef enum _TARG {
     TARG_THUMB,
 } TARG;
 
-typedef enum {
-    //There are actual special internal physical registers,
-    //and the ID is 0.This is the thread id,
-    //and the value read in the future will be 0 to 31.
-    SREG_TID = 0,
-
-    //There are actual special internal physical registers, and the ID is 3.
-    //This is the group id, and the value read in the future will be 0 to 3.
-    SREG_GID = 3,
-
-    //There are actual special internal physical registers, and the ID is 4.
-    //This is how many clocks the current hardware is running,
-    //a total of 56 bits.
-    SREG_CLOCK = 4,
-
-    //No actual special register, using immediate value 80 instead.
-    //The total number of threads, which is 32.
-    SREG_NTHREAD = 80,
-
-    //No actual special register, using immediate value 81 instead.
-    //The total number of groups is 4.
-    SREG_NGROUP = 81,
-
-    //No actual special register, using immediate value 82 instead.
-    //The total number of spe array columns is 8.
-    SREG_COL_SIZE = 82,
-
-    //No actual special register, using immediate value 82 instead.
-    //The total number of spe array rows is 4.
-    SREG_ROW_SIZE = 83,
-
-    //No actual special register, using immediate value 84 instead.
-    //This is the value of the spm and global memory alignment,
-    //which is 4 bytes.
-    SREG_ALIGN_MEM = 84,
-
-    //No actual special register, using immediate value 85 instead.
-    //This is the value of the matrix alignment, which is 64 byte.
-    SREG_ALIGN_MATRIX = 85,
-
-    //No actual special register, using immediate value 86 instead.
-    //This is the value of the return address, which is 64 byte.
-    SREG_RTN_ADDR = 86,
-
-    //No actual special register, using immediate value 87 instead.
-    //This is the value of the frame pointer address, which is 64 byte.
-    SREG_FRAME_ADDR = 87,
-
-    //No actual special register, using immediate value 88 instead.
-    //Indicates the first address of the vaarg.
-    SREG_VAARG = 88,
-
-    //No actual special register, using immediate value 0xC22 instead.
-    //Indicates the vector length.
-    SREG_VLEN = 0xC22,
-
-    //These two special registers belong to the TRF register and use temporary
-    //values as replacements.
-    //Specifically, the TRF register with value 31 represents exception status,
-    //and the TRF register with value 0 register represents the parameter
-    //address.
-    SREG_EXCEPTION = 0xFFE,
-    SREG_PARAM_ADDR = 0xFFF,
-
-    SREG_NUM,
-} SREG_INDEX;
 
 typedef enum _BUILTIN_TYPE {
     BUILTIN_UNDEF = 0,
@@ -755,100 +679,6 @@ typedef enum _OR_CODE {
 
 #include "arm_mach_def.h"
 
-#define SREG_TID_STR "tid"
-#define SREG_GID_STR "gid"
-#define SREG_CLOCK_STR "clock"
-#define SREG_NTHREAD_STR "nthread"
-#define SREG_COL_SIZE_STR "col_size"
-#define SREG_ROW_SIZE_STR "row_size"
-#define SREG_NGROUP_STR "ngroup"
-#define SREG_ALIGN_MEM_STR "memory_align"
-#define SREG_ALIGN_MATRIX_STR "matrix_align"
-#define SREG_RTN_ADDR_STR "rtn_addr"
-#define SREG_FRAME_ADDR_STR "frame_addr"
-#define SREG_VAARG_STR "vaarg"
-#define SREG_VLEN_STR "vlen"
 
-typedef enum _EXTERNAL_CALL_TYPE {
-    EXTERNAL_CALL_UNDEF = 0,
-    EXTERNAL_ABS,
-    EXTERNAL_LABS,
-    EXTERNAL_FABSF,
-    EXTERNAL_FABS,
-    EXTERNAL_FMAX,
-    EXTERNAL_FMIN,
-    EXTERNAL_MEMCPY,
-    EXTERNAL_MATMUL_ZYX,
-    EXTERNAL_DIVW,
-    EXTERNAL_DIVWU,
-    EXTERNAL_DIVL,
-    EXTERNAL_DIVLU,
-    EXTERNAL_REMW,
-    EXTERNAL_REMWU,
-    EXTERNAL_REML,
-    EXTERNAL_REMLU,
-    EXTERNAL_SIN,
-    EXTERNAL_SINF,
-    EXTERNAL_COS,
-    EXTERNAL_COSF,
-    EXTERNAL_POW,
-    EXTERNAL_POWF,
-    EXTERNAL_TAN,
-    EXTERNAL_TANF,
-    EXTERNAL_TANH,
-    EXTERNAL_TANHF,
-    EXTERNAL_ATAN,
-    EXTERNAL_ATANF,
-    EXTERNAL_LOG,
-    EXTERNAL_LOGF,
-    EXTERNAL_LOG2,
-    EXTERNAL_EXP,
-    EXTERNAL_EXPF,
-    EXTERNAL_EXP2,
-    EXTERNAL_ERF,
-    EXTERNAL_ERFF,
-    EXTERNAL_SIGMOID,
-    EXTERNAL_SIGMOIDF,
-    EXTERNAL_VTANH,
-    EXTERNAL_VTANH128,
-    EXTERNAL_VATAN,
-    EXTERNAL_VATAN128,
-    EXTERNAL_VLOG,
-    EXTERNAL_VLOG128,
-    EXTERNAL_VEXP,
-    EXTERNAL_VEXP128,
-    EXTERNAL_VERF,
-    EXTERNAL_VERF128,
-    EXTERNAL_VSIGMOID,
-    EXTERNAL_VSIGMOID128,
-    EXTERNAL_VSQRT,
-    EXTERNAL_VSQRT128,
-    EXTERNAL_VINV,
-    EXTERNAL_MALLOC,
-    EXTERNAL_FREE,
-    EXTERNAL_PERF_START,
-    EXTERNAL_PERF_STOP,
-    EXTERNAL_MALLOC_T2,
-    EXTERNAL_FREE_T2,
-    EXTERNAL_LOG_T2,
-    EXTERNAL_LOGF_T2,
-    EXTERNAL_EXP_T2,
-    EXTERNAL_EXPF_T2,
-    EXTERNAL_SIGMOID_T2,
-    EXTERNAL_SIGMOIDF_T2,
-    EXTERNAL_ATAN_T2,
-    EXTERNAL_ATANF_T2,
-    EXTERNAL_ERF_T2,
-    EXTERNAL_ERFF_T2,
-    EXTERNAL_MEMCPY_T2,
-    EXTERNAL_COS_T2,
-    EXTERNAL_COSF_T2,
-    EXTERNAL_SIN_T2,
-    EXTERNAL_SINF_T2,
-    EXTERNAL_TAN_T2,
-    EXTERNAL_TANF_T2,
-    //EXTERNAL_POW_T2,
-    //EXTERNAL_POWF_T2,
-} EXTERNAL_CALL_TYPE;
 
 #endif

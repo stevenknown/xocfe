@@ -1191,7 +1191,7 @@ public:
 
     //The function record the May-Reference MDSet of ir.
     //mds: record MayMDSet that has been hashed.
-    void setMayRef(MDSet const* mds, Region * rg)
+    void setMayRef(MDSet const* mds, Region const* rg)
     {
         ASSERT0(mds && !mds->is_empty());
         setRefMDSet(mds, rg);

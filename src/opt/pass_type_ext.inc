@@ -29,5 +29,3 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 PASS_CALC_DERIVATIVE,
 
 #include "targ_pass_type_ext.inc"
-
-#include "../elf/linker_pass_type_ext.inc"

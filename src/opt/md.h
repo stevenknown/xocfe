@@ -732,7 +732,7 @@ public:
     //Note this function does NOT clean output, and will append result to
     //output.
     void computeOverlap(
-        Region * current_rg, MD const* md, OUT MDSet & output,
+        Region const* current_rg, MD const* md, OUT MDSet & output,
         ConstMDIter & mditer, DefMiscBitSetMgr & mbsmgr, bool strictly);
 
     //Compute all other MD which are overlapped with MD in set 'mds'.
@@ -744,8 +744,9 @@ public:
     //strictly: set to true to compute if md may be overlapped with global
     //memory.
     void computeOverlap(
-        Region * current_rg, MOD MDSet & mds, OUT Vector<MD const*> & added,
-        ConstMDIter & mditer, DefMiscBitSetMgr & mbsmgr, bool strictly);
+        Region const* current_rg, MOD MDSet & mds,
+        OUT Vector<MD const*> & added, ConstMDIter & mditer,
+        DefMiscBitSetMgr & mbsmgr, bool strictly);
 
     //Compute all other MD which are overlapped with MD in set 'mds'.
     //e.g: mds contains {md1}, and md1 overlapped with md2, md3,
@@ -757,7 +758,7 @@ public:
     //memory.
     //Note output do not need to clean before invoke this function.
     void computeOverlap(
-        Region * current_rg, MDSet const& mds, OUT MDSet & output,
+        Region const* current_rg, MDSet const& mds, OUT MDSet & output,
         ConstMDIter & mditer, DefMiscBitSetMgr & mbsmgr, bool strictly);
 
     //Dump all registered MDs.

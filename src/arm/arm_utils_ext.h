@@ -43,6 +43,7 @@ author: Su Zhenyu
     SWITCH_CASE_EXT_ATOM: \
     case IR_PHYREG: \
     case IR_BROADCAST: \
+    case IR_MASK_OP: \
     SWITCH_CASE_ML_CODE
 
 #undef SWITCH_CASE_EXT_UNA

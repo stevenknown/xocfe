@@ -44,6 +44,21 @@ IR_ATOMINC,
 //Represent atomic cas operation of compare and swap on memory.
 IR_ATOMCAS,
 
+//Represent operation that has a mask operand. Usually the operation is used
+//to describe that by given a full-size vector or tensor operation, using a
+//mask operand to select specific elements for processing.
+//e.g: st:vec<f32x16> x = maskop:vec<f32x16> (add:vec<f32x16> $a, $b), $mask;
+//  'maskop' turned normal full-size add-operation into a masked-add-operation.
+IR_MASK_OP,
+
+//Represent operation that perform elements selection according to a mask
+//operand.
+//e.g: st:vec<f32x16> x = mask_select:<f32x16> $mask_opernd, $data;
+//  The stmt describes a masked-memory-store.$data is the data to be stored.
+//  $mask_operand is the mask which indicates the select behavior.
+//  'st:vec<f32x16> x' indicates the target memory address.
+IR_MASK_SELECT,
+
 //Represent physical register.
 //NOTE: the IR code is available only when REF_TARGMACH_INFO is enabled.
 IR_PHYREG,

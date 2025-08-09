@@ -251,7 +251,7 @@ public:
     //In this situation, AA can be conservatively regard all string variables
     //as same unbounded MD.
     MD const* getAndGenDedicateStrMD();
-    MDSystem * getMDSystem() { return m_md_sys; }
+    MDSystem * getMDSystem() const { return m_md_sys; }
     DefSymTab * getSymTab() { return &m_sym_tab; }
     TypeMgr * getTypeMgr() { return &m_type_mgr; }
     VarMgr * getVarMgr() const { return m_var_mgr; }
