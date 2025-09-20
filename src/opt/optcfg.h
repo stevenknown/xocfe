@@ -160,6 +160,9 @@ protected:
         BB *RESTRICT bb, BB const*RESTRICT next_bb, XR * xr,
         CfgOptCtx const& ctx);
 
+    bool removeEmptyBBWithoutNextBB(
+        BB * bb, C<BB*> * bbct, MOD RemoveEmptyBBCtx & rmctx);
+
     //Remove empty bb, and merger label info.
     //Return true if changed.
     bool removeEmptyBBHelper(
@@ -291,33 +294,49 @@ bool OptimizedCFG<BB, XR>::isValidToKeepSSAIfRemoveBB(BB const* bb) const
 
 
 template <class BB, class XR>
+bool OptimizedCFG<BB, XR>::removeEmptyBBWithoutNextBB(
+    BB * bb, C<BB*> * bbct, MOD RemoveEmptyBBCtx & rmctx)
+{
+    //'bb' is the last empty BB.
+    if (getCFG()->isRegionExit(bb)) {
+        //CASE:Do NOT remove entry or exit.
+        //Some redundant CFG has multi BB which satifies
+        //CFG entry and exit qualifications.
+        return false;
+    }
+    if (bb->getLabelList().get_elem_count() == 0) {
+        //CASE: BB is not the exit, and also does not have any label.
+        //Try to remove the redundant BB.
+        CfgOptCtx & ctx = rmctx.chooseCtx();
+        CFGOPTCTX_vertex_iter_time(&ctx) = 0;
+        preprocessBeforeRemoveBB(bb, ctx);
+        RMEMPTYBBCTX_vertex_iter_time(rmctx) +=
+            CFGOPTCTX_vertex_iter_time(&ctx);
+        CFGOPTCTX_vertex_iter_time(&ctx) = 0;
+        rmctx.addRemovedBB(bb->id());
+        getCFG()->removeBB(bbct, ctx);
+        RMEMPTYBBCTX_vertex_iter_time(rmctx) +=
+            CFGOPTCTX_vertex_iter_time(&ctx);
+        return true;
+    }
+    return false;
+}
+
+
+template <class BB, class XR>
 bool OptimizedCFG<BB, XR>::removeEmptyBBHelper(
     BB * bb, BB * next_bb, C<BB*> * bbct, C<BB*> * next_ct,
     MOD RemoveEmptyBBCtx & rmctx)
 {
     if (next_bb == nullptr) {
-        //'bb' is the last empty BB.
         ASSERT0(next_ct == nullptr);
         DUMMYUSE(next_ct);
+        return removeEmptyBBWithoutNextBB(bb, bbct, rmctx);
+    }
+    if (getCFG()->isRegionExit(bb)) {
         //CASE:Do NOT remove entry or exit.
         //Some redundant CFG has multi BB which satifies
-        //CFG entry qualifications.
-        if (bb->getLabelList().get_elem_count() == 0 &&
-            !getCFG()->isRegionExit(bb)) {
-            //BB does not have any label.
-            CfgOptCtx & ctx = rmctx.chooseCtx();
-            CFGOPTCTX_vertex_iter_time(&ctx) = 0;
-            preprocessBeforeRemoveBB(bb, ctx);
-            RMEMPTYBBCTX_vertex_iter_time(rmctx) +=
-                CFGOPTCTX_vertex_iter_time(&ctx);
-
-            CFGOPTCTX_vertex_iter_time(&ctx) = 0;
-            rmctx.addRemovedBB(bb->id());
-            getCFG()->removeBB(bbct, ctx);
-            RMEMPTYBBCTX_vertex_iter_time(rmctx) +=
-                CFGOPTCTX_vertex_iter_time(&ctx);
-            return true;
-        }
+        //CFG entry and exit qualifications.
         return false;
     }
     //Only apply restricted removing if CFG is invalid.
@@ -410,23 +429,27 @@ bool OptimizedCFG<BB, XR>::removeEmptyBB(OUT RemoveEmptyBBCtx & rmctx)
         ASSERT0(bb);
         BB * next_bb = nullptr;
         if (next_ct != nullptr) { next_bb = next_ct->val(); }
-
-        //TODO: confirm if this is correct:
-        //  isRegionExit() need to update if CFG changed or ir_bb_list
-        //  reconstructed.
-        //  e.g:void m(bool r, bool y)
-        //      {
-        //          bool l;
-        //          l = y || r;
-        //          return 0;
-        //      }
-        //After initCFG(), there are 2 BBs, BB1 and BB3.
-        //When IR_LOR simpilified, and new BB generated, func-exit BB flag
-        //has to be updated as well.
-        if (getCFG()->isEmptyBB(bb) &&
-            !getCFG()->isRegionEntry(bb) && !bb->isExceptionHandler()) {
-            removed |= removeEmptyBBHelper(bb, next_bb, ct, next_ct, rmctx);
+        if (!getCFG()->isEmptyBB(bb)) { continue; }
+        if (getCFG()->isRegionEntry(bb)) {
+            //TODO: confirm if this is correct:
+            //  isRegionExit() need to update if CFG changed or ir_bb_list
+            //  reconstructed.
+            //  e.g:void m(bool r, bool y)
+            //      {
+            //          bool l;
+            //          l = y || r;
+            //          return 0;
+            //      }
+            //After initCFG(), there are 2 BBs, BB1 and BB3.
+            //When IR_LOR simpilified, and new BB generated, func-exit BB flag
+            //has to be updated as well.
+            continue;
         }
+        if (bb->isExceptionHandler()) {
+            //For the sake of caution, we do not remove exception handler BB.
+            continue;
+        }
+        removed |= removeEmptyBBHelper(bb, next_bb, ct, next_ct, rmctx);
     }
     if (rmctx.needUpdateDomInfo()) {
         START_TIMER(u, "Remove Empty BB::Recompute DomInfo");

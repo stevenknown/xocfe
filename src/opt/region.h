@@ -292,13 +292,15 @@ public:
         return buf;
     }
 
-    //The function assigns a DummyUse to each non-intrisinc call-stmt in BB
-    //or IR list.
-    //Note DummyUse is usually used to build explicit DefUse chain.
+    //Assign DummyUses for different IRs.
+    //For example, assign a DummyUse to each non-intrisinc call-stmt in BB or
+    //IR list. Note DummyUse is usually used to build explicit DefUse chain.
     //e.g:given call foo(p); after assigning DummyUse, the function call will
-    //become call:(use(ld x, ld y), p), where ld x, ld y are MayRef of
-    //the function foo.
-    void assignDummyUseForCall();
+    //become call:(use(ld x, ld y), p), where ld x, ld y are MayRef of the
+    //function foo.
+    void assignDummyUse();
+    void assignDummyUseForIR(IR * ir);
+    virtual void assignDummyUseForIRExt(IR * ir) { return; }
 
     //Construct IR list from BB list.
     //clean_ir_list: clean bb's ir list if it is true.
@@ -319,6 +321,9 @@ public:
     void destroyPassMgr();
     void destroyAttachInfoMgr();
     void destroyIRBBMgr();
+
+    //Perform classic DU chain optimization.
+    bool doClassicDU(OptCtx & oc);
 
     //The funtion returns true means IR, BBList, MD ref,
     //DefUse chain or CFG etc informations changed, user should consider
@@ -436,6 +441,14 @@ public:
     //expression.
     //ir: root of IR tree.
     IR * dupIsomoStmt(IR const* ir, IR * rhs);
+    virtual IR * dupIsomoExtStmt(IR const* ir, IR * rhs);
+
+    //Duplication 'ir' and kids, but without ir's sibling node.
+    //The function will generate the isomophic IR stmt if given ir is
+    //expression.
+    //NOTE: the function does NOT duplicate RHS of given ir.
+    //ir: root of IR tree.
+    IR * dupIsomoStmtExceptRHS(IR const* ir);
 
     //Dump IRBB list into given file.
     //filename: dump BB list into given filename.
@@ -997,9 +1010,6 @@ public:
     //The function collect information that IPA may used.
     //Check and rescan call-list of region if something changed.
     void updateCallAndReturnList(bool scan_inner_region);
-
-    //Ensure that each IR in ir_list must be allocated in crrent region.
-    bool verifyIROwnership();
 
     //Allocate memory from region pool.
     void * xmalloc(UINT size);

@@ -67,6 +67,12 @@ bool verifySWITCH(IR const* ir, Region const* rg);
 bool verifyTer(IR const* ir, Region const* rg);
 bool verifyUna(IR const* ir, Region const* rg);
 
+//Ensure that each IR in ir_list must be allocated in current region.
+bool verifyIROwnership(Region const* rg);
+
+//The function verifies that attributes of IR are valid and reasonable.
+bool verifyIRAttr(Region const* rg);
+
 } //namespace xoc
 #endif
 

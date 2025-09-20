@@ -143,7 +143,7 @@ public:
     //Build IR_CALL operation.
     //res_list: reture value list.
     //result_prno: indicate the result PR which hold the return value.
-    //    0 means the call does not have a return value.
+    //    PRNO_UNDEF means the call does not have a return value.
     //type: result PR data type.
     IR * buildCall(Var * callee, IR * param_list, UINT result_prno,
                    Type const* type);
@@ -182,7 +182,9 @@ public:
     //e.g: the dummyuse of a CallStmt represents the variables that may be
     //referenced by the call.
     //for example: call fopen(h, dummyuse(errno));
+    //ty: the data type of dummyuse. Usually it is ANY.
     IR * buildDummyUse(IR * use_list);
+    IR * buildDummyUse(IR * use_list, Type const* ty);
 
     //This represents that the current CFA is at an offset
     //from the stack pointer.
@@ -230,9 +232,9 @@ public:
     //Build IR_ICALL operation.
     //res_list: reture value list.
     //result_prno: indicate the result PR which hold the return value.
-    //    0 means the call does not have a return value.
+    //    PRNO_UNDEF means the call does not have a return value.
     //type: result PR data type.
-    //    0 means the call does not have a return value.
+    //    PRNO_UNDEF means the call does not have a return value.
     IR * buildICall(IR * callee, IR * param_list, UINT result_prno,
                     Type const* type);
     IR * buildICall(IR * callee, IR * param_list)

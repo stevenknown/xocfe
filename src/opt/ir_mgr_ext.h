@@ -43,15 +43,15 @@ public:
     //newval: If "oldval" equals to the value in memory, "newval" will be set
     //        to the memory.
     //reslst: Multiple results will be modified.
-    IR * buildAtomCas(Type const* type, IR * memory, IR * oldval, IR * newval,
-                      IR * reslst);
+    IR * buildAtomCas(
+        Type const* type, IR * memory, IR * oldval, IR * newval, IR * reslst);
 
     //Build atomic inc operation of fetch and add on memory.
     //memory: Opearated memory.
     //reslst: Multiple results will be modified.
     //addend: (optional) Number to be added to memory, absent on T1.
-    IR * buildAtomInc(Type const* type, IR * memory, IR * reslst,
-                      IR * addend = nullptr);
+    IR * buildAtomInc(
+        Type const* type, IR * memory, IR * reslst, IR * addend = nullptr);
 
     IR * buildBroadCast(IR * src, IR * res_list, Type const* ty);
 
@@ -61,15 +61,24 @@ public:
     //ty: the result data type of the mask operation.
     IR * buildMaskOp(IR * op, IR * mask, Type const* ty);
 
-    //Build mask select-operation.
+    //Build mask select-to-result operation.
     //op: normal full-size operation.
     //mask: the mask operand.
-    IR * buildMaskSelect(IR * op, IR * mask, Type const* ty);
+    IR * buildMaskSelectToRes(IR * op, IR * mask, Type const* ty);
 
-    IR * buildVIStore(IR * base, TMWORD ofst, IR * rhs, IR * dummyuse,
-                      Type const* ty);
-    IR * buildVStore(Var * lhs, TMWORD ofst, IR * rhs, IR * dummyuse,
-                     Type const* ty);
+    //Build masked store stmt.
+    //reflhs: the function build stmt according to the given reference IR.
+    //        the reference IR may be expression or stmt.
+    //op: the normal RHS operation.
+    //mask: the mask operation that indicates the computation of mask value.
+    //ty: the result data type of return masked store stmt.
+    IR * buildMaskStoreStmtViaIsomoIR(
+        IR const* reflhs, IR * op, IR * mask, Type const* ty);
+
+    IR * buildVIStore(
+        IR * base, TMWORD ofst, IR * rhs, IR * dummyuse, Type const* ty);
+    IR * buildVStore(
+        Var * lhs, TMWORD ofst, IR * rhs, IR * dummyuse, Type const* ty);
     IR * buildVStorePR(PRNO resprno, IR * rhs, IR * dummyuse, Type const* ty);
 
     #ifdef REF_TARGMACH_INFO

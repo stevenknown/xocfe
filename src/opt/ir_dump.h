@@ -47,6 +47,13 @@ enum IR_DUMP_FLAG {
     IR_DUMP_NO_NEWLINE = 0x20, //Do NOT dump newline
     IR_DUMP_IRID = 0x40, //dump IR's id.
     IR_DUMP_DWARF = 0x80, //dump all DWARF debug information.
+
+    //Escape the double quote when dumpping.
+    //e.g: given string is "hello", expect dumping string is \"hello\",
+    //thus the dumping string is \\\"hello\\\".
+    //The option is used to dump string with double-quote into a specific
+    //file format, such as DOT file.
+    IR_DUMP_ESCAPE_DOUBLE_QUOTE = 0x100,
     IR_DUMP_COMBINE =
         IR_DUMP_KID|IR_DUMP_SRC_LINE|IR_DUMP_VAR_DECL|IR_DUMP_IRID,
 };
@@ -62,7 +69,10 @@ public:
     { return v | (g_dump_opt.isDumpIRID() ? IR_DUMP_IRID : 0); }
 };
 
-void dumpConstContent(IR const* ir, Region const* rg);
+//Dump the string content.
+//ctx: optional. If it is NULL, the function will dump string with default
+//     options.
+void dumpConstContent(IR const* ir, Region const* rg, IRDumpCtx<> const* ctx);
 
 //The function dumps IR info into LogCtx of current LogMgr.
 void dumpIR(IR const* ir, Region const* rg, CHAR const* attr = nullptr,
@@ -102,19 +112,20 @@ void dumpIRCodeName(IR_CODE code, Region const* rg);
 
 
 //The function dump IR info into given buffer.
-CHAR const* dumpIRToBuf(IR const* ir, Region const* rg, OUT StrBuf & outbuf,
-                        DumpFlag dumpflag = DumpFlag(IR_DUMP_COMBINE));
+CHAR const* dumpIRToBuf(
+    IR const* ir, Region const* rg, OUT StrBuf & outbuf,
+    DumpFlag dumpflag = DumpFlag(IR_DUMP_COMBINE), UINT indent = 0);
 
 //Dump IR info with a headline.
 //Dump both its kids and siblings.
-void dumpIRListH(IR const* ir_list, Region const* rg,
-                 CHAR const* attr = nullptr,
-                 DumpFlag dumpflag = DumpFlag(IR_DUMP_COMBINE));
+void dumpIRListH(
+    IR const* ir_list, Region const* rg, CHAR const* attr = nullptr,
+    DumpFlag dumpflag = DumpFlag(IR_DUMP_COMBINE));
 
 //Dump IR info with a postfix-attribute-string.
-void dumpIRList(IR const* ir_list, Region const* rg,
-                CHAR const* attr = nullptr,
-                DumpFlag dumpflag = DumpFlag(IR_DUMP_COMBINE));
+void dumpIRList(
+    IR const* ir_list, Region const* rg, CHAR const* attr = nullptr,
+    DumpFlag dumpflag = DumpFlag(IR_DUMP_COMBINE));
 
 //Dump IR list.
 void dumpIRList(IRList const& ir_list, Region const* rg);
@@ -189,12 +200,27 @@ public:
         : dn(tdn), dumpflag(tdumpflag), attr(tattr), custom_func(cf) {}
 };
 
+//This class dumps ir' name into a string buffer that encapsulated by the
+//class object. The string buffer will persist until the class object is
+//destroyed.
 class DumpIRName {
     COPY_CONSTRUCTOR(DumpIRName);
     xcom::DefFixedStrBuf m_buf;
 public:
     DumpIRName() {}
     CHAR const* dump(IR const* ir) { return xoc::dumpIRName(ir, m_buf); }
+};
+
+//This class dumps whold IR tree into a string buffer that encapsulated by the
+//class object. The string buffer will persist until the class object is
+//destroyed.
+class DumpIRTree {
+    COPY_CONSTRUCTOR(DumpIRTree);
+    xcom::StrBuf m_buf;
+public:
+    DumpIRTree(UINT bytesize = 32) : m_buf(bytesize) {}
+    CHAR const* dump(IR const* ir, Region const* rg);
+    CHAR const* dump(IR const* ir, Region const* rg, UINT indent);
 };
 
 void dumpAllKids(IR const* ir, Region const* rg, UINT dn, IRDumpCtx<> & ctx);
@@ -247,9 +273,6 @@ protected:
     Region const* m_rg;
     LogMgr * m_lm;
     xcom::StrBuf & m_outbuf; //records the user's dump-buffer.
-
-    //The indent of user's dump information is set to 0 by default.
-    static UINT const g_default_indent = 0;
 protected:
     //The function is an interface to encapsulate the user's dump behaviors.
     //User should rewrite the function with normal dump functions without
@@ -262,7 +285,9 @@ protected:
     Region const* getRegion() const { return m_rg; }
 public:
     DumpToBuf(Region const* rg, xcom::StrBuf & outbuf,
-              UINT indent = g_default_indent);
+              //The indent of user's dump information is set to 0 by default.
+              UINT indent = 0);
+
     //The function dump user designated information to given buffer.
     //Return the buffer pointer to facilate the scenarios that the returned
     //buffer is used in parameter of a call.

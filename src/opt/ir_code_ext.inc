@@ -57,7 +57,7 @@ IR_MASK_OP,
 //  The stmt describes a masked-memory-store.$data is the data to be stored.
 //  $mask_operand is the mask which indicates the select behavior.
 //  'st:vec<f32x16> x' indicates the target memory address.
-IR_MASK_SELECT,
+IR_MASK_SELECT_TO_RES,
 
 //Represent physical register.
 //NOTE: the IR code is available only when REF_TARGMACH_INFO is enabled.

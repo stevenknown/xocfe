@@ -40,7 +40,6 @@ class Vectorization;
 class VectOp;
 class VectOpMgr;
 
-#define DEFAULT_MAX_VECTOR_REGISTER_BYTE_SIZE 512
 #define VECTOP_ID_UNDEF 0
 
 class VectActMgr : public ActMgr {
@@ -229,18 +228,23 @@ public:
 };
 
 
-class VectCtx {
+class VectCtx : public PassCtx {
     COPY_CONSTRUCTOR(VectCtx);
 public:
     typedef xcom::List<IR*> CandList;
     typedef xcom::List<IR*>::Iter CandListIter;
     typedef xcom::EList<IR*, IR2Holder> ResCandList;
     typedef xcom::EList<IR*, IR2Holder>::Iter ResCandListIter;
+    typedef xcom::EList<IR const*, ConstIR2Holder> ResConstCandList;
+    typedef xcom::EList<IR const*, ConstIR2Holder>::Iter ResConstCandListIter;
     typedef xcom::List<VectOp*> VOpList;
-    typedef xcom::List<IR*> ResVOpList;
+    typedef xcom::List<VectOp*>::Iter VOpListIter;
+    typedef xcom::List<IR*> ResOpList;
+    typedef xcom::List<IR*>::Iter ResOpListIter;
 public:
     Vectorization * m_vect;
     Region * m_rg;
+    IRCFG * m_cfg;
     IRMgr * m_irmgr;
     LI<IRBB> const* m_li;
     IVR const* m_ivr;
@@ -253,25 +257,27 @@ public:
     GVN * m_gvn;
     VarMgr * m_vm;
     MDSystem * m_mdsys;
-    OptCtx const& m_oc;
+    IR const* m_epilloop_comp_remain;
     ResCandList m_rescand;
-    ResCandList m_prerequisite_list;
+    ResConstCandList m_initop_list;
+    ResConstCandList m_prerequisite_list;
     VOpList m_candvop_list;
     IRList m_generated_stmt_list;
 
     //Propagate information bottom up.
     //Record the generated vectorized operations. These vector operations will
     //replace original scalar operation and loop structure.
-    ResVOpList m_resvop_list;
+    ResOpList m_mailloop_resvop_list;
+
+    //Propagate information bottom up.
+    //Record the generated vectorized operations. These vector operations will
+    //be placed in new generated epilog-loop to compute the remainder data.
+    ResOpList m_epilloop_resvop_list;
+    ResOpList m_epilloop_maskop_list;
 public:
-    VectCtx(LI<IRBB> const* li, IVBoundInfo const* bi, OptCtx const& oc,
-            Vectorization * vect, GVN * gvn);
-    ~VectCtx()
-    {
-        delete m_lrmgr;
-        delete m_vectaccdesc_mgr;
-        m_infer_evn = nullptr;
-    }
+    VectCtx(LI<IRBB> const* li, IVBoundInfo const* bi, OptCtx & oc,
+            Vectorization * vect, GVN * gvn, ActMgr * am);
+    ~VectCtx();
 
     //Add a new vectoized-operation into candidate operation list.
     //Note the vectorized-operation in the candidate operation list will be
@@ -280,27 +286,39 @@ public:
     void addPrerequisiteOp(IR * op);
     void addStmtCand(IR * ir);
     void addGeneratedStmt(IR * ir);
+    void addGeneratedStmtFromBB(IRBB const* bb);
+
+    void cleanAfterLoopReconstruct();
 
     void dump() const;
 
     Region * getRegion() const { return m_rg; }
-    OptCtx const* getOptCtx() const { return &m_oc; }
+    IRCFG * getCFG() const { return m_cfg; }
     CandList & getCandList() { return m_stmt_cand_list; }
     BIV const* getBIV() const;
     VarMgr const* getVarMgr() const { return m_vm; }
     IRMgr * getIRMgr() const { return m_irmgr; }
+    IRMgrExt * getIRMgrExt() const { return (IRMgrExt*)m_irmgr; }
+    IVR const* getIVR() const { return m_ivr; }
     MDSystem const* getMDSystem() const { return m_mdsys; }
     IVBoundInfo const* getIVBoundInfo() const { return m_iv_bound_info; }
     LI<IRBB> const* getLI() const { return m_li; }
     LICMAnaCtx const* getLICMAnaCtx() const { return m_licm_anactx; }
     VOpList & getCandVOpList() { return m_candvop_list; }
-    ResVOpList & getResVOpList() { return m_resvop_list; }
+    ResOpList & getMainLoopResOpList() { return m_mailloop_resvop_list; }
+    ResOpList & getEpilLoopResOpList() { return m_epilloop_resvop_list; }
+    ResOpList & getEpilLoopMaskOpList() { return m_epilloop_maskop_list; }
     ResCandList & getResCandList() { return m_rescand; }
-    ResCandList & getPrerequisiteOpList() { return m_prerequisite_list; }
+    ResConstCandList & getInitOpList() { return m_initop_list; }
+    ResConstCandList & getPrerequisiteOpList() { return m_prerequisite_list; }
     IRList & getGeneratedStmtList() { return m_generated_stmt_list; }
     LinearRepMgr & getLinearRepMgr() const { return *m_lrmgr; }
     VectAccDescMgr & getVectAccDescMgr() const { return *m_vectaccdesc_mgr; }
     InferEVN & getInferEVN() const { return *m_infer_evn; }
+    Vectorization * getVect() const { return m_vect; }
+    VectActMgr * getActMgr() const { return (VectActMgr*)PassCtx::getActMgr(); }
+    IR const* getEpilLoopCompRemain() const { return m_epilloop_comp_remain; }
+    UINT getCurInd() const;
 
     bool isIV(IR const* ir) const;
     bool isRedStmt(IR const* ir) const;
@@ -313,6 +331,7 @@ public:
     bool isTCImm() const;
 
     void removeStmtCand(IR * ir) { m_stmt_cand_list.remove(ir); }
+    void recordEpillLoopCompRemain(IR const* comp_remain);
 
     void setLICMAnaCtx(LICMAnaCtx const* anactx) { m_licm_anactx = anactx; }
 
@@ -323,6 +342,10 @@ public:
 //This class represents loop vectorization.
 class Vectorization : public Pass {
     COPY_CONSTRUCTOR(Vectorization);
+    friend class GenerateMask;
+    friend class ConstructLoop;
+    friend class ReconstructLoopWithVariantTC;
+    friend class ReconstructLoopWithImmTC;
     bool m_is_aggressive;
     SMemPool * m_pool;
     IVR * m_ivr;
@@ -371,21 +394,19 @@ protected:
                     OUT LoopDepInfoSet & set) const;
 
     IR * buildVectPRResult(Type const* restype, IR * rhs, IRBB * bb);
-    IR * buildRefIV(BIV const* biv) const;
     IR * buildRefIV(BIV const* biv, Type const* ty) const;
+    IR * buildRefIV(BIV const* biv) const;
 
-    //The function generates main vector loop, and insert all these BBs into
-    //CFG. Note the function will recompute DU chain after construct the
-    //vector-main-loop.
-    //Return the root BB of the loop.
-    IRBB * constructVectMainLoopAndUpdateCFG(
-        MOD VectCtx & ctx, MOD OptCtx & oc) const;
+    IRBB * constructVectMainLoop(
+        MOD VectCtx & ctx, MOD OptCtx & oc, OUT bool & need_recst_bblst) const;
+    IRBB * constructVectEpilLoop(
+        MOD VectCtx & ctx, MOD OptCtx & oc, OUT bool & need_recst_bblst) const;
 
     //The function generates main vector single BB, and insert the BB into
     //CFG. Note the function will maintain DU chain incrementally after
     //generating and inserting the BB.
     //Return the generated main BB.
-    IRBB * constructVectMainBB(MOD VectCtx & ctx, MOD OptCtx & oc) const;
+    IRBB * constructVectMainBB(MOD VectCtx & ctx) const;
     bool constructSSARegion(
         VectCtx const& ctx, IRBB * root, OUT SSARegion & ssarg) const;
 
@@ -500,13 +521,9 @@ protected:
         IR const* start, VectCtx const& ctx, LoopDepCtx const& ldactx,
         LoopDepInfoSet const& set) const;
 
-    DefMiscBitSetMgr & getSBSMgr() { return m_sbs_mgr; }
     VectOpMgr & getVectOpMgr() { return m_vectop_mgr; }
     LoopDepAna * getLoopDepAna() const { return m_loopdepana; }
     OptCtx * getOptCtx() const { return m_oc; }
-    bool genDepOpOutsideLoop(MOD VectCtx & ctx) const;
-    IR * genVectMainLoop(MOD VectCtx & ctx) const;
-    IR * genBIVStrideStepExp(BIV const* biv, VectCtx const& ctx) const;
     IR * genRHSByVectOp(VectOp const& vop, OUT VectCtx & ctx);
     IR * genConstByVectOp(VectOp const& vop, OUT VectCtx & ctx);
     IR * genBinByVectOp(VectOp const& vop, OUT VectCtx & ctx);
@@ -624,14 +641,20 @@ protected:
     bool postProcessAfterReconstructLoop(VectCtx const& ctx, MOD OptCtx & oc);
 
     //Reconstruct CFG and perform misc CFG optimization if necessary.
-    //Return true if CFG or IR changed.
+    //changed: set to true if CFG or IR changed.
+    //Return true if the reconstruction is successful.
     bool reconstructLoop(
         MOD VectCtx & ctx, OUT bool & changed, MOD OptCtx & oc);
+
+    //Return true if the reconstruction is successful.
+    //changed: set to true if CFG or IR changed.
     bool reconstructLoopWithExactTC(
         MOD VectCtx & ctx, OUT bool & changed, MOD OptCtx & oc);
+
+    //Return true if the reconstruction is successful.
+    //changed: set to true if CFG or IR changed.
     bool reconstructLoopWithVariantTC(
         MOD VectCtx & ctx, OUT bool & changed, MOD OptCtx & oc);
-    void removeOrgScalarLoop(MOD VectCtx & ctx, MOD OptCtx & oc);
     void reset();
 
     bool tryVectorizeLoop(LI<IRBB> * li, MOD OptCtx & oc);
@@ -672,7 +695,6 @@ public:
     void addUseToRelatedPROp(MOD IR * exp) const;
 
     void dumpAllAct() const { getActMgr().dump(); }
-    bool dump(VectCtx const& ctx) const;
     virtual bool dump() const;
 
     virtual CHAR const* getPassName() const
@@ -680,6 +702,8 @@ public:
     PASS_TYPE getPassType() const { return PASS_VECT; }
     VectActMgr const& getActMgr() const { return m_am; }
     IVR const* getIVR() const { return m_ivr; }
+    DeadCodeElim * getDCE() const { return m_dce; }
+    DefMiscBitSetMgr & getSBSMgr() { return m_sbs_mgr; }
 
     //Return the maximum number of element in target machine vector register.
     HOST_UINT getMaxVectorElemNum(Type const* elemty, VectCtx const& ctx) const;
@@ -694,7 +718,7 @@ public:
     virtual HOST_UINT getMaxVectorRegisterByteSize() const
     {
         //Target Dependent Code.
-        return DEFAULT_MAX_VECTOR_REGISTER_BYTE_SIZE;
+        return MAX_VECTOR_REGISTER_BYTE_SIZE;
     }
 
     //Return true if user ask to perform aggressive optimization that without

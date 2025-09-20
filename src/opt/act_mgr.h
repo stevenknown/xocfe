@@ -26,17 +26,63 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 @*/
-#ifndef _IR_VERIFY_EXT_H_
-#define _IR_VERIFY_EXT_H_
+#ifndef _ACT_MGR_H_
+#define _ACT_MGR_H_
 
 namespace xoc {
 
-bool verifyVST(IR const* ir, Region const* rg);
-bool verifyVIST(IR const* ir, Region const* rg);
-bool verifyVSTPR(IR const* ir, Region const* rg);
-bool verifyBROADCAST(IR const* ir, Region const* rg);
-bool verifyMaskOp(IR const* ir, Region const* rg);
-bool verifyMaskSelectToRes(IR const* ir, Region const* rg);
+#define ACT_HANDLER_ID_UNDEF 0
+
+class ActHandler {
+    //The class permits copy-constructor.
+    UINT m_id;
+    #ifdef _DEBUG_
+    //NOTE: the variable is only used in DEBUG mode to facilitate user
+    //to debug and trace all reported actions.
+    UINT m_gid;
+    #endif
+public:
+    xcom::StrBuf * info;
+public:
+    ActHandler() : m_id(ACT_HANDLER_ID_UNDEF), info(nullptr) {}
+    ActHandler(UINT id, xcom::StrBuf * buf);
+
+    UINT id() const { return m_id; }
+};
+
+
+//The class records actions that Passes or Modules performed.
+//It is often used to inform user what behaviours have optimizations done,
+//and why are some optimizations not performed.
+class ActMgr {
+protected:
+    UINT m_cnt;
+    Region const* m_rg;
+    xcom::List<xcom::StrBuf*> m_act_list;
+protected:
+    xcom::StrBuf * allocStrBuf()
+    {
+        xcom::StrBuf * buf = new xcom::StrBuf(64);
+        m_act_list.append_tail(buf);
+        return buf;
+    }
+public:
+    ActMgr(Region const* rg) : m_rg(rg) { m_cnt = ACT_HANDLER_ID_UNDEF + 1; }
+    ~ActMgr() { clean(); }
+    void clean();
+
+    //Dump specific actions.
+    ActHandler dump(CHAR const* format, ...);
+    ActHandler dump_args(CHAR const* format, va_list args);
+
+    //Dump all actions.
+    void dump() const;
+
+    //Return the number of actions.
+    UINT getActNum() const { return m_act_list.get_elem_count(); }
+
+    Region const* getRegion() const { return m_rg; }
+};
 
 } //namespace xoc
 #endif

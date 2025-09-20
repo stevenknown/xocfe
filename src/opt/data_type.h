@@ -49,7 +49,7 @@ class RegionMgr;
 #define IS_INT(t) ((t) >= D_I8 && (t) <= D_U128)
 #define IS_SINT(t) ((t) >= D_I8 && (t) <= D_I128)
 #define IS_UINT(t) ((t) >= D_U8 && (t) <= D_U128)
-#define IS_FP(t) ((t) >= D_BF16 && (t) <= D_F128)
+#define IS_FP(t) ((t) >= D_F8_E4M3 && (t) <= D_F128)
 #define IS_BOOL(t) ((t) == D_B)
 #define IS_MC(t) ((t) == D_MC)
 #define IS_VEC(t) ((t) == D_VEC)
@@ -59,6 +59,8 @@ class RegionMgr;
                       t == D_STR || t == D_ANY)
 
 #define SWITCH_CASE_FP_DTYPE \
+    case D_F8_E4M3: \
+    case D_F8_E5M2: \
     case D_BF16: \
     case D_F16: \
     case D_F32: \
@@ -131,6 +133,10 @@ typedef enum _DATA_TYPE {
     D_U128,
 
     //Float type.
+    D_F8_E4M3, //Float point 8 bit with 1 sign bit, 4 exponent
+               //bits, and 3 mantissa bits
+    D_F8_E5M2, //Float point 8 bit with 1 sign bit, 5 exponent
+               //bits, and 2 mantissa bits
     D_BF16, //BFloat point 16 bit
     D_F16, //Float point 16 bit
     D_F32, //Float point 32 bit
@@ -280,6 +286,8 @@ public:
     bool is_u32() const { return TY_dtype(this) == D_U32; }
     bool is_u64() const { return TY_dtype(this) == D_U64; }
     bool is_u128() const { return TY_dtype(this) == D_U128; }
+    bool is_f8_e4m3() const { return TY_dtype(this) == D_F8_E4M3; }
+    bool is_f8_e5m2() const { return TY_dtype(this) == D_F8_E5M2; }
     bool is_bf16() const { return TY_dtype(this) == D_BF16; }
     bool is_f16() const { return TY_dtype(this) == D_F16; }
     bool is_f32() const { return TY_dtype(this) == D_F32; }
@@ -294,7 +302,7 @@ public:
     inline bool is_signed() const
     {
         if ((TY_dtype(this) >= D_I8 && TY_dtype(this) <= D_I128) ||
-            (TY_dtype(this) >= D_BF16 && TY_dtype(this) <= D_F128)) {
+            (TY_dtype(this) >= D_F8_E4M3 && TY_dtype(this) <= D_F128)) {
             return true;
         }
         return false;
@@ -351,7 +359,7 @@ public:
 
     //Return true if data type is float.
     static bool is_fp(DATA_TYPE dtype)
-    { return dtype >= D_BF16 && dtype <= D_F128; }
+    { return dtype >= D_F8_E4M3 && dtype <= D_F128; }
 
     //Return true if data type is signed integer.
     static bool is_signed(DATA_TYPE dtype)
@@ -756,6 +764,8 @@ protected:
     Type const* m_u32;
     Type const* m_u64;
     Type const* m_u128;
+    Type const* m_f8e4m3;
+    Type const* m_f8e5m2;
     Type const* m_bf16;
     Type const* m_f16;
     Type const* m_f32;
@@ -1001,6 +1011,8 @@ public:
         case D_U32: return m_u32;
         case D_U64: return m_u64;
         case D_U128: return m_u128;
+        case D_F8_E4M3: return m_f8e4m3;
+        case D_F8_E5M2: return m_f8e5m2;
         case D_BF16: return m_bf16;
         case D_F16: return m_f16;
         case D_F32: return m_f32;
@@ -1023,6 +1035,14 @@ public:
         return ty;
     }
 
+    //Return the type that represents the maximum byte size of vector register
+    //of target machine.
+    virtual Type const* getTargMachMaxVectorRegisterType()
+    {
+        ASSERTN(0, ("Target Dependent Code"));
+        return nullptr;
+    }
+
     //Return tensor type, total byte size of tensor =
     //degree_of_dim0 * degree_of_dim1 * ...  * degree_of_dimN * elem_byte_size.
     //e.g: Get tensor with type D_F32<2x3x4x5x1>.
@@ -1043,6 +1063,20 @@ public:
         TY_vec_size(&d) = vec_elem_num * getDTypeByteSize(vec_elem_ty);
         TY_vec_ety(&d) = vec_elem_ty;
         return TC_type(registerVector(&d));
+    }
+
+    //Return vector type, and vector total size = <vec_elem_num x vec_elem_ty>.
+    //e.g: int<16 x D_I32> means there are 16 elems in vector, each elem is
+    //D_I32 type, and vector total size is 64 bytes.
+    Type const* getVectorTypeViaTotalSize(
+        UINT vec_total_size, DATA_TYPE vec_elem_ty)
+    {
+        UINT etysize = getDTypeByteSize(vec_elem_ty);
+        ASSERT0(etysize);
+        ASSERT0(vec_total_size >= etysize);
+        ASSERT0((vec_total_size % etysize) == 0);
+        UINT vec_elem_num = vec_total_size / etysize;
+        return getVectorType(vec_elem_num, vec_elem_ty);
     }
 
     //Return stream type, which element type is 'elem_ty'.

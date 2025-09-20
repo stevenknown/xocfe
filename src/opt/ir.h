@@ -292,6 +292,8 @@ public:
     //IR may have an unique attach-info container.
     AIContainer * attach_info_container;
 public:
+    IR() {}
+
     //Calculate the accumulated offset value from the base of array.
     //e.g: For given array long long p[10][20],
     //the offset of p[i][j] can be computed by i*20 + j, and

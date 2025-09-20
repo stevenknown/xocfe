@@ -42,7 +42,7 @@ class IRMgr;
 typedef xcom::DefSBitSet BBSet;
 typedef xcom::DefSBitSetIter BBSetIter;
 template <class IRBB, class IR> class CFG;
-typedef List<LabelInfo const*> LabelInfoList;
+typedef xcom::List<LabelInfo const*> LabelInfoList;
 typedef LabelInfoList::Iter LabelInfoListIter;
 typedef TMap<IR const*, UINT> IROrder;
 
@@ -69,8 +69,7 @@ class BBIRList : public xcom::EList<IR*, IR2Holder> {
     IRBB * m_bb;
 public:
     BBIRList() { m_bb = nullptr; }
-
-    inline IRListIter append_head(IR * ir)
+    IRListIter append_head(IR * ir)
     {
         if (ir == nullptr) { return nullptr; }
         ASSERT0(m_bb != nullptr);
@@ -78,8 +77,7 @@ public:
         ir->setBB(m_bb);
         return xcom::EList<IR*, IR2Holder>::append_head(ir);
     }
-
-    inline IRListIter append_tail(IR * ir)
+    IRListIter append_tail(IR * ir)
     {
         if (ir == nullptr) { return nullptr; }
         ASSERT0(m_bb != nullptr);
@@ -98,28 +96,11 @@ public:
     //Insert ir after phi operations.
     IRListIter append_head_ex(IR * ir);
 
-    void copy(IN List<IR*> & src)
-    {
-        clean();
-        IR * ir = src.get_head();
-        for (INT n = src.get_elem_count(); n > 0; n--) {
-            xcom::EList<IR*, IR2Holder>::append_tail(ir);
-            ASSERT0(m_bb != nullptr);
-            if (ir->isStmtInBB()) {
-                ir->setBB(m_bb);
-            } else {
-                ASSERT0(ir->is_lab());
-            }
-            ir = src.get_next();
-        }
-    }
+    //Copy elments in 'src' and set BB pointer.
+    void copy(IN List<IR*> & src);
 
     //Count up memory size of BBIRList
-    size_t count_mem() const
-    {
-        return (size_t)sizeof(m_bb) +
-               ((xcom::EList<IR*, IR2Holder>*)this)->count_mem();
-    }
+    size_t count_mem() const;
 
     //The function extracts the rest of IR in 'irlst' into a new list. And
     //return the new IR list.
@@ -134,8 +115,8 @@ public:
     //        record in newlst.
     //include_marker: true to extract marker itself into 'newlst'.
     //newlst: record the extracted IR.
-    void extractRestIRIntoList(MOD BBIRListIter marker, bool include_marker,
-                               OUT BBIRList & newlst);
+    void extractRestIRIntoList(
+        MOD BBIRListIter marker, bool include_marker, OUT BBIRList & newlst);
 
     IR * getPrevIR(IR const* ir, OUT IRListIter * irit) const
     {
@@ -149,7 +130,7 @@ public:
     bool is_empty() const { return get_elem_count() == 0; }
 
     //Insert 'ir' before 'marker'.
-    inline IRListIter insert_before(IN IR * ir, IR const* marker)
+    IRListIter insert_before(IN IR * ir, IR const* marker)
     {
         if (ir == nullptr) { return nullptr; }
         ASSERT0(marker != nullptr);
@@ -160,7 +141,7 @@ public:
     }
 
     //Insert 'ir' before 'marker'. marker will be modified.
-    inline IRListIter insert_before(IN IR * ir, IN IRListIter marker)
+    IRListIter insert_before(IN IR * ir, IN IRListIter marker)
     {
         if (ir == nullptr) { return nullptr; }
         ASSERT0(marker != nullptr);
@@ -171,7 +152,7 @@ public:
     }
 
     //Insert 'ir' after 'marker'.
-    inline IRListIter insert_after(IR * ir, IR const* marker)
+    IRListIter insert_after(IR * ir, IR const* marker)
     {
         if (ir == nullptr) { return nullptr; }
         ASSERT0(marker != nullptr);
@@ -183,7 +164,7 @@ public:
     }
 
     //Insert 'ir' after 'marker'.
-    inline IRListIter insert_after(IR * ir, IN IRListIter marker)
+    IRListIter insert_after(IR * ir, IN IRListIter marker)
     {
         if (ir == nullptr) { return nullptr; }
         ASSERT0(marker != nullptr);
@@ -194,7 +175,7 @@ public:
     }
 
     //Remove ir that hold by 'holder'.
-    inline IR * remove(IN IRListIter holder)
+    IR * remove(IN IRListIter holder)
     {
         if (holder == nullptr) { return nullptr; }
         ASSERT0(holder->val());
@@ -203,7 +184,7 @@ public:
     }
 
     //Remove ir out of list.
-    inline IR * remove(IN IR * ir)
+    IR * remove(IN IR * ir)
     {
         if (ir == nullptr) { return nullptr; }
         ir->setBB(nullptr);
@@ -221,6 +202,7 @@ typedef xcom::Vector<IRBB*> BBVec;
 
 //
 //START BBList
+//
 typedef xcom::C<IRBB*> * BBListIter;
 class BBList : public xcom::List<IRBB*> {
 public:
@@ -396,8 +378,9 @@ public:
     void dumpDigest(Region const* rg) const;
     void dumpLabelList(Region const* rg) const;
     void dumpAttr(Region const* rg) const;
-    void dumpIRList(Region const* rg, bool dump_inner_region,
-                    MOD BBDumpCtxMgr<> * ctx) const;
+    void dumpIRList(
+        Region const* rg, bool dump_inner_region,
+        MOD BBDumpCtxMgr<> * ctx) const;
     void dump(Region const* rg, bool dump_inner_region = false,
               MOD BBDumpCtxMgr<> * ctx = nullptr) const;
     void dupSuccessorPhiOpnd(CFG<IRBB, IR> * cfg, Region * rg, UINT opnd_pos);
@@ -451,7 +434,7 @@ public:
     bool hasPhi(CFG<IRBB, IR> const* cfg) const
     { return hasMDPhi(cfg) || hasPRPhi(); }
 
-    //Return true if current bb has Phi with all same operand.
+    //Return true if current BB has Phi with all same operand.
     //e.g: phi $1 = ($2, $2, $2), return true.
     //     phi $1 = (0x3, $2, $2), return false.
     bool hasPhiWithAllSameOperand(CFG<IRBB, IR> const* cfg) const;
@@ -460,20 +443,10 @@ public:
     bool hasLabel() const
     { return const_cast<IRBB*>(this)->getLabelList().get_elem_count() != 0; }
 
-    //Is bb containing given label.
-    bool hasLabel(LabelInfo const* lab) const
-    {
-        LabelInfoListIter it;
-        IRBB * pthis = const_cast<IRBB*>(this);
-        for (LabelInfo const* li = pthis->getLabelList().get_head(&it);
-             li != nullptr; li = pthis->getLabelList().get_next(&it)) {
-            if (isSameLabel(li, lab)) {
-                return true;
-            }
-        }
-        return false;
-    }
+    //Return true if bb contains given label.
+    bool hasLabel(LabelInfo const* lab) const;
 
+    //Return true if bb contains lower-boundary stmt.
     bool hasLowerBoundary() const { return getLowerBoundary() != nullptr; }
 
     //For some aggressive optimized purposes, call node is not looked as
@@ -494,7 +467,7 @@ public:
         IR const* lb;
         return (lb = getLowerBoundary()) != nullptr ? lb->is_return() : false;
     }
-    //Return true if one of current bb's successors has a phi.
+    //Return true if one of current BB's successors has a phi.
     bool hasPhiInSuccBB(CFG<IRBB, IR> const* cfg) const;
 
     UINT id() const { return BB_id(this); }
@@ -544,118 +517,51 @@ public:
     static bool isBoundary(IR * ir)
     { return isUpperBoundary(ir) || isLowerBoundary(ir); }
 
-    //Could ir be looked as a first stmt in basic block?
+    //Return true if ir could be looked as the first stmt in basic block.
     static bool isUpperBoundary(IR const* ir)
     {
         ASSERTN(ir->isStmtInBB() || ir->is_lab(), ("illegal stmt in bb"));
         return ir->is_lab();
     }
+
+    //Return true if ir could be looked as the last stmt in basic block.
     static bool isLowerBoundary(IR const* ir);
 
-    inline bool isAttachDedicatedLabel()
-    {
-        for (LabelInfo const* li = getLabelList().get_head();
-             li != nullptr; li = getLabelList().get_next()) {
-            if (li->is_catch_start() || li->is_try_start() ||
-                li->is_try_end() || li->is_pragma()) {
-                return true;
-            }
-        }
-        return false;
-    }
+    //Return true if BB attached dedicated label that should not be removed.
+    bool isAttachDedicatedLabel();
 
-    inline bool isAttachIRRefedLabel()
-    {
-        for (LabelInfo const* li = getLabelList().get_head();
-             li != nullptr; li = getLabelList().get_next()) {
-            if (li->is_refed_by_ir()) { return true; }
-        }
-        return false;
-    }
+    //Return true if BB attached dedicated label that referenced by other ir.
+    bool isAttachIRRefedLabel();
 
     //Return true if current BB is the target of 'ir'.
     bool isTarget(IR const* ir) const
     { ASSERT0(ir->getLabel()); return hasLabel(ir->getLabel()); }
 
+    //Return true if ir1 dominates ir2 in current BB.
+    //Function will modify the IR container of bb.
+    //order: it records ir1 and ir2's order in current BB.
+    //is_strict: true if ir1 should not equal to ir2.
     bool is_dom(IR const* ir1, IR const* ir2, IROrder const& order,
-                bool is_strict) const
-    {
-        ASSERT0(ir1 && ir2 && ir1->is_stmt() && ir2->is_stmt() &&
-                ir1->getBB() == this && ir2->getBB() == this);
-        if (is_strict && ir1 == ir2) {
-            return false;
-        }
-        UINT ir1order = order.get(ir1);
-        UINT ir2order = order.get(ir2);
-        ASSERTN(ir1order != 0 || ir2order != 0,
-                ("Neither ir1 nor ir2 has an order set "));
-        if (ir1order == 0) { return false; }
-        if (ir2order == 0) { return true; }
-        ASSERT0(ir1order != ir2order);
-        return ir1order < ir2order;
-    }
+                bool is_strict) const;
 
-    //Return true if ir1 dominates ir2 in current bb.
+    //Return true if ir1 dominates ir2 in current BB.
     //Function will modify the IR container of bb.
     //is_strict: true if ir1 should not equal to ir2.
-    bool is_dom(IR const* ir1, IR const* ir2, bool is_strict) const
-    {
-        ASSERT0(ir1 && ir2 && ir1->is_stmt() && ir2->is_stmt() &&
-                ir1->getBB() == this && ir2->getBB() == this);
-        if (is_strict) {
-            if (ir1 == ir2) {
-                return false;
-            }
-        } else {
-            if (ir1 == ir2) {
-                return true;
-            }
-        }
-        IRListIter ctir;
-        for (BB_irlist(this).get_head(&ctir);
-             ctir != BB_irlist(this).end();
-             ctir = BB_irlist(this).get_next(ctir)) {
-            IR * ir = ctir->val();
-            if (ir == ir1) {
-                return true;
-            }
-            if (ir == ir2) {
-                return false;
-            }
-        }
-        return false;
-    }
+    bool is_dom(IR const* ir1, IR const* ir2, bool is_strict) const;
+
     //Return true if BB has no IR stmt.
     bool is_empty() const { return BB_irlist(this).get_elem_count() == 0; }
 
-    bool mayThrowException() const
-    {
-        IRListIter ct;
-        IR * x = BB_irlist(const_cast<IRBB*>(this)).get_tail(&ct);
-        if (x != nullptr && x->isMayThrow(true)) {
-            return true;
-        }
-        return false;
-    }
-
     //Add all Labels attached on src BB to current BB.
-    void mergeLabeInfoList(IRBB * src)
-    {
-        LabelInfoListIter it;
-        for (src->getLabelList().get_head(&it);
-             it != nullptr; it = src->getLabelList().get_next(it)) {
-            copyAttr(it->val());
-        }
-        //Note src's labellist will be moved to current BB.
-        getLabelList().move_head(src->getLabelList());
-        ASSERT0(src->getLabelList().get_elem_count() == 0);
-    }
+    void mergeLabeInfoList(IRBB * src);
+    bool mayThrowException() const;
+
     INT rpo() const { ASSERT0(m_vertex); return m_vertex->rpo(); }
+
     bool verifyBranchLabel(Lab2BB const& lab2bb) const;
     bool verify(Region const* rg) const;
 };
 //END IRBB
-
 
 
 //
@@ -696,15 +602,18 @@ public:
 
 //Exported Functions
 void dumpBBLabel(LabelInfoList & lablist, Region const* rg);
-void dumpBBList(BBList const* bbl, Region const* rg,
-                bool dump_inner_region = true, BBDumpCtxMgr<> * ctx = nullptr);
+void dumpBBList(
+    BBList const* bbl, Region const* rg, bool dump_inner_region = true,
+    BBDumpCtxMgr<> * ctx = nullptr);
 
 //filename: dump BB list into given filename.
-void dumpBBList(CHAR const* filename, BBList const* bbl, Region const* rg,
-                bool dump_inner_region = true, BBDumpCtxMgr<> * ctx = nullptr);
+void dumpBBList(
+    CHAR const* filename, BBList const* bbl, Region const* rg,
+    bool dump_inner_region = true, BBDumpCtxMgr<> * ctx = nullptr);
 
-void dumpBBSet(BBSet const& bbs, Region const* rg,
-               bool dump_inner_region = true, BBDumpCtxMgr<> * ctx = nullptr);
+void dumpBBSet(
+    BBSet const& bbs, Region const* rg, bool dump_inner_region = true,
+    BBDumpCtxMgr<> * ctx = nullptr);
 
 bool verifyIRandBB(BBList * bbl, Region const* rg);
 

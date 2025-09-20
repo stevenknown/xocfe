@@ -284,29 +284,29 @@ public:
 //primarily used to describe masked-selection, and should be combined with
 //store-stmt to describe a masked-store-operation.
 //e.g: the example stores sparse-data to 'res' according to '$mask'.
-//  st:vec<i32x32> res = 
-//    mask_select:vec<i32x32>
+//  st:vec<i32x32> res =
+//    maskselect:vec<i32x32>
 //      ld:vec<i32x32> data;
 //      $mask:<boolx32>
 
 //Normal full-size operation.
-#define MASKSELECT_op(ir) MASKSELECT_kid(ir, 0)
+#define MASKSELECTTORES_op(ir) MASKSELECTTORES_kid(ir, 0)
 
 //Mask operand.
-#define MASKSELECT_mask(ir) MASKSELECT_kid(ir, 1)
+#define MASKSELECTTORES_mask(ir) MASKSELECTTORES_kid(ir, 1)
 
-#define MASKSELECT_kid(ir, idx) \
-    (((CMaskSelect*)ir)->opnd[CK_KID_IRC(ir, IR_MASK_SELECT, idx)])
+#define MASKSELECTTORES_kid(ir, idx) \
+    (((CMaskSelectToRes*)ir)->opnd[CK_KID_IRC(ir, IR_MASK_SELECT_TO_RES, idx)])
 
-class CMaskSelect : public IR {
-    COPY_CONSTRUCTOR(CMaskSelect);
+class CMaskSelectToRes : public IR {
+    COPY_CONSTRUCTOR(CMaskSelectToRes);
 public:
     static BYTE const kid_map = 0x3;
     static BYTE const kid_num = 2;
     IR * opnd[kid_num];
 public:
     static inline IR *& accKid(IR * ir, UINT idx)
-    { return MASKSELECT_kid(ir, idx); }
+    { return MASKSELECTTORES_kid(ir, idx); }
 };
 
 

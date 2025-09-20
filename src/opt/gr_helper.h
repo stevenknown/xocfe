@@ -38,27 +38,30 @@ class DumpGRCtx {
 public:
     //Propagate info top down.
     //Set to true to dump string literal and ignore the \n.
-    BYTE dump_string_in_one_line:1;
+    bool dump_string_in_one_line;
 
     //Propagate info top down.
     //Set to true to dump inner region.
-    BYTE dump_inner_region:1;
+    bool dump_inner_region;
 
     //Propagate info top down.
     //Supply CFG when dumpping PHI.
     IRCFG const* cfg;
+    Region const* rg;
+    TypeMgr const* tm;
 public:
-    DumpGRCtx() { ::memset((void*)this, 0, sizeof(DumpGRCtx)); }
+    DumpGRCtx(Region const* r, bool dump_inner);
 };
 
 class GRDump {
     COPY_CONSTRUCTOR(GRDump);
+protected:
     Region const* m_rg;
     RegionMgr const* m_rm;
     TypeMgr const* m_tm;
     IRCFG const* m_cfg;
     LogMgr * m_lm; //LogMgr's Buffer may modified.
-private:
+protected:
     void dumpAllKids(IR const* ir, DumpGRCtx const* ctx) const;
     void dumpExtOp(IR const* ir, DumpGRCtx const* ctx) const;
     void dumpOffset(IR const* ir) const;
@@ -66,6 +69,35 @@ private:
     void dumpArrSubList(IR const* ir, UINT dn, DumpGRCtx const* ctx) const;
     void dumpConst(IR const* ir, DumpGRCtx const* ctx) const;
     void dumpPhi(IR const* ir, DumpGRCtx const* ctx) const;
+    void dumpST(IR const* ir, DumpGRCtx const* ctx) const;
+    void dumpLD(IR const* ir, DumpGRCtx const* ctx) const;
+    void dumpILD(IR const* ir, DumpGRCtx const* ctx) const;
+    void dumpReadPR(IR const* ir, DumpGRCtx const* ctx) const;
+    void dumpID(IR const* ir, DumpGRCtx const* ctx) const;
+    void dumpBinAndUna(IR const* ir, DumpGRCtx const* ctx) const;
+    void dumpIF(IR const* ir, DumpGRCtx const* ctx) const;
+    void dumpDoWhile(IR const* ir, DumpGRCtx const* ctx) const;
+    void dumpWhileDo(IR const* ir, DumpGRCtx const* ctx) const;
+    void dumpDoLoop(IR const* ir, DumpGRCtx const* ctx) const;
+    void dumpLoopIterCFS(IR const* ir, DumpGRCtx const* ctx) const;
+    void dumpReturn(IR const* ir, DumpGRCtx const* ctx) const;
+    void dumpGoto(IR const* ir, DumpGRCtx const* ctx) const;
+    void dumpIgoto(IR const* ir, DumpGRCtx const* ctx) const;
+    void dumpLabel(IR const* ir, DumpGRCtx const* ctx) const;
+    void dumpSelect(IR const* ir, DumpGRCtx const* ctx) const;
+    void dumpLda(IR const* ir, DumpGRCtx const* ctx) const;
+    void dumpSwitch(IR const* ir, DumpGRCtx const* ctx) const;
+    void dumpCase(IR const* ir, DumpGRCtx const* ctx) const;
+    void dumpArray(IR const* ir, DumpGRCtx const* ctx) const;
+    void dumpCall(IR const* ir, DumpGRCtx const* ctx) const;
+    void dumpCondBr(IR const* ir, DumpGRCtx const* ctx) const;
+    void dumpRegion(IR const* ir, DumpGRCtx const* ctx) const;
+    void dumpUndef(IR const* ir, DumpGRCtx const* ctx) const;
+    void dumpIST(IR const* ir, DumpGRCtx const* ctx) const;
+    void dumpStArray(IR const* ir, DumpGRCtx const* ctx) const;
+    void dumpGetelem(IR const* ir, DumpGRCtx const* ctx) const;
+    void dumpSetelem(IR const* ir, DumpGRCtx const* ctx) const;
+    void dumpStpr(IR const* ir, DumpGRCtx const* ctx) const;
 public:
     GRDump(Region const* rg);
     virtual ~GRDump() {}

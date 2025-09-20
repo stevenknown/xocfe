@@ -35,6 +35,8 @@ void dumpATOMCAS(IR const* ir, Region const* rg, IRDumpCtx<> & ctx);
 void dumpATOMINC(IR const* ir, Region const* rg, IRDumpCtx<> & ctx);
 void dumpBROADCAST(IR const* ir, Region const* rg, IRDumpCtx<> & ctx);
 void dumpVSTPR(IR const* ir, Region const* rg, IRDumpCtx<> & ctx);
+void dumpMaskOp(IR const* ir, Region const* rg, IRDumpCtx<> & ctx);
+void dumpMaskSelectToRes(IR const* ir, Region const* rg, IRDumpCtx<> & ctx);
 
 } //namespace xoc
 #endif

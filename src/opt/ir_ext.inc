@@ -36,11 +36,13 @@ bool is_vstpr() const { return getCode() == IR_VSTPR; }
 bool is_vist() const { return getCode() == IR_VIST; }
 bool is_broadcast() const { return getCode() == IR_BROADCAST; }
 bool is_maskop() const { return getCode() == IR_MASK_OP; }
-bool isVirtualOp() const
-{
-    switch (getCode()) {
-    SWITCH_CASE_EXT_VSTMT: return true;
-    default:; //Nothing to do.
-    }
-    return false;
-}
+bool is_mask_select_to_res() const
+{ return getCode() == IR_MASK_SELECT_TO_RES; }
+
+//Return true if current ir indicates a masked-store stmt that stores selected
+//elements into result memory or PR according to its mask-kid IR.
+bool isMaskStoreStmt() const
+{ return isStoreStmt() && getRHS()->is_mask_select_to_res(); }
+
+//Return true if current ir indicates a virtual operation.
+bool isVirtualOp() const;

@@ -146,6 +146,11 @@ public:
     bool is_dump_gscc; //Dump GSCC.
     bool is_dump_cdg; //Dump Control Dependence Graph.
     bool is_dump_lsra; //Dump LinearScanRA
+
+    //Used to dump the reorder functionality result in the LSRA PASS to verify
+    //the reorder result for the multiple MOV IRs if the reorder is required
+    //due to the USE dependencies problem.
+    bool is_dump_lsra_reorder_mov_in_latch_BB;
     bool is_dump_to_buffer; //Dump info to buffer
 
     //The option determines whether IR dumper dumps the IR's id when dumpIR()
@@ -162,7 +167,6 @@ public:
     bool isDumpAfterPass() const;
     bool isDumpAll() const;
     bool isDumpForTest() const;
-    bool isDumpArgPasser() const;
     bool isDumpBeforePass() const;
     bool isDumpBROpt() const;
     bool isDumpCalcDerivative() const;
@@ -170,7 +174,6 @@ public:
     bool isDumpCFG() const;
     bool isDumpCFGOpt() const;
     bool isDumpCG() const;
-    bool isDumpMatchAndReplace() const;
     bool isDumpCP() const;
     bool isDumpBCP() const;
     bool isDumpDCE() const;
@@ -179,7 +182,6 @@ public:
     bool isDumpExprTab() const;
     bool isDumpGCSE() const;
     bool isDumpMDRef() const;
-    bool isDumpGPAdjustment() const;
     bool isDumpGSCC() const;
     bool isDumpGVN() const;
     bool isDumpInferType() const;
@@ -187,9 +189,7 @@ public:
     bool isDumpInvertBrTgt() const;
     bool isDumpIRID() const;
     bool isDumpIRParser() const;
-    bool isDumpIRReloc() const;
     bool isDumpIVR() const;
-    bool isDumpKernelAdjustment() const;
     bool isDumpLICM() const;
     bool isDumpLIS() const;
     bool isDumpLivenessMgr() const;
@@ -197,6 +197,7 @@ public:
     bool isDumpLoopCVT() const;
     bool isDumpLoopDepAna() const;
     bool isDumpLSRA() const;
+    bool isDumpLSRAReorderMovInLatchBB() const;
     bool isDumpMDSetHash() const;
     bool isDumpMDSSAMgr() const;
     bool isDumpRegSSAMgr() const;
@@ -507,7 +508,7 @@ extern bool g_do_vrp;
 extern bool g_infer_type;
 
 //Perform cfg optimization: invert branch condition and target.
-extern bool g_invert_branch_target;
+extern bool g_do_invert_brtgt;
 
 //Set true to eliminate control-flow-structures.
 //Note this option may incur user unexpected result:
@@ -634,7 +635,6 @@ extern bool g_do_lsra;
 //Perform versatile scalar optimizations.
 extern bool g_do_scalar_opt;
 
-
 //Set to true to retain the PassMgr even if Region processing finished.
 extern bool g_retain_pass_mgr_for_region;
 
@@ -715,11 +715,11 @@ extern bool g_debug;
 //The front end is in debug_cpp mode.
 extern bool g_debug_cpp;
 
+//The front end is in debug_python mode.
+extern bool g_debug_python;
 
 //The front end is in debug_gr mode.
 extern bool g_debug_gr;
-
-
 
 } //namespace xoc
 

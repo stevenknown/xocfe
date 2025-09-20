@@ -161,10 +161,10 @@ protected:
     //For debug the context management of Dwarf.
     MCDwarfMgr * m_dm;
     Region * m_program;
+    TypeMgr * m_type_mgr;
     RegionVec m_id2rg;
     Sym2Regions m_sym2rg;
     DefSymTab m_sym_tab;
-    TypeMgr m_type_mgr;
     xcom::Vector<OptCtx*> m_id2optctx;
     xcom::BitSetMgr m_bs_mgr;
     xcom::DefMiscBitSetMgr m_sbs_mgr;
@@ -202,6 +202,9 @@ public:
 
     //Allocate VarMgr.
     virtual VarMgr * allocVarMgr();
+
+    //Allocate TypeMgr.
+    virtual TypeMgr * allocTypeMgr();
 
     //Allocate DwarfMgr.
     virtual MCDwarfMgr * allocDwarfMgr();
@@ -253,7 +256,7 @@ public:
     MD const* getAndGenDedicateStrMD();
     MDSystem * getMDSystem() const { return m_md_sys; }
     DefSymTab * getSymTab() { return &m_sym_tab; }
-    TypeMgr * getTypeMgr() { return &m_type_mgr; }
+    TypeMgr * getTypeMgr() const { return m_type_mgr; }
     VarMgr * getVarMgr() const { return m_var_mgr; }
     VarLabelRelationMgr * getVarLabelRelationMgr() const
     { return m_var_label_relation_mgr; }
@@ -283,6 +286,14 @@ public:
         ASSERTN(m_md_sys == nullptr, ("MDSystem already initialized"));
         m_md_sys = new MDSystem(m_var_mgr);
         ASSERT0(m_md_sys);
+    }
+
+    //Initialize TypeMgr structure.
+    void initTypeMgr()
+    {
+        ASSERT0(m_type_mgr == nullptr);
+        m_type_mgr = allocTypeMgr();
+        ASSERT0(m_type_mgr);
     }
 
     //Initialize DwarfMgr structure
