@@ -38,6 +38,8 @@ author: Su Zhenyu
 #define BYTE_PER_CHAR 1
 #define BYTE_PER_SHORT 2
 #define BYTE_PER_INT 4
+
+//NOTE:arm-linux-gnueabi-gcc defines LONG of ARM 32bit should be 4bytes.
 #define BYTE_PER_LONG 4
 #define BYTE_PER_LONGLONG 8
 #define BYTE_PER_FLOAT 4
@@ -105,10 +107,6 @@ author: Su Zhenyu
 //The alignment is power of 2 on ARM.
 #define STACK_ALIGNMENT 4
 
-//Define the minimum target machine parameter variable alignment.
-//The alignment is power of 2 on ARM.
-#define PARAM_ALIGNMENT GENERAL_REGISTER_SIZE
-
 //Define the minimum target machine code alignment.
 //The alignment is power of 2 on ARM.
 #define CODE_ALIGNMENT 4
@@ -162,7 +160,6 @@ author: Su Zhenyu
 //This is an expirical value.
 #define THRESHOLD_HIGH_DOMINATOR_FRONTIER_DENSITY 70000
 
-
 //Defined macros to skip some special argument registers when passing
 //arguments.
 #define TO_BE_COMPATIBLE_WITH_ARM_LINUX_GNUEABI
@@ -170,6 +167,7 @@ author: Su Zhenyu
 
 //Defined the maximum number of operand of OR.
 #define MAX_OR_OPERAND_NUM 8
+
 //Defined the maximum number of result of OR.
 #define MAX_OR_RESULT_NUM 4
 
@@ -184,6 +182,7 @@ typedef enum _SLOT {
     LAST_SLOT = SLOT_G,
     SLOT_NUM = 1,
 } SLOT;
+
 #define SLOT_NAME_MAX_LEN 10
 
 //Machine function units for all clusters.
@@ -448,13 +447,15 @@ typedef enum _REGFILE {
 //Define the cycle to load data from onchip L1 cache.
 #define ARM_LOAD_ONCHIP_CYC  3
 
+//Define the max byte size of vector register.
+#define MAX_VECTOR_REGISTER_BYTE_SIZE WORD_LENGTH_OF_TARGET_MACHINE * 8
+
 //Target.
 typedef enum _TARG {
     TARG_UNDEF = 0,
     TARG_ARM,
     TARG_THUMB,
 } TARG;
-
 
 typedef enum _BUILTIN_TYPE {
     BUILTIN_UNDEF = 0,
@@ -675,10 +676,18 @@ typedef enum _OR_CODE {
     OR_pop,
     OR_LAST,
 } OR_CODE;
+
 #define OR_NUM OR_LAST
 
 #include "arm_mach_def.h"
 
-
+//Use REG_GROUP to identify the different register
+//groups when access the regset.
+typedef enum {
+    REG_GROUP_UNDEF = 0,
+    REG_GROUP_FIRST = REG_GROUP_UNDEF,
+    REG_GROUP_LAST = REG_GROUP_FIRST,
+    REG_GROUP_NUM
+} REG_GROUP;
 
 #endif

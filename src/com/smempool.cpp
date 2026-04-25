@@ -115,7 +115,7 @@ static SMemPool * new_mem_pool(size_t size, MEMPOOLTYPE mpt)
 
 inline static void remove_smp(SMemPool * t)
 {
-    if (t == nullptr) return;
+    if (t == nullptr) { return; }
     ASSERTN(t->prev != nullptr, ("t should not be first."));
     t->prev->next = t->next;
     if (t->next != nullptr) {

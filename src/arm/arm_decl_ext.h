@@ -33,6 +33,13 @@ author: Su Zhenyu
 
 namespace xoc {
 
+typedef UINT & (*IRAccStrideFuncType)(IR * ir);
+
+#define IRDES_accstridewfunc(c) \
+    (getIRDesc()[c].field_acc_tab.getAccFunc(IR_ACC_STRIDEW))
+#define IRDES_accstridehfunc(c) \
+    (getIRDesc()[c].field_acc_tab.getAccFunc(IR_ACC_STRIDEH))
+
 ////////////////////////////////////////////////////////////////////////////////
 //NOTE DECL-EXT IS ALREADY IN XOC NAMESPACE. USER CAN USE XOC DATA            //
 //STRUCTURES DIRECTLY.                                                        //
@@ -70,6 +77,8 @@ class CConv : public IR {
 public:
     static BYTE const kid_map = 0x3;
     static BYTE const kid_num = 2;
+    static UINT const accinfo_num = 4;
+    static IRFieldAccTab::AccInfo accinfo[accinfo_num];
     StorageSpace storage_space;
     UINT stride_width;
     UINT stride_height;
@@ -78,13 +87,14 @@ public:
     //Access Kids.
     static inline IR *& accKid(IR * ir, UINT idx) { return CONV_kid(ir, idx); }
 
-    //Dump function.
-    static void accDump(IR const* ir, Region const* rg, IRDumpCtx<> & ctx);
-
     //Access storage space.
     static inline StorageSpace & accSS(IR * ir)
     { return CONV_storage_space(ir); }
+    static inline UINT & accStrideW(IR * ir) { return CONV_stride_w(ir); }
+    static inline UINT & accStrideH(IR * ir) { return CONV_stride_h(ir); }
 
+    //Dump function.
+    static void accDump(IR const* ir, Region const* rg, IRDumpCtx<> & ctx);
     IR * getKid(UINT idx) const { return CONV_kid(this, idx); }
 };
 
@@ -137,6 +147,8 @@ public:
 public:
     static BYTE const kid_map = 0x7;
     static BYTE const kid_num = 3;
+    static UINT const accinfo_num = 3;
+    static IRFieldAccTab::AccInfo accinfo[accinfo_num];
     OpndKind opnd_kind;
     StorageSpace storage_space;
     UINT stride_width;
@@ -146,12 +158,20 @@ public:
     //Access Kids.
     static inline IR *& accKid(IR * ir, UINT idx)
     { return CONVOPNDGRAD_kid(ir, idx); }
+    static inline UINT & accStrideW(IR * ir)
+    { return CONVOPNDGRAD_stride_w(ir); }
+    static inline UINT & accStrideH(IR * ir)
+    { return CONVOPNDGRAD_stride_h(ir); }
 
     //Dump function.
     static void accDump(IR const* ir, Region const* rg, IRDumpCtx<> & ctx);
 
     IR * getKid(UINT idx) const { return CONVOPNDGRAD_kid(this, idx); }
 };
+
+
+UINT getStrideH(IR const* ir);
+UINT getStrideW(IR const* ir);
 
 } //namespace xoc
 

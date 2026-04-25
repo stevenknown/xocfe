@@ -36,6 +36,8 @@ author: Su Zhenyu
 
 namespace xoc {
 
+#define PASS_ID_UNDEF 0
+
 class AliasAnalysis;
 class DUMgr;
 
@@ -43,20 +45,25 @@ typedef xcom::TMap<PASS_TYPE, Pass*> PassTab;
 typedef xcom::TMapIter<PASS_TYPE, Pass*> PassTabIter;
 typedef xcom::List<PASS_TYPE> PassTypeList;
 typedef xcom::List<PASS_TYPE>::Iter PassTypeListIter;
+typedef xcom::TTab<PassWrap*> PassWrapTab;
+typedef xcom::TTabIter<PassWrap*> PassWrapTabIter;
 
 class PassMgr {
     COPY_CONSTRUCTOR(PassMgr);
 protected:
+    UINT m_pass_count;
     Region * m_rg;
     RegionMgr * m_rumgr;
     TypeMgr * m_tm;
+    SMemPool * m_pool;
 
     //Record all allocated pass.
     //When PassMgr destructed, the table guarantees objects that allocated
     //by the mananger are destroyed at all.
-    xcom::TTab<Pass*> m_allocated_pass;
+    PassWrapTab m_allocated_pass;
     PassTab m_registered_pass;
 protected:
+    PassWrap * allocPassWrap();
     virtual Pass * allocAA();
     virtual Pass * allocCalcDerivative();
     virtual Pass * allocCallGraph();
@@ -76,13 +83,14 @@ protected:
         return nullptr;
     }
     virtual Pass * allocGCSE();
-    virtual Pass * allocBrCondProp();
+    virtual Pass * allocGlobalRefine();
     virtual Pass * allocGSCC();
     virtual Pass * allocGVN();
     virtual Pass * allocInferType();
     virtual Pass * allocInliner();
     virtual Pass * allocInsertCvt();
     virtual Pass * allocInvertBrTgt();
+    virtual Pass * allocIfConversion();
     virtual Pass * allocIPA();
     virtual Pass * allocIRMgr();
     virtual Pass * allocIRSimp();
@@ -95,6 +103,7 @@ protected:
     virtual Pass * allocLoopCvt();
     virtual Pass * allocLoopDepAna();
     virtual Pass * allocRegSSAMgr();
+    virtual Pass * allocSolveSetMgr();
     virtual Pass * allocPRLivenessMgr();
     virtual Pass * allocMDLivenessMgr();
     virtual Pass * allocMDSSALiveMgr();
@@ -124,9 +133,11 @@ protected:
         IRCFG *& cfg, AliasAnalysis *& aa, DUMgr *& dumgr, BitSet const& opts);
     void checkValidAndRecomputeImpl(
         MOD OptCtx * oc, PassTypeList const& optlist, BitSet const& opts);
+
+    void * xmalloc(UINT size);
 public:
     PassMgr(Region * rg);
-    virtual ~PassMgr() { destroyAllPass(); }
+    virtual ~PassMgr();
 
     //The function allocate pass object by given pass type.
     //Note the pass object returned by this function will NOT be registered in
@@ -136,6 +147,7 @@ public:
     //This function check validation of options in oc, perform
     //recomputation if it is invalid.
     //...: the options/passes that anticipated to recompute.
+    //     NOTE: the last option of these various options must be PASS_UNDEF.
     void checkValidAndRecompute(OptCtx * oc, ...);
     void checkValidAndRecompute(OptCtx * oc, PassTypeList const& optlist);
 

@@ -19,28 +19,41 @@ arm_simp.o\
 arm_refine.o\
 arm_sr.o\
 arm_var.o\
+arm_data_type.o\
 arm_ddg.o\
 arm_targinfo.o\
+arm_targ_interface.o\
 arm_decl_ext.o\
 arm_ir_dump.o\
 arm_ir_parser.o\
 arm_grreader.o\
-arm_elf_targinfo.o\
-arm_elf_mgr.o
+arm_option.o
 
 ifeq ($(FOR_IP), true)
   $(info "CONDBR:arm/Makefile.inc:FOR_IP=$(FOR_IP)")
   TARG_OBJS+=\
   arm_derivative.o\
   arm_irmgr.o\
+  arm_targinfo_mgr.o\
+  arm_regd.o\
+  arm_insert_cvt.o\
+  arm_regset_impl.o\
+  arm_linear_scan.o\
+  arm_arg_passer.o\
+  arm_elf_mgr.o\
   arm_elf_targinfo.o
-endif
-
-ifneq ($(findstring $(REF_TARGMACH_INFO), true),)
+else ifneq ($(findstring $(REF_TARGMACH_INFO), true),)
   $(info "CONDBR:arm/Makefile.inc:REF_TARGMACH_INFO=$(REF_TARGMACH_INFO)")
   TARG_OBJS+=\
+  arm_irmgr.o\
   arm_targinfo_mgr.o\
-  arm_linear_scan.o
+  arm_regd.o\
+  arm_insert_cvt.o\
+  arm_regset_impl.o\
+  arm_linear_scan.o\
+  arm_elf_mgr.o\
+  arm_elf_targinfo.o\
+  arm_arg_passer.o  
 endif
 
 ifeq ($(ROOT_DIR),)

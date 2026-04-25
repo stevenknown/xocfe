@@ -31,7 +31,7 @@ opt/symtab.o \
 opt/logmgr.o \
 opt/label.o
 
-CFLAGS = -O0 -g2 -Wno-write-strings -Wsign-promo \
+CFLAGS = -O0 -g2 -Wno-write-strings -Wsign-promo -std=c++11 \
         -Wsign-compare -Wpointer-arith -Wno-multichar -Winit-self \
         -Wstrict-aliasing=3 -Wswitch -D_DEBUG_ -D_SUPPORT_C11_ -DFOR_ARM #-Wall
         #-Werror=overloaded-virtual \

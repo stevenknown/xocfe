@@ -480,13 +480,12 @@ bool Decl::is_equal(Decl const& src) const
 bool Decl::is_restrict() const
 {
     ASSERTN(is_dt_declaration(), ("needs declaration"));
-    if (is_pointer()) {
-        Decl const* x = getPointerDecl();
-        ASSERT0(x);
-        TypeAttr const* ty = DECL_qua(x);
-        if (ty != nullptr && ty->is_restrict()) {
-            return true;
-        }
+    if (!is_pointer()) { return false; }
+    Decl const* x = getPointerDecl();
+    ASSERT0(x);
+    TypeAttr const* ty = DECL_qua(x);
+    if (ty != nullptr && ty->is_restrict()) {
+        return true;
     }
     return false;
 }

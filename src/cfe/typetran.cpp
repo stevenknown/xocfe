@@ -1043,7 +1043,6 @@ static INT TypeTranPreAndPostDec(Tree * t, TYCtx * cont)
 {
     ASSERT0(t);
     if (ST_SUCC != TypeTranList(TREE_dec_exp(t), cont)) { return ST_ERR; }
-
     Decl * d = TREE_result_type(TREE_dec_exp(t));
     if (!d->is_arith() && !d->is_pointer()) {
         xcom::DefFixedStrBuf buf;
@@ -1125,6 +1124,7 @@ static INT TypeTranInDMem(Tree * t, TYCtx * cont)
 
     if (!ld->is_pointer()) {
         xoc::Sym const* sym = TREE_id_decl(TREE_field(t))->getDeclSym();
+        ASSERT0(sym);
         err(t->getLineno(),
             "'->%s' : left operand has 'struct' type, should use '.'",
             sym->getStr());
@@ -1164,6 +1164,7 @@ static INT TypeTranDMem(Tree * t, TYCtx * cont)
 
     if (ld->is_pointer()) {
         Sym const* sym = TREE_id_decl(TREE_field(t))->getDeclSym();
+        ASSERT0(sym);
         err(t->getLineno(),
             "'.%s' : left operand points to 'struct' type, should use '->'",
             sym->getStr());
@@ -1263,7 +1264,7 @@ static INT TypeTranAdditive(Tree * t, TYCtx * cont)
 
     Decl * ld = TREE_result_type(t->lchild());
     Decl * rd = TREE_result_type(t->rchild());
-    if (TREE_token(t) == T_ADD) { // '+'
+    if (t->getToken() == T_ADD) { // '+'
         if (ld->is_pointer() && rd->is_pointer()) {
             err(t->getLineno(), "can not add two pointers");
             return ST_ERR;
@@ -1303,7 +1304,11 @@ static INT TypeTranAdditive(Tree * t, TYCtx * cont)
             //Arithmetic type.
             TREE_result_type(t) = buildBinaryOpType(t->getCode(), ld, rd);
         } else {
-            ASSERTN(0, ("illegal type for '%s'", getTokenName(TREE_token(t))));
+            TOKEN tok = t->getToken();
+            CHAR const* tokname = getTokenName(tok);
+            ASSERT0(tokname);
+            err(t->getLineno(), "illegal operand type for '%s'", tokname);
+            return ST_ERR;
         }
         return ST_SUCC;
     }
@@ -1342,13 +1347,13 @@ static INT TypeTranAdditive(Tree * t, TYCtx * cont)
             TREE_result_type(t) = buildBinaryOpType(t->getCode(), ld, rd);
         } else {
             err(t->getLineno(), "illegal operand type for '%s'",
-                getTokenName(TREE_token(t)));
+                getTokenName(t->getToken()));
             return ST_ERR;
         }
         return ST_SUCC;
     }
-
-    ASSERTN(0, ("illegal type for '%s'", getTokenName(TREE_token(t))));
+    ASSERTN(0, ("unhandled operand type for '%s'",
+            getTokenName(TREE_token(t))));
     return ST_ERR;
 }
 
