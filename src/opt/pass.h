@@ -49,15 +49,18 @@ protected:
     ActMgr * m_am;
     Region * m_rg;
 public:
+    PassCtx(ActMgr * am = nullptr);
     PassCtx(OptCtx * oc, ActMgr * am = nullptr);
     PassCtx(PassCtx const& src) { copy(src); }
 
     void copy(PassCtx const& src);
+    void clean();
 
     OptCtx * getOptCtx() const { return m_oc; }
     Region * getRegion() const { return m_rg; }
     ActMgr * getActMgr() const { return m_am; }
     GVN * getGVN() const { return m_gvn; }
+    IVR * getIVR() const { return m_ivr; }
 
     //The function try to judge if given 'ir' may reference IV, GVN etc.
     //If it is true, the function will invalidate related passes to avoid
@@ -68,6 +71,8 @@ public:
 
     PassCtx const& operator = (PassCtx const& src)
     { copy(src); return *this; }
+
+    void setActMgr(ActMgr * am) { m_am = am; }
 };
 
 
@@ -97,27 +102,24 @@ public:
     Pass(Region * rg) : m_is_valid(false), m_rg(rg) {}
     virtual ~Pass() {}
 
+    //The function calculates memory usage for current pass object.
+    //Return bytesize of memory usage.
+    virtual size_t count_mem() const;
+
     //The function dump pass relative information.
     //The dump information is always used to detect what the pass did.
     //Return true if dump successed, otherwise false.
-    virtual bool dump() const
-    {
-        //ASSERTN(0, ("Optimization Dependent Code"));
-        //The recommended dump headline format is:
-        //\n==---- DUMP PassName 'RegionName' ----==
-        return true;
-    }
+    virtual bool dump() const;
 
     //The function dump pass relative information before performing the pass.
     //The dump information is always used to detect what the pass did.
     //Return true if dump successed, otherwise false.
-    virtual bool dumpBeforePass() const
-    {
-        //ASSERTN(0, ("Optimization Dependent Code"));
-        //The recommended dump headline format is:
-        //\n==---- DUMP BEFORE PassName 'RegionName' ----==
-        return true;
-    }
+    virtual bool dumpBeforePass() const;
+
+    //The function dump pass relative information after performing the pass.
+    //The dump information is always used to detect what the pass did.
+    //Return true if dump successed, otherwise false.
+    virtual bool dumpAfterPass() const;
 
     PassWrap * getWrap() const { return m_wrap; }
     Region * getRegion() const { return m_rg; }

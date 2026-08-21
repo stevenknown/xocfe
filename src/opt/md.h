@@ -83,14 +83,14 @@ typedef UINT MDIdx;
 //MD is used to represent different memory object with
 //same base. Attributes of MD may be Id, Base Variable, Size, Offset,
 //Effect, Exact, Range, Unbound.
-//¡ð Id
+//[Id]
 //    Unique id of abstract memory object.
 //
-//¡ð Base Variable
+//[Base Variable]
 //    Since MD is the abstract version of Var, it is closely related to
 //    individual variable. This variable may be the base of several MD.
 //
-//¡ð Type
+//[Type]
 //    This attribute represent abstract memory object type.
 //    * MD_UNBOUND
 //        The object is unbound if we have no knowledge about MD size or
@@ -111,26 +111,26 @@ typedef UINT MDIdx;
 //        relation to the object is inexact. The store to object is
 //        nonkilling definition.
 //
-//¡ð Size
+//[Size]
 //    This attribute represents byte size of the abstract memory object.
 //
-//¡ð Offset
+//[Offset]
 //    This attribute represents byte size offset to the base variable.
 //
-//¡ð Effect
+//[Effect]
 //    This attribute refers to variables which are definitely declared
 //    by user or compiler and existed in the concrete. In contrast to
 //    effect MD, ALL_MEM memory object is ineffect.
 //
-//¡ð Exact
+//[Exact]
 //    This attribute represent abstract memory object with type is
 //    MD_EXACT. An exact MD is also effect.
 //
-//¡ð Range
+//[Range]
 //    This attribute represent abstract memory object with type is
 //    MD_RANGE. An range MD is also effect, but is not exact.
 //
-//¡ð Unbound
+//[Unbound]
 //    This attribute represent abstract memory object with type is
 //    MD_UNBOUND. An unbound MD may be effect, but is definitly inexact.
 
@@ -666,11 +666,11 @@ protected:
     SMemPool * m_sc_mdptr_pool;
     TypeMgr * m_tm;
     MD const* m_full_mem;
-    MD const * m_global_mem;
-    MD const * m_import_mem;
-    MD const * m_local_mem;
-    MD const * m_heap_mem;
-    MD const * m_local_may_alias;
+    MD const* m_global_mem;
+    MD const* m_import_mem;
+    MD const* m_local_mem;
+    MD const* m_heap_mem;
+    MD const* m_local_may_alias;
     MDId2MD m_id2md_map; //Map MD id to MD.
     SList<MD*> m_free_md_list; //MD allocated in pool.
     UINT m_md_count; //generate MD index, used by registerMD().
@@ -898,11 +898,21 @@ public:
     void dump(Region * rg);
 };
 
+
+//Return true if 'id' indicates the GLOBAL program region delegates that
+//may have sideeffect to memory.
 inline bool isGlobalSideEffectMD(MDIdx id)
 {
     return id == MD_GLOBAL_VAR || id == MD_IMPORT_VAR || id == MD_FULL_MEM;
 }
 
+//Return true if 'id' indicates the LOCAL region delegates that may have
+//sideeffect to memory.
+inline bool isLocalSideEffectMD(MDIdx id)
+{ return id == MD_LOCAL_MAY_ALIAS; }
+
+//Return true if 'set' contains the GLOBAL region delegates that may have
+//sideeffect to memory.
 inline bool isContainGlobalSideEffectMD(MDSet const& set)
 {
     DefSBitSetCore const& lset = (DefSBitSetCore const&)set;

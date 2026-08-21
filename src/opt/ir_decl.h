@@ -934,6 +934,9 @@ public:
     IR * getIV() const { return LOOP_iv(this); }
     IR * getInit() const { return LOOP_init(this); }
     IR * getStep() const { return LOOP_step(this); }
+
+    //Return true if ir can be regarded as a valid IV kid of DoLoop.
+    static bool isValidIV(IR const* ir);
 };
 
 
@@ -1491,11 +1494,11 @@ public:
     IR * getFalseExp() const { return SELECT_falseexp(this); }
 
     //Return true if both true-exp and false-exp are available.
-    static bool bothTFExpAvail(IR const* ir)
+    static bool isPartialSelect(IR const* ir)
     {
         ASSERT0(ir && ir->is_select());
         CSelect const* sel = (CSelect const*)ir;
-        return sel->getTrueExp() != nullptr && sel->getFalseExp() != nullptr;
+        return sel->getTrueExp() == nullptr || sel->getFalseExp() == nullptr;
     }
 };
 

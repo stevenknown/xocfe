@@ -367,6 +367,18 @@ public:
 //      |                |---decl-type (pointer:volatile)
 //      |                |---decl-type (pointer:const)
 //
+//  e.g1.2: int arr[10][40][30];
+//  Note the lowest dimension, which iterates most slowly, is at the most right
+//  of decl-type list.
+//  In this example, array:dim=30 is the lowest dimension.
+//  declaration----
+//      |         |--attribute (int)
+//      |         |--declarator1 (DCL_DECLARATOR)
+//      |               |---decl-type (id:arr)
+//      |               |---decl-type (array:dim=10)
+//      |               |---decl-type (array:dim=40)
+//      |               |---decl-type (array:dim=30)
+//
 //  e.g2: int (*q)[30];
 //  declaration----
 //      |          |--attribute (int)

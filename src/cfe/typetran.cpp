@@ -31,6 +31,10 @@ USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 namespace xfe {
 
 static INT TypeTranInitValScope(Tree * t, TYCtx * cont);
+static INT process_array_init_recur(Decl * dcl, TypeAttr * ty, Tree ** init);
+static INT process_singledim_array_init_recur(
+    Decl * dcl, TypeAttr * ty, MOD Tree ** init, bool has_declared_dim,
+    ULONGLONG dim, OUT ULONGLONG * count);
 
 #define BUILD_TYNAME(T)  buildTypeName(buildBaseTypeSpec(T))
 
@@ -55,6 +59,94 @@ static INT process_union_init(TypeAttr * ty, Tree ** init);
 static INT process_base_init(TypeAttr * ty, Tree ** init);
 static TypeAttr * buildBaseTypeSpec(INT des);
 
+static UINT eval_array_elem_count_via_initval(
+    TypeAttr const* spec_ty, Tree const* initval)
+{
+    if (initval->getCode() == TR_STRING && spec_ty->is_char()) {
+        ASSERT0(TREE_string_val(initval));
+        return TREE_string_val(initval)->getLen() + 1;
+    }
+    //simple type init. e.g INT/SHORT/CHAR, the number of array element
+    //that corresponding to an initval tree-node is 1.
+    return 1;
+}
+
+
+static INT process_singledim_array_initscope_init_recur(
+    Decl * dcl, TypeAttr * ty, MOD Tree ** init, bool has_declared_dim,
+    ULONGLONG dim, OUT ULONGLONG * count)
+{
+    ASSERT0((*init)->getCode() == TR_INITVAL_SCOPE);
+
+    //When we meet TR_INITVAL_SCOPE, because we are
+    //initializing an array, thus the initial value set begin at
+    //subset of TR_INITVAL_SCOPE.
+    Tree * t = TREE_initval_scope(*init);
+    INT st = process_singledim_array_init_recur(
+        dcl, ty, &t, has_declared_dim, dim, count);
+    *init = TREE_nsib(*init);
+    return st;
+}
+
+
+//Single dimension array.
+static INT process_singledim_array_init_recur(
+    Decl * dcl, TypeAttr * ty, MOD Tree ** init, bool has_declared_dim,
+    ULONGLONG dim, OUT ULONGLONG * count)
+{
+    INT st = ST_SUCC;
+    if ((*init)->getCode() == TR_INITVAL_SCOPE) {
+        return process_singledim_array_initscope_init_recur(
+            dcl, ty, init, has_declared_dim, dim, count);
+    }
+    ty = ty->getPureTypeAttr();
+    while (*init != nullptr && st == ST_SUCC) {
+        if (ty->is_struct()) {
+            st = process_struct_init(ty, init);
+            (*count)++;
+        } else if (ty->is_union()) {
+            st = process_union_init(ty, init);
+            (*count)++;
+        } else if (dcl->is_pointer()) {
+            st = process_pointer_init(const_cast<Decl*>(dcl), ty, init);
+            (*count)++;
+        } else {
+            //simple type init. e.g INT/SHORT/CHAR/STRING.
+            (*count) += eval_array_elem_count_via_initval(ty, *init);
+            st = process_base_init(ty, init);
+        }
+        if (has_declared_dim && (*count) >= dim) {
+            //If user has declared a dimension, there is no need to
+            //handle init-values that exceeded the dimension.
+            //e.g:int A[2] = {1,2,3}; the init-value 3 should be
+            //discarded.
+            break;
+        }
+    }
+    return st;
+}
+
+
+//Recorgnize and extract the initvalue of multipul dimension array.
+static INT process_multidim_array_init_recur(
+    Decl * dcl, TypeAttr * ty, MOD Tree ** init, bool has_declared_dim,
+    ULONGLONG dim, OUT ULONGLONG * count, Decl const* head)
+{
+    INT st = ST_SUCC;
+    while (*init != nullptr && st == ST_SUCC) {
+        st = process_array_init_recur(DECL_next(head), ty, init);
+        (*count)++;
+        if (has_declared_dim && (*count) >= dim) {
+            //If user has declared a dimension, there is no need to
+            //handle init-values that exceeded the dimension.
+            //e.g:int A[2] = {1,2,3}; the init-value 3 should be discarded.
+            break;
+        }
+    }
+    return st;
+}
+
+
 //Go through the init tree , 'dcl' must be DCL_ARRAY
 //NOTE: compute_array_dim() should be invoked.
 //      dcl might be changed.
@@ -66,7 +158,27 @@ static INT process_array_init_recur(Decl * dcl, TypeAttr * ty, Tree ** init)
     ASSERTN(dcl->is_dt_array(), ("ONLY can be DCL_ARRAY"));
     ULONGLONG dim = DECL_array_dim(dcl);
     ULONGLONG count = 0;
+    bool has_declared_dim = false;
+    if (dim > 0) {
+        //e.g: char A[]="..."; A doesn't declared a dimension, we have to
+        //compute the dimension via init-value.
+        // int B[10]={1,2,...}; B declared a dimension 10.
+        has_declared_dim = true;
+    }
 
+    //Find the lowest dimension.
+    //See details at decl.h.
+    //  e.g1.2: int arr[10][40][30];
+    //  Note the lowest dimension, which iterates most slowly,
+    //  is at the most right of decl-type list.
+    //  In this example, array:dim=30 is the lowest dimension.
+    //  declaration----
+    //      |         |--attribute (int)
+    //      |         |--declarator1 (DCL_DECLARATOR)
+    //      |               |---decl-type (id:arr)
+    //      |               |---decl-type (array:dim=10)
+    //      |               |---decl-type (array:dim=40)
+    //      |               |---decl-type (array:dim=30)
     Decl * head = dcl;
     Decl * tail = nullptr;
     while (DECL_next(dcl) != nullptr && DECL_next(dcl)->is_dt_array()) {
@@ -76,61 +188,14 @@ static INT process_array_init_recur(Decl * dcl, TypeAttr * ty, Tree ** init)
 
     INT st = ST_SUCC;
     if (head != tail) {
-        //multipul dimension array.
-        while (*init != nullptr && st == ST_SUCC) {
-            st = process_array_init_recur(DECL_next(head), ty, init);
-            count++;
-            if (dim > 0 && count >= dim) {
-                break;
-            }
-        }
+        st = process_multidim_array_init_recur(
+            dcl, ty, init, has_declared_dim, dim, &count, head);
     } else {
-        //Single dimension array.
-        if ((*init)->getCode() == TR_INITVAL_SCOPE) {
-            //When we meet TR_INITVAL_SCOPE, because we are
-            //initializing an array, thus the initial value set begin at
-            //subset of TR_INITVAL_SCOPE.
-            Tree * t = TREE_initval_scope(*init);
-            ty = ty->getPureTypeAttr();
-            while (t != nullptr && st == ST_SUCC) {
-                if (ty->is_struct()) {
-                    st = process_struct_init(ty, &t);
-                } else if (ty->is_union()) {
-                    st = process_union_init(ty, &t);
-                } else if (dcl->is_pointer()) {
-                    st = process_pointer_init(const_cast<Decl*>(dcl), ty, &t);
-                } else {
-                    //simple type init. e.g INT/SHORT/CHAR
-                    st = process_base_init(ty, &t);
-                }
-                count++;
-                if (dim > 0 && count >= dim) {
-                    break;
-                }
-            }
-            *init = TREE_nsib(*init);
-        } else {
-            ty = ty->getPureTypeAttr();
-            while (*init != nullptr && st == ST_SUCC) {
-                if (ty->is_struct()) {
-                    st = process_struct_init(ty, init);
-                } else if (ty->is_union()) {
-                    st = process_union_init(ty, init);
-                } else if (dcl->is_pointer()) {
-                    st = process_pointer_init(const_cast<Decl*>(dcl), ty, init);
-                } else {
-                    //simple type init. e.g INT/SHORT/CHAR
-                    st = process_base_init(ty, init);
-                }
-                count++;
-                if (dim > 0 && count >= dim) {
-                    break;
-                }
-            }
-        }
-    } //end else
-
-    if (dim == 0) {
+        st = process_singledim_array_init_recur(
+            dcl, ty, init, has_declared_dim, dim, &count);
+    }
+    if (!has_declared_dim) {
+        //Complete the array declaration by padding dimension.
         DECL_array_dim(head) = count;
     }
     return st;
@@ -245,8 +310,8 @@ static INT process_union_init(TypeAttr * ty, Tree ** init)
 //C base type
 static INT process_base_init(TypeAttr * ty, Tree ** init)
 {
-    Tree * t = TREE_initval_scope(*init);
     if ((*init)->getCode() == TR_INITVAL_SCOPE) {
+        Tree * t = TREE_initval_scope(*init);
         process_base_init(ty, &t);
         *init = TREE_nsib(*init);
         return ST_SUCC;
@@ -382,7 +447,6 @@ static TypeAttr * buildBaseTypeSpec(INT des)
         ASSERTN(0,("expect base type"));
         return nullptr;
     }
-
     if (IS_TYPE(des, T_SPEC_SIGNED)) {
         if (IS_TYPE(des, T_SPEC_CHAR)) {
             return g_schar_type;
@@ -440,7 +504,7 @@ static TypeAttr * buildBaseTypeSpec(INT des)
             return g_enum_type;
         }
     }
-    ASSERTN(0,("TODO"));
+    ASSERTN(0, ("TODO"));
     return nullptr;
 }
 

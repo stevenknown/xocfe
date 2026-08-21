@@ -40,6 +40,7 @@ namespace xcom {
 #define VERTEX_UNDEF 0
 
 #define HEIGHT_UNDEF ((VexIdx)-1)
+
 //The height of root is 0.
 #define HEIGHT_INIT_VAL 0
 
@@ -791,10 +792,20 @@ public:
     //Reverse all edges.
     void reverseEdges();
 
+    //e: the edge to be removed.
     //pos_in_outlist: optional, record the position in outlist of 'from' of 'e'
     //pos_in_inlist: optional, record the position in inlist of 'to' of 'e'
-    Edge * removeEdge(Edge * e, OUT UINT * pos_in_outlist = nullptr,
-                      OUT UINT * pos_in_inlist = nullptr);
+    Edge * removeEdge(
+        Edge * e, OUT UINT * pos_in_outlist = nullptr,
+        OUT UINT * pos_in_inlist = nullptr);
+
+    //The function remove all edges between 'from' and 'to'.
+    void removeEdge(VexIdx from, VexIdx to);
+
+    //The function remove all edges between 'from' and 'to'.
+    void removeEdge(Vertex * from, Vertex * to);
+
+    //The function remove all edges between 'from' and 'to'.
     void removeEdgeBetween(Vertex * v1, Vertex * v2);
     Vertex * removeVertex(Vertex * vex);
     Vertex * removeVertex(VexIdx vid)
@@ -874,30 +885,35 @@ typedef BitSet DomSet;
 //
 class DGraph : public Graph {
 protected:
-    BitSetMgr * m_bs_mgr;
     Vector<BitSet*> m_dom_set; //record dominator-set of each vertex.
     Vector<BitSet*> m_pdom_set; //record post-dominator-set of each vertex.
     Vector<VexIdx> m_idom_set; //immediate dominator.
     Vector<VexIdx> m_ipdom_set; //immediate post dominator.
     RPOMgr m_rpomgr;
+
+    //The DGraph will allocate misc BitSet, such as Dom, PDom.
+    //Manage these BitSet by its own BitSetMgr.
+    xcom::BitSetMgr m_bs_mgr;
 protected:
     //The function will compute idom for subgraph that rooted by 'entry'.
     //NOTE: the function needs RPO to compute DomInfo.
     //entry: the entry vertex of subgraph. Note there can be only ONE entry.
     //vlst: the Vertex list that belong to the subgraph.
-    void computeIdomForSubGraph(Vertex const* entry,
-                                List<Vertex const*> const& vlst);
+    void computeIdomForSubGraph(
+        Vertex const* entry, List<Vertex const*> const& vlst);
 
     //Return true if idom-set status changed.
     bool computeIdomForFullGraph(List<Vertex const*> const& vlst);
     void freeDomSet(VexIdx vid);
     void freePdomSet(VexIdx vid);
+    void freeDomAndPdomSet();
     bool verifyPdom(DGraph & g, RPOVexList const& rpovlst) const;
     bool verifyDom(DGraph & g, RPOVexList const& rpovlst) const;
 public:
     DGraph(UINT vex_hash_size = 64);
     DGraph(DGraph const& g);
     DGraph const& operator = (DGraph const&);
+    virtual ~DGraph();    
 
     //The function adds Dom, Pdom, IDom, IPDom information for newsucc, whereas
     //update the related info for 'marker'.
@@ -908,12 +924,45 @@ public:
     //oldsucc: the vertex that must be immediate successor of 'marker' before
     //         graph changed.
     //         NOTE: user has to guarrantee the relation of 'marker' and
-    //         'oldsucc' because the function could not check the relation.
-    //e.g: given edge marker->oldsucc, after insert newsucc, the graph will be:
-    //     marker->newsucc->oldsucc, where there is only ONE predecessor to
-    //     newsucc.
-    void addDomInfoToImmediateSucc(Vertex const* marker, Vertex const* newsucc,
-                                   Vertex const* oldsucc);
+    //         'oldsucc' because the function could not check the
+    //         before-graph-changed relation.
+    //e.g: given edge marker->oldsucc, after inserted newsucc, the graph
+    //will be:
+    //  marker->newsucc->oldsucc,
+    //where there is only ONE predecessor to newsucc.
+    void addDomInfoToImmediateSucc(
+        Vertex const* marker, Vertex const* newsucc, Vertex const* oldsucc);
+
+    //The function adds Dom, Pdom, IDom, IPDom information for each vertex
+    //in a subsequent Diamond Region, whereas
+    //update the related info for 'marker'.
+    //e.g:given Diamond Region top=V3, left=V4, right=V5, bottom=V6, after
+    //inserting the diamond region between edge V1->V2, the graph will be:
+    //    V1
+    //    |
+    //    v
+    //  -v3-
+    // |    |
+    // V4   V5
+    // |_  _|
+    //   ||
+    //   vv
+    //   V6
+    //   |
+    //   v
+    //   V2
+    //NOTE: the function maintains the Dom and PDom info after graph changed.
+    //marker: a marker vertex.
+    //top,left,right,bottom: these vertice constructs a Diamond Region that
+    //  is an immediate successor region of 'marker'.
+    //  The function will check the relation.
+    //oldsucc: the vertex that must be immediate successor of 'marker' before
+    //  graph changed.
+    //  NOTE: user has to guarrantee the relation of 'marker' and
+    //  'oldsucc' because the function could not check the relation.
+    void addDomInfoToImmediateSuccDiamondRegion(
+        Vertex const* marker, Vertex const* top, Vertex const* left,
+        Vertex const* right, Vertex const* bottom, Vertex const* oldsucc);
 
     //The function adds Dom and IDom information for newsucc, whereas
     //update the related info for 'oldsucc'. The newsucc is a new insert BB,
@@ -924,8 +973,8 @@ public:
     //e.g: marker->oldsucc, after insert newsucc, the graph will be:
     //     marker->newsucc->oldsucc, where there is only ONE edge between
     //     marker->newsucc, and newsucc->oldsucc.
-    void addDomToNewSingleInOutBB(Vertex const* marker, Vertex const* newsucc,
-                                  Vertex const* oldsucc);
+    void addDomInfoToNewSingleInOutBB(
+        Vertex const* marker, Vertex const* newsucc, Vertex const* oldsucc);
 
     //The function adds Dom, Pdom, IDom, IPDom information for newidom, whereas
     //update the related info for 'marker'.
@@ -933,8 +982,9 @@ public:
     //marker: a marker vertex.
     //newidom: the vertex that must be idom of 'marker'.
     //add_pdom_failed: return true if the function add PDomInfo failed.
-    void addDomInfoToNewIDom(Vertex const* marker, Vertex const* newidom,
-                             OUT bool & add_pdom_failed);
+    void addDomInfoToNewIDom(
+        Vertex const* marker, Vertex const* newidom,
+        OUT bool & add_pdom_failed);
 
     //The function adds Dom, Pdom, IDom, IPDom information for newidom, whereas
     //update the related info for 'marker'.
@@ -942,8 +992,8 @@ public:
     //marker: a marker vertex.
     //newidom: the vertex that must be idom of 'marker'.
     //add_pdom_failed: return true if the function add PDomInfo failed.
-    void addDomInfoToNewIDom(Vertex const* marker, VexIdx newidom,
-                             OUT bool & add_pdom_failed)
+    void addDomInfoToNewIDom(
+        Vertex const* marker, VexIdx newidom, OUT bool & add_pdom_failed)
     { addDomInfoToNewIDom(marker, addVertex(newidom), add_pdom_failed); }
 
     //The function adds Dom, Pdom, IDom, IPDom information for newidom, whereas
@@ -952,8 +1002,8 @@ public:
     //marker: a marker vertex.
     //newidom: the vertex that must be idom of 'marker'.
     //add_pdom_failed: return true if the function add PDomInfo failed.
-    void addDomInfoToNewIDom(VexIdx marker, VexIdx newidom,
-                             OUT bool & add_pdom_failed)
+    void addDomInfoToNewIDom(
+        VexIdx marker, VexIdx newidom, OUT bool & add_pdom_failed)
     {
         addDomInfoToNewIDom(getVertex(marker), addVertex(newidom),
                             add_pdom_failed);
@@ -980,10 +1030,7 @@ public:
     void clone(DGraph const& g, bool clone_edge_info, bool clone_vex_info)
     {
         Graph::clone(g, clone_edge_info, clone_vex_info);
-        m_bs_mgr = g.m_bs_mgr;
-        if (m_bs_mgr != nullptr) {
-            cloneDomAndPdom(g);
-        }
+        cloneDomAndPdom(g);
     }
 
     //Collect the 'id' vertex reaching nodes into 'visited'.
@@ -1088,8 +1135,8 @@ public:
     //The function generate DomTree for subgraph that all vertexs in subgraph
     //are at least dominated by 'root'.
     //dt: generate dominator tree and record in it.
-    void genDomTreeForSubGraph(Vertex const* root, OUT DomTree & dt,
-                               OUT UINT & iter_time) const;
+    void genDomTreeForSubGraph(
+        Vertex const* root, OUT DomTree & dt, OUT UINT & iter_time) const;
 
     //pdt: generate post-dominator tree and record in it.
     void genPDomTree(OUT DomTree & pdt) const;
@@ -1098,15 +1145,15 @@ public:
     { return m_dom_set.get((VecIdx)id); }
 
     RPOMgr & getRPOMgr() { return m_rpomgr; }
+    BitSetMgr & getBitSetMgr() { return m_bs_mgr; }
 
     //Get vertices who dominate vertex 'id'.
     //NOTE: set does NOT include 'v' itself.
     DomSet * gen_dom_set(VexIdx id)
     {
-        ASSERT0(m_bs_mgr != nullptr);
         DomSet * set = m_dom_set.get((VecIdx)id);
         if (set == nullptr) {
-            set = m_bs_mgr->create();
+            set = m_bs_mgr.create();
             m_dom_set.set((VecIdx)id, set);
         }
         return set;
@@ -1127,10 +1174,9 @@ public:
     //NOTE: set does NOT include 'v' itself.
     DomSet * gen_pdom_set(VexIdx id)
     {
-        ASSERT0(m_bs_mgr != nullptr);
         DomSet * set = m_pdom_set.get((VecIdx)id);
         if (set == nullptr) {
-            set = m_bs_mgr->create();
+            set = m_bs_mgr.create();
             m_pdom_set.set((VecIdx)id, set);
         }
         return set;
@@ -1172,9 +1218,9 @@ public:
         return get_ipdom(v2) == ((BSIdx)v1);
     }
 
-    //Sort node on graph in bfs-order.
-    void sortInBfsOrder(Vector<VexIdx> & order_buf, Vertex * root,
-                        BitSet & visit);
+    //Sort node on graph in BFS-order.
+    void sortInBFSOrder(
+        Vector<VexIdx> & order_buf, Vertex * root, BitSet & visit);
 
     //Sort node in dominator-tree in preorder.
     void sortDomTreeInPreorder(IN Vertex * root, OUT List<Vertex*> & lst);
@@ -1184,7 +1230,6 @@ public:
     //order: record the given order of each predecessor. Note the number
     //       of elements have to equal to the number of predecessor of vex.
     void sortPred(MOD Vertex * vex, Vector<VexIdx> const& order);
-    void setBitSetMgr(BitSetMgr * bs_mgr) { m_bs_mgr = bs_mgr; }
     void set_idom(VexIdx vid, VexIdx idom)
     { m_idom_set.set((VecIdx)vid, idom); }
     void set_ipdom(VexIdx vid, VexIdx ipdom)
@@ -1197,6 +1242,8 @@ public:
     //        changed by the function.
     //root: record the root vertex the of subgraph that affected by adding
     //      or removing edge.
+    //iter_times: record the number of time that iterate graph when updating
+    //            Dom.
     void reviseDomInfoAfterAddOrRemoveEdge(
         Vertex const* from, Vertex const* to, OUT VexTab * modset,
         OUT Vertex const*& root, OUT UINT & iter_time);
@@ -1207,6 +1254,7 @@ public:
     //Note the RPO must be available.
     //modset: if it is not null, means user asked to collect vertex that idom
     //        changed by the function.
+    //iter_times: record the number of time that iterate 'g' when updating Dom.
     bool recomputeDomInfoForSubGraph(
         Vertex const* root, OUT VexTab * modset, OUT UINT & iter_time);
     bool removeUnreachNode(VexIdx entry_id);
@@ -1218,8 +1266,8 @@ public:
     //iter_pred_succ: true to remove dominfo by iterate vex's predecessors
     //and sucessors til entry and exit.
     //iter_time: the number of times that the function iterates graph vertex.
-    void removeDomInfo(Vertex const* vex, bool iter_pred_succ,
-                       OUT UINT & iter_time);
+    void removeDomInfo(
+        Vertex const* vex, bool iter_pred_succ, OUT UINT & iter_time);
     void removeDomInfo(VexIdx vex, bool iter_pred_succ, OUT UINT & iter_time)
     { removeDomInfo(getVertex(vex), iter_pred_succ, iter_time); }
 
@@ -1328,14 +1376,15 @@ Vertex * GraphIterIn<CompareFunc>::get_next(Vertex const* t)
 //The class provides helper functions to convenient iterate vertex on graph.
 //If 'start' vertex is given, the class will visit all successors start from
 //'start' until reach one of exit of graph.
+//NOTE:the class iterates vertex in BFS order.
 template <class CompareFunc = GraphIterCompareFuncBase>
 class GraphIterOut {
     COPY_CONSTRUCTOR(GraphIterOut);
+protected:
     Vertex const* m_start;
     List<Vertex*> m_wl;
     TTab<VexIdx> m_visited;
     CompareFunc m_cf;
-protected:
     Graph const& m_g;
 public:
     GraphIterOut(Graph const& g, Vertex const* start);
@@ -1393,6 +1442,40 @@ Vertex * GraphIterOut<CompareFunc>::get_next(Vertex const* t)
 //END GraphIterOut
 
 
+//
+//START GraphIterOutDFS
+//
+//The class provides helper functions to convenient iterate vertex on graph.
+//If 'start' vertex is given, the class will visit all successors start from
+//'start' until reach each exits of graph.
+//NOTE:the class iterates vertex in DFS order.
+class GraphIterOutDFS {
+    COPY_CONSTRUCTOR(GraphIterOutDFS);
+protected:
+    bool m_is_dense;
+    Vertex const* m_start;
+    TTab<VexIdx> m_visitedtab;
+    BitSet m_visitedset;
+    Stack<EdgeC const*> m_est; //stack of out-edge of vertex
+protected:
+    bool is_dense() const { return m_is_dense; }
+    bool is_visited(VexIdx id) const;
+    void set_visited(VexIdx id);
+public:
+    GraphIterOutDFS(Vertex const* start, bool is_dense = false)
+        : m_start(start)
+    { m_is_dense = is_dense; }
+
+    Vertex const* get_first();
+    Vertex const* get_next();
+    void set_dense(bool is_dense) { m_is_dense = is_dense; }
+};
+//END GraphIterOutDFS
+
+
+//
+//START GraphIterOutEdge
+//
 //The class provides helper functions to convenient iterate edge on graph.
 //If 'start' vertex is given, the class will visit all out-edge of vertex
 //start from 'start' until reach one of exit of graph.
@@ -1407,8 +1490,119 @@ public:
     Edge * get_first();
     Edge * get_next(Edge const* t);
 };
+//END GraphIterOutEdge
 
 
+//
+//START VisiteGraphDFS
+//
+//The class represents the access-function of graph.
+class VisitGraphFuncBase {
+public:
+    //The function is a callback interface.
+    //The function will be invoked when all kid of v have been accessed.
+    //v: the vertex on graph.
+    //stk: the visiting stack of vertex. Usually, user does not need to
+    //     manipulate the element in stk.
+    void visitWhenAllKidHaveBeenVisited(
+        Vertex const* v, MOD Stack<Vertex const*> & stk)
+    {
+        DUMMYUSE(v); //Avoid compiler warning.
+        DUMMYUSE(stk); //Avoid compiler warning.
+        ASSERTN(0, ("Target Dependent Code"));
+    }
+
+    //The function is a callback interface.
+    //The function will be invoked when first accessing the vertex v.
+    //Return true to process the kid vertex on graph.
+    //v: the vertex on graph.
+    //stk: the visiting stack of vertex. Usually, user does not need to
+    //     manipulate the element in stk.
+    bool visitWhenFirstMeet(Vertex const* v, MOD Stack<Vertex const*> & stk)
+    {
+        DUMMYUSE(v); //Avoid compiler warning.
+        DUMMYUSE(stk); //Avoid compiler warning.
+        ASSERTN(0, ("Target Dependent Code"));
+        return true;
+    }
+};
+
+
+//The class provides helper functions to convenient iterate vertex on graph.
+//If 'start' vertex is given, the class will visit all successors start from
+//'start' until reach each exits of graph.
+//NOTE:the class iterates vertex in DFS order.
+template <class VF = VisitGraphFuncBase>
+class VisitGraphDFS {
+    COPY_CONSTRUCTOR(VisitGraphDFS);
+public:
+    typedef TTab<VexIdx> VisitedTab;
+    typedef BitSet VisitedSet;
+protected:
+    bool m_is_dense;
+    Graph const& m_g;
+    VF & m_vf;
+    VisitedTab m_visitedtab;
+    VisitedSet m_visitedset;
+protected:
+    bool isVisited(VexIdx vid) const
+    {
+        return is_dense() ?
+            m_visitedset.is_contain(vid) : m_visitedtab.find(vid);
+    }
+    bool is_dense() const { return m_is_dense; }
+
+    void set_visited(VexIdx vid)
+    {
+        if (is_dense()) { m_visitedset.bunion(vid); }
+        else { m_visitedtab.append(vid); }
+    }
+public:
+    VisitGraphDFS(Graph const& g, VF & vf, bool is_dense = true)
+        : m_is_dense(is_dense), m_g(g), m_vf(vf) {}
+
+    //The function will visit the graph beginning at the given 'start' vertex.
+    //NOTE: 'start' should belong to the graph.
+    void visit(Vertex const* start);
+    void set_dense(bool is_dense) { m_is_dense = is_dense; }
+};
+
+template <class VF>
+void VisitGraphDFS<VF>::visit(Vertex const* start)
+{
+    ASSERT0(start);
+    xcom::Stack<Vertex const*> stk;
+    Vertex const* v;
+    stk.push(start);
+    while ((v = stk.get_top()) != nullptr) {
+        if (!isVisited(v->id())) {
+            set_visited(v->id());
+            if (!m_vf.visitWhenFirstMeet(v, stk)) { continue; }
+        }
+        bool all_visited = true;
+        AdjVertexIter oit;
+        for (Vertex const* kid = Graph::get_first_out_vertex(v, oit);
+             kid != nullptr; kid = Graph::get_next_out_vertex(oit)) {
+            if (kid == v) { continue; }
+            if (!isVisited(kid->id())) {
+                all_visited = false;
+                stk.push(kid);
+                break;
+            }
+        }
+        if (all_visited) {
+            stk.pop();
+            //Do post-processing while all kids of vertex has been processed.
+            m_vf.visitWhenAllKidHaveBeenVisited(v, stk);
+        }
+    }
+}
+//END VisiteGraphDFS
+
+
+//
+//START MST
+//
 //The class represents the computation of Minimum Spanning Tree.
 //Note that the edge weight can NOT be negative.
 #define MST_WEIGHT_UNDEF 0
@@ -1452,6 +1646,26 @@ public:
         return build(m_g.get_first_vertex(it), path);
     }
 };
+//END MST
+
+
+//
+//START DFN
+//
+//The class represents the Depth First Number of graph.
+class DFN {
+    COPY_CONSTRUCTOR(DFN);
+protected:
+    Graph const& m_g;
+    Vector<UINT> m_in;
+    Vector<UINT> m_out;
+public:
+    DFN(Graph const& g) : m_g(g) {}
+    void compute();
+    UINT get_in(Vertex const* v) const { return m_in.get(v->id()); }
+    UINT get_out(Vertex const* v) const { return m_out.get(v->id()); }
+};
+//END DFN
 
 } //namespace xcom
 #endif

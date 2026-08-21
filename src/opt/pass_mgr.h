@@ -65,6 +65,7 @@ protected:
 protected:
     PassWrap * allocPassWrap();
     virtual Pass * allocAA();
+    virtual Pass * allocArgPasser();
     virtual Pass * allocCalcDerivative();
     virtual Pass * allocCallGraph();
     virtual Pass * allocCCP();
@@ -102,9 +103,11 @@ protected:
     virtual Pass * allocLivenessMgr();
     virtual Pass * allocLoopCvt();
     virtual Pass * allocLoopDepAna();
+    virtual Pass * allocBrCondProp();
     virtual Pass * allocRegSSAMgr();
     virtual Pass * allocSolveSetMgr();
     virtual Pass * allocPRLivenessMgr();
+    virtual Pass * allocVMDLivenessMgr();
     virtual Pass * allocMDLivenessMgr();
     virtual Pass * allocMDSSALiveMgr();
     virtual Pass * allocMDSSAMgr();
@@ -114,12 +117,25 @@ protected:
     virtual Pass * allocRCE();
     virtual Pass * allocRefine();
     virtual Pass * allocRefineDUChain();
+    virtual Pass * allocRegAllocMgr();
+    virtual Pass * allocRegCopyProp();
     virtual Pass * allocRP();
     virtual Pass * allocScalarOpt();
     virtual Pass * allocTargInfoHandler();
     virtual Pass * allocVectorization();
-    virtual Pass * allocAlgeReasscociate();
+    virtual Pass * allocAlgeReassociate();
     virtual Pass * allocVRP();
+    virtual Pass * allocGPAdjustment();
+    virtual Pass * allocStackColoring();
+    virtual Pass * allocIGotoOpt();
+    virtual Pass * allocIRReloc();
+    virtual Pass * allocPrologueEpilogue();
+    virtual Pass * allocBROpt();
+    virtual Pass * allocDynamicStack();
+    virtual Pass * allocInstSched();
+    virtual Pass * allocVarRelocMgr();
+    virtual Pass * allocSaveCallee();
+    virtual Pass * allocIRCompress();
 protected:
     void checkAndRecomputeDUChain(
         OptCtx * oc, DUMgr * dumgr, BitSet const& opts);
@@ -175,7 +191,7 @@ public:
         return registerPass(passty);
     }
 
-    virtual Pass * queryPass(PASS_TYPE passty)
+    virtual Pass * queryPass(PASS_TYPE passty) const
     { return m_registered_pass.get(passty); }
 
     virtual Pass * replacePass(PASS_TYPE passty, Pass * newpass);

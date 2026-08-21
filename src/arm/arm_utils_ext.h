@@ -39,6 +39,7 @@ author: Su Zhenyu
 
 //Defined the entry for extended expression ir code.
 #undef SWITCH_CASE_EXT_EXP
+#ifdef REF_TARGMACH_INFO
 #define SWITCH_CASE_EXT_EXP \
     SWITCH_CASE_EXT_ATOM: \
     case IR_PHYREG: \
@@ -47,6 +48,15 @@ author: Su Zhenyu
     case IR_DYNLEN_OP: \
     case IR_SELECT_TO_RES: \
     SWITCH_CASE_ML_CODE
+#else
+#define SWITCH_CASE_EXT_EXP \
+    SWITCH_CASE_EXT_ATOM: \
+    case IR_BROADCAST: \
+    case IR_MASK_OP: \
+    case IR_DYNLEN_OP: \
+    case IR_SELECT_TO_RES: \
+    SWITCH_CASE_ML_CODE
+#endif
 
 #undef SWITCH_CASE_EXT_UNA
 #define SWITCH_CASE_EXT_UNA SWITCH_CASE_ML_EXT_UNA

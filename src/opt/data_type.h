@@ -1182,7 +1182,8 @@ protected:
 
     //The function handles cases that at least one of operands
     //is of MC type.
-    Type const* hoistDTypeForBinOpWithMCType(Type const* d0, Type const* d1);
+    Type const* hoistDTypeForBinOpWithMCType(
+        Type const* d0, Type const* d1) const;
 
     Type * newType() { return (Type*)xmalloc(sizeof(Type)); }
 
@@ -1242,6 +1243,7 @@ public:
     //4. (else) Is any operand unsigned int? Convert the other to unsigned int.
     //
     //NOTE: The function does NOT hoist vector type.
+    //The function may register new type.
     Type const* hoistDTypeForBinOp(IR const* opnd0, IR const* opnd1);
 
     RegionMgr * getRegionMgr() const { return m_rm; }
@@ -1550,6 +1552,15 @@ public:
     Type const* getTargMachRegisterType() const
     {
         DATA_TYPE dt = getAlignedDType(WORD_LENGTH_OF_TARGET_MACHINE, false);
+        Type const* ty = getSimplexTypeEx(dt);
+        return ty;
+    }
+
+    //Return the signed type corresponding to the type that represents the
+    //general purpose register of target machine.
+    Type const* getTargMachRegisterSignedType() const
+    {
+        DATA_TYPE dt = getAlignedDType(WORD_LENGTH_OF_TARGET_MACHINE, true);
         Type const* ty = getSimplexTypeEx(dt);
         return ty;
     }
